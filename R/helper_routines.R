@@ -71,8 +71,8 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name){
 # ---------------------------------------------------------------------------------------------
 #' Define the indicators of following/not-following specific dynamic treatment rules indexed by theta.
 #'
-#' @param data The vector of continuous cutoff values that index each dynamic treatment rule
-#' @param theta Input data.frame or data.table in long format, see below for the description of the assumed format.
+#' @param data Input data.frame or data.table in long format, see below for the description of the assumed format.
+#' @param theta The vector of continuous cutoff values that index each dynamic treatment rule
 #' @param ID The name of the unique subject identifier
 #' @param t The name of the variable indicating time-period
 #' @param I Continuous biomarker variable used for determining the treatmet decision rule

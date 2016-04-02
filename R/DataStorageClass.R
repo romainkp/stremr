@@ -426,6 +426,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     convert.to.wide = function(bslcovars) {
       # dt = rbind(data.table(ID=1, x=sample(5,20,TRUE), y = sample(5,20,TRUE), t=1:20), data.table(ID=2, x=sample(5,15,TRUE), y = sample(5,15,TRUE), t=1:15))
       # dcast(dt, formula="ID ~ t", value.var=c("x", "y"), sep="_")
+      nodes <- self$nodes
       cast.vars <- c(nodes$Lnodes,nodes$Cnodes, nodes$Anodes, nodes$Nnodes, nodes$Ynode)
       if (!missing(bslcovars)) cast.vars <- setdiff(cast.vars, bslcovars)
       odata_wide <- dcast(OData$dat.sVar, formula = nodes$ID %+% " ~ " %+% nodes$tnode, value.var = cast.vars)
