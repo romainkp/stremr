@@ -314,14 +314,23 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
     covars <- setdiff(colnames(data), c(ID, t, CENS, TRT, MONITOR, OUTCOME))
   }
   # The ordering of variables in this list is the assumed temporal order!
-  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME)
+  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
+
+  # ---------------------------------------------------------------------------
+  # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
+  # Might expand this in the future to allow defining arbitrary summaries
+  # ---------------------------------------------------------------------------
+  lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
+  newVarnames <- lagnodes %+% ".tminus1"
+  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
+  # rule1: (C == 0L) & ((A.tminus1 == 1L & A == 1) | (N.tminus1 == 0 & A.tminus1 == A) | (N.tminus1 == 1 & ((I >= d.theta & A-A.tminus1 == 1L) | (I < d.theta & A == 0L & A.tminus1 == 0L))))
 
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
   for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
-  for (Ynode in nodes$Ynode)   CheckVarNameExists(OData$dat.sVar, Ynode)
-  for (Lnode in nodes$Lnodes)  CheckVarNameExists(OData$dat.sVar, Lnode)
+  for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
+  for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
   g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = nodes)
   g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = nodes)
@@ -341,19 +350,19 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   ALL.g.regs$S3class <- "generic"
   # using S3 method dispatch on ALL.g.regs:
   summeas.g0 <- newsummarymodel(reg = ALL.g.regs, DatNet.sWsA.g0 = OData)
+  # browser()
+
+  # EVALUATING SUBSETTING EXPRESSIONS:
+  # subs_expr1 <- "t == 0L"
+  # subs_expr2 <- "t > 0L"
+  # subs_expr3 <- "t > 0L & " %+% nodes$Anodes[1] %+% ".tminus1 == 1L"
+  # subset_idx <- OData$dat.sVar[, eval(parse(text=subs_expr3)), by = get(nodes$ID)][["V1"]]
+  # OData$dat.sVar[, subset_idx:=eval(parse(text=subs_expr3)), by = get(nodes$ID)]
 
   summeas.g0$fit(data = OData)
   h_gN <- summeas.g0$predictAeqa(newdata = OData)
 
-  # browser()
-  # ALL.g.regs <- RegressionClass$new(outvar = nodes$Ynode,
-  #                                                         predvars = Q.sVars$predvars[[1]],
-  #                                                         subset = !determ.Q,
-  #                                                         ReplMisVal0 = TRUE)
-  # m.Q.init <- BinOutModel$new(glm = FALSE, reg = Qreg)$fit(data = OData)
-
   # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
-
   # - Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
 
   # - When CENS[i] is binary and length(CENS)>1:
@@ -372,7 +381,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
 
 
 # - consider new dcast.data.table features in v1.9.7. Could be useful for fast conversion to wide format -> use simcusal interface for creating summaries -> back to long format with melt.data.table.
- # now allows drop = c(FALSE, TRUE) and drop = c(TRUE, FALSE). The former only fills all missing combinations of formula LHS, where as the latter fills only all missing combinations of formula RHS.
+# now allows drop = c(FALSE, TRUE) and drop = c(TRUE, FALSE). The former only fills all missing combinations of formula LHS, where as the latter fills only all missing combinations of formula RHS.
 # Thanks to Ananda Mahto for this SO post and to Jaap for filing #1512.
 # http://stackoverflow.com/questions/34830908/make-the-drop-argument-in-dcast-only-look-at-the-rhs-of-the-formula
 # https://github.com/Rdatatable/data.table
@@ -381,6 +390,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
 # - specifically look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
 
 
+return(list(summeas.g0 = summeas.g0, OData = OData, ALL.g.regs = ALL.g.regs, h_gN = h_gN))
 }
 
 

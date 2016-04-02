@@ -114,7 +114,7 @@ RegressionClass <- R6Class("RegressionClass",
                                     # (2) regression-specific predictor names; or
                                     # (3) list (of length(outvar)) of several predicator vectors, each such set is used as a separate regression for a node name in outvar
     reg_hazard = FALSE,            # If TRUE, the joint P(outvar|predvars) is factorized as \prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard)
-    subset = NULL,                 # subset expression (later evaluated to logical vector in the envir of the data)
+    subset = NULL,                 # subset variables (later these vars are tested for missing values, which forms the basis of the logical subset vector)
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
     nbins = NULL,                  # actual nbins used, for cont. outvar, defined in ContinSummaryModel$new()
     bin_nms = NULL,                # column names for bin indicators
