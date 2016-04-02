@@ -109,7 +109,7 @@ process_regform <- function(regform, sVar.map = NULL) {
   sW.names <- attributes(regformterms)$term.labels
   sW.names.alt <- colnames(attributes(regformterms)$factors)
   assert_that(all(sW.names == sW.names.alt))
-  # Getting outcomes (sA names):
+  # Getting OUTCOMEs (sA names):
   out.var <- rownames(attributes(regformterms)$factors)[1] # character string
   out.vars.form <- as.formula(". ~ " %+% out.var)
   out.vars.terms <- terms(out.vars.form)
@@ -151,7 +151,7 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #'  Implements the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimator of the discrete survival hazard function which is mapped into survival function.
 #' @param data Observed data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
 #'  the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
-#'  and the survival outcomes variable (\code{outcome}).
+#'  and the survival OUTCOME variable (\code{OUTCOME}).
 # @param estimators (NOT IMPLEMENTED) Character vector with estimator names.
 #' @param ID Unique subject identifier variable in the input data.
 #' @param t The name of the time/period variable in the input data.
@@ -165,7 +165,7 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #' Note that factors are not allowed in \code{CENS}.
 #' @param TRT Exposure/treatment variable(s) in input data.
 #' @param MONITOR Monitoring variable(s) in input data.
-#' @param outcome  Survival outcome variable name (column name in \code{data}).
+#' @param OUTCOME  Survival OUTCOME variable name (column name in \code{data}).
 #' @param noCENS.cat Defaults to 0. Use this to modify the reference category (no CENSoring / continuation of follow-up)
 #' for categorical CENSoring variables specifed in \code{CENS}.
 #' @param gform.TRT  Regression formula(s) for propensity score for the exposure/treatment(s): P(A(t) | W). See Details.
@@ -179,7 +179,7 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #'  \code{alpha}, \code{lbound}, \code{family}, \code{YnodeDET},
 #'  \code{h_g0_SummariesModel} and \code{h_gstar_SummariesModel}. See Details below for the description of each parameter.
 # (REMOVED) \code{n_MCsims}
-#((NOT IMPLEMENTED)) @param Q.SL.library SuperLearner libraries for outcome, Q
+#((NOT IMPLEMENTED)) @param Q.SL.library SuperLearner libraries for OUTCOME, Q
 #((NOT IMPLEMENTED)) @param g.SL.library SuperLearner libraries for treatment mechanism, g
 # @param sW Summary measures constructed from baseline covariates alone. This must be an object of class
 #  \code{DefineSummariesClass} that is returned by calling the function \code{\link{def_sW}}.
@@ -200,7 +200,7 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 # @param intervene2.sA
 # @param f_gstar2 Either a function or a vector of counterfactual exposure assignments.
 #  Used for estimating contrasts (average treatment effect) for two interventions, if omitted, only the average
-#  counterfactual outcome under intervention \code{f_gstar1} is estimated. The requirements for \code{f_gstar2}
+#  counterfactual OUTCOME under intervention \code{f_gstar1} is estimated. The requirements for \code{f_gstar2}
 #  are identical to those for \code{f_gstar1}.
 #'
 #' @section Details:
@@ -263,8 +263,8 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #'
 #' @return A named list with 3 items containing the estimation results for:
 #'  \itemize{
-#'  \item \code{EY_gstar1} - estimates of the mean counterfactual outcome under (stochastic) intervention function \code{f_gstar1} \eqn{(E_{g^*_1}[Y])}.
-#'  \item \code{EY_gstar2} - estimates of the mean counterfactual outcome under (stochastic) intervention function \code{f_gstar2} \eqn{(E_{g^*_2}[Y])},
+#'  \item \code{EY_gstar1} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar1} \eqn{(E_{g^*_1}[Y])}.
+#'  \item \code{EY_gstar2} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar2} \eqn{(E_{g^*_2}[Y])},
 #'    \code{NULL} if \code{f_gstar2} not specified.
 #'  \item \code{ATE} - additive treatment effect (\eqn{E_{g^*_1}[Y]} - \eqn{E_{g^*_2}[Y]}) under interventions \code{f_gstar1}
 #'    vs. in \code{f_gstar2}, \code{NULL} if \code{f_gstar2} not specified.
@@ -274,8 +274,8 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #'  \itemize{
 #'  \item \code{estimates} - various estimates of the target parameter (network population counterfactual mean under
 #'    (stochastic) intervention).
-#'  \item \code{vars} - the asymptotic variance estimates, for \strong{IPTW} and \strong{TMLE}.
-#'  \item \code{CIs} - CI estimates at \code{alpha} level, for \strong{IPTW} and \strong{TMLE}.
+#'  \item \code{vars} - the asymptotic variance estimates for \strong{IPTW}.
+#'  \item \code{CIs} - CI estimates at \code{alpha} level for \strong{IPTW}.
 #'  \item \code{other.vars} - Placeholder for future versions.
 # \item \code{h_g0_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under observed exposure mechanism
 #    \code{g0}. This is an object of \code{SummariesModel} \pkg{R6} class.
@@ -291,7 +291,7 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #' @example tests/examples/1_estimtr_example.R
 #' @export
 estimtr <- function(data, ID = "Subj_ID", t = "time_period",
-                              covars, CENS = "C", TRT = "A", MONITOR = "N", outcome = "Y",
+                              covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                               gform.CENS, gform.TRT, gform.MONITOR, noCENS.cat = 0L,
                               stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE, optPars = list()) {
 
@@ -299,10 +299,10 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   gform.TRT.default <- "Anodes ~ Lnodes"
   gform.MONITOR.default <- "Nnodes ~ Anodes + Lnodes"
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
-    covars <- setdiff(colnames(data), c(ID, t, CENS, TRT, MONITOR, outcome))
+    covars <- setdiff(colnames(data), c(ID, t, CENS, TRT, MONITOR, OUTCOME))
   }
   # The ordering of variables in this list is the assumed temporal order!
-  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = outcome)
+  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
 
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
@@ -347,7 +347,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
     # (2) An alternative: collapse CENS into a categorical (automatically), based on the ordering in CENS. Then the fitting of categoricals will perform all the subsetting correctly.
     # (3) Alternative: set the indicators of missingness in the right way for CENS[i] if any CENS[1], ..., CENS[i-1] are 1.
 
-  # - Stratification - allows K models on the SAME outcome by stratifying rule
+  # - Stratification - allows K models on the SAME OUTCOME by stratifying rule
     # (1) User specified rule function creates strata. (stratify.CENS, stratify.TRT, stratify.MONITOR) Note that if the rule is based on data.table syntax it will be VERY FAST!
     # A nice trick would be to be able to AUTOMATICALLY convert logical subset expressions to data.table statements -> Its possible with some meta-programming and parsing
     # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
