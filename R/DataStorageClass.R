@@ -429,7 +429,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       nodes <- self$nodes
       cast.vars <- c(nodes$Lnodes,nodes$Cnodes, nodes$Anodes, nodes$Nnodes, nodes$Ynode)
       if (!missing(bslcovars)) cast.vars <- setdiff(cast.vars, bslcovars)
-      odata_wide <- dcast(OData$dat.sVar, formula = nodes$ID %+% " ~ " %+% nodes$tnode, value.var = cast.vars)
+      odata_wide <- dcast(self$dat.sVar, formula = nodes$ID %+% " ~ " %+% nodes$tnode, value.var = cast.vars)
     return(odata_wide)
     }
 
