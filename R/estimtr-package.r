@@ -28,7 +28,7 @@
 #' Check for updates and report bugs at \url{http://github.com/osofr/estimtr}.
 #'
 #' @docType package
-#' @name estimtr
+#' @name estimtr-package
 #'
 NULL
 

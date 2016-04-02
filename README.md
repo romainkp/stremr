@@ -6,7 +6,7 @@ estimtr
 [![Travis-CI Build Status](https://travis-ci.org/osofr/estimtr.svg?branch=master)](https://travis-ci.org/osofr/estimtr)
 [![Coverage Status](https://coveralls.io/repos/osofr/estimtr/badge.svg?branch=master&service=github)](https://coveralls.io/github/osofr/estimtr?branch=master)
 
-The `estimtr` R package implementes the Inverse Probability Weighted Estimator (IPTW) of the causal survival hazard function for longitudinal right-censored data. The user-specified interventions on time-varying exposures and monitoring variables can be either stochastic, dynamic or static. The exposure, monitoring and censoring can be binary, categorical or multivariate (e.g., can use more than one column of dummy indicators for different censoring events or can code such censoring events with a single categorical censoring variable). The output includes the estimated survival curve, which is obtained as a mapping from the estimated discrete hazard function. When several interventions for exposure/monitoring are specified, the package will produce one survivial estimate for each intervention. The input data needs to be in long format, with a specific **fixed** temporal ordering of the variables (see documentation in `?estimtr` for additional details.
+The `estimtr` R package implementes the Inverse Probability Weighted Estimator (IPTW) of the causal survival hazard function for longitudinal right-censored data. The user-specified interventions on time-varying exposures and monitoring variables can be either stochastic, dynamic or static. The exposure, monitoring and censoring can be binary, categorical or multivariate (e.g., can use more than one column of dummy indicators for different censoring events or can code such censoring events with a single categorical censoring variable). The output includes the estimated survival curve, which is obtained as a mapping from the estimated discrete hazard function. When several interventions for exposure/monitoring are specified, the package will produce one survivial estimate for each intervention. The input data needs to be in long format, with a specific **fixed** temporal ordering of the variables.
 
 ### Installation
 
@@ -25,7 +25,17 @@ devtools::install_github('osofr/estimtr', build_vignettes = FALSE)
 
 ### Documentation
 
-...
+ For the general overview of the package:
+
+```R
+?estimtr-package
+```
+
+For specific documentation on how to run `estimtr()` function:
+```R
+?estimtr
+```
+
 <!-- Once the package is installed, see the [vignette](http://cran.r-project.org/web/packages/estimtr/vignettes/estimtr_vignette.pdf), consult the internal package documentation and examples. 
 
 * To see the vignette in R:
