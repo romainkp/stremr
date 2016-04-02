@@ -134,24 +134,10 @@ gvars$misfun <- testmisfun()
 .onAttach <- function(...) {
   if (interactive()) {
   	packageStartupMessage('estimtr')
-  	packageStartupMessage('Version: ', utils::packageDescription('estimtr')$Version)
+  	# packageStartupMessage('Version: ', utils::packageDescription('estimtr')$Version)
   	packageStartupMessage('Package created on ', utils::packageDescription('estimtr')$Date, '\n')
   	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/estimtr.', '\n')
-  	packageStartupMessage('To see the vignette use vignette("estimtr_vignette", package="estimtr"). To see all available package documentation use help(package = "estimtr") and ?estimtr.', '\n')
-  	packageStartupMessage('To see the latest updates for this version, use news(package = "estimtr").', '\n')
+  	# packageStartupMessage('To see the vignette use vignette("estimtr_vignette", package="estimtr"). To see all available package documentation use help(package = "estimtr") and ?estimtr.', '\n')
+  	# packageStartupMessage('To see the latest updates for this version, use news(package = "estimtr").', '\n')
   }
 }
-
-# Runs when loaded but not attached to search() path; e.g., when a package just Imports (not Depends on) estimtr
-.onLoad <- function(libname, pkgname) {
-    # Set estimtr package options, # estimtr.<argument name>
-    opts = c("estimtr.verbose"="TRUE"
-            )
-    for (i in setdiff(names(opts),names(options()))) {
-        eval(parse(text=paste("options(",i,"=",opts[i],")",sep="")))
-    }
-    invisible()
-}
-
-# .onUnload <- function(libpath) {
-# }

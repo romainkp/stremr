@@ -3,6 +3,7 @@
 .RData
 .DS_Store
 inst/doc
+src/*.o
 README.html
 tests/*.pdf
 tests/RUnit/*.html

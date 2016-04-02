@@ -160,10 +160,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
   portable = TRUE,
   class = TRUE,
   public = list(
-    noCENS.cat = 0L,
-    YnodeVals = NULL,           # Values of the binary outcome (Ynode) in observed data where det.Y = TRUE obs are set to NA
-    det.Y = NULL,                   # Logical vector, where YnodeVals[det.Y==TRUE] are deterministic (0 or 1)
-    curr_data_A_g0 = TRUE,   # is the current data in OdataDT generated under observed (g0)? If FALSE, current data is under g.star (intervention)
+    noCENS.cat = 0L,        # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables
+    YnodeVals = NULL,       # Values of the binary outcome (Ynode) in observed data where det.Y = TRUE obs are set to NA
+    det.Y = NULL,           # Logical vector, where YnodeVals[det.Y==TRUE] are deterministic (0 or 1)
+    curr_data_A_g0 = TRUE,  # is the current data in OdataDT generated under observed (g0)? If FALSE, current data is under g.star (intervention)
 
     initialize = function(Odata, nodes, YnodeVals, det.Y, noCENS.cat,...) {
       assert_that(is.data.frame(Odata) | is.data.table(Odata))
@@ -179,7 +179,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
       if (!missing(YnodeVals)) self$addYnode(YnodeVals = YnodeVals, det.Y = det.Y)
 
-      self$def.types.sVar(type.sVar) # Define the type of each sVar[i]: bin, cat or cont
+      self$def.types.sVar() # Define the type of each sVar[i]: bin, cat or cont
 
       invisible(self)
     },
@@ -361,7 +361,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # type.sVar acts as a flag: only detect types when !is.null(type.sVar), otherwise can pass type.sVar = list(sVar = NA, ...) or a value type.sVar = NA/gvars$sVartypes$bin/etc
     def.types.sVar = function(type.sVar = NULL) {
       if (is.null(type.sVar)) {
-        self$type.sVar <- detect.col.types(self$dat.sVar)
+        private$.type.sVar <- detect.col.types(self$dat.sVar)
       } else {
         n.sVar <- length(self$names.sVar)
         len <- length(type.sVar)
@@ -379,7 +379,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       invisible(self)
     },
     set.sVar.type = function(name.sVar, new.type) { private$.type.sVar[[name.sVar]] <- new.type },
-    get.sVar.type = function(name.sVar) { if (missing(name.sVar)) { self$type.sVar } else { self$type.sVar[[name.sVar]] } },
+    get.sVar.type = function(name.sVar) { if (missing(name.sVar)) { private$.type.sVar } else { private$.type.sVar[[name.sVar]] } },
     is.sVar.bin = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$bin },
     is.sVar.cat = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cat },
     is.sVar.cont = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cont },
@@ -465,14 +465,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
   ),
   private = list(
-    .nodes = list(),                          # names of the nodes in the data (Anode, Ynode, etc..)
+    .nodes = list(),              # names of the nodes in the data (Anode, Ynode, etc..)
     .protected.YnodeVals = NULL,  # Actual observed values of the binary outcome (Ynode), along with deterministic vals
-    .mat.sVar = NULL,                    # Data.table storing all evaluated sVars, with named columns
-    .active.bin.sVar = NULL,           # Name of active binarized cont sVar, changes as fit/predict is called (bin indicators are temp. stored in mat.bin.sVar)
-    .mat.bin.sVar = NULL,              # Temporary storage mat for bin indicators on currently binarized continous sVar (from private$.active.bin.sVar)
-    .ord.sVar = NULL,                     # Ordinal (cat) transform for continous sVar
-    # sVar.object = NULL,              # DefineSummariesClass object that contains / evaluates sVar expressions
-    .type.sVar = NULL,                   # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
+    .mat.sVar = NULL,             # Data.table storing all evaluated sVars, with named columns
+    .active.bin.sVar = NULL,      # Name of active binarized cont sVar, changes as fit/predict is called (bin indicators are temp. stored in mat.bin.sVar)
+    .mat.bin.sVar = NULL,         # Temporary storage mat for bin indicators on currently binarized continous sVar (from private$.active.bin.sVar)
+    .ord.sVar = NULL,             # Ordinal (cat) transform for continous sVar
+    # sVar.object = NULL,         # DefineSummariesClass object that contains / evaluates sVar expressions
+    .type.sVar = NULL,            # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
     # Replace all missing (NA) values with a default integer (0) for matrix
     fixmiss_sVar_mat = function() {
       self$dat.sVar[gvars$misfun(self$dat.sVar)] <- gvars$misXreplace
@@ -633,6 +633,6 @@ DatNetStorageClass <- R6Class(classname = "DatNetStorageClass",
     .A_g0_DT = NULL,              # Backed-up versions of the Anodes vars that come from the observed data
     .sA_g0_DT = NULL,             # Backed-up versions of the summaries in sA (but not Anodes) that come from the observed data
     .save_sA_Vars = NULL,         # Summary measure variables that were pre-saved (backed-up) and were not part of new.sA (Anodes)
-    .restored_sA_Vars = FALSE   # Were the summary measures (not Anodes) restored as well? If not, they need to be reconstructed
+    .restored_sA_Vars = FALSE     # Were the summary measures (not Anodes) restored as well? If not, they need to be reconstructed
   )
 )

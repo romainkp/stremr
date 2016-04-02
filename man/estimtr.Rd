@@ -41,8 +41,9 @@ Note that factors are not allowed in \code{CENS}.}
 \item{gform.MONITOR}{Regression formula(s) for estimating the propensity score for the MONITORing process: P(N(t) | W). See Details.
 (the observed exposure mechanism), When omitted the regression is defined by \code{sA~sW}, where \code{sA}}
 
-\item{noCENS.cat}{Defaults to 0. Use this to modify the reference category (no CENSoring / continuation of follow-up)
-for categorical CENSoring variables specifed in \code{CENS}.}
+\item{noCENS.cat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
+Use this to modify the default reference category (no CENSoring / continuation of follow-up)
+for variables specifed in \code{CENS}.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(estimtr.verbose=TRUE)}.}
 

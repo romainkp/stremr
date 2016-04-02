@@ -191,7 +191,7 @@ BinDat <- R6Class(classname = "BinDat",
     },
 
     newdata = function(newdata, getoutvar = TRUE, ...) {
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       # CALL self$setdata.long() when: 1) self$pool_cont is TRUE & 2) more than one outvars_to_pool
       if (self$pool_cont && length(self$outvars_to_pool)>1) {
         self$setdata.long(data = newdata, ...)
@@ -227,7 +227,7 @@ BinDat <- R6Class(classname = "BinDat",
     # Sets X_mat, Yvals, evaluates subset and performs correct subseting of data
     # everything is performed using data$ methods (data is of class DatNet.sWsA)
     setdata = function(data, getoutvar, ...) {
-      assert_that(is.DatNet.sWsA(data))
+      assert_that(is.DataStorageClass(data))
       self$n <- data$nobs
       self$subset_idx <- self$define.subset_idx(data)
       if (getoutvar) private$Y_vals <- data$get.outvar(self$subset_idx, self$outvar) # Always a vector
@@ -244,7 +244,7 @@ BinDat <- R6Class(classname = "BinDat",
     },
 
     setdata.long = function(data, ...) {
-      assert_that(is.DatNet.sWsA(data))
+      assert_that(is.DataStorageClass(data))
       self$n <- data$nobs
       self$subset_idx <- self$define.subset_idx(data)
       if (!(data$active.bin.sVar %in% self$outvar)) { stop("currently binirized sVar does not match self$outvar argument") }

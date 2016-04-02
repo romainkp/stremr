@@ -392,7 +392,7 @@ SummariesModel <- R6Class(classname = "SummariesModel",
     getcumprodAeqa = function() { private$cumprodAeqa },  # get joint prob as a vector of the cumulative prod over j for P(sA[j]=a[j]|sW)
 
     fit = function(data) {
-      assert_that(is.DatNet.sWsA(data))
+      assert_that(is.DataStorageClass(data))
       # serial loop over all regressions in PsAsW.models:
       if (!self$parfit_allowed) {
         for (k_i in seq_along(private$PsAsW.models)) {
@@ -420,7 +420,7 @@ SummariesModel <- R6Class(classname = "SummariesModel",
       if (missing(newdata)) {
         stop("must provide newdata")
       }
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       # serial loop over all regressions in PsAsW.models:
       if (!self$parfit_allowed) {
         for (k_i in seq_along(private$PsAsW.models)) {
@@ -449,7 +449,7 @@ SummariesModel <- R6Class(classname = "SummariesModel",
     # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
     predictAeqa = function(newdata, ...) {
       assert_that(!missing(newdata))
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       n <- newdata$nobs
       if (!self$parfit_allowed) {
         cumprodAeqa <- rep.int(1, n)
@@ -473,7 +473,7 @@ SummariesModel <- R6Class(classname = "SummariesModel",
     sampleA = function(newdata, ...) {
       # stop("not implemented")
       assert_that(!missing(newdata))
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       n <- newdata$nobs
 
       # loop over all regressions in PsAsW.models, sample CONDITIONALLY on observations that haven't been put in a specific bin yet
@@ -635,14 +635,14 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       self$reg <- reg
       self$outvar <- reg$outvar
       if (is.null(reg$intrvls)) {
-        assert_that(is.DatNet.sWsA(DatNet.sWsA.g0))
+        assert_that(is.DataStorageClass(DatNet.sWsA.g0))
         self$intrvls <- DatNet.sWsA.g0$detect.sVar.intrvls(reg$outvar,
                                                       nbins = self$reg$nbins,
                                                       bin_bymass = self$reg$bin_bymass,
                                                       bin_bydhist = self$reg$bin_bydhist,
                                                       max_nperbin = self$reg$max_nperbin)
         if (!missing(DatNet.sWsA.gstar)) {
-          assert_that(is.DatNet.sWsA(DatNet.sWsA.gstar))
+          assert_that(is.DataStorageClass(DatNet.sWsA.gstar))
           gstar.intrvls <- DatNet.sWsA.gstar$detect.sVar.intrvls(reg$outvar,
                                                       nbins = self$reg$nbins,
                                                       bin_bymass = self$reg$bin_bymass,
@@ -674,7 +674,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
     # Transforms data for continous outcome to discretized bins sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data) {
-      assert_that(is.DatNet.sWsA(data))
+      assert_that(is.DataStorageClass(data))
       # Binirizes & saves binned matrix inside DatNet.sWsA
       data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
       if (gvars$verbose) {
@@ -694,7 +694,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       if (missing(newdata)) {
         stop("must provide newdata")
       }
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       if (gvars$verbose) print("performing prediction for continuous outcome: " %+% self$outvar)
       # mat_bin doesn't need to be saved (even though its invisibly returned); mat_bin is automatically saved in datnet.sW.sA - a potentially dangerous side-effect!!!
       newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
@@ -706,7 +706,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
     # Convert contin. sA vector into matrix of binary cols, then call parent class method: super$predictAeqa()
     # Invisibly return cumm. prob P(sA=sa|sW=sw)
     predictAeqa = function(newdata) { # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a`s)
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
       bws <- newdata$get.sVar.bw(name.sVar = self$outvar, intervals = self$intrvls)
@@ -789,7 +789,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
       # all predvars remain unchanged
       if (is.null(reg$levels)) {
-        assert_that(is.DatNet.sWsA(DatNet.sWsA.g0))
+        assert_that(is.DataStorageClass(DatNet.sWsA.g0))
         self$levels <- self$reg$levels <- DatNet.sWsA.g0$detect.cat.sVar.levels(reg$outvar)
       } else {
         self$levels <- self$reg$levels
@@ -808,7 +808,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
     # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data) {
-      assert_that(is.DatNet.sWsA(data))
+      assert_that(is.DataStorageClass(data))
       # Binirizes & saves binned matrix inside DatNet.sWsA for categorical sVar
       data$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
       if (gvars$verbose) {
@@ -828,7 +828,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       if (missing(newdata)) {
         stop("must provide newdata")
       }
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
       newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
       super$predict(newdata)
@@ -839,7 +839,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
     # Invisibly return cumm. prob P(sA=sa|sW=sw)
     # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
     predictAeqa = function(newdata) {
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
       newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
       cumprodAeqa <- super$predictAeqa(newdata = newdata)
@@ -851,7 +851,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
 
     sampleA = function(newdata) {
       # stop("not implemented")
-      assert_that(is.DatNet.sWsA(newdata))
+      assert_that(is.DataStorageClass(newdata))
       # bring the sampled variable back to its original scale / levels:
       sampleA <- self$levels[super$sampleA(newdata = newdata)]
       return(sampleA)

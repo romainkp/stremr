@@ -1,4 +1,7 @@
+
+#' @useDynLib estimtr
 #' @import R6
+#' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is
 #' @importFrom stats approx binomial coef glm.control glm.fit plogis predict qlogis qnorm quantile rnorm terms var predict glm.control
@@ -166,8 +169,9 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #' @param TRT Exposure/treatment variable(s) in input data.
 #' @param MONITOR Monitoring variable(s) in input data.
 #' @param OUTCOME  Survival OUTCOME variable name (column name in \code{data}).
-#' @param noCENS.cat Defaults to 0. Use this to modify the reference category (no CENSoring / continuation of follow-up)
-#' for categorical CENSoring variables specifed in \code{CENS}.
+#' @param noCENS.cat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
+#' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
+#' for variables specifed in \code{CENS}.
 #' @param gform.TRT  Regression formula(s) for propensity score for the exposure/treatment(s): P(A(t) | W). See Details.
 #' @param gform.CENS  Regression formula(s) for estimating the propensity score for the censoring mechanism: P(C(t) | W). See Details.
 #' @param gform.MONITOR  Regression formula(s) for estimating the propensity score for the MONITORing process: P(N(t) | W). See Details.
@@ -295,6 +299,14 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
                               gform.CENS, gform.TRT, gform.MONITOR, noCENS.cat = 0L,
                               stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE, optPars = list()) {
 
+  gvars$verbose <- TRUE
+  # if (verbose) {
+    message("Running with the following setting: ");
+    str(gvars$opts)
+    # message("Running tmlenet with the following settings from optPars arg of tmlenet(): ");
+    # str(optPars)
+  # }
+
   gform.CENS.default <- "Cnodes ~ Lnodes"
   gform.TRT.default <- "Anodes ~ Lnodes"
   gform.MONITOR.default <- "Nnodes ~ Anodes + Lnodes"
@@ -322,16 +334,18 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   all_outVar_class <- lapply(all_outVar_nms, function(outVar_nm) OData$type.sVar[outVar_nm])
 
   ALL.g.regs <- RegressionClass$new(sep_predvars_sets = TRUE,
-                                                            outvar.class = all_outVar_class,
-                                                            outvar = all_outVar_nms,
-                                                            predvars = all_predVar_nms,
-                                                            subset = all_subsets_expr)
-  regclass.g0$S3class <- "generic"
-  # using S3 method dispatch on regclass.g0:
+                                    outvar.class = all_outVar_class,
+                                    outvar = all_outVar_nms,
+                                    predvars = all_predVar_nms,
+                                    subset = all_subsets_expr)
+  ALL.g.regs$S3class <- "generic"
+  # using S3 method dispatch on ALL.g.regs:
   summeas.g0 <- newsummarymodel(reg = ALL.g.regs, DatNet.sWsA.g0 = OData)
+
   summeas.g0$fit(data = OData)
   h_gN <- summeas.g0$predictAeqa(newdata = OData)
 
+  # browser()
   # ALL.g.regs <- RegressionClass$new(outvar = nodes$Ynode,
   #                                                         predvars = Q.sVars$predvars[[1]],
   #                                                         subset = !determ.Q,
