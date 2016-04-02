@@ -1,0 +1,59 @@
+#----------------------------------------------------------------
+# Travis-CI configuration for R packages
+#
+# REFERENCES:
+# * Travis CI: https://travis-ci.org/
+# * native R support: https://github.com/craigcitro/r-travis
+# * examples: https://github.com/craigcitro/r-travis/wiki/Porting-to-native-R-support-in-Travis
+# * r-builder: https://github.com/metacran/r-builder
+# * covr: https://github.com/jimhester/covr
+# * Coveralls: https://coveralls.io/
+#
+# Validate your .travis.yml file at http://lint.travis-ci.org/
+#----------------------------------------------------------------
+
+language: r
+warnings_are_errors: false
+# r_build_args: "--compact-vignettes"
+# r_check_args: "--as-cran"
+r_build_args: "--no-build-vignettes --no-manual"
+r_check_args: "--no-build-vignettes --no-manual --as-cran"
+
+sudo: required
+
+os:
+  - linux
+  # - osx
+
+r_binary_packages:
+  - knitr
+  - data.table
+  - RUnit
+  - igraph
+  - ggplot2
+  - Hmisc
+  - mvtnorm
+  - copula
+
+r_github_packages:
+  - jimhester/covr
+
+r_packages:
+  - ltmle
+  - bindata
+
+env:
+ global:
+   - CRAN: http://cran.rstudio.com
+
+after_success:
+  - Rscript -e 'covr::coveralls()'
+
+on_failure:
+  - ./travis-tool.sh dump_logs
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
+
