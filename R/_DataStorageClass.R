@@ -114,8 +114,8 @@ make.bins_mtx_1 <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins) {
 #' @keywords R6 class
 #' @details
 #' #' \itemize{
-#' \item{\code{YnodeVals}} - .
-#' \item{\code{det.Y}} - .
+#'    \item{\code{YnodeVals}}
+#'    \item{\code{det.Y}}
 #' }
 #' @section Methods:
 #' \describe{

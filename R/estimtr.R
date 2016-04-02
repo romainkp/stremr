@@ -145,17 +145,17 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #---------------------------------------------------------------------------------
 # MAIN estimtr FUNCTION
 #---------------------------------------------------------------------------------
-#' Estimate the Survival of Intervention on Exposures and MONITORing Process for Right Censored Longitudinal Data.
+#' Estimate Survival with Interventions on Exposure and MONITORing Process in Right Censored Longitudinal Data.
 #'
-#' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment exposure regime and  among dependent units with known network structure (in presence of
-#'  interference and/or spillover) using \strong{TMLE} (targeted maximum likelihood estimation), \strong{IPTW}
-#'  (Horvitz-Thompson or the inverse-probability-of-treatment).
-#' @param data Observed data, a \code{data.frame} with named columns, containing the baseline covariates,
-#'  exposures (\code{Anodes}), the outcomes (\code{Ynode}) and possibly the network column (\code{NETIDnode}), where
-#'  network is specified by a vector of strings of friend IDs, each string using \code{optPars$sep} character to separate different friend IDs
-#'  (default is \code{optPars$sep=' '}).
+#' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring process.
+#'  Implements the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimator of the discrete survival hazard function which is mapped into survival function.
+#' @param data Observed data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
+#'  the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
+#'  and the survival outcomes variable (\code{outcome}).
 # @param estimators (NOT IMPLEMENTED) Character vector with estimator names.
-#' @param CENS The name(s) of the CENSoring variable or variables.
+#' @param ID Unique subject identifier variable in the input data.
+#' @param t The name of the time/period variable in the input data.
+#' @param CENS CENSoring variable(s) in the input data.
 #' Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
 #' For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).
 #' For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of follow-up and other
@@ -163,35 +163,11 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #' Use the argument \code{noCENS.cat} to change the reference (continuation of follow-up) category from default 0 to any other value.
 #' (NOTE: Changing \code{noCENS.cat} has zero effect on coding of the binary CENSoring variables, those have to always use 1 to code the CENSoring event).
 #' Note that factors are not allowed in \code{CENS}.
+#' @param TRT Exposure/treatment variable(s) in input data.
+#' @param MONITOR Monitoring variable(s) in input data.
+#' @param outcome  Survival outcome variable name (column name in \code{data}).
 #' @param noCENS.cat Defaults to 0. Use this to modify the reference category (no CENSoring / continuation of follow-up)
 #' for categorical CENSoring variables specifed in \code{CENS}.
-# @param sW Summary measures constructed from baseline covariates alone. This must be an object of class
-#  \code{DefineSummariesClass} that is returned by calling the function \code{\link{def_sW}}.
-# @param sA Summary measures constructed from exposures \code{Anodes} and baseline covariates. This must be an object of class
-#  \code{DefineSummariesClass} that is returned by calling the function \code{\link{def_sW}}.
-# @param Anodes Exposure (treatment) variable name (column name in \code{data}); exposures can be either binary, categorical or continuous.
-#  This variable can be instead specified with argument \code{sA} by adding a call \code{+def_sA(Anodes="ExposureVarName")} to \code{sA}.
-# @param AnodeDET Optional column name for indicators of deterministic values of exposures in \code{Anodes},
-#  should be coded as (\code{TRUE}/\code{FALSE}) or (\code{1}/\code{0});
-#  observations with \code{AnodeDET}=\code{TRUE}/\code{1} are assumed to have deterministically assigned exposures
-#' @param Ynode  Outcome variable name (column name in \code{data}), assumed normalized between 0 and 1. This can instead be specified
-#'  on the left-side of the regression formula in argument \code{Qform}.
-#' @param ID Unique subject identifier variable in the input data.
-# @param intervene1.sA
-# @param f_gstar1 Either a function or a vector of counterfactual exposures. If a function, must return
-#  a vector of counterfactual exposures evaluated based on the summary measures matrix (\code{sW,sA}) passed as a named
-#  argument \code{"data"}, therefore, the function in \code{f_gstar1} must have a named argument \code{"data"} in its signature.
-#  The interventions defined by \code{f_gstar1} can be static, dynamic or stochastic. If \code{f_gstar1} is specified as a
-#  vector, it must be of length \code{nrow(data)} or 1 (constant treatment assigned to all observations).
-#  See Details below and Examples in "EQUIVALENT WAYS OF SPECIFYING INTERVENTION \code{f_gstar1}" for demonstration.
-# @param intervene2.sA
-# @param f_gstar2 Either a function or a vector of counterfactual exposure assignments.
-#  Used for estimating contrasts (average treatment effect) for two interventions, if omitted, only the average
-#  counterfactual outcome under intervention \code{f_gstar1} is estimated. The requirements for \code{f_gstar2}
-#  are identical to those for \code{f_gstar1}.
-# @param nFnode (Optional) Name of the variable for the number of friends each unit has, this name can then be used
-#  inside the summary measures and regression formulas \code{sW}, \code{sA}, \code{Qform}, \code{hform.g0},
-#  \code{hform.gstar} and \code{gform}. See Details.
 #' @param gform.TRT  Regression formula(s) for propensity score for the exposure/treatment(s): P(A(t) | W). See Details.
 #' @param gform.CENS  Regression formula(s) for estimating the propensity score for the censoring mechanism: P(C(t) | W). See Details.
 #' @param gform.MONITOR  Regression formula(s) for estimating the propensity score for the MONITORing process: P(N(t) | W). See Details.
@@ -205,6 +181,27 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 # (REMOVED) \code{n_MCsims}
 #((NOT IMPLEMENTED)) @param Q.SL.library SuperLearner libraries for outcome, Q
 #((NOT IMPLEMENTED)) @param g.SL.library SuperLearner libraries for treatment mechanism, g
+# @param sW Summary measures constructed from baseline covariates alone. This must be an object of class
+#  \code{DefineSummariesClass} that is returned by calling the function \code{\link{def_sW}}.
+# @param sA Summary measures constructed from exposures \code{Anodes} and baseline covariates. This must be an object of class
+#  \code{DefineSummariesClass} that is returned by calling the function \code{\link{def_sW}}.
+# @param Anodes Exposure (treatment) variable name (column name in \code{data}); exposures can be either binary, categorical or continuous.
+#  This variable can be instead specified with argument \code{sA} by adding a call \code{+def_sA(Anodes="ExposureVarName")} to \code{sA}.
+# @param AnodeDET Optional column name for indicators of deterministic values of exposures in \code{Anodes},
+#  should be coded as (\code{TRUE}/\code{FALSE}) or (\code{1}/\code{0});
+#  observations with \code{AnodeDET}=\code{TRUE}/\code{1} are assumed to have deterministically assigned exposures
+# @param intervene1.sA
+# @param f_gstar1 Either a function or a vector of counterfactual exposures. If a function, must return
+#  a vector of counterfactual exposures evaluated based on the summary measures matrix (\code{sW,sA}) passed as a named
+#  argument \code{"data"}, therefore, the function in \code{f_gstar1} must have a named argument \code{"data"} in its signature.
+#  The interventions defined by \code{f_gstar1} can be static, dynamic or stochastic. If \code{f_gstar1} is specified as a
+#  vector, it must be of length \code{nrow(data)} or 1 (constant treatment assigned to all observations).
+#  See Details below and Examples in "EQUIVALENT WAYS OF SPECIFYING INTERVENTION \code{f_gstar1}" for demonstration.
+# @param intervene2.sA
+# @param f_gstar2 Either a function or a vector of counterfactual exposure assignments.
+#  Used for estimating contrasts (average treatment effect) for two interventions, if omitted, only the average
+#  counterfactual outcome under intervention \code{f_gstar1} is estimated. The requirements for \code{f_gstar2}
+#  are identical to those for \code{f_gstar1}.
 #'
 #' @section Details:
 #'
@@ -216,11 +213,10 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #'
 #' @section Additional parameters:
 #'
-#' Some of the parameters that control the estimation in \code{estimtr} can be set by calling the function
-#'  \code{\link{estimtr_options}}.
+#' Some of the parameters that control the estimation in \code{estimtr} can be set by calling the function \code{\link{estimtr_options}}.
 #'
-#' Additional parameters can be also specified as a named list \code{optPars} argument of the
-#' \code{estimtr} function. The items that can be specified in \code{optPars} are:
+#' Additional parameters can be also specified as a named list \code{optPars} argument of the \code{estimtr} function.
+#' The items that can be specified in \code{optPars} are:
 #' \itemize{
 #'
 #' \item \code{alpha} - alpha-level for CI calculation (0.05 for 95% CIs);
@@ -235,16 +231,14 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #    These newly generated exposures are utilized when fitting the conditional densities P(\code{sA}|\code{sW})
 #    and when evaluating the substitution estimators \strong{GCOMP} and \strong{TMLE}
 #    under stochastic interventions \code{f_gstar1} or \code{f_gstar2}.
-#'
-#' \item \code{h_g0_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under observed exposure mechanism \code{g0},
-#'    returned by the previous runs of the \code{estimtr} function.
-#'    This has to be an object of \code{SummariesModel} \pkg{R6} class. When this argument is specified, all predictions
-#'    P(\code{sA}=\code{sa}|\code{sW}=\code{sw}) under \code{g0} will be based on the model fits provided by this argument.
-#'
-#' \item \code{h_gstar_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under (stochastic) intervention
-#'    specified by \code{f_gstar1} or \code{f_gstar2}. Also an object of \code{SummariesModel} \pkg{R6} class.
-#'    When this argument is specified, the predictions P(\code{sA}=\code{sa}|\code{sW}=\code{sw})
-#'    under \code{f_gstar1} or \code{f_gstar2} will be based on the model fits provided by this argument.
+#(REMOVED) \item \code{h_g0_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under observed exposure mechanism \code{g0},
+#    returned by the previous runs of the \code{estimtr} function.
+#    This has to be an object of \code{SummariesModel} \pkg{R6} class. When this argument is specified, all predictions
+#    P(\code{sA}=\code{sa}|\code{sW}=\code{sw}) under \code{g0} will be based on the model fits provided by this argument.
+#(REMOVED) \item \code{h_gstar_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under (stochastic) intervention
+#    specified by \code{f_gstar1} or \code{f_gstar2}. Also an object of \code{SummariesModel} \pkg{R6} class.
+#    When this argument is specified, the predictions P(\code{sA}=\code{sa}|\code{sW}=\code{sw})
+#    under \code{f_gstar1} or \code{f_gstar2} will be based on the model fits provided by this argument.
 #' }
 #'
 #' @section Specifying the counterfactual intervention function (\code{f_gstar1} and \code{optPars$f_gstar2}):
@@ -257,19 +251,15 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #' **********************************************************************
 #'
 #' \itemize{
-#' \item As described in the following section, the first step is to construct an estimator \eqn{P_{g_N}(sA | sW)}
-#'    for the common (in \code{i}) conditional density \eqn{P_{g_0}(sA | sW)} for common (in \code{i}) unit-level summary
-#'    measures (\code{sA},\code{sW}).
+#' \item As described in the following section, the first step is to construct an estimator \eqn{P_{g_N}(A(t) | L(t))}
+#'    for the probability of exposure \eqn{P_{g_0}(A(t) | W(t))}.
 #'
-#' \item The same fitting algorithm is applied to construct an estimator \eqn{P_{g^*_N}(sA^* | sW^*)} of the common (in \code{i})
-#'    conditional density \eqn{P_{g^*}(sA^* | sW^*)} for common (in \code{i}) unit-level summary measures (\code{sA^*},\code{sW^*})
-#'    implied by the user-supplied stochastic intervention \code{f_gstar1} or \code{f_gstar2} and the observed distribution of \code{W}.
+#' \item Based on the user specified stochastic intervention, we can also obtain \eqn{P_{g^*_N}(A^*(t) | L(t) }
 #'
-#' \item These two density estimators form the basis of the IPTW estimator,
-#'    which is evaluated at the observed N data points \eqn{O_i=(sW_i, sA_i, Y_i), i=1,...,N} and is given by
-#'    \deqn{\psi^{IPTW}_n = \sum_{i=1,...,N}{Y_i \frac{P_{g^*_N}(sA^*=sA_i | sW=sW_i)}{P_{g_N}(sA=sA_i | sW=sW_i)}}.}
+#' \item Combining the two probabilities forms the basis of the IPTW estimator,
+#'    which is evaluated at the observed N data points \eqn{O_i=((L_i(t), A_i(t): t=0,...,K), Y_i), i=1,...,N} and is given by
+#'    \deqn{\psi^{IPTW}_n = \sum_{i=1,...,N}{Y_i \frac{P_{g^*_N}(A^*(t)=A_i(t) | L(t)=L_i(t))}{P_{g_N}(A(t)=A_i(t) | L(t)=L_i(t))}}.}
 #' }
-#'
 #'
 #' @return A named list with 3 items containing the estimation results for:
 #'  \itemize{
@@ -287,27 +277,23 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
 #'  \item \code{vars} - the asymptotic variance estimates, for \strong{IPTW} and \strong{TMLE}.
 #'  \item \code{CIs} - CI estimates at \code{alpha} level, for \strong{IPTW} and \strong{TMLE}.
 #'  \item \code{other.vars} - Placeholder for future versions.
-#'  \item \code{h_g0_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under observed exposure mechanism
-#'    \code{g0}. This is an object of \code{SummariesModel} \pkg{R6} class.
-#'  \item \code{h_gstar_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under intervention \code{f_gstar1}
-#'    or \code{f_gstar2}. This is an object of \code{SummariesModel} \pkg{R6} class.
+# \item \code{h_g0_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under observed exposure mechanism
+#    \code{g0}. This is an object of \code{SummariesModel} \pkg{R6} class.
+#  \item \code{h_gstar_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under intervention \code{f_gstar1}
+#    or \code{f_gstar2}. This is an object of \code{SummariesModel} \pkg{R6} class.
 #' }
 #'
 #' Currently implemented estimators are:
 #'  \itemize{
-#'  \item \code{h_iptw} - Efficient IPTW based on weights h_gstar/h_gN.
+#'  \item \code{iptw} - IPTW
 #' }
 #' @seealso \code{\link{estimtr-package}} for the general overview of the package,
-#'  \code{\link{def_sW}} for defining the summary measures, \code{\link{eval.summaries}} for
-#'  evaluation and validation of the summary measures,
-#'  and \code{\link{df_netKmax2}}/\code{\link{df_netKmax6}}/\code{\link{NetInd_mat_Kmax6}}
-#'  for examples of network datasets.
 #' @example tests/examples/1_estimtr_example.R
 #' @export
 estimtr <- function(data, ID = "Subj_ID", t = "time_period",
                               covars, CENS = "C", TRT = "A", MONITOR = "N", outcome = "Y",
                               gform.CENS, gform.TRT, gform.MONITOR, noCENS.cat = 0L,
-                              stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE) {
+                              stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE, optPars = list()) {
 
   gform.CENS.default <- "Cnodes ~ Lnodes"
   gform.TRT.default <- "Anodes ~ Lnodes"

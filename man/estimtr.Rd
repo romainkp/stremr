@@ -9,17 +9,19 @@
 estimtr(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C",
   TRT = "A", MONITOR = "N", outcome = "Y", gform.CENS, gform.TRT,
   gform.MONITOR, noCENS.cat = 0L, stratify.CENS = NULL,
-  stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE)
+  stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE,
+  optPars = list())
 }
 \arguments{
-\item{data}{Observed data, a \code{data.frame} with named columns, containing the baseline covariates,
-exposures (\code{Anodes}), the outcomes (\code{Ynode}) and possibly the network column (\code{NETIDnode}), where
-network is specified by a vector of strings of friend IDs, each string using \code{optPars$sep} character to separate different friend IDs
-(default is \code{optPars$sep=' '}).}
+\item{data}{Observed data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
+the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
+and the survival outcomes variable (\code{outcome}).}
 
 \item{ID}{Unique subject identifier variable in the input data.}
 
-\item{CENS}{The name(s) of the CENSoring variable or variables.
+\item{t}{The name of the time/period variable in the input data.}
+
+\item{CENS}{CENSoring variable(s) in the input data.
 Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
 For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).
 For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of follow-up and other
@@ -27,6 +29,12 @@ values indicate different reasons for CENSoring.
 Use the argument \code{noCENS.cat} to change the reference (continuation of follow-up) category from default 0 to any other value.
 (NOTE: Changing \code{noCENS.cat} has zero effect on coding of the binary CENSoring variables, those have to always use 1 to code the CENSoring event).
 Note that factors are not allowed in \code{CENS}.}
+
+\item{TRT}{Exposure/treatment variable(s) in input data.}
+
+\item{MONITOR}{Monitoring variable(s) in input data.}
+
+\item{outcome}{Survival outcome variable name (column name in \code{data}).}
 
 \item{gform.CENS}{Regression formula(s) for estimating the propensity score for the censoring mechanism: P(C(t) | W). See Details.}
 
@@ -39,9 +47,6 @@ Note that factors are not allowed in \code{CENS}.}
 for categorical CENSoring variables specifed in \code{CENS}.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(estimtr.verbose=TRUE)}.}
-
-\item{Ynode}{Outcome variable name (column name in \code{data}), assumed normalized between 0 and 1. This can instead be specified
-on the left-side of the regression formula in argument \code{Qform}.}
 
 \item{optPars}{A named list of additional optional parameters to be passed to \code{estimtr}, such as
  \code{alpha}, \code{lbound}, \code{family}, \code{YnodeDET},
@@ -64,15 +69,11 @@ Each list item above is itself a list containing the items:
  \item \code{vars} - the asymptotic variance estimates, for \strong{IPTW} and \strong{TMLE}.
  \item \code{CIs} - CI estimates at \code{alpha} level, for \strong{IPTW} and \strong{TMLE}.
  \item \code{other.vars} - Placeholder for future versions.
- \item \code{h_g0_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under observed exposure mechanism
-   \code{g0}. This is an object of \code{SummariesModel} \pkg{R6} class.
- \item \code{h_gstar_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under intervention \code{f_gstar1}
-   or \code{f_gstar2}. This is an object of \code{SummariesModel} \pkg{R6} class.
 }
 
 Currently implemented estimators are:
  \itemize{
- \item \code{h_iptw} - Efficient IPTW based on weights h_gstar/h_gN.
+ \item \code{iptw} - IPTW
 }
 }
 \description{
@@ -82,9 +83,8 @@ In particular, the interventions may represent exposures to treatment regimens, 
 events, or of clinical monitoring events. \pkg{estimtr} enables estimation of a selected set of the user-specified causal quantities of interest,
 such as, treatment-specific survival curves and the average risk difference over time.
 
-Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment exposure regime and  among dependent units with known network structure (in presence of
- interference and/or spillover) using \strong{TMLE} (targeted maximum likelihood estimation), \strong{IPTW}
- (Horvitz-Thompson or the inverse-probability-of-treatment).
+Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring process.
+ Implements the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimator of the discrete survival hazard function which is mapped into survival function.
 }
 \section{Documentation}{
 
@@ -128,11 +128,10 @@ The regression formalas in \code{Qform}, \code{hform.g0} and \code{hform.gstar} 
 \section{Additional parameters}{
 
 
-Some of the parameters that control the estimation in \code{estimtr} can be set by calling the function
- \code{\link{estimtr_options}}.
+Some of the parameters that control the estimation in \code{estimtr} can be set by calling the function \code{\link{estimtr_options}}.
 
-Additional parameters can be also specified as a named list \code{optPars} argument of the
-\code{estimtr} function. The items that can be specified in \code{optPars} are:
+Additional parameters can be also specified as a named list \code{optPars} argument of the \code{estimtr} function.
+The items that can be specified in \code{optPars} are:
 \itemize{
 
 \item \code{alpha} - alpha-level for CI calculation (0.05 for 95% CIs);
@@ -141,16 +140,6 @@ Additional parameters can be also specified as a named list \code{optPars} argum
 
 \item \code{family} - Family specification for regression models, defaults to binomial (CURRENTLY ONLY BINOMIAL
  FAMILY IS IMPLEMENTED).
-
-\item \code{h_g0_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under observed exposure mechanism \code{g0},
-   returned by the previous runs of the \code{estimtr} function.
-   This has to be an object of \code{SummariesModel} \pkg{R6} class. When this argument is specified, all predictions
-   P(\code{sA}=\code{sa}|\code{sW}=\code{sw}) under \code{g0} will be based on the model fits provided by this argument.
-
-\item \code{h_gstar_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under (stochastic) intervention
-   specified by \code{f_gstar1} or \code{f_gstar2}. Also an object of \code{SummariesModel} \pkg{R6} class.
-   When this argument is specified, the predictions P(\code{sA}=\code{sa}|\code{sW}=\code{sw})
-   under \code{f_gstar1} or \code{f_gstar2} will be based on the model fits provided by this argument.
 }
 }
 
@@ -167,17 +156,14 @@ The functions \code{f_gstar1} and \code{f_gstar2} can only depend on variables s
 **********************************************************************
 
 \itemize{
-\item As described in the following section, the first step is to construct an estimator \eqn{P_{g_N}(sA | sW)}
-   for the common (in \code{i}) conditional density \eqn{P_{g_0}(sA | sW)} for common (in \code{i}) unit-level summary
-   measures (\code{sA},\code{sW}).
+\item As described in the following section, the first step is to construct an estimator \eqn{P_{g_N}(A(t) | L(t))}
+   for the probability of exposure \eqn{P_{g_0}(A(t) | W(t))}.
 
-\item The same fitting algorithm is applied to construct an estimator \eqn{P_{g^*_N}(sA^* | sW^*)} of the common (in \code{i})
-   conditional density \eqn{P_{g^*}(sA^* | sW^*)} for common (in \code{i}) unit-level summary measures (\code{sA^*},\code{sW^*})
-   implied by the user-supplied stochastic intervention \code{f_gstar1} or \code{f_gstar2} and the observed distribution of \code{W}.
+\item Based on the user specified stochastic intervention, we can also obtain \eqn{P_{g^*_N}(A^*(t) | L(t) }
 
-\item These two density estimators form the basis of the IPTW estimator,
-   which is evaluated at the observed N data points \eqn{O_i=(sW_i, sA_i, Y_i), i=1,...,N} and is given by
-   \deqn{\psi^{IPTW}_n = \sum_{i=1,...,N}{Y_i \frac{P_{g^*_N}(sA^*=sA_i | sW=sW_i)}{P_{g_N}(sA=sA_i | sW=sW_i)}}.}
+\item Combining the two probabilities forms the basis of the IPTW estimator,
+   which is evaluated at the observed N data points \eqn{O_i=((L_i(t), A_i(t): t=0,...,K), Y_i), i=1,...,N} and is given by
+   \deqn{\psi^{IPTW}_n = \sum_{i=1,...,N}{Y_i \frac{P_{g^*_N}(A^*(t)=A_i(t) | L(t)=L_i(t))}{P_{g_N}(A(t)=A_i(t) | L(t)=L_i(t))}}.}
 }
 }
 \examples{
@@ -187,9 +173,5 @@ The functions \code{f_gstar1} and \code{f_gstar2} can only depend on variables s
 }
 \seealso{
 \code{\link{estimtr-package}} for the general overview of the package,
- \code{\link{def_sW}} for defining the summary measures, \code{\link{eval.summaries}} for
- evaluation and validation of the summary measures,
- and \code{\link{df_netKmax2}}/\code{\link{df_netKmax6}}/\code{\link{NetInd_mat_Kmax6}}
- for examples of network datasets.
 }
 

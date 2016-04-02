@@ -21,8 +21,8 @@ The class \code{DataStorageClass} is the only way the package uses to access the
 }
 \details{
 #' \itemize{
-\item{\code{YnodeVals}} - .
-\item{\code{det.Y}} - .
+   \item{\code{YnodeVals}}
+   \item{\code{det.Y}}
 }
 }
 \section{Methods}{
