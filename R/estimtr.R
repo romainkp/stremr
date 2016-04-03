@@ -317,6 +317,25 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
 
+  # --------------------------------------------------------------------------------------------------------
+  # Create dummies for factors
+  # --------------------------------------------------------------------------------------------------------
+  factor.Ls <- unlist(lapply(OData$dat.sVar, is.factor))
+  factor.Ls <- names(factor.Ls)[factor.Ls]
+  new.factor.names <- vector(mode="list", length=length(factor.Ls))
+  names(new.factor.names) <- factor.Ls
+  if (length(factor.Ls)>0)
+    message("found factors in the data, these are being converted to binary indicators (and excluding the first level): " %+% paste0(factor.Ls, collapse=","))
+  for (factor.varnm in factor.Ls) {
+    factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
+    factor.levs <- factor.levs[-1] # remove the first level (reference class)
+    # use levels to define cat indicators:
+    OData$dat.sVar[,(factor.varnm %+% "_" %+% factor.levs) := lapply(factor.levs, function(x) levels(get(factor.varnm))[get(factor.varnm)] %in% x)]
+    # to remove the origional factor var: # OData$dat.sVar[,(factor.varnm):=NULL]
+    new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
+    # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
+  }
+
   # ---------------------------------------------------------------------------
   # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
   # Might expand this in the future to allow defining arbitrary summaries
@@ -332,11 +351,11 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
-  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = nodes)
-  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = nodes)
-  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, sVar.map = nodes)
+  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = c(nodes,new.factor.names))
+  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = c(nodes,new.factor.names))
+  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, sVar.map = c(nodes,new.factor.names))
 
-  # put all three regression models (C,A,N) into one regression object!
+  # put all three regression models (C,A,N) into one regression object:
   all_outVar_nms <- c(g.C.sVars$outvars, g.A.sVars$outvars, g.N.sVars$outvars)
   all_predVar_nms <- c(g.C.sVars$predvars, g.A.sVars$predvars, g.N.sVars$predvars)
   all_subsets_expr <- lapply(all_outVar_nms, function(var) lapply(var, function(var) {var}))
@@ -347,9 +366,12 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
                                     outvar = all_outVar_nms,
                                     predvars = all_predVar_nms,
                                     subset = all_subsets_expr)
+
   ALL.g.regs$S3class <- "generic"
   # using S3 method dispatch on ALL.g.regs:
   summeas.g0 <- newsummarymodel(reg = ALL.g.regs, DatNet.sWsA.g0 = OData)
+
+  # browser()
   # browser()
 
   # EVALUATING SUBSETTING EXPRESSIONS:

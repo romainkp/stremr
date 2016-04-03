@@ -7,9 +7,9 @@
 follow.rule.d.DT(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL)
 }
 \arguments{
-\item{data}{The vector of continuous cutoff values that index each dynamic treatment rule}
+\item{data}{Input data.frame or data.table in long format, see below for the description of the assumed format.}
 
-\item{theta}{Input data.frame or data.table in long format, see below for the description of the assumed format.}
+\item{theta}{The vector of continuous cutoff values that index each dynamic treatment rule}
 
 \item{ID}{The name of the unique subject identifier}
 
@@ -62,7 +62,7 @@ Define the indicators of following/not-following specific dynamic treatment rule
 \dontrun{
 theta <- seq(7,8.5,by=0.5)
 FOLLOW.D.DT <- follow.rule.d.DT(data = data, theta = theta,
-                 ID = "Study_ID", t = "X_intnum", I = "X_a1c",
+                 ID = "StudyID", t = "X_intnum", I = "X_a1c",
                  TRT = "X_exposure", CENS = "X_censor", MONITOR = "N.t",
                  rule.names = paste0("new.d",theta))
 }

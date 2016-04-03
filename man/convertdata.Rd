@@ -4,10 +4,11 @@
 \alias{convertdata}
 \title{Helper routine to convert the data into the format data.table required by estmr() function.}
 \usage{
-convertdata(data, ID, t, imp.I, MONITOR.name)
+convertdata(data, ID, t, imp.I, MONITOR.name = "N",
+  tsinceNis1 = "tsinceNis1")
 }
 \arguments{
-\item{data}{Input data.table or data.frame}
+\item{data}{Input data.table or data.frame.}
 
 \item{ID}{The name of the unique subject identifier (character, numeric or factor).}
 
@@ -15,8 +16,10 @@ convertdata(data, ID, t, imp.I, MONITOR.name)
 When imp.I(t)=1 it means that the patient was not observed (no office visit) at time-point t and hence no biomarker was measured.}
 
 \item{MONITOR.name}{The name of the MONITORing variable which will be evaluated by this routine.
- This new column MONITOR(t) is the indicator of being monitored (having a doctors visit) at time-point t+1 the indicator of the
- imputation (having observed/measured biomarker) at time-point t+1}
+This new column MONITOR(t) is the indicator of being monitored (having a doctors visit) at time-point t+1 the indicator of the
+imputation (having observed/measured biomarker) at time-point t+1.}
+
+\item{tsinceNis1}{The name of the variable that counts number of periods since last monitoring event at t-1.}
 
 \item{I}{The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.}
 }
@@ -48,10 +51,10 @@ The time ordering of the output data at each t is as follows: (I, CENS, TRT, MON
 
 In output data.table, MONITOR(t-1)=1 indicates that the biomarker I(t) at t is observed and vice versa.
 
-In addition the output data.table will contain a column "lastN.t", where:
+In addition the output data.table will contain a column "tsinceNis1", where:
 \itemize{
-  \item lastN.t(t) = 0 means that the person was monitored at time-point t-1.
-  \item lastN.t(t) > 0 is the count of the number of cycles since last monitoring event.
+  \item tsinceNis1(t) = 0 means that the person was monitored at time-point t-1.
+  \item tsinceNis1(t) > 0 is the count of the number of cycles since last monitoring event.
 }
 }
 
