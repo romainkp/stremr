@@ -62,7 +62,7 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name){
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, indx:=cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = get(ID)]
-  DT[, lastN.t:=seq(.N)-1, by = .(Study_ID, indx)]
+  DT[, lastN.t:=seq(.N)-1, by = .(get(ID), indx)]
   DT[is.na(DT[["indx"]]), lastN.t:=NA]
   DT[, indx:=NULL]
   return(DT)
