@@ -20,7 +20,7 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 #' @param MONITOR.name The name of the MONITORing variable which will be evaluated by this routine.
 #'  This new column MONITOR(t) is the indicator of being monitored (having a doctors visit) at time-point t+1 the indicator of the
 #'  imputation (having observed/measured biomarker) at time-point t+1.
-#' @param tSinceLastMONITOR.name The name of the variable that counts number of periods since last monitoring event at t-1.
+#' @param tsinceNis1 The name of the variable that counts number of periods since last monitoring event at t-1.
 #'
 #' @section Details:
 #'
@@ -41,14 +41,14 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 #'
 #' In output data.table, MONITOR(t-1)=1 indicates that the biomarker I(t) at t is observed and vice versa.
 #'
-#' In addition the output data.table will contain a column "tSinceLastMONITOR.name", where:
+#' In addition the output data.table will contain a column "tsinceNis1", where:
 #' \itemize{
-#'   \item tSinceLastMONITOR.name(t) = 0 means that the person was monitored at time-point t-1.
-#'   \item tSinceLastMONITOR.name(t) > 0 is the count of the number of cycles since last monitoring event.
+#'   \item tsinceNis1(t) = 0 means that the person was monitored at time-point t-1.
+#'   \item tsinceNis1(t) > 0 is the count of the number of cycles since last monitoring event.
 #' }
 #' @return A data.table in long format with ordering (I, CENS, TRT, MONITOR)
 #' @export
-convertdata <- function(data, ID, t, imp.I, MONITOR.name, tSinceLastMONITOR.name){
+convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "tsinceNis1"){
   require('data.table')
   if (is.data.table(data)) {
     DT <- data.table(data[,c(ID, t, imp.I), with = FALSE], key=c(ID, t))
@@ -63,8 +63,8 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name, tSinceLastMONITOR.name
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, indx:=cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = get(ID)]
-  DT[, (tSinceLastMONITOR.name):=seq(.N)-1, by = .(get(ID), indx)]
-  DT[is.na(DT[["indx"]]), (tSinceLastMONITOR.name):=NA]
+  DT[, (tsinceNis1):=seq(.N)-1, by = .(get(ID), indx)]
+  DT[is.na(DT[["indx"]]), (tsinceNis1):=NA]
   DT[, indx:=NULL]
   return(DT)
 }
