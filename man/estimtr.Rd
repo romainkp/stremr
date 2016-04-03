@@ -19,6 +19,9 @@ and the survival OUTCOME variable (\code{OUTCOME}).}
 
 \item{t}{The name of the time/period variable in the input data.}
 
+\item{covars}{Time varying and baseline covariates. This argument does not need to be specified, by default all variables
+that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.}
+
 \item{CENS}{CENSoring variable(s) in the input data.
 Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
 For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).

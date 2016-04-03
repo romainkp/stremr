@@ -39,7 +39,8 @@ This R6 class defines fields and methods that controls all the parameters for no
      and each list item being a vector specifying the regression predictors for a specific outcome in \code{outvar}.
 \item{{reg_hazard}} - Logical, if TRUE, the joint probability model P(outvar | predvars) is factorized as
    \\prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard).
-\item{\code{subset}} - Subset expression (later evaluated to logical vector in the envir of the data).
+\item{\code{subset_vars}} - Subset variables (later evaluated to logical vector based on non-missing (!is.na()) values of these variables).
+\item{\code{subset_exprs}} - Subset expressions (later evaluated to logical vector in the envir of the data).
 \item{\code{ReplMisVal0}} - Logical, if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0).
 \item{\code{nbins}} - Integer number of bins used for a continuous outvar, the intervals are defined inside
  \code{ContinSummaryModel$new()} and then saved in this field.
@@ -69,7 +70,7 @@ This R6 class defines fields and methods that controls all the parameters for no
 \describe{
   \item{\code{new(sep_predvars_sets = FALSE,
                   outvar.class = gvars$sVartypes$bin,
-                  outvar, predvars, subset, intrvls,
+                  outvar, predvars, subset_vars, subset_exprs, intrvls,
                   ReplMisVal0 = TRUE,
                   useglm = getopt("useglm"),
                   parfit = getopt("parfit"),

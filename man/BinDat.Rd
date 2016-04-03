@@ -25,8 +25,8 @@ This R6 class can request, store and manage the design matrix Xmat, as well as t
 \item{predvars} - Predictor names.
 \item{pool_cont} - Perform pooling of bins?
 \item{outvars_to_pool} - Outcome bin indicators to pool?
-\item{subset_expr} - Defines the subset which would be used for fitting this model (logical, expression or indices).
-\item{subset_idx} - Subset \code{subset_expr} converted to logical vector.
+\item{subset_vars} - Defines the subset which would be used for fitting this model (logical, expression or indices).
+\item{subset_idx} - Subset \code{subset_vars} converted to logical vector.
 }
 }
 \section{Methods}{

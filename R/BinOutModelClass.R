@@ -123,8 +123,8 @@ join.Xmat = function(X_mat, sVar_melt_DT, ID) {
 #' \item{predvars} - Predictor names.
 #' \item{pool_cont} - Perform pooling of bins?
 #' \item{outvars_to_pool} - Outcome bin indicators to pool?
-#' \item{subset_expr} - Defines the subset which would be used for fitting this model (logical, expression or indices).
-#' \item{subset_idx} - Subset \code{subset_expr} converted to logical vector.
+#' \item{subset_vars} - Defines the subset which would be used for fitting this model (logical, expression or indices).
+#' \item{subset_idx} - Subset \code{subset_vars} converted to logical vector.
 #' }
 #' @section Methods:
 #' \describe{
@@ -167,7 +167,8 @@ BinDat <- R6Class(classname = "BinDat",
     outvars_to_pool = character(),
     ReplMisVal0 = logical(),
     n = NA_integer_,        # number of rows in the input data
-    subset_expr = NULL,     # PASS THE LOGICAL EXPRESSIONS TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
+    subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
+    subset_expr = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
     subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
 
     initialize = function(reg, ...) {
@@ -175,13 +176,17 @@ BinDat <- R6Class(classname = "BinDat",
       assert_that(is.character(reg$predvars))
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
-      self$subset_expr <- reg$subset
+
+      self$subset_vars <- reg$subset_vars
+      self$subset_expr <- reg$subset_exprs
+      assert_that(length(self$subset_expr) <= 1)
+
       self$pool_cont <- reg$pool_cont
       self$outvars_to_pool <- reg$outvars_to_pool
       self$ReplMisVal0 <- reg$ReplMisVal0
       self$nbins <- reg$nbins
-      if (is.null(reg$subset)) {self$subset_expr <- TRUE}
-      assert_that(is.logical(self$subset_expr) || is.call(self$subset_expr) || is.character(self$subset_expr))
+      if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
+      assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
       invisible(self)
     },
 
@@ -202,17 +207,17 @@ BinDat <- R6Class(classname = "BinDat",
     },
 
     define.subset_idx = function(data) {
-      if (is.logical(self$subset_expr)) {
-        subset_idx <- self$subset_expr
+      if (is.logical(self$subset_vars)) {
+        subset_idx <- self$subset_vars
       # ******************************************************
       # NOTE: Below subsetting by call/expression is currently disabled, for speed & memory efficiency
       # all subsetting is done by subsetvars (variable name(s) must be non-missing)
       # ******************************************************
-      } else if (is.call(self$subset_expr)) {
-        subset_idx <- data$evalsubst(subsetexpr = self$subset_expr)
+      } else if (is.call(self$subset_vars)) {
+        subset_idx <- data$evalsubst(subsetexpr = self$subset_vars)
         # stop("disabled for memory/speed efficiency")
-      } else if (is.character(self$subset_expr)) {
-        subset_idx <- data$evalsubst(subsetvars = self$subset_expr)
+      } else if (is.character(self$subset_vars)) {
+        subset_idx <- data$evalsubst(subsetvars = self$subset_vars)
       }
       assert_that(is.logical(subset_idx))
       if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
@@ -535,8 +540,8 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
       # browser()
       # Don't want to subset by the outvar, since binarized mat for cat outcome is not re-created when just sampling
       # But need to reset it back when done
-      temp_subset_expr <- self$bindat$subset_expr
-      self$bindat$subset_expr <- self$bindat$subset_expr[!self$bindat$subset_expr %in% self$bindat$outvar]
+      temp_subset_vars <- self$bindat$subset_vars
+      self$bindat$subset_vars <- self$bindat$subset_vars[!self$bindat$subset_vars %in% self$bindat$outvar]
       self$bindat$newdata(newdata = newdata, getoutvar = FALSE) # populate bindat with new design matrix covars X_mat
 
       assert_that(is.logical(self$getsubset))
@@ -572,7 +577,7 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       self$wipe.alldat
-      self$bindat$subset_expr <- temp_subset_expr
+      self$bindat$subset_vars <- temp_subset_vars
       # private$probAeqa <- probAeqa # NOTE disabling internal saving of probAeqa
       # **********************************************************************
       return(sampleA)

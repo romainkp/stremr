@@ -9,6 +9,7 @@ gvars$misval <- NA_integer_ # the default missing value for observations (# gvar
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
 gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$tolerr => a = b
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
+gvars$noCENS.cat <- 0L      # the reference category that designates continuation of follow-up
 
 getopt <- function(optname) {
   opt <- gvars$opts

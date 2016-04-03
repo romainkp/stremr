@@ -147,6 +147,24 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL, factor.map 
   return(list(outvars = outvars, predvars = predvars))
 }
 
+# Create subsetting expressions for a node (Anode, Cnode or Nnode):
+create_subset_expr <- function(outvars, stratify.EXPRS, censoring = FALSE) {
+  Node_subset_expr <- vector(mode="list", length=length(outvars))
+  names(Node_subset_expr) <- outvars
+  Node_subset_expr[] <- "rep.int(TRUE, .N)"
+  # For C by definition, we subset the values of all previous censoring variables
+  if (censoring) {
+    for (Var_indx in seq_along(outvars[-1])) {
+      Node_subset_expr[[Var_indx+1]] <- paste0(as.vector(unlist(outvars[1:Var_indx])) %+% " == " %+% gvars$noCENS.cat, collapse=" & ")
+    }
+  }
+  if (!is.null(stratify.EXPRS)) {
+    for (idx in seq_along(Node_subset_expr))
+      Node_subset_expr[[idx]] <- stringr::str_c(Node_subset_expr[[idx]], " & ", stratify.EXPRS)
+  }
+  return(lapply(Node_subset_expr, function(el) list(el)))
+}
+
 #---------------------------------------------------------------------------------
 # MAIN estimtr FUNCTION
 #---------------------------------------------------------------------------------
@@ -160,6 +178,8 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL, factor.map 
 # @param estimators (NOT IMPLEMENTED) Character vector with estimator names.
 #' @param ID Unique subject identifier variable in the input data.
 #' @param t The name of the time/period variable in the input data.
+#' @param covars Time varying and baseline covariates. This argument does not need to be specified, by default all variables
+#' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.
 #' @param CENS CENSoring variable(s) in the input data.
 #' Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
 #' For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).
@@ -302,6 +322,8 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
                               stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE, optPars = list()) {
 
   gvars$verbose <- TRUE
+  gvars$noCENS.cat <- noCENS.cat
+
   # if (verbose) {
     message("Running with the following setting: ");
     str(gvars$opts)
@@ -353,29 +375,10 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
-  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = nodes, factor.map = new.factor.names)
-  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = nodes, factor.map = new.factor.names)
-  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, sVar.map = nodes, factor.map = new.factor.names)
-
-  # put all three regression models (C,A,N) into one regression object:
-  all_outVar_nms <- c(g.C.sVars$outvars, g.A.sVars$outvars, g.N.sVars$outvars)
-  all_predVar_nms <- c(g.C.sVars$predvars, g.A.sVars$predvars, g.N.sVars$predvars)
-  all_subsets_expr <- lapply(all_outVar_nms, function(var) lapply(var, function(var) {var}))
-  all_outVar_class <- lapply(all_outVar_nms, function(outVar_nm) OData$type.sVar[outVar_nm])
-
-  ALL.g.regs <- RegressionClass$new(sep_predvars_sets = TRUE,
-                                    outvar.class = all_outVar_class,
-                                    outvar = all_outVar_nms,
-                                    predvars = all_predVar_nms,
-                                    subset = all_subsets_expr)
-
-  ALL.g.regs$S3class <- "generic"
-  # using S3 method dispatch on ALL.g.regs:
-  summeas.g0 <- newsummarymodel(reg = ALL.g.regs, DatNet.sWsA.g0 = OData)
-
   # browser()
+  # gform.CENS <- c("A1 ~ L1 + L2", "A2 ~ L3 + L4")
+  # gform.CENS <- c("C1 + C2 + C3 ~ L1 + L2")
   # browser()
-
   # EVALUATING SUBSETTING EXPRESSIONS:
   # subs_expr1 <- "t == 0L"
   # subs_expr2 <- "t > 0L"
@@ -383,9 +386,39 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # subset_idx <- OData$dat.sVar[, eval(parse(text=subs_expr3)), by = get(nodes$ID)][["V1"]]
   # OData$dat.sVar[, subset_idx:=eval(parse(text=subs_expr3)), by = get(nodes$ID)]
 
+  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = nodes, factor.map = new.factor.names)
+  C_subset_expr <- create_subset_expr(outvars = g.C.sVars$outvars, stratify.EXPRS = stratify.CENS, censoring = TRUE)
+
+  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = nodes, factor.map = new.factor.names)
+  A_subset_expr <- create_subset_expr(outvars = g.A.sVars$outvars, stratify.EXPRS = stratify.TRT, censoring = FALSE)
+
+  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, sVar.map = nodes, factor.map = new.factor.names)
+  N_subset_expr <- create_subset_expr(outvars = g.N.sVars$outvars, stratify.EXPRS = stratify.MONITOR, censoring = FALSE)
+
+  # put all three regression models (C,A,N) into one regression object:
+  all_outVar_nms <- c(g.C.sVars$outvars, g.A.sVars$outvars, g.N.sVars$outvars)
+  all_predVar_nms <- c(g.C.sVars$predvars, g.A.sVars$predvars, g.N.sVars$predvars)
+  all_subsets_vars <- lapply(all_outVar_nms, function(var) lapply(var, function(var) {var}))
+  all_outVar_class <- lapply(all_outVar_nms, function(outVar_nm) OData$type.sVar[outVar_nm])
+
+  ALL.g.regs <- RegressionClass$new(sep_predvars_sets = TRUE,
+                                    outvar.class = all_outVar_class,
+                                    outvar = all_outVar_nms,
+                                    predvars = all_predVar_nms,
+                                    subset_vars = all_subsets_vars,
+                                    subset_exprs = c(C_subset_expr, A_subset_expr, N_subset_expr)
+                                    )
+
+  ALL.g.regs$S3class <- "generic"
+  # using S3 method dispatch on ALL.g.regs:
+  summeas.g0 <- newsummarymodel(reg = ALL.g.regs, DatNet.sWsA.g0 = OData)
+
   summeas.g0$fit(data = OData)
   h_gN <- summeas.g0$predictAeqa(newdata = OData)
 
+  # ------------------------------------------------------------------------------------------------------------------------------
+  # TO DO:
+  # ------------------------------------------------------------------------------------------------------------------------------
   # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
   # - Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
 
@@ -399,19 +432,9 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
     # A nice trick would be to be able to AUTOMATICALLY convert logical subset expressions to data.table statements -> Its possible with some meta-programming and parsing
     # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
     # Can specify K regressions in gform.CENS/gform.TRT/gform.MONITOR. If only one regression is specified it will be aplied to ALL stratas.
+    # Otherwise stratas should be specified as a named list of K items
 
-  # - Factors: when a predictor in covars is a factor it needs to be automatically converted to length(levels(L[i])) dummy indicators.
-  # Might use the existing routine from tmlenet by factor -> categorical -> indicatorMatrix
-
-
-# - consider new dcast.data.table features in v1.9.7. Could be useful for fast conversion to wide format -> use simcusal interface for creating summaries -> back to long format with melt.data.table.
-# now allows drop = c(FALSE, TRUE) and drop = c(TRUE, FALSE). The former only fills all missing combinations of formula LHS, where as the latter fills only all missing combinations of formula RHS.
-# Thanks to Ananda Mahto for this SO post and to Jaap for filing #1512.
-# http://stackoverflow.com/questions/34830908/make-the-drop-argument-in-dcast-only-look-at-the-rhs-of-the-formula
-# https://github.com/Rdatatable/data.table
-# https://github.com/Rdatatable/data.table/issues/1512
-
-# - specifically look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
+  # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
 
 
 return(list(summeas.g0 = summeas.g0, OData = OData, ALL.g.regs = ALL.g.regs, h_gN = h_gN))

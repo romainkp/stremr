@@ -51,7 +51,8 @@ newsummarymodel.categor <- function(reg, DatNet.sWsA.g0, ...) CategorSummaryMode
 #'      and each list item being a vector specifying the regression predictors for a specific outcome in \code{outvar}.
 #' \item{{reg_hazard}} - Logical, if TRUE, the joint probability model P(outvar | predvars) is factorized as
 #'    \\prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard).
-#' \item{\code{subset}} - Subset expression (later evaluated to logical vector in the envir of the data).
+#' \item{\code{subset_vars}} - Subset variables (later evaluated to logical vector based on non-missing (!is.na()) values of these variables).
+#' \item{\code{subset_exprs}} - Subset expressions (later evaluated to logical vector in the envir of the data).
 #' \item{\code{ReplMisVal0}} - Logical, if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0).
 #' \item{\code{nbins}} - Integer number of bins used for a continuous outvar, the intervals are defined inside
 #'  \code{ContinSummaryModel$new()} and then saved in this field.
@@ -79,7 +80,7 @@ newsummarymodel.categor <- function(reg, DatNet.sWsA.g0, ...) CategorSummaryMode
 #' \describe{
 #'   \item{\code{new(sep_predvars_sets = FALSE,
 #'                   outvar.class = gvars$sVartypes$bin,
-#'                   outvar, predvars, subset, intrvls,
+#'                   outvar, predvars, subset_vars, subset_exprs, intrvls,
 #'                   ReplMisVal0 = TRUE,
 #'                   useglm = getopt("useglm"),
 #'                   parfit = getopt("parfit"),
@@ -114,7 +115,8 @@ RegressionClass <- R6Class("RegressionClass",
                                     # (2) regression-specific predictor names; or
                                     # (3) list (of length(outvar)) of several predicator vectors, each such set is used as a separate regression for a node name in outvar
     reg_hazard = FALSE,            # If TRUE, the joint P(outvar|predvars) is factorized as \prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard)
-    subset = NULL,                 # subset variables (later these vars are tested for missing values, which forms the basis of the logical subset vector)
+    subset_vars = NULL,            # subset variables (later these vars are tested for missing values, which forms the basis of the logical subset vector)
+    subset_exprs = NULL,           # subset expressions (as strings) (later these expressed are evaluated in the envir of the data, must evaluated to logical vector)
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
     nbins = NULL,                  # actual nbins used, for cont. outvar, defined in ContinSummaryModel$new()
     bin_nms = NULL,                # column names for bin indicators
@@ -135,7 +137,9 @@ RegressionClass <- R6Class("RegressionClass",
     # form = NULL,                 # (NOT IMPLEMENTED) reg formula, if provided run using the usual glm / speedglm functions
     initialize = function(sep_predvars_sets = FALSE,
                           outvar.class = gvars$sVartypes$bin,
-                          outvar, predvars, subset, intrvls,
+                          outvar, predvars,
+                          subset_vars, subset_exprs,
+                          intrvls,
                           ReplMisVal0 = TRUE, # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
                           useglm = getopt("useglm"),
                           parfit = getopt("parfit"),
@@ -179,22 +183,28 @@ RegressionClass <- R6Class("RegressionClass",
       }
 
       self$levels <- NULL
-
       n_regs <- length(outvar)
 
-      if (!missing(subset)) {
-        self$subset <- subset
-        if (length(subset) < n_regs) {
-          self$subset <- rep_len(subset, n_regs)
-        } else if (length(subset) > n_regs) {
-          # ... TO FINISH ...
-          # increase n_regs to all combinations of (n_regs x subset)
-          # stop("subset cannot be longer than length(outvar)")
-          if (!is.logical(subset)) stop("not implemented")
-          # ... TO FINISH ...
+      if (!missing(subset_vars)) {
+        self$subset_vars <- subset_vars
+        if (length(subset_vars) < n_regs) {
+          self$subset_vars <- rep_len(subset_vars, n_regs)
+        } else if (length(subset_vars) > n_regs) {
+          if (!is.logical(subset_vars)) stop("not implemented")
         }
       } else {
-        self$subset <- rep_len(list(TRUE), n_regs)
+        self$subset_vars <- rep_len(list(TRUE), n_regs)
+      }
+
+      if (!missing(subset_exprs)) {
+        self$subset_exprs <- subset_exprs
+        if (length(subset_exprs) < n_regs) {
+          self$subset_exprs <- rep_len(subset_exprs, n_regs)
+        } else if (length(subset_exprs) > n_regs) {
+          # stop("not implemented")
+        }
+      } else {
+        self$subset_exprs <- NULL
       }
     },
 
@@ -220,22 +230,21 @@ RegressionClass <- R6Class("RegressionClass",
         predvars_2 <- reg$predvars[[k_i]]
         if (!identical(predvars_1, predvars_2)) stop("fatal error: look up of reg$predvars[[...]] by outvar and by index k_i returning different results")
         self$predvars <- reg$predvars[[k_i]] # (2) extract specific predictors from the named list reg$predvars for each outvar
-
       # modeling bin hazard indicators, no need to condition on previous outcomes as they will all be degenerate
       } else if (self$reg_hazard) {
         self$predvars <- reg$predvars # Predictors
-
       # factorization of the joint prob P(A,B,C|D):=P(A|D)*P(B|A,D)*P(C|A,B,D)
       } else {
         self$predvars <- c(reg$outvar[-c(k_i:n_regs)], reg$predvars) # Predictors
       }
 
-      # The subset is a list when RegressionClass specifies several regression models at once,
-      # obtain the appropriate subset for this regression k_i and set it to self
-      # On the other hand, if subset is a vector of variable names, all of those variables will be used for
-      # choosing the subsets for all n_regs regressions.
-      if (is.list(reg$subset)) {
-        self$subset <- reg$subset[[k_i]]
+      # The subset_vars is a list when RegressionClass specifies several regression models at once,
+      # obtain the appropriate subset_vars for this regression k_i and set it to self
+      # On the other hand, if subset_vars is a vector of variable names, all of those variables will be used for
+      # choosing the subset_varss for all n_regs regressions.
+      if (is.list(reg$subset_vars)) {
+        self$subset_vars <- reg$subset_vars[[k_i]]
+        self$subset_exprs <- reg$subset_exprs[[k_i]]
       }
       if (is.list(reg$intrvls)) {
         outvar_idx <- which(names(reg$intrvls) %in% self$outvar)
@@ -262,12 +271,12 @@ RegressionClass <- R6Class("RegressionClass",
       self$outvar.class <- regs_list$outvar.class # Vector of class(es) of outcome var(s): binary, categorical, continuous
       self$outvar <- regs_list$outvar # An outcome variable that is being modeled:
       self$predvars <- regs_list$predvars
-      self$subset <- regs_list$subset
+      self$subset_vars <- regs_list$subset_vars
+      self$subset_exprs <- regs_list$subset_exprs
       return(invisible(self))
     },
 
     resetS3class = function() class(self) <- c("RegressionClass", "R6")
-
   ),
 
   active = list(
@@ -286,9 +295,11 @@ RegressionClass <- R6Class("RegressionClass",
 
     get.reg = function() {
       list(outvar.class = self$outvar.class,
-          outvar = self$outvar,
-          predvars = self$predvars,
-          subset = self$subset)
+           outvar = self$outvar,
+           predvars = self$predvars,
+           subset_vars = self$subset_vars,
+           subset_exprs = self$subset_exprs,
+           )
     }
   )
 )
@@ -543,7 +554,7 @@ SummariesModel <- R6Class(classname = "SummariesModel",
 # same code in ContinSummaryModel$new and CategorSummaryModel$new replaced with outside function:
 # Define subset evaluation for new bins:
 # ******************************************************
-# NOTE: Subsetting by var name only (which automatically evaluates as !gvars$misval(var)) for speed & memory efficiency
+# NOTE: subsetting by var name only (which automatically evaluates as !gvars$misval(var)) for speed & memory efficiency
 # ******************************************************
 # -------------------------------------------------------------------------------------------
 def_regs_subset <- function(self) {
@@ -554,7 +565,7 @@ def_regs_subset <- function(self) {
     new.subsets <- lapply(self$reg$bin_nms,
                               function(var) {
                                 res <- var
-                                if (add.oldsubset) res <- c(res, self$reg$subset)
+                                if (add.oldsubset) res <- c(res, self$reg$subset_vars)
                                 res
                               })
 
@@ -563,8 +574,7 @@ def_regs_subset <- function(self) {
     bin_regs$ChangeOneToManyRegresssions(regs_list = list(outvar.class = new.sAclass,
                                                           outvar = self$reg$bin_nms,
                                                           predvars = self$reg$predvars,
-                                                          subset = new.subsets))
-    bin_regs$subset
+                                                          subset_vars = new.subsets))
   # Same but when pooling across bin indicators:
   } else {
     bin_regs$outvar.class <- gvars$sVartypes$bin
@@ -573,7 +583,7 @@ def_regs_subset <- function(self) {
     if (gvars$verbose)  {
       print("pooled bin_regs$outvar: "); print(bin_regs$outvar)
       print("bin_regs$outvars_to_pool: "); print(bin_regs$outvars_to_pool)
-      print("bin_regs$subset: "); print(bin_regs$subset)
+      print("bin_regs$subset_vars: "); print(bin_regs$subset_vars)
     }
   }
   bin_regs$resetS3class()

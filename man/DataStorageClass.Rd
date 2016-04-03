@@ -37,7 +37,7 @@ The class \code{DataStorageClass} is the only way the package uses to access the
   \item{\code{replaceOneAnode(AnodeName, newAnodeVal)}}{...}
   \item{\code{replaceManyAnodes(Anodes, newAnodesMat)}}{...}
   \item{\code{addYnode(YnodeVals, det.Y)}}{...}
-  \item{\code{evalsubst(subsetexpr, subsetvars)}}{...}
+  \item{\code{evalsubst(subset_expr, subset_vars)}}{...}
   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
   \item{\code{bin.nms.sVar(name.sVar, nbins)}}{...}

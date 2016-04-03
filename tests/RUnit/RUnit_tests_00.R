@@ -88,10 +88,94 @@ sample_checks <- function() {   # doesnt run, this is just to show what test fun
   checkIdentical(NaN, NaN)
   checkIdentical(-Inf, -Inf)
 }
-
 `%+%` <- function(a, b) paste0(a, b)
 as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
 allNA = function(x) all(is.na(x))
+
+
+
+# test various regression / subsetting schemes and make sure it works as expected
+test.regressionCases <- function() {
+  # ------------------------------------------------------------------------------------------------------------------
+  # 1A) No stratification, TRT=c("A1","A2"), CENS=c("C1","C2","C3"), MONITOR="N":
+  # ------------------------------------------------------------------------------------------------------------------
+  # Two equivalent ways to specify regression models:
+  gform.TRT1 <- c("A1 + A2 ~ L1 + L2")
+  gform.TRT2 <- c("A1 ~ L1 + L2", "A2 ~ L1 + L2 + A1")
+  # Two equivalent way to specify regressions models:
+  gform.CENS1 <- c("C1 + C2 + C3 ~ L1 + L2")
+  gform.CENS2 <- c("C1 ~ L1 + L2", "C2 ~ L1 + L2 + C1", "C3 ~ L1 + L2 + C1 + C2")
+
+  gform.MONITOR <- c("N ~ L1 + L2 + A1 + A2")
+
+  # ........
+  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
+  #                             gform.CENS = gform.CENS1, gform.TRT = gform.TRT1, gform.MONITOR = gform.MONITOR,
+  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
+
+  # ........
+  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
+  #                             gform.CENS = gform.CENS2, gform.TRT = gform.TRT2, gform.MONITOR = gform.MONITOR,
+  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
+
+  # ------------------------------------------------------------------------------------------------------------------
+  # 1B) Categorical TRT="A" that codes the same (A1,A2,A3), categorical CENS="C" that codes (C1,C2,C3)
+  # Should be equivalent to approach in 1A
+  # ------------------------------------------------------------------------------------------------------------------
+  gform.TRT3 <- c("A ~ L1 + L2")
+  gform.CENS3 <- c("C ~ L1 + L2")
+  # ........
+  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  #                             covars, CENS = c("C"), TRT = c("A"), MONITOR = "N", OUTCOME = "Y",
+  #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform.MONITOR = gform.MONITOR,
+  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
+
+  # ------------------------------------------------------------------------------------------------------------------
+  # 2A) Stratification (subsetting) by logical expressions on TRT=c("A1","A2") & CENS=c("C1","C2","C3"):
+  # ******* WHEN ONLY ONE REGRESSION IS SPECIFIED (gform.TRT1 and gform.CENS1) ********
+  # ------------------------------------------------------------------------------------------------------------------
+  gform.TRT1 <- c("A1 + A2 ~ L1 + L2"); stratify.TRT1 = c("t == 0L", "t > 0L")
+  gform.CENS1 <- c("C1 + C2 + C3 ~ L1 + L2"); stratify.CENS1 = c("t == 0L", "t > 0L")
+  # ........
+  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
+  #                             gform.CENS = gform.CENS1, gform.TRT = gform.TRT1, gform.MONITOR = gform.MONITOR,
+  #                             stratify.CENS = stratify.CENS1, stratify.TRT = stratify.TRT1, stratify.MONITOR = NULL)
+
+  # ------------------------------------------------------------------------------------------------------------------
+  # 2B) Stratification
+  # ******* WHEN > ONE REGRESSION IS SPECIFIED, i.e., gform.TRT2 and gform.CENS2) ********
+  # ONE SOLUTION IS TO FORCE stratify.CENS & stratify.TRT TO BE A NAMED LIST.
+  # EACH ITEM IN A LIST CORRESPONDS TO VECTOR OF STRATIFICATION RULES
+  # ------------------------------------------------------------------------------------------------------------------
+  gform.TRT2 <- c("A1 ~ L1 + L2", "A2 ~ L1 + L2 + A1")
+  stratify.TRT2 = list(A1=c("t == 0L", "t > 0L"), A2=c("t == 0L", "t > 0L"))
+
+  gform.CENS2 <- c("C1 ~ L1 + L2", "C2 ~ L1 + L2 + C1", "C3 ~ L1 + L2 + C1 + C2")
+  stratify.CENS2 = list(C1=c("t == 0L", "t > 0L"), C2=c("t == 0L", "t > 0L"))
+  # ........
+  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
+  #                             gform.CENS = gform.CENS2, gform.TRT = gform.TRT2, gform.MONITOR = gform.MONITOR,
+  #                             stratify.CENS = stratify.CENS2, stratify.TRT = stratify.TRT2, stratify.MONITOR = NULL)
+
+  # ------------------------------------------------------------------------------------------------------------------
+  # 2C) Stratification (subsetting) by logical expressions on cat TRT=c("A") and cat CENS="C":
+  # ------------------------------------------------------------------------------------------------------------------
+  gform.TRT3 <- c("A ~ L1 + L2")
+  stratify.TRT3 = c("t == 0L", "t > 0L & A.tminus1 == 0L", "t > 0L & A.tminus1 == 1L")
+
+  gform.CENS3 <- c("C ~ L1 + L2")
+  stratify.CENS3 = c("t == 0L", "t > 0L & A.tminus1 == 0L", "t > 0L & A.tminus1 == 1L")
+  # ........
+  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  #                             covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
+  #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform.MONITOR = gform.MONITOR,
+  #                             stratify.CENS = stratify.CENS3, stratify.TRT = stratify.TRT3, stratify.MONITOR = NULL)
+
+}
 
 
 # test that all new nodes added after time-var nodes have a t argument:
@@ -103,4 +187,23 @@ test.t.error <- function() {
 test.Nsamp.n.test <- function() {
 # ....
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

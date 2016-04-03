@@ -15,7 +15,8 @@ Imports:
     R6,
     Rcpp,
     speedglm,
-    stats
+    stats,
+    stringr
 LinkingTo: Rcpp
 Suggests:
     RUnit,

@@ -128,7 +128,7 @@ make.bins_mtx_1 <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins) {
 #'   \item{\code{replaceOneAnode(AnodeName, newAnodeVal)}}{...}
 #'   \item{\code{replaceManyAnodes(Anodes, newAnodesMat)}}{...}
 #'   \item{\code{addYnode(YnodeVals, det.Y)}}{...}
-#'   \item{\code{evalsubst(subsetexpr, subsetvars)}}{...}
+#'   \item{\code{evalsubst(subset_expr, subset_vars)}}{...}
 #'   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
 #'   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
 #'   \item{\code{bin.nms.sVar(name.sVar, nbins)}}{...}
@@ -198,11 +198,11 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     # Could also do evaluation in a special env with a custom subsetting fun '[' that will dynamically find the correct dataset that contains
     # sVar.name (dat.sVar or dat.bin.sVar) and will return sVar vector
-    evalsubst = function(subsetexpr, subsetvars) {
-      if (missing(subsetexpr)) {
-        assert_that(!missing(subsetvars))
+    evalsubst = function(subset_expr, subset_vars) {
+      if (missing(subset_expr)) {
+        assert_that(!missing(subset_vars))
         res <- rep.int(TRUE, self$nobs)
-        for (subsetvar in subsetvars) {
+        for (subsetvar in subset_vars) {
           # *) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
           sVar.vec <- self$get.outvar(var = subsetvar)
           assert_that(!is.null(sVar.vec))
@@ -211,13 +211,13 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         }
         return(res)
       # ******************************************************
-      # NOTE: Below is currently not being used, all subsetting now is done with subsetvars above, for speed & memory efficiency
+      # NOTE: Below is currently not being used, all subsetting now is done with subset_vars above, for speed & memory efficiency
       # ******************************************************
       } else {
-        if (is.logical(subsetexpr)) {
-          return(subsetexpr)
+        if (is.logical(subset_expr)) {
+          return(subset_expr)
         } else {
-          res <- self$dat.sVar[, eval(parse(text = subsetexpr)), by = get(self$nodes$ID)][["V1"]]
+          res <- self$dat.sVar[, eval(parse(text = subset_expr)), by = get(self$nodes$ID)][["V1"]]
           assert_that(is.logical(res))
           browser()
 
@@ -226,7 +226,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           # REPLACING WITH env that is made of data.frames instead of matrices
           # ******************************************************
           # eval.env <- c(data.frame(self$dat.sVar), data.frame(self$dat.bin.sVar), as.list(gvars))
-          # res <- try(eval(subsetexpr, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
+          # res <- try(eval(subset_expr, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
           # self$dat.sVar[eval(),]
           # stop("disabled for memory/speed efficiency")
           return(res)
