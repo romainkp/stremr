@@ -106,7 +106,7 @@ get_vars_fromlist <- function(varname, sVar.map) {
   }
 }
 # Parse the formulas for summary measure names and create a map to actual covariate names in sA & sW
-process_regform <- function(regform, sVar.map = NULL) {
+process_regform <- function(regform, sVar.map = NULL, factor.map = NULL) {
   # Getting predictors (sW names):
   regformterms <- terms(regform)
   sW.names <- attributes(regformterms)$term.labels
@@ -120,11 +120,13 @@ process_regform <- function(regform, sVar.map = NULL) {
 
   outvars <- unlist(lapply(sA.names, get_vars_fromlist, sVar.map))
   predvars <- unlist(lapply(sW.names, get_vars_fromlist, sVar.map))
+  # in case some factors were also involved (these will then be replaced only on a second iteration)
+  predvars <- unlist(lapply(predvars, get_vars_fromlist, factor.map))
   return(list(outvars = outvars, predvars = predvars))
 }
 
 # When several reg forms are specified (multivariate Anodes), process outvars into one vector and process predvars in a named list of vectors
-process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
+process_regforms <- function(regforms, default.reg, sVar.map = NULL, factor.map = NULL) {
   using.default <- FALSE
   if (missing(regforms)) {
     using.default <- TRUE
@@ -135,7 +137,7 @@ process_regforms <- function(regforms, default.reg, sVar.map = NULL) {
   predvars <- vector(mode="list", length=length(regforms))
 
   for (idx in seq_along(regforms)) {
-    res <- process_regform(as.formula(regforms[[idx]]), sVar.map = sVar.map)
+    res <- process_regform(as.formula(regforms[[idx]]), sVar.map = sVar.map, factor.map = factor.map)
     outvars[[idx]] <- res$outvars
     predvars[[idx]] <- res$predvars
     names(outvars)[idx] <- names(predvars)[idx] <- paste0(outvars[[idx]], collapse="+")
@@ -351,9 +353,9 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
-  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = c(nodes,new.factor.names))
-  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = c(nodes,new.factor.names))
-  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, sVar.map = c(nodes,new.factor.names))
+  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = nodes, factor.map = new.factor.names)
+  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = nodes, factor.map = new.factor.names)
+  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, sVar.map = nodes, factor.map = new.factor.names)
 
   # put all three regression models (C,A,N) into one regression object:
   all_outVar_nms <- c(g.C.sVars$outvars, g.A.sVars$outvars, g.N.sVars$outvars)
