@@ -13,6 +13,126 @@ newsummarymodel.binary <- function(reg, ...) BinOutModel$new(reg = reg, ...)
 newsummarymodel.contin <- function(reg, DatNet.sWsA.g0, ...) ContinSummaryModel$new(reg = reg, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
 # Summary model constructor for categorical outcome sA[j]:
 newsummarymodel.categor <- function(reg, DatNet.sWsA.g0, ...) CategorSummaryModel$new(reg = reg, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
+# Summary model constructor for stratification (by subset_exprs):
+newsummarymodel.stratify <- function(reg, ...) StratifySummariesModel$new(reg = reg, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
+
+print.SingleRegressionClass <- function(regobj) regobj$show()
+
+get_outvars <- function(regobjlist) { UseMethod("get_outvars") }
+get_outvars.ListOfSingleRegressionClass <- function(regobjlist) {
+  outvars <- NULL
+  for (idx in seq_along(regobjlist))
+    outvars <- c(outvars, regobjlist[[idx]]$outvar)
+  return(outvars)
+}
+get_subset_exprs <- function(regobjlist) { UseMethod("get_subset_exprs") }
+get_subset_exprs.ListOfSingleRegressionClass <- function(regobjlist) {
+  subset_exprs <- NULL
+  for (idx in seq_along(regobjlist))
+    subset_exprs <- c(subset_exprs, regobjlist[[idx]]$subset_exprs)
+  return(subset_exprs)
+}
+set_subset_exprs <- function(regobjlist, idx, subset_expr) { UseMethod("set_subset_exprs") }
+set_subset_exprs.ListOfSingleRegressionClass <- function(regobjlist, idx, subset_expr) {
+  subset_exprs <- NULL
+  idx_count <- 0
+  for (idx_reg in seq_along(regobjlist)) {
+    for (idx_outvar in seq_along(regobjlist[[idx_reg]]$outvar)) {
+      idx_count <- idx_count + 1
+      if (idx == idx_count) {
+        regobjlist[[idx_reg]]$subset_exprs[[idx_outvar]] <- subset_expr
+        return(invisible(regobjlist[[idx_reg]]))
+      }
+    }
+  }
+}
+
+SingleRegressionClass <- R6Class("SingleRegressionClass",
+  class = TRUE,
+  portable = TRUE,
+  public = list(
+    outvar = character(),          # vector of regression outcome variable names
+    predvars = character(),        # vector of predictor names
+    outvar.class = character(),    # Named LIST of outcome class names: binary / continuous / categorical
+    subset_vars = NULL,            # Named LIST for subset vars, one list item per outcome in outvar, each list item can be a character vector.
+                                   # Later these are tested for missing values, which forms the basis of the logical subset vector)
+    subset_exprs = NULL,           # Named LIST of subset expressions (as strings), one list item per outcome in outvar.
+                                   # Each item is a vector of different subsetting expressions (form stratified models)
+                                   # These expressions are evaluated in the envir of the data, must evaluate to a logical vector
+    reg_hazard = FALSE,            # If TRUE, the joint P(outvar|predvars) is factorized as \prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard)
+    censoring = FALSE,             #
+    formula = NULL,                # (NOT IMPLEMENTED) reg formula, if provided run using the usual glm / speedglm functions
+    # family = NULL,               # (NOT IMPLEMENTED) to run w/ other than "binomial" family
+    initialize = function(outvar, predvars, outvar.class, subset_vars = NULL, subset_exprs = NULL, reg_hazard = FALSE, censoring = FALSE, formula = NULL) {
+      assert_that(is.character(outvar))
+      assert_that(is.character(predvars))
+      self$outvar <- outvar
+      self$predvars <- predvars
+      self$outvar.class <- self$checkInputList(outvar.class)
+
+      if (!is.null(subset_vars)) {
+        self$subset_vars <- self$checkInputList(subset_vars)
+      } else {
+        self$subset_vars <- lapply(self$outvar, function(var) {var})
+        names(self$subset_vars) <- self$outvar
+      }
+
+      if (!is.null(subset_exprs)) {
+        self$subset_exprs <- self$checkInputList(subset_exprs)
+      } else {
+        self$subset_exprs <- lapply(self$outvar, function(var) {NULL})
+        names(self$subset_exprs) <- self$outvar
+      }
+
+      assert_that(is.flag(reg_hazard))
+      self$reg_hazard <- reg_hazard
+      assert_that(is.flag(censoring))
+      self$censoring <- censoring
+      if (!is.null(formula)) self$formula <- formula
+      return(self)
+    },
+
+    checkInputList = function(inputlist) {
+      assert_that(is.list(inputlist))
+      assert_that(length(inputlist) == length(self$outvar))
+      assert_that(all(names(inputlist) %in% self$outvar))
+      return(inputlist)
+    },
+
+    show = function() {
+      str(self$get.reg)
+      return(invisible(self$get.reg))
+    },
+
+    set_subset_expr = function(subset_expr) {
+      return(self)
+    },
+
+    resetS3class = function() class(self) <- c("RegressionClass", "R6")
+  ),
+  active = list(
+    # For S3 dispatch on newsummarymodel():
+    S3class = function(newclass) {
+      if (!missing(newclass)) {
+        if (length(class(self)) > 2) stop("S3 dispatch class on RegressionClass has already been set")
+        if (length(newclass) > 1) stop("cannot set S3 class on RegressionClass with more than one outvar variable")
+        class(self) <- c(class(self), newclass)
+      } else {
+        return(class(self))
+      }
+    },
+    get.reg = function() {
+      list(outvar = self$outvar, predvars = self$predvars,
+           outvar.class = self$outvar.class,
+           subset_vars = self$subset_vars,
+           subset_exprs = self$subset_exprs,
+           censoring = self$censoring
+           )
+    }
+  )
+)
+
+
 
 ## ---------------------------------------------------------------------
 #' R6 class that defines regression models evaluating P(sA|sW), for summary measures (sW,sA)
@@ -136,8 +256,8 @@ RegressionClass <- R6Class("RegressionClass",
     # family = NULL,               # (NOT IMPLEMENTED) to run w/ other than "binomial" family
     # form = NULL,                 # (NOT IMPLEMENTED) reg formula, if provided run using the usual glm / speedglm functions
     initialize = function(sep_predvars_sets = FALSE,
-                          outvar.class = gvars$sVartypes$bin,
                           outvar, predvars,
+                          outvar.class = gvars$sVartypes$bin,
                           subset_vars, subset_exprs,
                           intrvls,
                           ReplMisVal0 = TRUE, # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
@@ -212,37 +332,40 @@ RegressionClass <- R6Class("RegressionClass",
     # and set self to a single univariate k_i regression for outcome self$outvar[[k_i]]
     ChangeManyToOneRegresssion = function(k_i, reg) {
       self$resetS3class()
-
       assert_that(!missing(k_i))
       if (missing(reg)) stop("reg must be also specified when k_i is specified")
       assert_that(is.count(k_i))
       assert_that(k_i <= length(reg$outvar))
-
       n_regs <- length(reg$outvar)
-      self$outvar.class <- reg$outvar.class[[k_i]] # Class of the outcome var: binary, categorical, continuous:
-      self$outvar <- reg$outvar[[k_i]]             # An outcome variable that is being modeled:
+      self$outvar.class <- reg$outvar.class[[k_i]] # Class of the outcome var: binary, categorical, continuous
+      self$outvar <- reg$outvar[[k_i]]             # An outcome variable that is being modeled
 
-      # modeling separate regressions (with different predictors for each outcome in outvar)
+      # print("self$outvar.class"); print(self$outvar.class)
+
       if (reg$sep_predvars_sets) {
+        # Modeling separate regressions (with different predictors for each outcome in outvar)
         self$sep_predvars_sets <- FALSE # (1) set the children objects to sep_predvars_sets <- FALSE
         if (!(names(reg$predvars)[k_i] %in% names(reg$outvar)[k_i])) stop("the names of list items in predvars must be in the same order as the node names in outvar")
         predvars_1 <- reg$predvars[[names(reg$outvar)[k_i]]]
         predvars_2 <- reg$predvars[[k_i]]
         if (!identical(predvars_1, predvars_2)) stop("fatal error: look up of reg$predvars[[...]] by outvar and by index k_i returning different results")
         self$predvars <- reg$predvars[[k_i]] # (2) extract specific predictors from the named list reg$predvars for each outvar
-      # modeling bin hazard indicators, no need to condition on previous outcomes as they will all be degenerate
       } else if (self$reg_hazard) {
+        # Modeling hazards of bin indicators, no need to condition on previous outcomes as they will all be degenerate. P(A,B,C|D) -> P(A|D),P(B|D),P(C|D)
         self$predvars <- reg$predvars # Predictors
-      # factorization of the joint prob P(A,B,C|D):=P(A|D)*P(B|A,D)*P(C|A,B,D)
       } else {
+        # Factorizating the joint prob as P(A,B,C|D):=P(A|D)*P(B|A,D)*P(C|A,B,D)
         self$predvars <- c(reg$outvar[-c(k_i:n_regs)], reg$predvars) # Predictors
       }
 
-      # The subset_vars is a list when RegressionClass specifies several regression models at once,
-      # obtain the appropriate subset_vars for this regression k_i and set it to self
+      # The subset_vars is a list when RegressionClass is used to specify several regression models.
+      # Obtain appropriate subset_vars for this regression (k_i) and set it to self.
       # On the other hand, if subset_vars is a vector of variable names, all of those variables will be used for
-      # choosing the subset_varss for all n_regs regressions.
+      # choosing the subset_vars for all n_regs regressions.
       if (is.list(reg$subset_vars)) {
+        # print("reg$subset_vars"); print(reg$subset_vars)
+        # print("reg$subset_exprs"); print(reg$subset_exprs)
+
         self$subset_vars <- reg$subset_vars[[k_i]]
         self$subset_exprs <- reg$subset_exprs[[k_i]]
       }
@@ -256,12 +379,12 @@ RegressionClass <- R6Class("RegressionClass",
         self$S3class <- "generic" # Multivariate/Univariate regression at the top level, need to do another round of S3 dispatch on SummaryModel
       } else if (length(self$outvar)==1) {
         self$S3class <- self$outvar.class # Set class on outvar.class for S3 dispatch...
+        print("self$S3class:"); print(self$S3class)
       } else if (length(self$outvar) > 1){
         stop("can't define a univariate regression for an outcome of length > 1")
       } else {
         stop("can't have an outcome with no class type")
       }
-
       return(invisible(self))
     },
 
@@ -272,10 +395,8 @@ RegressionClass <- R6Class("RegressionClass",
       self$outvar <- regs_list$outvar # An outcome variable that is being modeled:
       self$predvars <- regs_list$predvars
       self$subset_vars <- regs_list$subset_vars
-      self$subset_exprs <- regs_list$subset_exprs
       return(invisible(self))
     },
-
     resetS3class = function() class(self) <- c("RegressionClass", "R6")
   ),
 
@@ -284,9 +405,7 @@ RegressionClass <- R6Class("RegressionClass",
     S3class = function(newclass) {
       if (!missing(newclass)) {
         if (length(class(self)) > 2) stop("S3 dispatch class on RegressionClass has already been set")
-
         if (length(newclass) > 1) stop("cannot set S3 class on RegressionClass with more than one outvar variable")
-
         class(self) <- c(class(self), newclass)
       } else {
         return(class(self))
@@ -297,8 +416,7 @@ RegressionClass <- R6Class("RegressionClass",
       list(outvar.class = self$outvar.class,
            outvar = self$outvar,
            predvars = self$predvars,
-           subset_vars = self$subset_vars,
-           subset_exprs = self$subset_exprs,
+           subset_vars = self$subset_vars
            )
     }
   )
@@ -353,22 +471,18 @@ SummariesModel <- R6Class(classname = "SummariesModel",
   class = TRUE,
   public = list(
     reg = NULL,
-    outvar = character(),   # outcome name(s)
-    predvars = character(), # names of predictor vars
+    outvar = character(),      # outcome name(s)
+    predvars = character(),    # names of predictor vars
     n_regs = integer(),        # total no. of reg. models (logistic regressions)
     parfit_allowed = FALSE,    # allow parallel fit of multivar outvar when 1) reg$parfit = TRUE & 2) all.outvar.bin = TRUE
     initialize = function(reg, no_set_outvar = FALSE, ...) {
       self$reg <- reg
-
       if (!no_set_outvar) self$outvar <- reg$outvar
       self$predvars <- reg$predvars
-
       self$n_regs <- length(reg$outvar) # Number of sep. logistic regressions to run
       all.outvar.bin <-  all(reg$outvar.class %in% gvars$sVartypes$bin)
-
       if (reg$parfit & all.outvar.bin & (self$n_regs > 1)) self$parfit_allowed <- TRUE
       #**** NOTE: for ltmle this should be changed to: if (reg$sep_predvars_sets) self$parfit_allowed <- TRUE
-
       if (gvars$verbose) {
         print("#----------------------------------------------------------------------------------")
         print("New instance of SummariesModel:")
@@ -382,11 +496,13 @@ SummariesModel <- R6Class(classname = "SummariesModel",
         }
         print("No. of regressions: " %+% self$n_regs)
         print("All outcomes binary? " %+% all.outvar.bin)
+        print("reg$subset_vars"); print(reg$subset_vars)
+        print("reg$subset_exprs"); print(reg$subset_exprs)
+        print("reg$outvar.class"); print(reg$outvar.class)
         if (self$parfit_allowed) print("Performing parallel fits: " %+% self$parfit_allowed)
         print("#----------------------------------------------------------------------------------")
       }
-
-      # factorize the joint into univariate regressions, by dimensionality of the outcome variable (sA_nms):
+      # Factorize the joint into univariate regressions, by dimensionality of the outcome variable (sA_nms):
       for (k_i in 1:self$n_regs) {
         reg_i <- reg$clone()
         reg_i$ChangeManyToOneRegresssion(k_i, reg)
@@ -397,11 +513,9 @@ SummariesModel <- R6Class(classname = "SummariesModel",
       }
       invisible(self)
     },
-
     length = function(){ base::length(private$PsAsW.models) },
     getPsAsW.models = function() { private$PsAsW.models },  # get all summary model objects (one model object per outcome var sA[j])
     getcumprodAeqa = function() { private$cumprodAeqa },  # get joint prob as a vector of the cumulative prod over j for P(sA[j]=a[j]|sW)
-
     fit = function(data) {
       assert_that(is.DataStorageClass(data))
       # serial loop over all regressions in PsAsW.models:
@@ -425,12 +539,9 @@ SummariesModel <- R6Class(classname = "SummariesModel",
       }
       invisible(self)
     },
-
     # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
     predict = function(newdata) {
-      if (missing(newdata)) {
-        stop("must provide newdata")
-      }
+      if (missing(newdata)) stop("must provide newdata")
       assert_that(is.DataStorageClass(newdata))
       # serial loop over all regressions in PsAsW.models:
       if (!self$parfit_allowed) {
@@ -453,7 +564,6 @@ SummariesModel <- R6Class(classname = "SummariesModel",
       }
       invisible(self)
     },
-
     # WARNING: This method cannot be chained together with other methods (s.a, class$predictAeqa()$fun())
     # Uses daughter objects (stored from prev call to fit()) to get predictions for P(sA=obsdat.sA|sW=sw)
     # Invisibly returns the joint probability P(sA=sa|sW=sw), also saves it as a private field "cumprodAeqa"
@@ -480,16 +590,12 @@ SummariesModel <- R6Class(classname = "SummariesModel",
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     },
-
     sampleA = function(newdata, ...) {
-      # stop("not implemented")
       assert_that(!missing(newdata))
       assert_that(is.DataStorageClass(newdata))
       n <- newdata$nobs
-
       # loop over all regressions in PsAsW.models, sample CONDITIONALLY on observations that haven't been put in a specific bin yet
       sampleA_mat <- matrix(0L, nrow = n, ncol = length(private$PsAsW.models))
-
       for (k_i in seq_along(private$PsAsW.models)) {
         sampleA_newcat <- private$PsAsW.models[[k_i]]$sampleA(newdata = newdata, ...)
         if (k_i == 1L) sampleA_mat[, k_i] <- sampleA_newcat
@@ -501,23 +607,15 @@ SummariesModel <- R6Class(classname = "SummariesModel",
           sampleA_mat[(sampleA_mat[, k_i - 1] == 0L), k_i] <- sampleA_newcat[(sampleA_mat[, k_i - 1] == 0L)]
         }
       }
-
-      # browser()
-      # print(head(sampleA_mat))
-      # nF.PA <- rowSums(1L - sampleA_mat) + 1L
-      # # print(table(as.vector(sampleA_mat)))
-
       if (length(private$PsAsW.models) > 1) {
         sampleA_mat[, length(private$PsAsW.models)] <- 1L # make last category a reference category
         sampleA_cat <- rowSums(1L - sampleA_mat) + 1L
       } else {
         sampleA_cat <- as.vector(sampleA_mat)
       }
-
       return(sampleA_cat)
     }
   ),
-
   active = list(
     # recursively call all saved daughter model fits and wipe out any traces of saved data
     wipe.alldat = function() {
@@ -527,7 +625,6 @@ SummariesModel <- R6Class(classname = "SummariesModel",
       return(self)
     }
   ),
-
   private = list(
     deep_clone = function(name, value) {
       # if value is is an environment, quick way to copy:
@@ -551,15 +648,17 @@ SummariesModel <- R6Class(classname = "SummariesModel",
 
 
 # -------------------------------------------------------------------------------------------
-# same code in ContinSummaryModel$new and CategorSummaryModel$new replaced with outside function:
-# Define subset evaluation for new bins:
-# ******************************************************
-# NOTE: subsetting by var name only (which automatically evaluates as !gvars$misval(var)) for speed & memory efficiency
-# ******************************************************
+# Same code called from ContinSummaryModel$new and CategorSummaryModel$new:
+# From a single categorical/continous outcome regression define a regression class for many binary dummy outcomes.
+# First makes a clone of the parent RegressionClass and the recents the previous outvar/outvar.class to new binary outcomes/classes.
+# Defines subset_var evaluation for new bins (for fitting the hazard of each new category/dummy)
+# NOTE: This subsetting is performed by var name only (which automatically evaluates as !gvars$misval(var)) for speed & memory efficiency
+# The code in DataStorageClass$binirize.sVar() will automatically set the indicator Bin_K[i] to NA when Bin_K-1[i] is 1 for the first time.
+# Thus, by excluding all observations such that !is.na(Bin_K) we end up fitting the hazard for Bin_K=1.
 # -------------------------------------------------------------------------------------------
 def_regs_subset <- function(self) {
-  bin_regs <- self$reg$clone() # instead of defining new RegressionClass now cloning parent reg object and then ADDING new SETTINGS
-  bin_regs$reg_hazard <- TRUE # don`t add degenerate bins as predictors in each binary regression
+  bin_regs <- self$reg$clone()  # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
+  bin_regs$reg_hazard <- TRUE   # Don`t add degenerate bins as predictors in each binary regression
   if (!self$reg$pool_cont) {
     add.oldsubset <- TRUE
     new.subsets <- lapply(self$reg$bin_nms,
@@ -574,7 +673,8 @@ def_regs_subset <- function(self) {
     bin_regs$ChangeOneToManyRegresssions(regs_list = list(outvar.class = new.sAclass,
                                                           outvar = self$reg$bin_nms,
                                                           predvars = self$reg$predvars,
-                                                          subset_vars = new.subsets))
+                                                          subset_vars = new.subsets
+                                                          ))
   # Same but when pooling across bin indicators:
   } else {
     bin_regs$outvar.class <- gvars$sVartypes$bin
@@ -675,12 +775,10 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       names(self$reg$intrvls.width) <- names(self$intrvls.width) <- self$reg$bin_nms
       if (gvars$verbose)  {
         print("ContinSummaryModel outcome: "%+%self$outvar)
-        # print("ContinSummaryModel reg$nbins: " %+% self$reg$nbins)
       }
       bin_regs <- def_regs_subset(self = self)
       super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
     },
-
     # Transforms data for continous outcome to discretized bins sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data) {
@@ -698,12 +796,9 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       self$wipe.alldat # wiping out all data traces in ContinSummaryModel...
       invisible(self)
     },
-
     # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
     predict = function(newdata) {
-      if (missing(newdata)) {
-        stop("must provide newdata")
-      }
+      if (missing(newdata)) stop("must provide newdata")
       assert_that(is.DataStorageClass(newdata))
       if (gvars$verbose) print("performing prediction for continuous outcome: " %+% self$outvar)
       # mat_bin doesn't need to be saved (even though its invisibly returned); mat_bin is automatically saved in datnet.sW.sA - a potentially dangerous side-effect!!!
@@ -712,7 +807,6 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DatNet.sWsA object...
       invisible(self)
     },
-
     # Convert contin. sA vector into matrix of binary cols, then call parent class method: super$predictAeqa()
     # Invisibly return cumm. prob P(sA=sa|sW=sw)
     predictAeqa = function(newdata) { # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a`s)
@@ -735,11 +829,9 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     },
-
     sampleA = function() {
       stop("not implemented")
     }
-
   ),
   active = list(
     cats = function() {seq_len(self$reg$nbins)}
@@ -797,7 +889,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       self$reg <- reg
       self$outvar <- reg$outvar
       # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
-      # all predvars remain unchanged
+      # All predvars remain unchanged
       if (is.null(reg$levels)) {
         assert_that(is.DataStorageClass(DatNet.sWsA.g0))
         self$levels <- self$reg$levels <- DatNet.sWsA.g0$detect.cat.sVar.levels(reg$outvar)
@@ -808,13 +900,10 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       self$reg$bin_nms <- DatNet.sWsA.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
       if (gvars$verbose)  {
         print("CategorSummaryModel outcome: "%+%self$outvar)
-        # print("CategorSummaryModel reg$levels: "); print(self$reg$levels)
-        # print("CategorSummaryModel reg$nbins: " %+% self$reg$nbins)
       }
       bin_regs <- def_regs_subset(self = self)
       super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
     },
-
     # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data) {
@@ -832,12 +921,9 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       self$wipe.alldat # wiping out all data traces in ContinSummaryModel...
       invisible(self)
     },
-
     # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
     predict = function(newdata) {
-      if (missing(newdata)) {
-        stop("must provide newdata")
-      }
+      if (missing(newdata)) stop("must provide newdata")
       assert_that(is.DataStorageClass(newdata))
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
       newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
@@ -845,7 +931,6 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DatNet.sWsA object...
       invisible(self)
     },
-
     # Invisibly return cumm. prob P(sA=sa|sW=sw)
     # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
     predictAeqa = function(newdata) {
@@ -858,16 +943,95 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     },
-
     sampleA = function(newdata) {
-      # stop("not implemented")
       assert_that(is.DataStorageClass(newdata))
-      # bring the sampled variable back to its original scale / levels:
-      sampleA <- self$levels[super$sampleA(newdata = newdata)]
+      sampleA <- self$levels[super$sampleA(newdata = newdata)] # bring the sampled variable back to its original scale / levels:
       return(sampleA)
     }
   ),
   active = list(
     cats = function() {seq_len(self$reg$nbins)}
+  )
+)
+
+StratifySummariesModel <- R6Class(classname = "CategorSummaryModel",
+  inherit = SummariesModel,
+  portable = TRUE,
+  class = TRUE,
+  public = list(
+    reg = NULL,
+    outvar = character(),     # the name of the categorical outcome var (sA[j])
+    # levels = numeric(),       # all unique values for sA[j] sorted in increasing order
+    nbins = integer(),
+    subset_exprs = NULL,
+    # Define settings for fitting cat sA and then call $new for super class (SummariesModel)
+    initialize = function(reg, DatNet.sWsA.g0, ...) {
+      self$reg <- reg
+      self$outvar <- reg$outvar
+      # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
+      # all predvars remain unchanged
+      # Define stratas (different regressions) based on the number of subsetting expressions in reg$subset_exprs
+      if (is.null(reg$levels)) {
+        assert_that(is.DataStorageClass(DatNet.sWsA.g0))
+        self$levels <- self$reg$levels <- DatNet.sWsA.g0$detect.cat.sVar.levels(reg$outvar)
+      } else {
+        self$levels <- self$reg$levels
+      }
+      self$nbins <- self$reg$nbins <- length(self$levels)
+      self$reg$bin_nms <- DatNet.sWsA.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
+      if (gvars$verbose)  {
+        print("StratifySummariesModel outcome: "%+%self$outvar)
+        print("StratifySummariesModel subsetting expressions: "%+%self$subset_exprs)
+        # print("CategorSummaryModel reg$levels: "); print(self$reg$levels)
+        # print("CategorSummaryModel reg$nbins: " %+% self$reg$nbins)
+      }
+
+
+
+      bin_regs <- def_regs_subset(self = self)
+
+
+
+      super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
+    },
+
+    # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
+    # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
+    fit = function(data) {
+      assert_that(is.DataStorageClass(data))
+      if (gvars$verbose) {
+        print("performing fitting for outcome based on stratified model: " %+% self$outvar)
+        print("following subsets are defined: "); print(table(data$get.sVar(self$outvar)))
+      }
+      super$fit(data) # call the parent class fit method
+      if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
+      invisible(self)
+    },
+    # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
+    predict = function(newdata) {
+      if (missing(newdata)) stop("must provide newdata")
+      assert_that(is.DataStorageClass(newdata))
+      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
+      super$predict(newdata)
+      invisible(self)
+    },
+    # Invisibly return cumm. prob P(sA=sa|sW=sw)
+    # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
+    predictAeqa = function(newdata) {
+      assert_that(is.DataStorageClass(newdata))
+      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
+      cumprodAeqa <- super$predictAeqa(newdata = newdata)
+      private$cumprodAeqa <- cumprodAeqa
+      return(cumprodAeqa)
+    },
+    sampleA = function(newdata) {
+      assert_that(is.DataStorageClass(newdata))
+      # bring the sampled variable back to its original scale / levels:
+      sampleA <- super$sampleA(newdata = newdata)
+      return(sampleA)
+    }
+  ),
+  active = list(
+    # cats = function() {seq_len(self$reg$nbins)}
   )
 )

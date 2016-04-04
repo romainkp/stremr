@@ -107,13 +107,16 @@ get_vars_fromlist <- function(varname, sVar.map) {
 }
 # Parse the formulas for summary measure names and create a map to actual covariate names in sA & sW
 process_regform <- function(regform, sVar.map = NULL, factor.map = NULL) {
+  # regform1 <- as.formula("N.t ~ 1")
   # Getting predictors (sW names):
   regformterms <- terms(regform)
   sW.names <- attributes(regformterms)$term.labels
   sW.names.alt <- colnames(attributes(regformterms)$factors)
   assert_that(all(sW.names == sW.names.alt))
   # Getting OUTCOMEs (sA names):
-  out.var <- rownames(attributes(regformterms)$factors)[1] # character string
+  (out.var <- deparse(attributes(regformterms)$variables[[2]])) # LHS character string
+  # out.var <- rownames(attributes(regformterms)$factors)[1] # character string
+
   out.vars.form <- as.formula(". ~ " %+% out.var)
   out.vars.terms <- terms(out.vars.form)
   sA.names <- attributes(out.vars.terms)$term.labels
@@ -125,44 +128,66 @@ process_regform <- function(regform, sVar.map = NULL, factor.map = NULL) {
   return(list(outvars = outvars, predvars = predvars))
 }
 
+
+# Loop through a list of SingleRegressionClass objects and their outvars as if it was one long list of outvars and create the subsetting expressions
+# Need to test one boundary case where the entire regs[[idx]]$subset_exprs is NULL what happens then?
+stratify_by_uncensored <- function(regs) {
+  for (Var_indx in seq_along(get_outvars(regs)[-1])) {
+    strat.C <- paste0(as.vector(get_outvars(regs)[1:Var_indx]) %+% " == " %+% gvars$noCENS.cat, collapse=" & ")
+    curr_exprs <- get_subset_exprs(regs)[[Var_indx+1]]
+    if (!is.null(curr_exprs)) {
+      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_expr = stringr::str_c(curr_exprs, " & ", strat.C))
+    } else {
+      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_expr = strat.C)
+    }
+  }
+  return(regs)
+}
+
+# Create subsetting expressions for a node (Anode, Cnode or Nnode):
+create_subset_expr <- function(outvars, stratify.EXPRS) {
+  if (is.null(stratify.EXPRS)) {
+    return(NULL)
+  }
+  Node_subset_expr <- vector(mode="list", length=length(outvars))
+  names(Node_subset_expr) <- outvars
+  assert_that(is.list(stratify.EXPRS))
+  assert_that(all(outvars %in% names(stratify.EXPRS)))
+  for (idx in seq_along(Node_subset_expr))
+    if (!is.null(stratify.EXPRS[[outvars[idx]]]))
+      Node_subset_expr[[idx]] <- stratify.EXPRS[[outvars[idx]]]
+  return(Node_subset_expr)
+}
+
 # When several reg forms are specified (multivariate Anodes), process outvars into one vector and process predvars in a named list of vectors
-process_regforms <- function(regforms, default.reg, sVar.map = NULL, factor.map = NULL) {
+# stratify.EXPRS - Must be a named list. One item (characeter vectors) per one outcome in regforms.
+process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData, sVar.map = NULL, factor.map = NULL, censoring = FALSE) {
   using.default <- FALSE
   if (missing(regforms)) {
     using.default <- TRUE
     regforms <- default.reg
   }
-
+  if (!is.null(stratify.EXPRS)) assert_that(is.list(stratify.EXPRS))
   outvars <- vector(mode="list", length=length(regforms))
   predvars <- vector(mode="list", length=length(regforms))
+  regs <- vector(mode="list", length=length(regforms))
 
   for (idx in seq_along(regforms)) {
     res <- process_regform(as.formula(regforms[[idx]]), sVar.map = sVar.map, factor.map = factor.map)
     outvars[[idx]] <- res$outvars
-    predvars[[idx]] <- res$predvars
+    if (!is.null(res$predvars)) predvars[[idx]] <- res$predvars
     names(outvars)[idx] <- names(predvars)[idx] <- paste0(outvars[[idx]], collapse="+")
     if (using.default && gvars$verbose)
       message("Using the default regression formula: " %+% paste0(outvars[[idx]], collapse="+") %+% " ~ " %+% paste0(predvars[[idx]], collapse="+"))
+      # browser()
+      subset_expr <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
+      regobj <- SingleRegressionClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = OData$type.sVar[res$outvars],
+                                          subset_vars = NULL, subset_exprs = subset_expr, reg_hazard = FALSE, censoring = censoring)
+      regs[[idx]] <- regobj
   }
-  return(list(outvars = outvars, predvars = predvars))
-}
-
-# Create subsetting expressions for a node (Anode, Cnode or Nnode):
-create_subset_expr <- function(outvars, stratify.EXPRS, censoring = FALSE) {
-  Node_subset_expr <- vector(mode="list", length=length(outvars))
-  names(Node_subset_expr) <- outvars
-  Node_subset_expr[] <- "rep.int(TRUE, .N)"
-  # For C by definition, we subset the values of all previous censoring variables
-  if (censoring) {
-    for (Var_indx in seq_along(outvars[-1])) {
-      Node_subset_expr[[Var_indx+1]] <- paste0(as.vector(unlist(outvars[1:Var_indx])) %+% " == " %+% gvars$noCENS.cat, collapse=" & ")
-    }
-  }
-  if (!is.null(stratify.EXPRS)) {
-    for (idx in seq_along(Node_subset_expr))
-      Node_subset_expr[[idx]] <- stringr::str_c(Node_subset_expr[[idx]], " & ", stratify.EXPRS)
-  }
-  return(lapply(Node_subset_expr, function(el) list(el)))
+  class(regs) <- c(class(regs), "ListOfSingleRegressionClass")
+  if (censoring) regs <- stratify_by_uncensored(regs)
+  return(list(outvars = outvars, predvars = predvars, regs = regs))
 }
 
 #---------------------------------------------------------------------------------
@@ -375,9 +400,10 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
-  # browser()
+
   # gform.CENS <- c("A1 ~ L1 + L2", "A2 ~ L3 + L4")
   # gform.CENS <- c("C1 + C2 + C3 ~ L1 + L2")
+  # gform.CENS <- paste0(c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes), collapse=" + ") %+% "~" %+% paste0(nodes$Lnodes, collapse=" + ")
   # browser()
   # EVALUATING SUBSETTING EXPRESSIONS:
   # subs_expr1 <- "t == 0L"
@@ -386,28 +412,106 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # subset_idx <- OData$dat.sVar[, eval(parse(text=subs_expr3)), by = get(nodes$ID)][["V1"]]
   # OData$dat.sVar[, subset_idx:=eval(parse(text=subs_expr3)), by = get(nodes$ID)]
 
-  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, sVar.map = nodes, factor.map = new.factor.names)
-  C_subset_expr <- create_subset_expr(outvars = g.C.sVars$outvars, stratify.EXPRS = stratify.CENS, censoring = TRUE)
+  # g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
+  #                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+  # # C_subset_expr <- create_subset_expr(outvars = g.C.sVars$outvars, )
 
-  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, sVar.map = nodes, factor.map = new.factor.names)
-  A_subset_expr <- create_subset_expr(outvars = g.A.sVars$outvars, stratify.EXPRS = stratify.TRT, censoring = FALSE)
+  # # put all three regression models (C,A,N) into one regression object:
+  # all_outVar_nms <- c(g.C.sVars$outvars, g.A.sVars$outvars, g.N.sVars$outvars)
+  # all_predVar_nms <- c(g.C.sVars$predvars, g.A.sVars$predvars, g.N.sVars$predvars)
+  # all_subsets_vars <- lapply(all_outVar_nms, function(var) lapply(var, function(var) {var}))
+  # all_subset_exprs <- c(C_subset_expr, A_subset_expr, N_subset_expr)
+  # all_outVar_class <- lapply(all_outVar_nms, function(outVar_nm) OData$type.sVar[outVar_nm])
 
-  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, sVar.map = nodes, factor.map = new.factor.names)
-  N_subset_expr <- create_subset_expr(outvars = g.N.sVars$outvars, stratify.EXPRS = stratify.MONITOR, censoring = FALSE)
 
-  # put all three regression models (C,A,N) into one regression object:
-  all_outVar_nms <- c(g.C.sVars$outvars, g.A.sVars$outvars, g.N.sVars$outvars)
-  all_predVar_nms <- c(g.C.sVars$predvars, g.A.sVars$predvars, g.N.sVars$predvars)
-  all_subsets_vars <- lapply(all_outVar_nms, function(var) lapply(var, function(var) {var}))
-  all_outVar_class <- lapply(all_outVar_nms, function(outVar_nm) OData$type.sVar[outVar_nm])
+
+  # ------------------------------------------------------------------------------------------
+  # TESTING 2 approaches to specifying regression forms "A1+A2 ~ L" vs. c("A1 ~ L", "A2 ~ L + A1")
+  #  **** ADD TO TESTS ***
+  # ------------------------------------------------------------------------------------------
+  # # EXAMPLE 1:
+  # gform.CENS <- "C + TI.t + N.t ~ highA1c.t + lastN.t"
+  # g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = NULL,
+  #                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+  # (regs <- g.C.sVars$regs)
+
+  # # EXAMPLE 2:
+  # gform.CENS <- "C + TI.t + N.t ~ highA1c.t + lastN.t"
+  # strat.str <- c("t == 0L", "t > 0")
+  # stratify.CENS <- rep(list(strat.str), 3)
+  # names(stratify.CENS) <- c("C", "TI.t", "N.t")
+  # g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
+  #                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+  # (regs <- g.C.sVars$regs)
+
+  # # EXAMPLE 3:
+  # gform.CENS <- c("C + TI.t ~ highA1c.t + lastN.t", "N.t ~ highA1c.t + lastN.t + C + TI.t")
+  # g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = NULL,
+  #                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+  # (regs <- g.C.sVars$regs)
+
+  # EXAMPLE 4:
+  gform.CENS <- c("C + TI.t ~ highA1c.t + lastN.t", "N.t ~ highA1c.t + lastN.t + C + TI.t")
+  stratify.CENS <- list(C = NULL, TI.t = c("t == 0L"), N.t = c("t == 0L", "t > 0"))
+  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
+                                OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+  (regs <- g.C.sVars$regs)
+  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, stratify.EXPRS = stratify.TRT,
+                                sVar.map = nodes, factor.map = new.factor.names)
+  (regs <- g.A.sVars$regs)
+  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, stratify.EXPRS = stratify.MONITOR,
+                                sVar.map = nodes, factor.map = new.factor.names)
+  (regs <- g.N.sVars$regs)
+
+  # browser()
+
+  # all_outVar_nms <- c(g.C.sVars$outvars)
+  # all_predVar_nms <- c(g.C.sVars$predvars)
+  # all_subsets_vars <- lapply(all_outVar_nms, function(var) lapply(var, function(var) {var}))
+  # all_subset_exprs <- C_subset_expr
+  # all_outVar_class <- lapply(all_outVar_nms, function(outVar_nm) OData$type.sVar[outVar_nm])
 
   ALL.g.regs <- RegressionClass$new(sep_predvars_sets = TRUE,
-                                    outvar.class = all_outVar_class,
                                     outvar = all_outVar_nms,
                                     predvars = all_predVar_nms,
+                                    outvar.class = all_outVar_class,
                                     subset_vars = all_subsets_vars,
-                                    subset_exprs = c(C_subset_expr, A_subset_expr, N_subset_expr)
+                                    subset_exprs = all_subset_exprs
                                     )
+
+  # --------------------------------------------------------
+  # LOWER LEVEL OF REGRESSION POSSIBLE -> DEFINE EITHER A LIST OF A SEPARATE SMALL R6 CLASS
+  # --------------------------------------------------------
+  # sep_predvars_sets = FALSE
+  str(all_outVar_nms[[1]])
+  lapply(all_outVar_nms[[1]], function(var) {return(var)})
+  # chr [1:3] "C" "TI.t" "N.t"
+  str(all_predVar_nms[[1]])
+  # chr [1:2] "highA1c.t" "lastN.t"
+  str(all_outVar_class[[1]])
+  # List of 3
+  # $ C   : chr "binary"
+  # $ TI.t: chr "binary"
+  # $ N.t : chr "binary"
+  str(all_subsets_vars[[1]])
+  # List of 3
+  # $ : chr "C"
+  # $ : chr "TI.t"
+  # $ : chr "N.t"
+  str(all_subset_exprs[[1]])
+  # $ : chr "rep.int(TRUE, .N)"
+  # $ : chr "rep.int(TRUE, .N)"
+  # $ : chr "rep.int(TRUE, .N)"
+
+  ALL.g.regs <- RegressionClass$new(sep_predvars_sets = FALSE,
+                                    outvar = all_outVar_nms[[1]],
+                                    predvars = all_predVar_nms[[1]],
+                                    outvar.class = all_outVar_class[[1]],
+                                    subset_vars = all_subsets_vars[[1]],
+                                    subset_exprs = all_subset_exprs[[1]]
+                                    )
+
+  browser()
 
   ALL.g.regs$S3class <- "generic"
   # using S3 method dispatch on ALL.g.regs:
