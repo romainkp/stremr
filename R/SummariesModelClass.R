@@ -849,7 +849,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
   )
 )
 
-StratifySummariesModel <- R6Class(classname = "CategorSummaryModel",
+StratifySummariesModel <- R6Class(classname = "StratifySummariesModel",
   inherit = SummariesModel,
   portable = TRUE,
   class = TRUE,

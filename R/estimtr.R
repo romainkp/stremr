@@ -338,18 +338,41 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #' @seealso \code{\link{estimtr-package}} for the general overview of the package,
 #' @example tests/examples/1_estimtr_example.R
 #' @export
+# ------------------------------------------------------------------------------------------------------------------------------
+# TO DO:
+# ------------------------------------------------------------------------------------------------------------------------------
+# - Implement automatic function calling for gstar.TRT & gstar.MONITOR based on user-specified rule functions
+#   If its a list of functions or if function returns more than one rule, apply the whole estimation procedure to each combination of TRT/MONITORING rules
+# - NEED TO IMPLEMENT $get.fits() METHOD IN SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression + coefficients)
+#   The method needs to appropriately format the output based on several model predictions (for stratified, categorical or continuous outcome)
+# - Save the weights at each t and save the cummulative weights for all observations who were following the rule (g.CAN(O_i)>0)
+# - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
+# - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
+# ------------------------------------------------------------------------------------------------------------------------------
+# - (IMPLEMENTED) Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
+# - (IMPLEMENTED) When CENS[i] is binary and length(CENS)>1:
+  # (1) Specify subset rule for i>1: (CENS[1]==0 & CENS[2]==0 & ... & CENS[i-1]==0)
+  # (2) An alternative: collapse CENS into a categorical (automatically), based on the ordering in CENS. Then the fitting of categoricals will perform all the subsetting correctly.
+  # (3) Alternative: set the indicators of missingness in the right way for CENS[i] if any CENS[1], ..., CENS[i-1] are 1.
+# - (IMPLEMENTED) Stratification - allows K models on the SAME OUTCOME by stratifying rule
+  # (1) User specified rule function creates strata. (stratify.CENS, stratify.TRT, stratify.MONITOR) Note that if the rule is based on data.table syntax it will be VERY FAST!
+  # A nice trick would be to be able to AUTOMATICALLY convert logical subset expressions to data.table statements -> Its possible with some meta-programming and parsing
+  # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
+  # Can specify K regressions in gform.CENS/gform.TRT/gform.MONITOR. If only one regression is specified it will be aplied to ALL stratas.
+  # Otherwise stratas should be specified as a named list of K items
 estimtr <- function(data, ID = "Subj_ID", t = "time_period",
                               covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                               gform.CENS, gform.TRT, gform.MONITOR, noCENS.cat = 0L,
-                              stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE, optPars = list()) {
+                              stratify.CENS = NULL, stratify.TRT = NULL,
+                              stratify.MONITOR = NULL,
+                              gstar.TRT = NULL, gstar.MONITOR = NULL,
+                              verbose = FALSE, optPars = list()) {
 
   gvars$verbose <- TRUE
   gvars$noCENS.cat <- noCENS.cat
   # if (verbose) {
     message("Running with the following setting: ");
     str(gvars$opts)
-    # message("Running tmlenet with the following settings from optPars arg of tmlenet(): ");
-    # str(optPars)
   # }
 
   gform.CENS.default <- "Cnodes ~ Lnodes"
@@ -358,6 +381,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
     covars <- setdiff(colnames(data), c(ID, t, CENS, TRT, MONITOR, OUTCOME))
   }
+
   # The ordering of variables in this list is the assumed temporal order!
   nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
@@ -388,7 +412,6 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
   OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
-  # rule1: (C == 0L) & ((A.tminus1 == 1L & A == 1) | (N.tminus1 == 0 & A.tminus1 == A) | (N.tminus1 == 1 & ((I >= d.theta & A-A.tminus1 == 1L) | (I < d.theta & A == 0L & A.tminus1 == 0L))))
 
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
@@ -427,49 +450,121 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   h_gN <- summeas.g0$predictAeqa(newdata = OData)
 
   # ------------------------------------------------------------------------------------------------------------------------------
-  # TO DO:
+  # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
   # ------------------------------------------------------------------------------------------------------------------------------
-  # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
-  # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
+  # (1) gA.star: prob of following one treatment rule; and
+  # (2) gN.star prob following the monitoring regime; and
+  # (3) gC.star: the indicator of not being censored.
   # ------------------------------------------------------------------------------------------------------------------------------
-  # - (IMPLEMENTED) Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
-  # - (IMPLEMENTED) When CENS[i] is binary and length(CENS)>1:
-    # (1) Specify subset rule for i>1: (CENS[1]==0 & CENS[2]==0 & ... & CENS[i-1]==0)
-    # (2) An alternative: collapse CENS into a categorical (automatically), based on the ordering in CENS. Then the fitting of categoricals will perform all the subsetting correctly.
-    # (3) Alternative: set the indicators of missingness in the right way for CENS[i] if any CENS[1], ..., CENS[i-1] are 1.
-  # - (IMPLEMENTED) Stratification - allows K models on the SAME OUTCOME by stratifying rule
-    # (1) User specified rule function creates strata. (stratify.CENS, stratify.TRT, stratify.MONITOR) Note that if the rule is based on data.table syntax it will be VERY FAST!
-    # A nice trick would be to be able to AUTOMATICALLY convert logical subset expressions to data.table statements -> Its possible with some meta-programming and parsing
-    # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
-    # Can specify K regressions in gform.CENS/gform.TRT/gform.MONITOR. If only one regression is specified it will be aplied to ALL stratas.
-    # Otherwise stratas should be specified as a named list of K items
 
-
-
-  # ------------------------------------------------------------------------------------------------------------------------------
-  # Combine the propensity score for observed (gC,gA,gN) with the propensity score for intervention:
-  # (1) gAstar: prob of following one treatment rule; and
-  # (2) gNstar prob following the monitoring regime; and
-  # (3) indicator of not being censored.
-  # ------------------------------------------------------------------------------------------------------------------------------
-  browser()
-
+  # ------------------------------------------------------------------------------------------
   # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
+  # ..... NOT REALLY NEEDED ......
+  # ------------------------------------------------------------------------------------------
   EVENT_IND <- "Delta"
+  if (EVENT_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(EVENT_IND):=NULL]
   OData$dat.sVar[,(EVENT_IND):=as.integer(any(get(OUTCOME) %in% 1)), by = eval(ID)]
 
+  # ------------------------------------------------------------------------------------------
   # Evaluate the indicator that this person was right-censored at some point in time:
+  # ..... NOT REALLY NEEDED ......
+  # ------------------------------------------------------------------------------------------
   CENS_IND <- "AnyCensored"
+  if (CENS_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(CENS_IND):=NULL]
   # noCENS.cat <- 0L; CENS <- c("C")
-  O.dataDT[, (CENS_IND) := FALSE, by = eval(ID)]
+  OData$dat.sVar[, (CENS_IND) := FALSE, by = eval(ID)]
   for (Cvar in CENS) {
-    O.dataDT[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
+    OData$dat.sVar[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
   }
-  O.dataDT[, (CENS_IND) := as.integer(get(CENS_IND))]
+  OData$dat.sVar[, (CENS_IND) := as.integer(get(CENS_IND))]
+
+  # ------------------------------------------------------------------------------------------
+  # Evaluate the total duration of the follow-up for each observation
+  # ..... NOT REALLY NEEDED ......
+  # ------------------------------------------------------------------------------------------
 
 
+  # ------------------------------------------------------------------------------------------
+  # Probabilities of counterfactual interventions under observed (A,C,N) at each t
+  # ------------------------------------------------------------------------------------------
+  # browser()
 
-return(list(summeas.g0 = summeas.g0, OData = OData, ALL_g_regs = ALL_g_regs, h_gN = h_gN))
+  # probability of following the rule at t, under intervention gstar.A on A(t)
+  # **** NOTE ****: TO BE REPLACED WITH THE ACTUAL rule name column or vector of indicators for followers/non-followers:
+  # **** NOTE ****
+  # if gstar.TRT is a function then call it, if its a list of functions, then call one at a time.
+  # if gstar.TRT returns more than one rule-column, use each.
+  gstar.A <- gstar.TRT
+  OData$dat.sVar[, gstar.A := get(gstar.A)]
+
+  # indicator that the person is uncensored at each t (continuation of follow-up)
+  gstar.C <- "gstar.C"
+  OData$dat.sVar[, gstar.C := as.integer(rowSums(.SD) == eval(noCENS.cat)), .SDcols = CENS]
+
+  # probability of monitoring N(t)=1 under intervention gstar.N on N(t)
+  # **** NOTE ****: TO BE REPLACED WITH THE ACTUAL MONITORING regime column or vector of probabilities:
+  # **** NOTE ****
+  # if gstar.MONITOR is a function then call it, if its a list of functions, then call one at a time.
+  # if gstar.MONITOR returns more than one rule-column, use each.
+  gstar.N <- gstar.MONITOR
+  OData$dat.sVar[, gstar.N := get(gstar.N)]
+
+  # joint probability for all 3:
+  OData$dat.sVar[, c("gstar.CAN") := gstar.A * gstar.C * gstar.N]
+  # OData$dat.sVar[1:100,]
+
+  # ------------------------------------------------------------------------------------------
+  # Observed likelihood of (A,C,N) at each t
+  # ------------------------------------------------------------------------------------------
+  summeas.gC <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
+  # summeas.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
+
+  summeas.gA <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
+  # summeas.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
+
+  summeas.gN <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
+  # summeas.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
+
+  g0.A <- summeas.gA$getcumprodAeqa()
+  g0.C <- summeas.gC$getcumprodAeqa()
+  g0.N <- summeas.gN$getcumprodAeqa()
+
+  N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
+
+  OData$dat.sVar[, c("g0.A","g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
+  # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)]
+  OData$dat.sVar[, c("wt.by.t") := gstar.CAN / g0.CAN, by = eval(ID)]
+  OData$dat.sVar[, c("cumm.IPAW") := cumprod(wt.by.t), by = eval(ID)]
+
+  # -------------------------------------------------------------------------------------------
+  # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
+  # NOTE: IT MIGHT MAKE SENSE TO DO THIS AT THE VERY BEGINNING????
+  # DEPENDS ON STRUCTURE OF THE DATA AND IF ANY C events ACTUALLY OCCURRED IN LAST ROW -> THIS IS THE CASE FOR ADMINISTRATIVE CENSORING
+  # -------------------------------------------------------------------------------------------
+  shifted.OUTCOME <- OUTCOME%+%".tplus1"
+  OData$dat.sVar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = eval(ID)]
+  OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
+
+  # multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
+  OData$dat.sVar[, ("Wt.OUTCOME") := get(shifted.OUTCOME)*cumm.IPAW]
+  # OData$dat.sVar[101:200, ]
+
+  # Row indices for all subjects at t who had the event at t+1 (NOT USING)
+    # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
+
+  # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
+  sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
+  # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
+  # (equivalent to summing cummulative weights cumm.IPAW by t)
+  sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
+  # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
+  St_ht_IPAW <- sum_Ywt[sum_Allwt][,ht := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
+
+  # browser()
+# , ALL_g_regs = ALL_g_regs
+# , h_gN = h_gN
+return(list(St_ht_IPAW = St_ht_IPAW, summeas.g0 = summeas.g0, OData = OData$dat.sVar))
+
 }
 
 

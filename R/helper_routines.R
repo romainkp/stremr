@@ -63,7 +63,7 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, indx:=cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID)]
-  DT[, (tsinceNis1) := seq(.N)-1, by = .(get(ID), indx)]
+  DT[, (tsinceNis1) := seq(.N)-1, by = .(eval(ID), indx)]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
   DT[, indx := NULL]
   return(DT)
@@ -132,7 +132,7 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
   # Create "indx" vector that goes up by 1 every time MONITOR(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, indx := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID)]
   # Intermediate variable lastN.t to count number of cycles since last visit at t-1. Reset lastN.t(t)=0 when MONITOR(t-1)=1.
-  DT[, lastN.t := seq(.N)-1, by = .(get(ID), indx)]
+  DT[, lastN.t := seq(.N)-1, by = .(eval(ID), indx)]
   DT[is.na(DT[["indx"]]), lastN.t := NA]
   DT[, indx := NULL]
 

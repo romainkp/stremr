@@ -7,8 +7,8 @@
 estimtr(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C",
   TRT = "A", MONITOR = "N", OUTCOME = "Y", gform.CENS, gform.TRT,
   gform.MONITOR, noCENS.cat = 0L, stratify.CENS = NULL,
-  stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE,
-  optPars = list())
+  stratify.TRT = NULL, stratify.MONITOR = NULL, gstar.TRT = NULL,
+  gstar.MONITOR = NULL, verbose = FALSE, optPars = list())
 }
 \arguments{
 \item{data}{Observed data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
