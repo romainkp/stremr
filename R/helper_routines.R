@@ -59,13 +59,13 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   }
   # "Leading" (shifting up) and inverting indicator of observing I, renaming it to MONITOR value;
   # N(t-1)=1 indicates that I(t) is observed. Note that the very first I(t) is assumed to be always observed.
-  DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by=get(ID), .SDcols=(imp.I)]
+  DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID), .SDcols=(imp.I)]
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
-  DT[, indx:=cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = get(ID)]
-  DT[, (tsinceNis1):=seq(.N)-1, by = .(get(ID), indx)]
-  DT[is.na(DT[["indx"]]), (tsinceNis1):=NA]
-  DT[, indx:=NULL]
+  DT[, indx:=cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID)]
+  DT[, (tsinceNis1) := seq(.N)-1, by = .(get(ID), indx)]
+  DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
+  DT[, indx := NULL]
   return(DT)
 }
 
@@ -130,38 +130,38 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
     stop("input data must be either a data.table or a data.frame")
   }
   # Create "indx" vector that goes up by 1 every time MONITOR(t-1) shifts from 1 to 0 or from 0 to 1
-  DT[, indx:=cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = get(ID)]
+  DT[, indx := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID)]
   # Intermediate variable lastN.t to count number of cycles since last visit at t-1. Reset lastN.t(t)=0 when MONITOR(t-1)=1.
-  DT[, lastN.t:=seq(.N)-1, by = .(get(ID), indx)]
-  DT[is.na(DT[["indx"]]), lastN.t:=NA]
-  DT[, indx:=NULL]
+  DT[, lastN.t := seq(.N)-1, by = .(get(ID), indx)]
+  DT[is.na(DT[["indx"]]), lastN.t := NA]
+  DT[, indx := NULL]
 
   # Define chgTRT=TRT(t)-TRT(t-1), switching to treatment (+1), not changing treatment (0), going off treatment (-1). Assume people were off treatment prior to t=0.
-  DT[, "chgTRT":=diff(c(0L, .SD[[1]])), by = get(ID), .SDcols=(TRT)]
+  DT[, "chgTRT" := diff(c(0L, .SD[[1]])), by = eval(ID), .SDcols=(TRT)]
   # The observation is not censored at time-point t
-  DT[, notC:=(get(CENS)==0L), by = get(ID)]
+  DT[, notC := (get(CENS)==0L), by = eval(ID)]
 
   # (1) Follow rule at t if uncensored and remaining on treatment (TRT(t-1)=TRT(t)=1):
-  DT[, "d.follow_r1":= notC & (get(TRT)==1L) & (chgTRT==0L), by = get(ID), with = FALSE]
+  DT[, "d.follow_r1" := notC & (get(TRT)==1L) & (chgTRT==0L), by = eval(ID), with = FALSE]
   # rule1: (C[t] == 0L) & (A[t-1] == 1L) & (A[t] == 1)
 
   # (2) Follow rule at t if uncensored, haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
-  DT[, "d.follow_r2":= notC & (lastN.t > 0L) & (chgTRT==0L), by = get(ID), with = FALSE]
+  DT[, "d.follow_r2" := notC & (lastN.t > 0L) & (chgTRT==0L), by = eval(ID), with = FALSE]
   # rule2: (C[t] == 0L) & (N[t-1] == 0) & (A[t-1] == A[t])
 
   # (3) Follow rule at t if uncensored, was monitored (MONITOR(t-1)=0) and either:
   # (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
   for (dtheta in theta) {
-    DT[, "d.follow_r3":= notC & (lastN.t == 0L) & (((get(I) >= eval(dtheta)) & (chgTRT==1L)) | ((get(I) < eval(dtheta)) & (chgTRT==0L))), by = get(ID), with = FALSE]
+    DT[, "d.follow_r3" := notC & (lastN.t == 0L) & (((get(I) >= eval(dtheta)) & (chgTRT==1L)) | ((get(I) < eval(dtheta)) & (chgTRT==0L))), by = eval(ID), with = FALSE]
     # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
 
     # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
-    DT[, "d.follow_allr":= d.follow_r1 | d.follow_r2 | d.follow_r3, by = get(ID)]
+    DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3, by = eval(ID)]
     # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:
-    DT[, paste0("d",dtheta):=as.logical(cumprod(d.follow_allr)), by = get(ID)]
+    DT[, paste0("d",dtheta) := as.logical(cumprod(d.follow_allr)), by = eval(ID)]
   }
 
-  DT[, d.follow_r3:=NULL]; DT[, d.follow_allr:=NULL]
+  DT[, d.follow_r3 := NULL]; DT[, d.follow_allr := NULL]
   if (!is.null(rule.names)) {
     stopifnot(length(rule.names)==length(theta))
     setnames(DT, old = paste0("d",theta), new = rule.names)

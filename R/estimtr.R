@@ -96,7 +96,7 @@ RhsVars <- function(f) {
 }
 
 #---------------------------------------------------------------------------------
-# SPECIFYING regressions for g.C, g.A & g.N
+# SPECIFYING regressions for gC, gA & gN
 #---------------------------------------------------------------------------------
 get_vars_fromlist <- function(varname, sVar.map) {
   if (varname %in% names(sVar.map)) {
@@ -126,8 +126,6 @@ process_regform <- function(regform, sVar.map = NULL, factor.map = NULL) {
   predvars <- unlist(lapply(predvars, get_vars_fromlist, factor.map))
   return(list(outvars = outvars, predvars = predvars))
 }
-
-
 # Loop through a list of SingleRegressionFormClass objects and their outvars as if it was one long list of outvars and create the subsetting expressions
 # This uses S3 method dispatch on object ListOfRegressionForms
 stratify_by_uncensored <- function(regs) {
@@ -142,7 +140,6 @@ stratify_by_uncensored <- function(regs) {
   }
   return(regs)
 }
-
 # Create subsetting expressions for a node (Anode, Cnode or Nnode)
 # Named list with character expressions for subsetting. Each list item corresponds to one outcome in SingleRegressionFormClass
 create_subset_expr <- function(outvars, stratify.EXPRS) {
@@ -403,39 +400,39 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # Put all three regression models (C,A,N) into one regression object of class ListOfRegressionForms
   # ------------------------------------------------------------------------------------------------
   g_CAN_regs_list <- vector(mode = "list", length = 3)
-  names(g_CAN_regs_list) <- c("g.C", "g.A", "g.N")
+  names(g_CAN_regs_list) <- c("gC", "gA", "gN")
   class(g_CAN_regs_list) <- c(class(g_CAN_regs_list), "ListOfRegressionForms")
 
-  g.C.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
+  gC.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
-  # (regs <- g.C.sVars$regs)
-  g_CAN_regs_list[["g.C"]] <- g.C.sVars$regs
+  # (regs <- gC.sVars$regs)
+  g_CAN_regs_list[["gC"]] <- gC.sVars$regs
 
-  g.A.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, stratify.EXPRS = stratify.TRT,
+  gA.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, stratify.EXPRS = stratify.TRT,
                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  # (regs <- g.A.sVars$regs)
-  g_CAN_regs_list[["g.A"]] <- g.A.sVars$regs
+  # (regs <- gA.sVars$regs)
+  g_CAN_regs_list[["gA"]] <- gA.sVars$regs
 
-  g.N.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, stratify.EXPRS = stratify.MONITOR,
+  gN.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, stratify.EXPRS = stratify.MONITOR,
                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  # (regs <- g.N.sVars$regs)
-  g_CAN_regs_list[["g.N"]] <- g.N.sVars$regs
+  # (regs <- gN.sVars$regs)
+  g_CAN_regs_list[["gN"]] <- gN.sVars$regs
 
   ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
   ALL_g_regs$S3class <- "generic"
   # using S3 method dispatch on ALL_g_regs:
   summeas.g0 <- newsummarymodel(reg = ALL_g_regs, DatNet.sWsA.g0 = OData)
   summeas.g0$fit(data = OData)
+  # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...))
   h_gN <- summeas.g0$predictAeqa(newdata = OData)
 
   # ------------------------------------------------------------------------------------------------------------------------------
   # TO DO:
   # ------------------------------------------------------------------------------------------------------------------------------
   # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
-  # - Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
   # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
-
   # ------------------------------------------------------------------------------------------------------------------------------
+  # - (IMPLEMENTED) Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
   # - (IMPLEMENTED) When CENS[i] is binary and length(CENS)>1:
     # (1) Specify subset rule for i>1: (CENS[1]==0 & CENS[2]==0 & ... & CENS[i-1]==0)
     # (2) An alternative: collapse CENS into a categorical (automatically), based on the ordering in CENS. Then the fitting of categoricals will perform all the subsetting correctly.
@@ -446,6 +443,31 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
     # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
     # Can specify K regressions in gform.CENS/gform.TRT/gform.MONITOR. If only one regression is specified it will be aplied to ALL stratas.
     # Otherwise stratas should be specified as a named list of K items
+
+
+
+  # ------------------------------------------------------------------------------------------------------------------------------
+  # Combine the propensity score for observed (gC,gA,gN) with the propensity score for intervention:
+  # (1) gAstar: prob of following one treatment rule; and
+  # (2) gNstar prob following the monitoring regime; and
+  # (3) indicator of not being censored.
+  # ------------------------------------------------------------------------------------------------------------------------------
+  browser()
+
+  # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
+  EVENT_IND <- "Delta"
+  OData$dat.sVar[,(EVENT_IND):=as.integer(any(get(OUTCOME) %in% 1)), by = eval(ID)]
+
+  # Evaluate the indicator that this person was right-censored at some point in time:
+  CENS_IND <- "AnyCensored"
+  # noCENS.cat <- 0L; CENS <- c("C")
+  O.dataDT[, (CENS_IND) := FALSE, by = eval(ID)]
+  for (Cvar in CENS) {
+    O.dataDT[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
+  }
+  O.dataDT[, (CENS_IND) := as.integer(get(CENS_IND))]
+
+
 
 return(list(summeas.g0 = summeas.g0, OData = OData, ALL_g_regs = ALL_g_regs, h_gN = h_gN))
 }
