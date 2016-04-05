@@ -192,7 +192,7 @@ BinDat <- R6Class(classname = "BinDat",
 
     # printing regression:
     show = function() {
-      "P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=",") %+% ")"
+      "P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=",") %+% ")" %+% "; Stratify: " %+% self$subset_expr
     },
 
     newdata = function(newdata, getoutvar = TRUE, ...) {
@@ -214,10 +214,10 @@ BinDat <- R6Class(classname = "BinDat",
       # all subsetting is done by subsetvars (variable name(s) must be non-missing)
       # ******************************************************
       } else if (is.call(self$subset_vars)) {
-        subset_idx <- data$evalsubst(subsetexpr = self$subset_vars)
-        # stop("disabled for memory/speed efficiency")
+        # subset_idx <- data$evalsubst(subsetexpr = self$subset_vars)
+        stop("calls aren't allowed in BinDat$subset_vars")
       } else if (is.character(self$subset_vars)) {
-        subset_idx <- data$evalsubst(subsetvars = self$subset_vars)
+        subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_expr = self$subset_expr)
       }
       assert_that(is.logical(subset_idx))
       if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
@@ -241,7 +241,12 @@ BinDat <- R6Class(classname = "BinDat",
         colnames(private$X_mat) <- c("Intercept", self$predvars)
       } else {
         # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DatNet.sWsA$get.dat.sVar() IS MADE ***
-        private$X_mat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(self$subset_idx, self$predvars)))
+        if (length(self$predvars)==0L) {
+          private$X_mat <- as.matrix(rep.int(1L, sum(self$subset_idx)), ncol=1)
+        } else {
+          private$X_mat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(self$subset_idx, self$predvars)))
+        }
+        colnames(private$X_mat)[1] <- "Intercept"
         # To find and replace misvals in X_mat:
         if (self$ReplMisVal0) private$X_mat[gvars$misfun(private$X_mat)] <- gvars$misXreplace
       }
@@ -427,7 +432,7 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
       self$bindat <- BinDat$new(reg = reg, ...) # postponed adding data in BinDat until self$fit() is called
       class(self$bindat) <- c(class(self$bindat), self$glmfitclass)
       if (gvars$verbose) {
-        print("New BinOutModel instance:"); print(self$show())
+        print("New instance of BinOutModel:"); print(self$show())
       }
       # Get the bin width (interval length) for the current bin name self$getoutvarnm (for discretized continuous sA only):
       self$cont.sVar.flag <- self$getoutvarnm %in% names(reg$intrvls.width)
@@ -442,6 +447,8 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
     },
 
     fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
+      if (gvars$verbose) print("fitting the model: " %+% self$show())
+
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
       self$bindat$newdata(newdata = data, ...) # populate bindat with X_mat & Y_vals
       private$m.fit <- logisfit(datsum_obj = self$bindat) # private$m.fit <- data_obj$logisfit or private$m.fit <- data_obj$logisfit()

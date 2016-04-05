@@ -198,10 +198,11 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     # Could also do evaluation in a special env with a custom subsetting fun '[' that will dynamically find the correct dataset that contains
     # sVar.name (dat.sVar or dat.bin.sVar) and will return sVar vector
-    evalsubst = function(subset_expr, subset_vars) {
-      if (missing(subset_expr)) {
-        assert_that(!missing(subset_vars))
-        res <- rep.int(TRUE, self$nobs)
+    evalsubst = function(subset_vars, subset_expr = NULL) {
+      # browser()
+      res <- rep.int(TRUE, self$nobs)
+      if (!missing(subset_vars)) {
+        assert_that(is.character(subset_vars))
         for (subsetvar in subset_vars) {
           # *) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
           sVar.vec <- self$get.outvar(var = subsetvar)
@@ -209,18 +210,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           # *) reconstruct correct expression that tests for missing values
           res <- res & (!gvars$misfun(sVar.vec))
         }
-        return(res)
-      # ******************************************************
-      # NOTE: Below is currently not being used, all subsetting now is done with subset_vars above, for speed & memory efficiency
-      # ******************************************************
-      } else {
+      }
+      if (!is.null(subset_expr)) {
         if (is.logical(subset_expr)) {
-          return(subset_expr)
-        } else {
-          res <- self$dat.sVar[, eval(parse(text = subset_expr)), by = get(self$nodes$ID)][["V1"]]
-          assert_that(is.logical(res))
-          browser()
-
+          res <- res & subset_expr
+        } else if (is.character(subset_expr)){
+          # browser()
+          # data.table evaluation of the logical subset expression
+          res.tmp <- self$dat.sVar[, eval(parse(text = subset_expr)), by = get(self$nodes$ID)][["V1"]]
+          assert_that(is.logical(res.tmp))
+          res <- res & res.tmp
           # ******************************************************
           # THIS WAS A BOTTLENECK: for 500K w/ 1000 bins: 4-5sec
           # REPLACING WITH env that is made of data.frames instead of matrices
@@ -229,9 +228,9 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           # res <- try(eval(subset_expr, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
           # self$dat.sVar[eval(),]
           # stop("disabled for memory/speed efficiency")
-          return(res)
         }
       }
+      return(res)
     },
 
     # ---------------------------------------------------------------------
@@ -239,6 +238,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     get.dat.sVar = function(rowsubset = TRUE, covars) {
       if (!missing(covars)) {
+        # browser()
         if (length(unique(colnames(self$dat.sVar))) < length(colnames(self$dat.sVar))) {
           warning("repeating column names in the final data set; please check for duplicate summary measure / node names")
         }
@@ -268,6 +268,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         return(self$dat.sVar[rowsubset, , drop = FALSE])
       }
     },
+
     get.outvar = function(rowsubset = TRUE, var) {
       if (length(self$nodes) < 1) stop("DataStorageClass$nodes list is empty!")
       if (var %in% self$names.sVar) {
@@ -481,7 +482,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     active.bin.sVar = function() { private$.active.bin.sVar },
     ord.sVar = function() { private$.ord.sVar },
     type.sVar = function() { private$.type.sVar }
-
   ),
   private = list(
     .nodes = list(),              # names of the nodes in the data (Anode, Ynode, etc..)
