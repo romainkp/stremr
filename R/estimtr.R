@@ -346,7 +346,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
                               gform.CENS, gform.TRT, gform.MONITOR, noCENS.cat = 0L,
                               stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL, verbose = FALSE, optPars = list()) {
 
-  gvars$verbose <- FALSE
+  gvars$verbose <- TRUE
   gvars$noCENS.cat <- noCENS.cat
   # if (verbose) {
     message("Running with the following setting: ");

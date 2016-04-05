@@ -543,8 +543,6 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
     sampleA = function(newdata, bw.j.sA_diff) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
       assert_that(self$is.fitted)
       assert_that(!missing(newdata))
-
-      # browser()
       # Don't want to subset by the outvar, since binarized mat for cat outcome is not re-created when just sampling
       # But need to reset it back when done
       temp_subset_vars <- self$bindat$subset_vars

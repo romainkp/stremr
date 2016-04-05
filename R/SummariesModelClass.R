@@ -473,6 +473,7 @@ SummariesModel <- R6Class(classname = "SummariesModel",
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     },
+
     sampleA = function(newdata, ...) {
       assert_that(!missing(newdata))
       assert_that(is.DataStorageClass(newdata))
@@ -777,6 +778,12 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       self$outvar <- reg$outvar
       # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
       # All predvars remain unchanged
+      # browser()
+
+      if (self$reg$get.reg$censoring & gvars$verbose) {
+        message("...fitting a model for categorical censoring...")
+      }
+
       if (is.null(reg$levels)) {
         assert_that(is.DataStorageClass(DatNet.sWsA.g0))
         self$levels <- self$reg$levels <- DatNet.sWsA.g0$detect.cat.sVar.levels(reg$outvar)
@@ -791,6 +798,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       bin_regs <- def_regs_subset(self = self)
       super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
     },
+
     # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data) {
@@ -874,7 +882,7 @@ StratifySummariesModel <- R6Class(classname = "CategorSummaryModel",
       names(stratify_regs$subset_exprs) <- stratify_regs$outvar
       stratify_regs$reg_hazard <- TRUE
       # print("stratify_regs class:"); stratify_regs$show()
-      super$initialize(reg = stratify_regs, no_set_outvar = TRUE, ...)
+      super$initialize(reg = stratify_regs, no_set_outvar = TRUE, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
     },
 
     # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data

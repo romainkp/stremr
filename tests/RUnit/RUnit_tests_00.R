@@ -93,7 +93,6 @@ as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
 allNA = function(x) all(is.na(x))
 
 
-
 # test various regression / subsetting schemes and make sure it works as expected
 test.regressionCases <- function() {
   # ------------------------------------------------------------------------------------------------------------------
@@ -187,23 +186,4 @@ test.t.error <- function() {
 test.Nsamp.n.test <- function() {
 # ....
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

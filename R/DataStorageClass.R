@@ -93,7 +93,27 @@ make.bins_mtx_1 <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins) {
   }
   dummies_mat[, new.cats[length(new.cats)]] <- gvars$misval
   colnames(dummies_mat) <- bin.nms
-  dummies_mat
+  return(dummies_mat)
+}
+
+# put the first level (category) as a reference (last category) for categorical censoring
+make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.level = gvars$noCENS.cat) {
+  n <- length(x.ordinal)
+  new.ref.level <- levels[length(levels)]+1
+  levels <- c(levels[-which(levels %in% ref.level)], new.ref.level)
+  x.ordinal[as.integer(x.ordinal)==as.integer(ref.level)] <- new.ref.level
+
+  new.cats <- 1:nbins
+  dummies_mat <- matrix(1L, nrow = n, ncol = length(new.cats))
+  for(cat in new.cats[-length(new.cats)]) {
+    subset_Bj0 <- x.ordinal > levels[cat]
+    dummies_mat[subset_Bj0, cat] <- 0L
+    subset_Bjmiss <- x.ordinal < levels[cat]
+    dummies_mat[subset_Bjmiss, cat] <- gvars$misval
+  }
+  dummies_mat[, new.cats[length(new.cats)]] <- gvars$misval
+  colnames(dummies_mat) <- bin.nms
+  return(dummies_mat)
 }
 
 ## ---------------------------------------------------------------------
@@ -173,7 +193,11 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       # alternative is to set it without copying Odata
       # setDT(Odata); self$dat.sVar <- Odata
 
-      if (!missing(noCENS.cat)) self$noCENS.cat <- noCENS.cat
+      if (!missing(noCENS.cat)) {
+        self$noCENS.cat <- noCENS.cat
+      } else {
+        self$noCENS.cat <- gvars$noCENS.cat
+      }
 
       if (!missing(nodes)) self$nodes <- nodes
 
@@ -297,7 +321,11 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       if (self$is.sVar.cont(name.sVar)) {
         private$binirize.cont.sVar(name.sVar, ...)
       } else if (self$is.sVar.cat(name.sVar)) {
-        private$binirize.cat.sVar(name.sVar, ...)
+        if (self$is.sVar.CENS(name.sVar)) {
+          private$binirize.cat.CENS.sVar(name.sVar, ...)
+        } else {
+          private$binirize.cat.sVar(name.sVar, ...)
+        }
       } else {
         stop("...can only call $binirize.sVar for continuous or categorical sVars...")
       }
@@ -389,6 +417,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     is.sVar.bin = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$bin },
     is.sVar.cat = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cat },
     is.sVar.cont = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cont },
+    is.sVar.CENS = function(name.sVar) { name.sVar %in% self$nodes$Cnodes },
 
     # ---------------------------------------------------------------------
     # Directly replace variable(s) in the storage data.table (by reference)
@@ -520,6 +549,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       nbins <- length(levels)
       bin.nms <- self$bin.nms.sVar(name.sVar, nbins)
       self$dat.bin.sVar <- make.bins_mtx_1(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels)
+      invisible(self$dat.bin.sVar)
+    },
+    # Create a matrix of bin indicators for categorical CENSORING sVar (the reference category is gvars$noCENS.cat):
+    binirize.cat.CENS.sVar = function(name.sVar, levels) {
+      if (gvars$verbose) {
+        message("making matrix for dummies for cat. censoring, reference category is " %+% self$noCENS.cat)
+      }
+      nbins <- length(levels)
+      bin.nms <- self$bin.nms.sVar(name.sVar, nbins)
+      self$dat.bin.sVar <- make.bins_mtx_cens(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels, ref.level = self$noCENS.cat)
       invisible(self$dat.bin.sVar)
     }
   )
