@@ -67,6 +67,7 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   DT[, (tsinceNis1) := seq(.N)-1, by = .(eval(ID.expression), indx)]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
   DT[, indx := NULL]
+  DT[, (imp.I) := NULL]
   return(DT)
 }
 
