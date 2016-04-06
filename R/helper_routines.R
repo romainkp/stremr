@@ -59,11 +59,11 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   }
   # "Leading" (shifting up) and inverting indicator of observing I, renaming it to MONITOR value;
   # N(t-1)=1 indicates that I(t) is observed. Note that the very first I(t) is assumed to be always observed.
-  DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID), .SDcols=(imp.I)]
+  DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = get(eval(ID)), .SDcols=(imp.I)]
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, indx:=cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID)]
-  DT[, (tsinceNis1) := seq(.N)-1, by = .(eval(ID), indx)]
+  DT[, (tsinceNis1) := seq(.N)-1, by = .(get(eval(ID)), indx)]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
   DT[, indx := NULL]
   return(DT)
