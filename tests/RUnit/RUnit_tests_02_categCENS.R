@@ -77,9 +77,9 @@ test.model.fits.categorCENSOR <- function() {
           gform.CENS = gform.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-  #      Min.   1st Qu.    Median      Mean   3rd Qu.      Max.
-  # 0.0008805 0.0405500 0.1581000 0.1575000 0.2271000 1.0000000
+
+  res$IPW_estimates
+  res$OData
 
   # --------------------------------
   # EXAMPLE 2:
@@ -101,9 +101,9 @@ test.model.fits.categorCENSOR <- function() {
           gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-  #     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-  # 0.001018 0.038620 0.164500 0.168500 0.254200 1.000000
+
+  res$IPW_estimates
+  res$OData
 
   # --------------------------------
   # EXAMPLE 3:
@@ -121,9 +121,8 @@ test.model.fits.categorCENSOR <- function() {
           gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-  #     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-  # 0.001018 0.038620 0.164500 0.168500 0.254200 1.000000
+  res$IPW_estimates
+  res$OData
 
   # --------------------------------
   # EXAMPLE 4:
@@ -147,9 +146,8 @@ test.model.fits.categorCENSOR <- function() {
           gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-#    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
-# 0.00109 0.08220 0.28870 0.23970 0.35340 1.00000
+  res$IPW_estimates
+  res$OData
 
 }
 

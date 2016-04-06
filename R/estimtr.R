@@ -394,7 +394,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   new.factor.names <- vector(mode="list", length=length(factor.Ls))
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0)
-    message("found factors in the data, these are being converted to binary indicators (and excluding the first level): " %+% paste0(factor.Ls, collapse=","))
+    message("found factors in the data, these are being converted to binary indicators (first level excluded): " %+% paste0(factor.Ls, collapse=","))
   for (factor.varnm in factor.Ls) {
     factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
     factor.levs <- factor.levs[-1] # remove the first level (reference class)
@@ -449,14 +449,6 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...))
   h_gN <- summeas.g0$predictAeqa(newdata = OData)
 
-  # ------------------------------------------------------------------------------------------------------------------------------
-  # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
-  # ------------------------------------------------------------------------------------------------------------------------------
-  # (1) gA.star: prob of following one treatment rule; and
-  # (2) gN.star prob following the monitoring regime; and
-  # (3) gC.star: the indicator of not being censored.
-  # ------------------------------------------------------------------------------------------------------------------------------
-
   # ------------------------------------------------------------------------------------------
   # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
   # ..... NOT REALLY NEEDED ......
@@ -483,45 +475,13 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # ..... NOT REALLY NEEDED ......
   # ------------------------------------------------------------------------------------------
 
-
-  # ------------------------------------------------------------------------------------------
-  # Probabilities of counterfactual interventions under observed (A,C,N) at each t
-  # ------------------------------------------------------------------------------------------
-  # browser()
-
-  # probability of following the rule at t, under intervention gstar.A on A(t)
-  # **** NOTE ****: TO BE REPLACED WITH THE ACTUAL rule name column or vector of indicators for followers/non-followers:
-  # **** NOTE ****
-  # if gstar.TRT is a function then call it, if its a list of functions, then call one at a time.
-  # if gstar.TRT returns more than one rule-column, use each.
-  gstar.A <- gstar.TRT
-  OData$dat.sVar[, gstar.A := get(gstar.A)]
-
-  # indicator that the person is uncensored at each t (continuation of follow-up)
-  gstar.C <- "gstar.C"
-  OData$dat.sVar[, gstar.C := as.integer(rowSums(.SD) == eval(noCENS.cat)), .SDcols = CENS]
-
-  # probability of monitoring N(t)=1 under intervention gstar.N on N(t)
-  # **** NOTE ****: TO BE REPLACED WITH THE ACTUAL MONITORING regime column or vector of probabilities:
-  # **** NOTE ****
-  # if gstar.MONITOR is a function then call it, if its a list of functions, then call one at a time.
-  # if gstar.MONITOR returns more than one rule-column, use each.
-  gstar.N <- gstar.MONITOR
-  OData$dat.sVar[, gstar.N := get(gstar.N)]
-
-  # joint probability for all 3:
-  OData$dat.sVar[, c("gstar.CAN") := gstar.A * gstar.C * gstar.N]
-  # OData$dat.sVar[1:100,]
-
-  # ------------------------------------------------------------------------------------------
+ # ------------------------------------------------------------------------------------------
   # Observed likelihood of (A,C,N) at each t
   # ------------------------------------------------------------------------------------------
   summeas.gC <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
   # summeas.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
-
   summeas.gA <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
   # summeas.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
-
   summeas.gN <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
   # summeas.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
 
@@ -531,14 +491,54 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
 
   N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
 
-  OData$dat.sVar[, c("g0.A","g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
+  OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)]
+
+  # ------------------------------------------------------------------------------------------
+  # Probabilities of counterfactual interventions under observed (A,C,N) at each t
+  # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
+  # ------------------------------------------------------------------------------------------------------------------------------
+  # (1) gA.star: prob of following one treatment rule; and
+  # (2) gN.star prob following the monitoring regime; and
+  # (3) gC.star: the indicator of not being censored.
+  # ------------------------------------------------------------------------------------------------------------------------------
+  # probability of following the rule at t, under intervention gstar.A on A(t)
+  # **** NOTE ****
+  # if gstar.TRT is a function then call it, if its a list of functions, then call one at a time.
+  # if gstar.TRT returns more than one rule-column, estimate for each.
+  if (!is.null(gstar.TRT)) {
+    gstar.A <- gstar.TRT
+  } else {
+    gstar.A <- "g0.A" # use the actual observed exposure probability (no intervention on TRT)
+  }
+  OData$dat.sVar[, gstar.A := get(gstar.A)]
+
+  # indicator that the person is uncensored at each t (continuation of follow-up)
+  gstar.C <- "gstar.C"
+  OData$dat.sVar[, gstar.C := as.integer(rowSums(.SD) == eval(noCENS.cat)), .SDcols = CENS]
+
+  # probability of monitoring N(t)=1 under intervention gstar.N on N(t)
+  # **** NOTE ****
+  # if gstar.MONITOR is a function then call it, if its a list of functions, then call one at a time.
+  # if gstar.MONITOR returns more than one rule-column, use each.
+  if (!is.null(gstar.TRT)) {
+    gstar.N <- gstar.MONITOR
+  } else {
+    gstar.N <- "g0.N" # use the actual observed monitoring probability (no intervention on MONITOR)
+  }
+  OData$dat.sVar[, gstar.N := get(gstar.N)]
+
+  # Joint probability for all 3:
+  OData$dat.sVar[, c("gstar.CAN") := gstar.A * gstar.C * gstar.N]
+  # OData$dat.sVar[1:100,]
+
+  # Weights by time and cummulative weights by time:
   OData$dat.sVar[, c("wt.by.t") := gstar.CAN / g0.CAN, by = eval(ID)]
   OData$dat.sVar[, c("cumm.IPAW") := cumprod(wt.by.t), by = eval(ID)]
 
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
-  # NOTE: IT MIGHT MAKE SENSE TO DO THIS AT THE VERY BEGINNING????
+  # NOTE: DO THIS AT THE VERY BEGINNING INSTEAD????
   # DEPENDS ON STRUCTURE OF THE DATA AND IF ANY C events ACTUALLY OCCURRED IN LAST ROW -> THIS IS THE CASE FOR ADMINISTRATIVE CENSORING
   # -------------------------------------------------------------------------------------------
   shifted.OUTCOME <- OUTCOME%+%".tplus1"
@@ -560,11 +560,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][,ht := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
 
-  # browser()
-# , ALL_g_regs = ALL_g_regs
-# , h_gN = h_gN
-return(list(St_ht_IPAW = St_ht_IPAW, summeas.g0 = summeas.g0, OData = OData$dat.sVar))
-
+return(list(IPW_estimates = data.frame(St_ht_IPAW), model.fits = summeas.g0, OData = OData$dat.sVar))
 }
 
 

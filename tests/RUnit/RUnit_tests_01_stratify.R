@@ -90,6 +90,7 @@ test.helperfuns <- function() {
 
 
 test.model.fits.stratify <- function() {
+  library("data.table")
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
   # ------------------------------------------------------------------------------------------------------
@@ -114,9 +115,8 @@ test.model.fits.stratify <- function() {
           gform.CENS = gform.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-  #     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-  # 0.005405 0.036910 0.187900 0.170300 0.232300 1.000000
+  res$IPW_estimates
+  # res$OData
 
   # --------------------------------
   # EXAMPLE 2:
@@ -138,9 +138,8 @@ test.model.fits.stratify <- function() {
           gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-  #     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-  # 0.004097 0.042890 0.195800 0.179600 0.251900 1.000000
+  res$IPW_estimates
+  # res$OData
 
   # --------------------------------
   # EXAMPLE 3:
@@ -158,9 +157,8 @@ test.model.fits.stratify <- function() {
           gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-  #     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-  # 0.004097 0.042890 0.195800 0.179600 0.251900 1.000000
+  res$IPW_estimates
+  # res$OData
 
   # --------------------------------
   # EXAMPLE 4:
@@ -184,8 +182,6 @@ test.model.fits.stratify <- function() {
           gform.MONITOR = gform.MONITOR)
           # noCENS.cat = 0L)
     )
-  summary(res$h_gN)
-  #     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-  # 0.001089 0.082200 0.288700 0.239700 0.353400 1.000000
-
+  res$IPW_estimates
+  # res$OData
 }
