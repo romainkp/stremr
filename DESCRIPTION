@@ -3,7 +3,7 @@ Title: IPTW Estimation of the Causal Survival Hazard Function for Stochastic, Dy
 Version: 0.0.0.9000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
-    person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu”),
+    person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
     person("Romain", "Neugebauer", role="aut", email="Romain.S.Neugebauer@kp.org"))
 Description: Implements the Inverse Probability Weighted Estimator (IPTW) of the causal survival hazard function for longitudinal right-censored data. The user-specified interventions on time-varying exposures and monitoring variables can be either stochastic, dynamic or static. The exposure, monitoring and censoring can be binary, categorical or multivariate (e.g., can use more than one column of dummy indicators for different censoring events or can code such censoring events with a single categorical censoring variable). The output produced includes the estimate of the survival curve, which is mapped from the estimated discrete hazard function. When more than one intervention on exposures/monitoring is specified, the package will produce several survival curves, one survival curve for each user-defined intervention. The input data needs to be in long format. 
 URL: https://github.com/osofr/estimtr
