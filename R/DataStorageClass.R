@@ -452,8 +452,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------------
     # Cast long format data into wide format:
     # bslcovars - names of covariates that shouldn't be cast (remain invariant with t)
+    # TO DO - add excludevars arg to exclude covariates
     # ---------------------------------------------------------------------------
     convert.to.wide = function(bslcovars) {
+      # excludevars
       # dt = rbind(data.table(ID=1, x=sample(5,20,TRUE), y = sample(5,20,TRUE), t=1:20), data.table(ID=2, x=sample(5,15,TRUE), y = sample(5,15,TRUE), t=1:15))
       # dcast(dt, formula="ID ~ t", value.var=c("x", "y"), sep="_")
       nodes <- self$nodes

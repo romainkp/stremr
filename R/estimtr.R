@@ -492,7 +492,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
 
   OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
-  # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)]
+  # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
 
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
@@ -521,7 +521,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # **** NOTE ****
   # if gstar.MONITOR is a function then call it, if its a list of functions, then call one at a time.
   # if gstar.MONITOR returns more than one rule-column, use each.
-  if (!is.null(gstar.TRT)) {
+  if (!is.null(gstar.MONITOR)) {
     gstar.N <- gstar.MONITOR
   } else {
     gstar.N <- "g0.N" # use the actual observed monitoring probability (no intervention on MONITOR)
@@ -560,7 +560,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][,ht := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
 
-return(list(IPW_estimates = data.frame(St_ht_IPAW), model.fits = summeas.g0, OData = OData$dat.sVar))
+return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, model.R6.fits = summeas.g0, data.R6.object = OData))
 }
 
 
