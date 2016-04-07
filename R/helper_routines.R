@@ -49,7 +49,7 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 #' @return A data.table in long format with ordering (I, CENS, TRT, MONITOR)
 #' @export
 convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "tsinceNis1"){
-  require('data.table')
+  # require('data.table')
   ID.expression <- as.name(ID)
   if (is.data.table(data)) {
     DT <- data.table(data[,c(ID, t, imp.I), with = FALSE], key=c(ID, t))
@@ -123,7 +123,7 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #' @export
 #'
 follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL){
-  require('data.table')
+  # require('data.table')
   ID.expression <- as.name(ID)
   if (is.data.table(data)) {
     DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR), with = FALSE], key=c(ID,t))

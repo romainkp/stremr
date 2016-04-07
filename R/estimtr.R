@@ -199,15 +199,15 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #'
 #' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring process.
 #'  Implements the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimator of the discrete survival hazard function which is mapped into survival function.
-#' @param data Observed data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
+#' @param data Input data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
 #'  the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
 #'  and the survival OUTCOME variable (\code{OUTCOME}).
 # @param estimators (NOT IMPLEMENTED) Character vector with estimator names.
-#' @param ID Unique subject identifier variable in the input data.
-#' @param t The name of the time/period variable in the input data.
-#' @param covars Time varying and baseline covariates. This argument does not need to be specified, by default all variables
+#' @param ID Unique subject identifier column name in \code{data}.
+#' @param t The name of the time/period variable in \code{data}.
+#' @param covars Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
 #' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.
-#' @param CENS CENSoring variable(s) in the input data.
+#' @param CENS Column name of the censoring variable(s) in \code{data}.
 #' Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
 #' For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).
 #' For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of follow-up and other
@@ -215,9 +215,9 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #' Use the argument \code{noCENS.cat} to change the reference (continuation of follow-up) category from default 0 to any other value.
 #' (NOTE: Changing \code{noCENS.cat} has zero effect on coding of the binary CENSoring variables, those have to always use 1 to code the CENSoring event).
 #' Note that factors are not allowed in \code{CENS}.
-#' @param TRT Exposure/treatment variable(s) in input data.
-#' @param MONITOR Monitoring variable(s) in input data.
-#' @param OUTCOME  Survival OUTCOME variable name (column name in \code{data}).
+#' @param TRT A column name in \code{data} for the exposure/treatment variable(s).
+#' @param MONITOR A column name in \code{data} for the indicator(s) of monitoring events.
+#' @param OUTCOME  A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.
 #' @param noCENS.cat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 #' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 #' for variables specifed in \code{CENS}.
@@ -227,6 +227,14 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 # @param hform.g0 Regression formula for estimating the conditional density of P(\code{sA} | \code{sW}) under \code{g0}
 #' (the observed exposure mechanism), When omitted the regression is defined by \code{sA~sW}, where \code{sA}
 #  are all summary measures defined by argument \code{sA} and \code{sW} are all baseline summary measures defined by argument \code{sW}.
+#' @param stratify.CENS A named list with one item per variable in \code{CENS}.
+#' Each list item is a character vector of stratification subsets for the corresponding variable in \code{CENS}.
+#' @param stratify.TRT A named list with one item per variable in \code{TRT}.
+#' Each list item is a character vector of stratification subsets for the corresponding variable in \code{TRT}.
+#' @param stratify.MONITOR A named list with one item per variable in \code{MONITOR}.
+#' Each list item is a character vector of stratification subsets for the corresponding variable in \code{MONITOR}.
+#' @param gstar.TRT Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.
+#' @param gstar.MONITOR Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(estimtr.verbose=TRUE)}.
 #' @param optPars A named list of additional optional parameters to be passed to \code{estimtr}, such as
 #'  \code{alpha}, \code{lbound}, \code{family}, \code{YnodeDET},
@@ -372,10 +380,11 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
   # Otherwise stratas should be specified as a named list of K items
 estimtr <- function(data, ID = "Subj_ID", t = "time_period",
                               covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
-                              gform.CENS, gform.TRT, gform.MONITOR, noCENS.cat = 0L,
+                              gform.CENS, gform.TRT, gform.MONITOR,
                               stratify.CENS = NULL, stratify.TRT = NULL,
                               stratify.MONITOR = NULL,
                               gstar.TRT = NULL, gstar.MONITOR = NULL,
+                              noCENS.cat = 0L,
                               verbose = FALSE, optPars = list()) {
 
   gvars$verbose <- TRUE
