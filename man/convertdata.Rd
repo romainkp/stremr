@@ -23,7 +23,7 @@ imputation (having observed/measured biomarker) at time-point t+1.}
 
 \item{tsinceNis1}{The name of the variable that counts number of periods since last monitoring event at t-1.}
 
-\item{I}{The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.}
+\item{I}{The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.}
 }
 \value{
 A data.table in long format with ordering (I, CENS, TRT, MONITOR)

@@ -15,7 +15,7 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 #' @param data Input data.table or data.frame.
 #' @param ID The name of the unique subject identifier (character, numeric or factor).
 #' @param t The name of the time/period variable in \code{data}.
-#' @param I The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.
+#' @param I The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.
 #' @param imp.I The name of the binary indicator of missingness or imputation for I at time point t and it is used for coding MONITOR(t-1):=1-imp.I(t).
 #'  When imp.I(t)=1 it means that the patient was not observed (no office visit) at time-point t and hence no biomarker was measured.
 #' @param MONITOR.name The name of the MONITORing variable which will be evaluated by this routine.
