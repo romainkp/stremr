@@ -422,8 +422,8 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
 
-  print(str(lagnodes))
-  print(OData$dat.sVar)
+  # print(str(lagnodes))
+  # print(OData$dat.sVar)
 
   OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
 

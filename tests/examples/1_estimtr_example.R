@@ -57,5 +57,6 @@ res <- follow.rule.d.DT(OdataDT,
         CENS = "CatC", gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
         TRT = "TI", gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
         MONITOR = "N", gform.MONITOR = gform.MONITOR, OUTCOME = "Y")
+
 res$IPW_estimates
 res$dataDT
