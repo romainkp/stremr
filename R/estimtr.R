@@ -149,7 +149,12 @@ create_subset_expr <- function(outvars, stratify.EXPRS) {
   Node_subset_expr <- vector(mode="list", length=length(outvars))
   names(Node_subset_expr) <- outvars
   assert_that(is.list(stratify.EXPRS))
-  assert_that(all(outvars %in% names(stratify.EXPRS)))
+  if (!all(outvars %in% names(stratify.EXPRS))) {
+    stop("Could not locate the appropriate regression variable(s) within the supplied stratification list stratify.CENS, stratify.TRT or stratify.MONITOR." %+% "\n" %+%
+          "The regression outcome variable(s) specified in gform.CENS, gform.TRT or gform.MONITOR were: ( '" %+% paste0(outvars, collapse=",") %+% "' )" %+% "\n" %+%
+          "However, the item names in the matching stratification list were: ( '" %+% paste0(names(stratify.EXPRS), collapse=",") %+% "' )"
+          )
+  }
   for (idx in seq_along(Node_subset_expr))
     if (!is.null(stratify.EXPRS[[outvars[idx]]]))
       Node_subset_expr[[idx]] <- stratify.EXPRS[[outvars[idx]]]
@@ -341,10 +346,15 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 # ------------------------------------------------------------------------------------------------------------------------------
 # TO DO:
 # ------------------------------------------------------------------------------------------------------------------------------
-# - Implement automatic function calling for gstar.TRT & gstar.MONITOR based on user-specified rule functions
-#   If its a list of functions or if function returns more than one rule, apply the whole estimation procedure to each combination of TRT/MONITORING rules
+# **** TO DO: ****
+# Write a helper method for SummaryModel class which goes down the nested tree of objects and obtains the model fits for each regression/outcome
 # - NEED TO IMPLEMENT $get.fits() METHOD IN SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression + coefficients)
 #   The method needs to appropriately format the output based on several model predictions (for stratified, categorical or continuous outcome)
+# **** TO DO: ****
+# IF A CERTAIN REGRESSION FORMULA / INTERVENTION NODE IS NOT SPECIFIED CREATE A DUMMY CLASS WHICH WOULD ALWAYS PUT MASS 1 ON THE OBERVED O
+#
+# - Implement automatic function calling for gstar.TRT & gstar.MONITOR based on user-specified rule functions
+#   If its a list of functions or if function returns more than one rule, apply the whole estimation procedure to each combination of TRT/MONITORING rules
 # - Save the weights at each t and save the cummulative weights for all observations who were following the rule (g.CAN(O_i)>0)
 # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
 # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
@@ -420,7 +430,8 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
   # ------------------------------------------------------------------------------------------------
-  # Put all three regression models (C,A,N) into one regression object of class ListOfRegressionForms
+  # Process the input formulas and stratification settings;
+  # Define regression classes for g.C, g.A, g.N and put them in a single list of regressions.
   # ------------------------------------------------------------------------------------------------
   g_CAN_regs_list <- vector(mode = "list", length = 3)
   names(g_CAN_regs_list) <- c("gC", "gA", "gN")
@@ -428,22 +439,23 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
 
   gC.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
-  # (regs <- gC.sVars$regs)
   g_CAN_regs_list[["gC"]] <- gC.sVars$regs
 
   gA.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, stratify.EXPRS = stratify.TRT,
                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  # (regs <- gA.sVars$regs)
   g_CAN_regs_list[["gA"]] <- gA.sVars$regs
 
   gN.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, stratify.EXPRS = stratify.MONITOR,
                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  # (regs <- gN.sVars$regs)
   g_CAN_regs_list[["gN"]] <- gN.sVars$regs
 
+  # ------------------------------------------------------------------------------------------
+  # DEFINE a single regression class
+  # Perform S3 method dispatch on ALL_g_regs, which will determine the nested tree of SummaryModel objects
+  # Perform fit and prediction
+  # ------------------------------------------------------------------------------------------
   ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
   ALL_g_regs$S3class <- "generic"
-  # using S3 method dispatch on ALL_g_regs:
   summeas.g0 <- newsummarymodel(reg = ALL_g_regs, DatNet.sWsA.g0 = OData)
   summeas.g0$fit(data = OData)
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...))
@@ -453,23 +465,21 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
   # ..... NOT REALLY NEEDED ......
   # ------------------------------------------------------------------------------------------
-  EVENT_IND <- "Delta"
-  if (EVENT_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(EVENT_IND):=NULL]
-  OData$dat.sVar[,(EVENT_IND):=as.integer(any(get(OUTCOME) %in% 1)), by = eval(ID)]
-
+  # EVENT_IND <- "Delta"
+  # if (EVENT_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(EVENT_IND):=NULL]
+  # OData$dat.sVar[,(EVENT_IND):=as.integer(any(get(OUTCOME) %in% 1)), by = eval(ID)]
   # ------------------------------------------------------------------------------------------
   # Evaluate the indicator that this person was right-censored at some point in time:
   # ..... NOT REALLY NEEDED ......
   # ------------------------------------------------------------------------------------------
-  CENS_IND <- "AnyCensored"
-  if (CENS_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(CENS_IND):=NULL]
-  # noCENS.cat <- 0L; CENS <- c("C")
-  OData$dat.sVar[, (CENS_IND) := FALSE, by = eval(ID)]
-  for (Cvar in CENS) {
-    OData$dat.sVar[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
-  }
-  OData$dat.sVar[, (CENS_IND) := as.integer(get(CENS_IND))]
-
+  # CENS_IND <- "AnyCensored"
+  # if (CENS_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(CENS_IND):=NULL]
+  # # noCENS.cat <- 0L; CENS <- c("C")
+  # OData$dat.sVar[, (CENS_IND) := FALSE, by = eval(ID)]
+  # for (Cvar in CENS) {
+  #   OData$dat.sVar[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
+  # }
+  # OData$dat.sVar[, (CENS_IND) := as.integer(get(CENS_IND))]
   # ------------------------------------------------------------------------------------------
   # Evaluate the total duration of the follow-up for each observation
   # ..... NOT REALLY NEEDED ......
@@ -488,9 +498,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   g0.A <- summeas.gA$getcumprodAeqa()
   g0.C <- summeas.gC$getcumprodAeqa()
   g0.N <- summeas.gN$getcumprodAeqa()
-
   N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
-
   OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
 
@@ -498,43 +506,41 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
   # ------------------------------------------------------------------------------------------------------------------------------
-  # (1) gA.star: prob of following one treatment rule; and
-  # (2) gN.star prob following the monitoring regime; and
-  # (3) gC.star: the indicator of not being censored.
+  # (1) gC.star: the indicator of not being censored.
+  # (2) gA.star: prob of following one treatment rule; and
+  # (3) gN.star prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
+  # indicator that the person is uncensored at each t (continuation of follow-up)
+  # gstar.C <- "gstar.C"
+  OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD) == eval(noCENS.cat)), .SDcols = CENS]
+
   # probability of following the rule at t, under intervention gstar.A on A(t)
   # **** NOTE ****
   # if gstar.TRT is a function then call it, if its a list of functions, then call one at a time.
   # if gstar.TRT returns more than one rule-column, estimate for each.
   if (!is.null(gstar.TRT)) {
-    gstar.A <- gstar.TRT
+    gstar.A <- as.name(gstar.TRT)
   } else {
-    gstar.A <- "g0.A" # use the actual observed exposure probability (no intervention on TRT)
+    gstar.A <- as.name("g0.A") # use the actual observed exposure probability (no intervention on TRT)
   }
-  OData$dat.sVar[, gstar.A := get(gstar.A)]
-
-  # indicator that the person is uncensored at each t (continuation of follow-up)
-  gstar.C <- "gstar.C"
-  OData$dat.sVar[, gstar.C := as.integer(rowSums(.SD) == eval(noCENS.cat)), .SDcols = CENS]
+  # OData$dat.sVar[, "gstar.A" := get(gstar.A)]
 
   # probability of monitoring N(t)=1 under intervention gstar.N on N(t)
   # **** NOTE ****
   # if gstar.MONITOR is a function then call it, if its a list of functions, then call one at a time.
   # if gstar.MONITOR returns more than one rule-column, use each.
   if (!is.null(gstar.MONITOR)) {
-    gstar.N <- gstar.MONITOR
+    gstar.N <- as.name(gstar.MONITOR)
   } else {
-    gstar.N <- "g0.N" # use the actual observed monitoring probability (no intervention on MONITOR)
+    gstar.N <- as.name("g0.N") # use the actual observed monitoring probability (no intervention on MONITOR)
   }
-  OData$dat.sVar[, gstar.N := get(gstar.N)]
+  # OData$dat.sVar[, "gstar.N" := get(gstar.N)]
 
   # Joint probability for all 3:
-  OData$dat.sVar[, c("gstar.CAN") := gstar.A * gstar.C * gstar.N]
-  # OData$dat.sVar[1:100,]
-
+  OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
   # Weights by time and cummulative weights by time:
-  OData$dat.sVar[, c("wt.by.t") := gstar.CAN / g0.CAN, by = eval(ID)]
-  OData$dat.sVar[, c("cumm.IPAW") := cumprod(wt.by.t), by = eval(ID)]
+  OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(ID)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(ID)]
+  # OData$dat.sVar[1:100,]
 
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
@@ -546,11 +552,10 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
 
   # multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
-  OData$dat.sVar[, ("Wt.OUTCOME") := get(shifted.OUTCOME)*cumm.IPAW]
+  OData$dat.sVar[, "Wt.OUTCOME" := get(shifted.OUTCOME)*cumm.IPAW]
   # OData$dat.sVar[101:200, ]
-
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
-    # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
+  # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
   sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
@@ -558,7 +563,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # (equivalent to summing cummulative weights cumm.IPAW by t)
   sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
-  St_ht_IPAW <- sum_Ywt[sum_Allwt][,ht := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
+  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
 
 return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, model.R6.fits = summeas.g0, data.R6.object = OData))
 }

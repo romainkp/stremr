@@ -74,10 +74,12 @@ test.helperfuns <- function() {
 
   addN.t1 <- convertdata(O.data, ID = "ID", t = "t", imp.I = "N",
                         MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
+
   addN.t2 <- convertdata(O.data.DT, ID = "ID", t = "t", imp.I = "N",
                         MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
   O.data_dhigh_dlow1 <- follow.rule.d.DT(O.data, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
                                         CENS = "C", TRT = "TI", MONITOR = "N", rule.names = c("dlow", "dhigh"))
+
   O.data_dhigh_dlow2 <- follow.rule.d.DT(O.data.DT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
                                         CENS = "C", TRT = "TI", MONITOR = "N", rule.names = c("dlow", "dhigh"))
 
@@ -94,7 +96,7 @@ test.model.fits.stratify <- function() {
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
   # ------------------------------------------------------------------------------------------------------
-  Nsize <- 10000
+  Nsize <- 1000
   O.data <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356)
   O.data[O.data[,"t"]%in%16,"lastNat1"] <- NA
   O.data <- O.data[,!names(O.data)%in%c("highA1c.UN", "timelowA1c.UN")]
@@ -184,4 +186,17 @@ test.model.fits.stratify <- function() {
     )
   res$IPW_estimates
   # res$dataDT
+
+  # --------------------------------
+  # EXAMPLE 5: Test for error when item names in stratification list do not match the outcome names in regression formula(s)
+  # --------------------------------
+  gform.CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
+  stratify.CENS <- list(wrongC = NULL, TI = c("t == 0L", "t > 0"), N = c("t == 0L", "t > 0"))
+  checkException(
+      estimtr(O.data, ID = "ID", t = "t",
+            covars = c("highA1c", "lastNat1"),
+            CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
+            gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
+            gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
+            gform.MONITOR = gform.MONITOR))
 }

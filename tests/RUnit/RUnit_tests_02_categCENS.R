@@ -70,14 +70,13 @@ test.model.fits.categorCENSOR <- function() {
   OdataCatCENS <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356, catC=TRUE)
   OdataCatCENS[OdataCatCENS[,"t"]%in%16,"lastNat1"] <- NA
   OdataCatCENS <- OdataCatCENS[,!names(OdataCatCENS)%in%c("highA1c.UN", "timelowA1c.UN")]
-  save(OdataCatCENS, file="OdataCatCENS.rda")
+  # save(OdataCatCENS, file="OdataCatCENS.rda")
   head(OdataCatCENS)
   nrow(OdataCatCENS)
-
   table(OdataCatCENS[,"Y"])
   table(OdataCatCENS[,"C"])
-
   unique(OdataCatCENS[,"C"])
+  unique(OdataCatCENS[,"CatC"])
   # [1]  0  2  1 NA
 
   # --------------------------------
