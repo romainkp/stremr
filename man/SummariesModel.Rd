@@ -18,12 +18,12 @@ This R6 class Class for defining, fitting and predicting the probability model
  probabilities based on name ordering provided by (\code{sA_nms}, \code{sW_nms}).
  When the outcome variable \code{sA[j]} is binary, this class will automatically call
  a new instance of \code{\link{BinOutModel}} class.
- Provide \code{self$fit()} function argument \code{data} as a \code{\link{DatNet.sWsA}} class object.
+ Provide \code{self$fit()} function argument \code{data} as a \code{\link{DataStorageClass}} class object.
  This data will be used for fitting the model \code{P(sA|sW)}.
- Provide \code{self$fit()} function argument \code{newdata} (also as \code{DatNet.sWsA} class) for predictions of the type
+ Provide \code{self$fit()} function argument \code{newdata} (also as \code{DataStorageClass} class) for predictions of the type
  \code{P(sA=1|sW=sw)}, where \code{sw} values are coming from \code{newdata} object.
  Finally, provide \code{self$predictAeqa} function \code{newdata} argument
- (also \code{DatNet.sWsA} class object) for getting the likelihood predictions \code{P(sA=sa|sW=sw)}, where
+ (also \code{DataStorageClass} class object) for getting the likelihood predictions \code{P(sA=sa|sW=sw)}, where
  both, \code{sa} and \code{sw} values are coming from \code{newdata} object.
 }
 \details{

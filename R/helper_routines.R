@@ -14,6 +14,7 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 #'
 #' @param data Input data.table or data.frame.
 #' @param ID The name of the unique subject identifier (character, numeric or factor).
+#' @param t The name of the time/period variable in \code{data}.
 #' @param I The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.
 #' @param imp.I The name of the binary indicator of missingness or imputation for I at time point t and it is used for coding MONITOR(t-1):=1-imp.I(t).
 #'  When imp.I(t)=1 it means that the patient was not observed (no office visit) at time-point t and hence no biomarker was measured.
@@ -51,6 +52,7 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "tsinceNis1"){
   # require('data.table')
   ID.expression <- as.name(ID)
+  indx <- as.name("indx")
   if (is.data.table(data)) {
     DT <- data.table(data[,c(ID, t, imp.I), with = FALSE], key=c(ID, t))
   } else if (is.data.frame(data)) {
@@ -63,10 +65,11 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID.expression), .SDcols=(imp.I)]
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
-  DT[, indx:=cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID.expression)]
-  DT[, (tsinceNis1) := seq(.N)-1, by = .(eval(ID.expression), indx)]
+  DT[, ("indx") := cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID.expression)]
+  DT[, (tsinceNis1) := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
+  # DT[, (tsinceNis1) := seq(.N)-1, by = .(eval(ID.expression), indx)]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
-  DT[, indx := NULL]
+  DT[, ("indx") := NULL]
   DT[, (imp.I) := NULL]
   return(DT)
 }
@@ -125,6 +128,10 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL){
   # require('data.table')
   ID.expression <- as.name(ID)
+  indx <- as.name("indx")
+  chgTRT <- as.name("chgTRT")
+  lastN.t <- as.name("lastN.t")
+
   if (is.data.table(data)) {
     DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR), with = FALSE], key=c(ID,t))
   } else if (is.data.frame(data)) {
@@ -133,38 +140,38 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
     stop("input data must be either a data.table or a data.frame")
   }
   # Create "indx" vector that goes up by 1 every time MONITOR(t-1) shifts from 1 to 0 or from 0 to 1
-  DT[, indx := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID.expression)]
+  DT[, "indx" := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID.expression)]
   # Intermediate variable lastN.t to count number of cycles since last visit at t-1. Reset lastN.t(t)=0 when MONITOR(t-1)=1.
-  DT[, lastN.t := seq(.N)-1, by = .(eval(ID.expression), indx)]
-  DT[is.na(DT[["indx"]]), lastN.t := NA]
-  DT[, indx := NULL]
+  DT[, "lastN.t" := seq(.N)-1, by = .(eval(ID.expression), eval(indx))]
+  DT[is.na(DT[["indx"]]), "lastN.t" := NA]
+  DT[, "indx" := NULL]
 
   # Define chgTRT=TRT(t)-TRT(t-1), switching to treatment (+1), not changing treatment (0), going off treatment (-1). Assume people were off treatment prior to t=0.
   DT[, "chgTRT" := diff(c(0L, .SD[[1]])), by = eval(ID.expression), .SDcols=(TRT)]
   # The observation is not censored at time-point t
-  DT[, notC := (get(CENS)==0L), by = eval(ID.expression)]
+  # DT[, notC := (get(CENS)==0L), by = eval(ID.expression)]
 
   # (1) Follow rule at t if uncensored and remaining on treatment (TRT(t-1)=TRT(t)=1):
-  DT[, "d.follow_r1" := notC & (get(TRT)==1L) & (chgTRT==0L), by = eval(ID.expression), with = FALSE]
+  DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
   # rule1: (C[t] == 0L) & (A[t-1] == 1L) & (A[t] == 1)
 
   # (2) Follow rule at t if uncensored, haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
-  DT[, "d.follow_r2" := notC & (lastN.t > 0L) & (chgTRT==0L), by = eval(ID.expression), with = FALSE]
+  DT[, "d.follow_r2" := (get(CENS)==0L) & (eval(lastN.t) > 0L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
   # rule2: (C[t] == 0L) & (N[t-1] == 0) & (A[t-1] == A[t])
 
   # (3) Follow rule at t if uncensored, was monitored (MONITOR(t-1)=0) and either:
   # (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
   for (dtheta in theta) {
-    DT[, "d.follow_r3" := notC & (lastN.t == 0L) & (((get(I) >= eval(dtheta)) & (chgTRT==1L)) | ((get(I) < eval(dtheta)) & (chgTRT==0L))), by = eval(ID.expression), with = FALSE]
+    DT[, "d.follow_r3" := (get(CENS)==0L) & (eval(lastN.t) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L))), by = eval(ID.expression), with = FALSE]
     # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
 
     # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
-    DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3, by = eval(ID.expression)]
+    DT[, "d.follow_allr" := eval(parse(text="d.follow_r1 | d.follow_r2 | d.follow_r3")), by = eval(ID.expression)]
     # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:
-    DT[, paste0("d",dtheta) := as.logical(cumprod(d.follow_allr)), by = eval(ID.expression)]
+    DT[, paste0("d",dtheta) := eval(parse(text="as.logical(cumprod(d.follow_allr))")), by = eval(ID.expression)]
   }
 
-  DT[, d.follow_r3 := NULL]; DT[, d.follow_allr := NULL]
+  DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]
   if (!is.null(rule.names)) {
     stopifnot(length(rule.names)==length(theta))
     setnames(DT, old = paste0("d",theta), new = rule.names)

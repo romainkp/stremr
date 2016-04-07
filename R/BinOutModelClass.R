@@ -108,7 +108,7 @@ join.Xmat = function(X_mat, sVar_melt_DT, ID) {
 #'  logistic regression P(Bin|Xmat).
 #'  Can also be used for converting data in wide format to long when requested,
 #'  e.g., when pooling across binary indicators (fitting one pooled logistic regression model for several indicators)
-#'  The class has methods that perform queries to data storage R6 class DatNet.sWsA to get appropriate data columns & row subsets
+#'  The class has methods that perform queries to data storage R6 class DataStorageClass to get appropriate data columns & row subsets
 #'
 #' @docType class
 #' @format An \code{\link{R6Class}} generator object
@@ -230,7 +230,7 @@ BinDat <- R6Class(classname = "BinDat",
     },
 
     # Sets X_mat, Yvals, evaluates subset and performs correct subseting of data
-    # everything is performed using data$ methods (data is of class DatNet.sWsA)
+    # everything is performed using data$ methods (data is of class DataStorageClass)
     setdata = function(data, getoutvar, ...) {
       assert_that(is.DataStorageClass(data))
       self$n <- data$nobs
@@ -240,7 +240,7 @@ BinDat <- R6Class(classname = "BinDat",
         private$X_mat <- matrix(, nrow = 0L, ncol = (length(self$predvars) + 1))
         colnames(private$X_mat) <- c("Intercept", self$predvars)
       } else {
-        # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DatNet.sWsA$get.dat.sVar() IS MADE ***
+        # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DataStorageClass$get.dat.sVar() IS MADE ***
         if (length(self$predvars)==0L) {
           private$X_mat <- as.matrix(rep.int(1L, sum(self$subset_idx)), ncol=1)
         } else {
@@ -299,7 +299,7 @@ BinDat <- R6Class(classname = "BinDat",
       #   private$X_mat <- matrix(, nrow = 0L, ncol = (length(self$predvars) + 1))
       #   colnames(private$X_mat) <- c("Intercept", self$predvars)
       # } else {
-      #   # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DatNet.sWsA$get.dat.sVar() IS MADE ***
+      #   # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DataStorageClass$get.dat.sVar() IS MADE ***
       #   private$X_mat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(self$subset_idx, self$predvars)))
         # To find and replace misvals in X_mat:
         if (self$ReplMisVal0) private$X_mat[gvars$misfun(private$X_mat)] <- gvars$misXreplace
@@ -374,7 +374,7 @@ BinDat <- R6Class(classname = "BinDat",
 #'  logistic regression P(Bin|Xmat).
 #'  Can also be used for converting data in wide format to long when requested,
 #'  e.g., when pooling across binary indicators (fitting one pooled logistic regression model for several indicators)
-#'  The class has methods that perform queries to data storage R6 class DatNet.sWsA to get appropriate data columns & row subsets
+#'  The class has methods that perform queries to data storage R6 class DataStorageClass to get appropriate data columns & row subsets
 #'
 #' @docType class
 #' @format An \code{\link{R6Class}} generator object

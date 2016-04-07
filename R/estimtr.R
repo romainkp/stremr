@@ -469,7 +469,7 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # ------------------------------------------------------------------------------------------
   ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
   ALL_g_regs$S3class <- "generic"
-  summeas.g0 <- newsummarymodel(reg = ALL_g_regs, DatNet.sWsA.g0 = OData)
+  summeas.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
   summeas.g0$fit(data = OData)
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...))
   h_gN <- summeas.g0$predictAeqa(newdata = OData)

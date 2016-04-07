@@ -12,6 +12,8 @@ convertdata(data, ID, t, imp.I, MONITOR.name = "N",
 
 \item{ID}{The name of the unique subject identifier (character, numeric or factor).}
 
+\item{t}{The name of the time/period variable in \code{data}.}
+
 \item{imp.I}{The name of the binary indicator of missingness or imputation for I at time point t and it is used for coding MONITOR(t-1):=1-imp.I(t).
 When imp.I(t)=1 it means that the patient was not observed (no office visit) at time-point t and hence no biomarker was measured.}
 

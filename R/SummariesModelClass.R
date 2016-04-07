@@ -6,17 +6,17 @@
 # ---------------------------------------------------------------------------------
 # S3 constructors for the summary model classes:
 # ---------------------------------------------------------------------------------
-newsummarymodel <- function(reg, DatNet.sWsA.g0, ...) { UseMethod("newsummarymodel") }
+newsummarymodel <- function(reg, DataStorageClass.g0, ...) { UseMethod("newsummarymodel") }
 # Summary model constructor for generic regression with multivariate outcome, but one set of predictors
-newsummarymodel.generic <- function(reg, DatNet.sWsA.g0, ...) SummariesModel$new(reg = reg, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
+newsummarymodel.generic <- function(reg, DataStorageClass.g0, ...) SummariesModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for binary outcome sA[j]:
 newsummarymodel.binary <- function(reg, ...) BinOutModel$new(reg = reg, ...)
 # Summary model constructor for continuous outcome sA[j]:
-newsummarymodel.contin <- function(reg, DatNet.sWsA.g0, ...) ContinSummaryModel$new(reg = reg, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
+newsummarymodel.contin <- function(reg, DataStorageClass.g0, ...) ContinSummaryModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for categorical outcome sA[j]:
-newsummarymodel.categor <- function(reg, DatNet.sWsA.g0, ...) CategorSummaryModel$new(reg = reg, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
+newsummarymodel.categor <- function(reg, DataStorageClass.g0, ...) CategorSummaryModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for stratification (by reg$subset_exprs):
-newsummarymodel.stratify <- function(reg, DatNet.sWsA.g0, ...) StratifySummariesModel$new(reg = reg, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
+newsummarymodel.stratify <- function(reg, DataStorageClass.g0, ...) StratifySummariesModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 
 # ---------------------------------------------------------------------------------
 # S3 methods for regression subsetting/stratification/interval subsetting
@@ -309,12 +309,12 @@ RegressionClass <- R6Class("RegressionClass",
 #'  probabilities based on name ordering provided by (\code{sA_nms}, \code{sW_nms}).
 #'  When the outcome variable \code{sA[j]} is binary, this class will automatically call
 #'  a new instance of \code{\link{BinOutModel}} class.
-#'  Provide \code{self$fit()} function argument \code{data} as a \code{\link{DatNet.sWsA}} class object.
+#'  Provide \code{self$fit()} function argument \code{data} as a \code{\link{DataStorageClass}} class object.
 #'  This data will be used for fitting the model \code{P(sA|sW)}.
-#'  Provide \code{self$fit()} function argument \code{newdata} (also as \code{DatNet.sWsA} class) for predictions of the type
+#'  Provide \code{self$fit()} function argument \code{newdata} (also as \code{DataStorageClass} class) for predictions of the type
 #'  \code{P(sA=1|sW=sw)}, where \code{sw} values are coming from \code{newdata} object.
 #'  Finally, provide \code{self$predictAeqa} function \code{newdata} argument
-#'  (also \code{DatNet.sWsA} class object) for getting the likelihood predictions \code{P(sA=sa|sW=sw)}, where
+#'  (also \code{DataStorageClass} class object) for getting the likelihood predictions \code{P(sA=sa|sW=sw)}, where
 #'  both, \code{sa} and \code{sw} values are coming from \code{newdata} object.
 #'
 #' @docType class
@@ -608,7 +608,7 @@ def_regs_subset <- function(self) {
 #' }
 #' @section Methods:
 #' \describe{
-#'   \item{\code{new(reg, DatNet.sWsA.g0, DatNet.sWsA.gstar, ...)}}{...}
+#'   \item{\code{new(reg, DataStorageClass.g0, DataStorageClass.gstar, ...)}}{...}
 #'   \item{\code{fit(data)}}{...}
 #'   \item{\code{predict(newdata)}}{...}
 #'   \item{\code{predictAeqa(newdata)}}{...}
@@ -629,19 +629,19 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
     intrvls.width = NULL,
     bin_weights = NULL,
     # Define settings for fitting contin sA and then call $new for super class (SummariesModel)
-    initialize = function(reg, DatNet.sWsA.g0, DatNet.sWsA.gstar, ...) {
+    initialize = function(reg, DataStorageClass.g0, DataStorageClass.gstar, ...) {
       self$reg <- reg
       self$outvar <- reg$outvar
       if (is.null(reg$intrvls)) {
-        assert_that(is.DataStorageClass(DatNet.sWsA.g0))
-        self$intrvls <- DatNet.sWsA.g0$detect.sVar.intrvls(reg$outvar,
+        assert_that(is.DataStorageClass(DataStorageClass.g0))
+        self$intrvls <- DataStorageClass.g0$detect.sVar.intrvls(reg$outvar,
                                                       nbins = self$reg$nbins,
                                                       bin_bymass = self$reg$bin_bymass,
                                                       bin_bydhist = self$reg$bin_bydhist,
                                                       max_nperbin = self$reg$max_nperbin)
-        if (!missing(DatNet.sWsA.gstar)) {
-          assert_that(is.DataStorageClass(DatNet.sWsA.gstar))
-          gstar.intrvls <- DatNet.sWsA.gstar$detect.sVar.intrvls(reg$outvar,
+        if (!missing(DataStorageClass.gstar)) {
+          assert_that(is.DataStorageClass(DataStorageClass.gstar))
+          gstar.intrvls <- DataStorageClass.gstar$detect.sVar.intrvls(reg$outvar,
                                                       nbins = self$reg$nbins,
                                                       bin_bymass = self$reg$bin_bymass,
                                                       bin_bydhist = self$reg$bin_bydhist,
@@ -655,7 +655,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
         self$intrvls <- self$reg$intrvls
       }
       self$reg$nbins <- length(self$intrvls) - 1
-      self$reg$bin_nms <- DatNet.sWsA.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
+      self$reg$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
       # Save bin widths in reg class (naming the vector entries by bin names):
       self$intrvls.width <- diff(self$intrvls)
       self$intrvls.width[self$intrvls.width <= gvars$tolerr] <- 1
@@ -671,7 +671,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data) {
       assert_that(is.DataStorageClass(data))
-      # Binirizes & saves binned matrix inside DatNet.sWsA
+      # Binirizes & saves binned matrix inside DataStorageClass
       data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
       if (gvars$verbose) {
         print("performing fitting for continuous outcome: " %+% self$outvar)
@@ -680,7 +680,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       }
       super$fit(data) # call the parent class fit method
       if (gvars$verbose) message("fit for outcome " %+% self$outvar %+% " succeeded...")
-      data$emptydat.bin.sVar # wiping out binirized mat in data DatNet.sWsA object...
+      data$emptydat.bin.sVar # wiping out binirized mat in data DataStorageClass object...
       self$wipe.alldat # wiping out all data traces in ContinSummaryModel...
       invisible(self)
     },
@@ -692,7 +692,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
       # mat_bin doesn't need to be saved (even though its invisibly returned); mat_bin is automatically saved in datnet.sW.sA - a potentially dangerous side-effect!!!
       newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
       super$predict(newdata)
-      newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DatNet.sWsA object...
+      newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DataStorageClass object...
       invisible(self)
     },
     # Convert contin. sA vector into matrix of binary cols, then call parent class method: super$predictAeqa()
@@ -753,7 +753,7 @@ ContinSummaryModel <- R6Class(classname = "ContinSummaryModel",
 #' }
 #' @section Methods:
 #' \describe{
-#'   \item{\code{new(reg, DatNet.sWsA.g0, ...)}}{...}
+#'   \item{\code{new(reg, DataStorageClass.g0, ...)}}{...}
 #'   \item{\code{fit(data)}}{...}
 #'   \item{\code{predict(newdata)}}{...}
 #'   \item{\code{predictAeqa(newdata)}}{...}
@@ -773,7 +773,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
     levels = numeric(),       # all unique values for sA[j] sorted in increasing order
     nbins = integer(),
     # Define settings for fitting cat sA and then call $new for super class (SummariesModel)
-    initialize = function(reg, DatNet.sWsA.g0, ...) {
+    initialize = function(reg, DataStorageClass.g0, ...) {
       self$reg <- reg
       self$outvar <- reg$outvar
       # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
@@ -785,13 +785,13 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       }
 
       if (is.null(reg$levels)) {
-        assert_that(is.DataStorageClass(DatNet.sWsA.g0))
-        self$levels <- self$reg$levels <- DatNet.sWsA.g0$detect.cat.sVar.levels(reg$outvar)
+        assert_that(is.DataStorageClass(DataStorageClass.g0))
+        self$levels <- self$reg$levels <- DataStorageClass.g0$detect.cat.sVar.levels(reg$outvar)
       } else {
         self$levels <- self$reg$levels
       }
       self$nbins <- self$reg$nbins <- length(self$levels)
-      self$reg$bin_nms <- DatNet.sWsA.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
+      self$reg$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
       if (gvars$verbose)  {
         print("CategorSummaryModel outcome: "%+%self$outvar)
       }
@@ -803,7 +803,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data) {
       assert_that(is.DataStorageClass(data))
-      # Binirizes & saves binned matrix inside DatNet.sWsA for categorical sVar
+      # Binirizes & saves binned matrix inside DataStorageClass for categorical sVar
       data$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
       if (gvars$verbose) {
         print("performing fitting for categorical outcome: " %+% self$outvar)
@@ -812,7 +812,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       }
       super$fit(data) # call the parent class fit method
       if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
-      data$emptydat.bin.sVar # wiping out binirized mat in data DatNet.sWsA object...
+      data$emptydat.bin.sVar # wiping out binirized mat in data DataStorageClass object...
       self$wipe.alldat # wiping out all data traces in ContinSummaryModel...
       invisible(self)
     },
@@ -823,7 +823,7 @@ CategorSummaryModel <- R6Class(classname = "CategorSummaryModel",
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
       newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
       super$predict(newdata)
-      newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DatNet.sWsA object...
+      newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DataStorageClass object...
       invisible(self)
     },
     # Invisibly return cumm. prob P(sA=sa|sW=sw)
@@ -862,7 +862,7 @@ StratifySummariesModel <- R6Class(classname = "StratifySummariesModel",
     # Define settings for fitting cat sA and then call $new for super class (SummariesModel)
     # We produce a regression class with 3 outvars (same) and 3 outvar.class (same)
     # The daughter regression clases resulting from this need to be of class StratifiedRegressionModelClass
-    initialize = function(reg, DatNet.sWsA.g0, ...) {
+    initialize = function(reg, DataStorageClass.g0, ...) {
       self$reg <- reg
       self$outvar <- reg$outvar
       self$subset_exprs <- reg$subset_exprs
@@ -882,7 +882,7 @@ StratifySummariesModel <- R6Class(classname = "StratifySummariesModel",
       names(stratify_regs$subset_exprs) <- stratify_regs$outvar
       stratify_regs$reg_hazard <- TRUE
       # print("stratify_regs class:"); stratify_regs$show()
-      super$initialize(reg = stratify_regs, no_set_outvar = TRUE, DatNet.sWsA.g0 = DatNet.sWsA.g0, ...)
+      super$initialize(reg = stratify_regs, no_set_outvar = TRUE, DataStorageClass.g0 = DataStorageClass.g0, ...)
     },
 
     # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
