@@ -352,7 +352,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #   The method needs to appropriately format the output based on several model predictions (for stratified, categorical or continuous outcome)
 # **** TO DO: ****
 # IF A CERTAIN REGRESSION FORMULA / INTERVENTION NODE IS NOT SPECIFIED CREATE A DUMMY CLASS WHICH WOULD ALWAYS PUT MASS 1 ON THE OBERVED O
-#
+# TO DO: CONSIDER NOT THROWING AN ERROR WHEN stratify.VAR list is unnamed for cases where VAR is univariate (only one variable name)
 # - Implement automatic function calling for gstar.TRT & gstar.MONITOR based on user-specified rule functions
 #   If its a list of functions or if function returns more than one rule, apply the whole estimation procedure to each combination of TRT/MONITORING rules
 # - Save the weights at each t and save the cummulative weights for all observations who were following the rule (g.CAN(O_i)>0)
@@ -421,6 +421,10 @@ estimtr <- function(data, ID = "Subj_ID", t = "time_period",
   # ---------------------------------------------------------------------------
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
+
+  print(str(lagnodes))
+  print(OData$dat.sVar)
+
   OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
 
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
