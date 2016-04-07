@@ -61,16 +61,29 @@ simulateDATA.fromDAG <- function(catC = FALSE, Nsize = 1000, rndseed = NULL){
   return(O.data)
 }
 
-test.model.fits.categorCENSOR <- function() {
-  # ------------------------------------------------------------------------------------------------------
-  # (IA) Data from the simulation study
-  # ------------------------------------------------------------------------------------------------------
-  Nsize <- 50000
+# ------------------------------------------------------------------------------------------------------
+# SIMULATE, SAVE AND COMPRESS THE DATASET FROM THE EXAMPLE
+# ------------------------------------------------------------------------------------------------------
+notrun.save.example.data <- function() {
   library("simcausal")
+  Nsize <- 50000
   OdataCatCENS <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356, catC=TRUE)
   OdataCatCENS[OdataCatCENS[,"t"]%in%16,"lastNat1"] <- NA
   OdataCatCENS <- OdataCatCENS[,!names(OdataCatCENS)%in%c("highA1c.UN", "timelowA1c.UN")]
-  # save(OdataCatCENS, file="OdataCatCENS.rda")
+  save(OdataCatCENS, compress = TRUE, file = "OdataCatCENS.rda", compression_level = 9)
+  library("tools")
+  resaveRdaFiles("./OdataCatCENS.rda", compress = "bzip2")
+}
+
+test.model.fits.categorCENSOR <- function() {
+  library("simcausal")
+  # ------------------------------------------------------------------------------------------------------
+  # (IA) Data from the simulation study
+  # ------------------------------------------------------------------------------------------------------
+  Nsize <- 1000
+  OdataCatCENS <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356, catC=TRUE)
+  OdataCatCENS[OdataCatCENS[,"t"]%in%16,"lastNat1"] <- NA
+  OdataCatCENS <- OdataCatCENS[,!names(OdataCatCENS)%in%c("highA1c.UN", "timelowA1c.UN")]
   head(OdataCatCENS)
   nrow(OdataCatCENS)
   table(OdataCatCENS[,"Y"])
