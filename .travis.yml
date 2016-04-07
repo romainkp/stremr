@@ -38,6 +38,7 @@ r_binary_packages:
   - speedglm
   - stringr
   - rmarkdown
+  - magrittr
 
 r_github_packages:
   - jimhester/covr
