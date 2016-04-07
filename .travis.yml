@@ -26,21 +26,24 @@ os:
   # - osx
 
 r_binary_packages:
-  - knitr
+  - assertthat
   - data.table
+  - foreach
+  - knitr
+  - R6
+  - Rcpp
   - RUnit
-  - igraph
-  - ggplot2
-  - Hmisc
-  - mvtnorm
-  - copula
+  - speedglm
+  - stringr
+  - rmarkdown
 
 r_github_packages:
   - jimhester/covr
+  - osofr/simcausal
 
-r_packages:
-  - ltmle
-  - bindata
+# r_packages:
+#   - ltmle
+#   - bindata
 
 env:
  global:

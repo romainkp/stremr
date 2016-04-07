@@ -22,7 +22,6 @@ LinkingTo: Rcpp
 Suggests:
     RUnit,
     knitr,
-    ggplot2,
-    Hmisc
+    ggplot2
 License: GPL-2
 LazyData: true
