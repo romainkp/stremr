@@ -6,7 +6,7 @@
 \title{An example of a dataset in long format with categorical censoring variable.}
 \format{A data frame with 50,000 observations and variables:
 \describe{
-  \item{IDs}{Unique subject identifier}
+  \item{ID}{Unique subject identifier}
   \item{CVD}{Baseline confounder (time invariant)}
   \item{t}{Interger for current time period, range 0-16}
   \item{Y}{Binary outcome}

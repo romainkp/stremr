@@ -22,7 +22,7 @@ LinkingTo: Rcpp
 Suggests:
     RUnit,
     knitr,
-    ggplot2,
-    simcausal
+    simcausal,
+    magrittr
 License: GPL-2
 LazyData: true

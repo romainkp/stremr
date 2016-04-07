@@ -29,6 +29,8 @@ r_binary_packages:
   - assertthat
   - data.table
   - foreach
+  - ggplot2
+  - igraph
   - knitr
   - R6
   - Rcpp

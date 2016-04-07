@@ -50,7 +50,6 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 #' @return A data.table in long format with ordering (I, CENS, TRT, MONITOR)
 #' @export
 convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "tsinceNis1"){
-  # require('data.table')
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   if (is.data.table(data)) {
@@ -142,7 +141,7 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
   # Create "indx" vector that goes up by 1 every time MONITOR(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, "indx" := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID.expression)]
   # Intermediate variable lastN.t to count number of cycles since last visit at t-1. Reset lastN.t(t)=0 when MONITOR(t-1)=1.
-  DT[, "lastN.t" := seq(.N)-1, by = .(eval(ID.expression), eval(indx))]
+  DT[, "lastN.t" := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
   DT[is.na(DT[["indx"]]), "lastN.t" := NA]
   DT[, "indx" := NULL]
 
