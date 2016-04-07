@@ -116,7 +116,7 @@ test.model.fits.stratify <- function() {
           # noCENS.cat = 0L)
     )
   res$IPW_estimates
-  # res$OData
+  # res$dataDT
 
   # --------------------------------
   # EXAMPLE 2:
@@ -139,7 +139,7 @@ test.model.fits.stratify <- function() {
           # noCENS.cat = 0L)
     )
   res$IPW_estimates
-  # res$OData
+  # res$dataDT
 
   # --------------------------------
   # EXAMPLE 3:
@@ -158,7 +158,7 @@ test.model.fits.stratify <- function() {
           # noCENS.cat = 0L)
     )
   res$IPW_estimates
-  # res$OData
+  # res$dataDT
 
   # --------------------------------
   # EXAMPLE 4:
@@ -183,5 +183,5 @@ test.model.fits.stratify <- function() {
           # noCENS.cat = 0L)
     )
   res$IPW_estimates
-  # res$OData
+  # res$dataDT
 }

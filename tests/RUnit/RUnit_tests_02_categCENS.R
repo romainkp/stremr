@@ -22,7 +22,8 @@ simulateDATA.fromDAG <- function(catC = FALSE, Nsize = 1000, rndseed = NULL){
     node("timelowA1c.UN", t = 0, distr = "rbern", prob = 1-highA1c.UN[0]) +  # Z(0) - counts the number of time the (possibly unobserved) A1c was low
 
     node("TI", t = 0, distr = "rbern", prob = ifelse(highA1c[0] == 0, ifelse(CVD[0] == 1, 0.5, 0.1), ifelse(CVD[0] == 1, 0.9, 0.5))) +
-    node("C", t = 0, distr = "rbern", prob = 0, EFU = TRUE) +  # no censoring in first bin
+    node("CatC", t = 0, distr = "rconst", const = 0) +
+    node("C", t = 0, distr = "rconst", const = ifelse(CatC[t] > 0L, 1, 0), EFU = TRUE) +  # last time point is when admin end of study occurs
 
     node("N", t = 0, distr = "rbern", prob = 1) +
 
@@ -39,14 +40,14 @@ simulateDATA.fromDAG <- function(catC = FALSE, Nsize = 1000, rndseed = NULL){
             ifelse(highA1c[t] == 0,
               ifelse(CVD[0] == 1, 0.3, 0.1),
                 ifelse(CVD[0] == 1, 0.7, 0.5)), 0))) +
-    node("C", t = 1:16, distr = "rbern", prob = ifelse(t == 16, 1, 0), EFU = TRUE) +  # last time point is when admin end of study occurs
+    node("CatC", t = 1:16, distr = "rcategor.int.b0", probs = c(0.95, 0.025, 0.025)) +
+    node("C", t = 1:16, distr = "rconst", const = ifelse(CatC[t] > 0L, 1, 0), EFU = TRUE) +  # last time point is when admin end of study occurs
 ###### N(t)
     node("N", t = 1:16, distr = "rbern", prob = 1)
 
-  if (catC) {
-    Drm <- Drm + node("C", t = 1:16, distr = "rcategor.int.b0", probs = c(0.90, 0.05, 0.05), EFU = TRUE)
-  }
-  # return(Drm)
+  # if (catC) {
+  #   Drm <- Drm + node("C", t = 1:16, distr = "rcategor.int.b0", probs = c(0.90, 0.05, 0.05), EFU = TRUE)
+  # }
 
   g05.Params = list(name = "Sporadic 0.5", gInt.N = g.p(0.5), Nprob.t0 = 0.5, Nprob.tplus = 0.5)
   prob.t0 <- g05.Params$Nprob.t0
@@ -66,11 +67,17 @@ test.model.fits.categorCENSOR <- function() {
   # ------------------------------------------------------------------------------------------------------
   Nsize <- 50000
   library("simcausal")
-  O.data <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356, catC=TRUE)
-  O.data[O.data[,"t"]%in%16,"lastNat1"] <- NA
-  O.data <- O.data[,!names(O.data)%in%c("highA1c.UN", "timelowA1c.UN")]
-  head(O.data)
-  unique(O.data[,"C"])
+  OdataCatCENS <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356, catC=TRUE)
+  OdataCatCENS[OdataCatCENS[,"t"]%in%16,"lastNat1"] <- NA
+  OdataCatCENS <- OdataCatCENS[,!names(OdataCatCENS)%in%c("highA1c.UN", "timelowA1c.UN")]
+  save(OdataCatCENS, file="OdataCatCENS.rda")
+  head(OdataCatCENS)
+  nrow(OdataCatCENS)
+
+  table(OdataCatCENS[,"Y"])
+  table(OdataCatCENS[,"C"])
+
+  unique(OdataCatCENS[,"C"])
   # [1]  0  2  1 NA
 
   # --------------------------------
@@ -81,7 +88,7 @@ test.model.fits.categorCENSOR <- function() {
   gform.MONITOR <- "N ~ 1"
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    estimtr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
@@ -89,7 +96,7 @@ test.model.fits.categorCENSOR <- function() {
     )
 
   res$IPW_estimates
-  res$OData
+  # res$dataDT
 
   # --------------------------------
   # EXAMPLE 2:
@@ -103,7 +110,7 @@ test.model.fits.categorCENSOR <- function() {
 
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    estimtr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
@@ -113,7 +120,7 @@ test.model.fits.categorCENSOR <- function() {
     )
 
   res$IPW_estimates
-  res$OData
+  # res$dataDT
 
   # --------------------------------
   # EXAMPLE 3:
@@ -123,16 +130,16 @@ test.model.fits.categorCENSOR <- function() {
   gform.MONITOR <- "N ~ 1"
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    estimtr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
           gform.TRT = gform.TRT,
-          gform.MONITOR = gform.MONITOR)
-          # noCENS.cat = 0L)
+          gform.MONITOR = gform.MONITOR,
+          noCENS.cat = 1L)
     )
   res$IPW_estimates
-  res$OData
+  # res$dataDT
 
   # --------------------------------
   # EXAMPLE 4:
@@ -148,16 +155,16 @@ test.model.fits.categorCENSOR <- function() {
 
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    estimtr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
           gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
-          gform.MONITOR = gform.MONITOR)
-          # noCENS.cat = 0L)
+          gform.MONITOR = gform.MONITOR,
+          noCENS.cat = 0L)
     )
   res$IPW_estimates
-  res$OData
+  # res$dataDT
 
 }
 
