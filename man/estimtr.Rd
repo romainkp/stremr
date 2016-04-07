@@ -187,34 +187,14 @@ res <- follow.rule.d.DT(OdataDT,
         rule.names = c("dlow", "dhigh")) \%>\%
 # Merge rule definitions into main dataset:
   merge(OdataDT, ., by=c("ID", "t")) \%>\%
-# Estimate hazard and survival for one rule (dhigh):
+# Estimate hazard and survival for a rule "dhigh":
   estimtr(gstar.TRT = "dhigh", gstar.MONITOR = "gstar.N",
         ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
         CENS = "CatC", gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
         TRT = "TI", gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
         MONITOR = "N", gform.MONITOR = gform.MONITOR, OUTCOME = "Y")
-
 res$IPW_estimates
 res$dataDT
-
-#
-
-# 1   0   454.3149     52317.95 0.008683729 0.9913163 0.9913163
-# 2   1  1017.5525     58103.12 0.017512871 0.9824871 0.9739555
-# 3   2  1984.8726     65236.63 0.030425737 0.9695743 0.9443222
-# 4   3  2574.1207     72427.57 0.035540621 0.9644594 0.9107604
-# 5   4  2992.5615     78301.84 0.038218280 0.9617817 0.8759527
-# 6   5  2700.6900     82870.70 0.032589204 0.9674108 0.8474061
-# 7   6  2723.0310     85716.79 0.031767768 0.9682322 0.8204859
-# 8   7  2430.9155     86839.14 0.027993317 0.9720067 0.7975178
-# 9   8  2045.0943     86974.15 0.023513817 0.9764862 0.7787651
-# 10  9  1792.4145     86574.65 0.020703687 0.9792963 0.7626418
-# 11 10  1241.2401     84669.60 0.014659809 0.9853402 0.7514616
-# 12 11  1644.1322     84222.47 0.019521300 0.9804787 0.7367921
-# 13 12  1162.6926     82402.67 0.014109889 0.9858901 0.7263960
-# 14 13  1345.1770     81187.78 0.016568713 0.9834313 0.7143606
-# 15 14  1289.4711     79339.03 0.016252669 0.9837473 0.7027503
-# 16 15  1547.5597     77454.59 0.019980220 0.9800198 0.6887092
 }
 \seealso{
 \code{\link{estimtr-package}} for the general overview of the package,

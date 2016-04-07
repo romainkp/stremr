@@ -12,7 +12,7 @@ DatNetStorageClass
 R6 class for storing, managing, subsetting and manipulating the input data for networks.
 }
 \details{
-#' \itemize{
+\itemize{
 \item{\code{sW}} - Baseline summaries
 \item{\code{sA}} - Exposure summaries
 \item{\code{intervene1.sA}} - Intervention object 1

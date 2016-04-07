@@ -120,8 +120,8 @@ make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.
 #' R6 class for storing, managing, subsetting and manipulating the input data.
 #'
 #'  The class \code{DataStorageClass} is the only way the package uses to access the input data.
-#'  The evaluated summary measures from sVar.object are stored as a matrix (private$.mat.sVar).
-#'  Contains methods for replacing missing values with default in gvars$misXreplace.
+#'  The evaluated summary measures from sVar.object are stored as a matrix (\code{private$.mat.sVar}).
+#'  Contains methods for replacing missing values with default in \code{gvars$misXreplace}.
 #'  Also contains method for detecting / setting sVar variable type (binary, categor, contin).
 #'  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
 #'  For continous sVar this class provides methods for detecting / setting bin intervals,
@@ -133,7 +133,7 @@ make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.
 #' @format An \code{\link{R6Class}} generator object
 #' @keywords R6 class
 #' @details
-#' #' \itemize{
+#' \itemize{
 #'    \item{\code{YnodeVals}}
 #'    \item{\code{det.Y}}
 #' }
@@ -164,10 +164,10 @@ make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.
 #'    \item{\code{nobs}}{...}
 #'    \item{\code{ncols.sVar}}{...}
 #'    \item{\code{names.sVar}}{...}
-#'    \item{\code{type.sVar}} - Named list of length \code{ncol(private$.mat.sVar)} with \code{sVar} variable types: "binary"/"categor"/"contin".
+#'    \item{\code{type.sVar}}{Named list of length \code{ncol(private$.mat.sVar)} with \code{sVar} variable types: "binary"/"categor"/"contin".}
 #'    \item{\code{dat.sVar}}{...}
-#'    \item{\code{ord.sVar}} - Ordinal (categorical) transformation of a continous covariate \code{sVar}.
-#'    \item{\code{active.bin.sVar}} - Name of active binarized cont sVar, changes as fit/predict is called (bin indicators are temp. stored in private$.mat.bin.sVar)
+#'    \item{\code{ord.sVar}}{Ordinal (categorical) transformation of a continous covariate \code{sVar}.}
+#'    \item{\code{active.bin.sVar}}{Name of active binarized cont sVar, changes as fit/predict is called (bin indicators are temp. stored in private$.mat.bin.sVar)}
 #'    \item{\code{dat.bin.sVar}}{...}
 #'    \item{\code{emptydat.sVar}}{...}
 #'    \item{\code{emptydat.bin.sVar}}{...}
@@ -239,8 +239,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         if (is.logical(subset_expr)) {
           res <- res & subset_expr
         } else if (is.character(subset_expr)){
-          # browser()
+          # ******************************************************
           # data.table evaluation of the logical subset expression
+          # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_expr))
+          # ******************************************************
           res.tmp <- self$dat.sVar[, eval(parse(text = subset_expr)), by = get(self$nodes$ID)][["V1"]]
           assert_that(is.logical(res.tmp))
           res <- res & res.tmp
@@ -575,7 +577,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 #' @format An \code{\link{R6Class}} generator object
 #' @keywords R6 class
 #' @details
-#' #' \itemize{
+#' \itemize{
 #' \item{\code{sW}} - Baseline summaries
 #' \item{\code{sA}} - Exposure summaries
 #' \item{\code{intervene1.sA}} - Intervention object 1
