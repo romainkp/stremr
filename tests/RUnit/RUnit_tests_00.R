@@ -7,15 +7,15 @@ if(FALSE) {
   setwd(".."); setwd(".."); getwd()
   document()
   load_all("./") # load all R files in /R and datasets in /data. Ignores NAMESPACE:
-  # estimtr:::debug_set() # SET TO DEBUG MODE
+  # stremr:::debug_set() # SET TO DEBUG MODE
 
   setwd("..");
-  install("estimtr", build_vignettes = FALSE) # INSTALL W/ devtools:
+  install("stremr", build_vignettes = FALSE) # INSTALL W/ devtools:
   # system("echo $PATH") # see the current path env var
-  # system("R CMD Rd2pdf estimtr")  # just create the pdf manual from help files
+  # system("R CMD Rd2pdf stremr")  # just create the pdf manual from help files
   # CHECK AND BUILD PACKAGE:
   getwd()
-  # setwd("./estimtr"); setwd(".."); getwd()
+  # setwd("./stremr"); setwd(".."); getwd()
   devtools::check() # runs full check
   devtools::check(args = c("--no-vignettes"), build_args = c("--no-build-vignettes")) # runs faster
   devtools::build_win(args = "--compact-vignettes") # build package on CRAN servers (windows os?)
@@ -30,22 +30,22 @@ if(FALSE) {
 
   setwd("..")
 
-  # system("R CMD check --as-cran estimtr_0.5.0.tar.gz") # check R package tar ball prior to CRAN submission
-      ## system("R CMD check --no-manual --no-vignettes estimtr") # check without building the pdf manual and not building vignettes
-      ## system("R CMD build estimtr --no-build-vignettes")
-      ## system("R CMD build estimtr")
+  # system("R CMD check --as-cran stremr_0.5.0.tar.gz") # check R package tar ball prior to CRAN submission
+      ## system("R CMD check --no-manual --no-vignettes stremr") # check without building the pdf manual and not building vignettes
+      ## system("R CMD build stremr --no-build-vignettes")
+      ## system("R CMD build stremr")
   # devtools::use_travis() # SET UP TRAVIS CONFIG FILE
   # INSTALLING FROM SOURCE:
-  # install.packages("./estimtr_0.2.2.tar.gz", repos = NULL, type="source", dependencies=TRUE)
-  # library(estimtr)
-  # estimtr:::addvectorfcn("poisson")
-  # estimtr:::debug_set() # SET TO DEBUG MODE
-  # estimtr:::debug_off() # SET DEBUG MODE OFF
+  # install.packages("./stremr_0.2.2.tar.gz", repos = NULL, type="source", dependencies=TRUE)
+  # library(stremr)
+  # stremr:::addvectorfcn("poisson")
+  # stremr:::debug_set() # SET TO DEBUG MODE
+  # stremr:::debug_off() # SET DEBUG MODE OFF
 
   # To install a specific branch:
-  # devtools::install_github('osofr/estimtr', ref = "simnet", build_vignettes = FALSE)
-  # options(estimtr.verbose = FALSE)
-  # devtools::install_github('osofr/estimtr', build_vignettes = FALSE)
+  # devtools::install_github('osofr/stremr', ref = "simnet", build_vignettes = FALSE)
+  # options(stremr.verbose = FALSE)
+  # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 }
 
 psi_RDs_DAG2a <- NULL
@@ -108,13 +108,13 @@ test.regressionCases <- function() {
   gform.MONITOR <- c("N ~ L1 + L2 + A1 + A2")
 
   # ........
-  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
   #                             gform.CENS = gform.CENS1, gform.TRT = gform.TRT1, gform.MONITOR = gform.MONITOR,
   #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
 
   # ........
-  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
   #                             gform.CENS = gform.CENS2, gform.TRT = gform.TRT2, gform.MONITOR = gform.MONITOR,
   #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
@@ -126,7 +126,7 @@ test.regressionCases <- function() {
   gform.TRT3 <- c("A ~ L1 + L2")
   gform.CENS3 <- c("C ~ L1 + L2")
   # ........
-  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C"), TRT = c("A"), MONITOR = "N", OUTCOME = "Y",
   #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform.MONITOR = gform.MONITOR,
   #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
@@ -138,7 +138,7 @@ test.regressionCases <- function() {
   gform.TRT1 <- c("A1 + A2 ~ L1 + L2"); stratify.TRT1 = c("t == 0L", "t > 0L")
   gform.CENS1 <- c("C1 + C2 + C3 ~ L1 + L2"); stratify.CENS1 = c("t == 0L", "t > 0L")
   # ........
-  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
   #                             gform.CENS = gform.CENS1, gform.TRT = gform.TRT1, gform.MONITOR = gform.MONITOR,
   #                             stratify.CENS = stratify.CENS1, stratify.TRT = stratify.TRT1, stratify.MONITOR = NULL)
@@ -155,7 +155,7 @@ test.regressionCases <- function() {
   gform.CENS2 <- c("C1 ~ L1 + L2", "C2 ~ L1 + L2 + C1", "C3 ~ L1 + L2 + C1 + C2")
   stratify.CENS2 = list(C1=c("t == 0L", "t > 0L"), C2=c("t == 0L", "t > 0L"))
   # ........
-  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
   #                             gform.CENS = gform.CENS2, gform.TRT = gform.TRT2, gform.MONITOR = gform.MONITOR,
   #                             stratify.CENS = stratify.CENS2, stratify.TRT = stratify.TRT2, stratify.MONITOR = NULL)
@@ -169,7 +169,7 @@ test.regressionCases <- function() {
   gform.CENS3 <- c("C ~ L1 + L2")
   stratify.CENS3 = c("t == 0L", "t > 0L & A.tminus1 == 0L", "t > 0L & A.tminus1 == 1L")
   # ........
-  # estimtr <- function(data = Odata, ID = "ID", t = "t",
+  # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
   #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform.MONITOR = gform.MONITOR,
   #                             stratify.CENS = stratify.CENS3, stratify.TRT = stratify.TRT3, stratify.MONITOR = NULL)

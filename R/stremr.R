@@ -1,5 +1,5 @@
 
-#' @useDynLib estimtr
+#' @useDynLib stremr
 #' @import R6
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
@@ -193,7 +193,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 }
 
 #---------------------------------------------------------------------------------
-# MAIN estimtr FUNCTION
+# MAIN stremr FUNCTION
 #---------------------------------------------------------------------------------
 #' Estimate Survival with Interventions on Exposure and MONITORing Process in Right Censored Longitudinal Data.
 #'
@@ -235,8 +235,8 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #' Each list item is a character vector of stratification subsets for the corresponding variable in \code{MONITOR}.
 #' @param gstar.TRT Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.
 #' @param gstar.MONITOR Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(estimtr.verbose=TRUE)}.
-#' @param optPars A named list of additional optional parameters to be passed to \code{estimtr}, such as
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#' @param optPars A named list of additional optional parameters to be passed to \code{stremr}, such as
 #'  \code{alpha}, \code{lbound}, \code{family}, \code{YnodeDET},
 #'  \code{h_g0_SummariesModel} and \code{h_gstar_SummariesModel}. See Details below for the description of each parameter.
 # (REMOVED) \code{n_MCsims}
@@ -274,9 +274,9 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #'
 #' @section Additional parameters:
 #'
-#' Some of the parameters that control the estimation in \code{estimtr} can be set by calling the function \code{\link{estimtr_options}}.
+#' Some of the parameters that control the estimation in \code{stremr} can be set by calling the function \code{\link{stremr_options}}.
 #'
-#' Additional parameters can be also specified as a named list \code{optPars} argument of the \code{estimtr} function.
+#' Additional parameters can be also specified as a named list \code{optPars} argument of the \code{stremr} function.
 #' The items that can be specified in \code{optPars} are:
 #' \itemize{
 #'
@@ -293,7 +293,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #    and when evaluating the substitution estimators \strong{GCOMP} and \strong{TMLE}
 #    under stochastic interventions \code{f_gstar1} or \code{f_gstar2}.
 #(REMOVED) \item \code{h_g0_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under observed exposure mechanism \code{g0},
-#    returned by the previous runs of the \code{estimtr} function.
+#    returned by the previous runs of the \code{stremr} function.
 #    This has to be an object of \code{SummariesModel} \pkg{R6} class. When this argument is specified, all predictions
 #    P(\code{sA}=\code{sa}|\code{sW}=\code{sw}) under \code{g0} will be based on the model fits provided by this argument.
 #(REMOVED) \item \code{h_gstar_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under (stochastic) intervention
@@ -348,8 +348,8 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #'  \itemize{
 #'  \item \code{iptw} - IPTW
 #' }
-#' @seealso \code{\link{estimtr-package}} for the general overview of the package,
-#' @example tests/examples/1_estimtr_example.R
+#' @seealso \code{\link{stremr-package}} for the general overview of the package,
+#' @example tests/examples/1_stremr_example.R
 #' @export
 # ------------------------------------------------------------------------------------------------------------------------------
 # TO DO:
@@ -378,7 +378,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
   # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
   # Can specify K regressions in gform.CENS/gform.TRT/gform.MONITOR. If only one regression is specified it will be aplied to ALL stratas.
   # Otherwise stratas should be specified as a named list of K items
-estimtr <- function(data, ID = "Subj_ID", t = "time_period",
+stremr <- function(data, ID = "Subj_ID", t = "time_period",
                               covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                               gform.CENS, gform.TRT, gform.MONITOR,
                               stratify.CENS = NULL, stratify.TRT = NULL,

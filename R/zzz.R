@@ -1,10 +1,10 @@
 
 #-----------------------------------------------------------------------------
-# Global State Vars (can be controlled globally with options(estimtr.optname = ))
+# Global State Vars (can be controlled globally with options(stremr.optname = ))
 #-----------------------------------------------------------------------------
 gvars <- new.env(parent = emptyenv())
 gvars$verbose <- FALSE      # verbose mode (print all messages)
-gvars$opts <- list()        # named list of package options that is controllable by the user (estimtr_options())
+gvars$opts <- list()        # named list of package options that is controllable by the user (stremr_options())
 gvars$misval <- NA_integer_ # the default missing value for observations (# gvars$misval <- -.Machine$integer.max)
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
 gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$tolerr => a = b
@@ -17,18 +17,18 @@ getopt <- function(optname) {
   return(opt[[optname]])
 }
 
-#' Print Current Option Settings for \code{estimtr}
-#' @return Invisibly returns a list of \code{estimtr} options.
-#' @seealso \code{\link{estimtr_options}}
+#' Print Current Option Settings for \code{stremr}
+#' @return Invisibly returns a list of \code{stremr} options.
+#' @seealso \code{\link{stremr_options}}
 #' @export
-print_estimtr_opts <- function() {
+print_stremr_opts <- function() {
   print(gvars$opts)
   invisible(gvars$opts)
 }
 
-#' Setting Options for \code{estimtr}
+#' Setting Options for \code{stremr}
 #'
-#' Additional options that control the estimation algorithm in \code{estimtr} package
+#' Additional options that control the estimation algorithm in \code{stremr} package
 #' @param useglm Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
 #' \code{\link[stats]{glm.fit}}.
 #' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
@@ -41,7 +41,7 @@ print_estimtr_opts <- function() {
 #' @param parfit Default is \code{FALSE}. Set to \code{TRUE} to use \code{foreach} package and its functions
 #'  \code{foreach} and \code{dopar} to perform
 #'  parallel logistic regression fits and predictions for discretized continuous outcomes. This functionality
-#'  requires registering a parallel backend prior to running \code{estimtr} function, e.g.,
+#'  requires registering a parallel backend prior to running \code{stremr} function, e.g.,
 #'  using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
 #'  \code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".
 #' @param nbins Set the default number of bins when discretizing a continous outcome variable under setting
@@ -56,9 +56,9 @@ print_estimtr_opts <- function() {
 #' @param maxNperBin Max number of observations per 1 bin for a continuous outcome (applies directly when
 #'  \code{bin.method="equal.mass"} and indirectly when \code{bin.method="equal.len"}, but \code{nbins = NA}).
 #' @return Invisibly returns a list with old option settings.
-#' @seealso \code{\link{print_estimtr_opts}}
+#' @seealso \code{\link{print_stremr_opts}}
 #' @export
-estimtr_options <- function(useglm = FALSE,
+stremr_options <- function(useglm = FALSE,
                             parfit = FALSE,
                             bin.method = c("equal.len", "equal.mass", "dhist"),
                             nbins = NA,
@@ -116,17 +116,17 @@ set.misval <- function(gvars, newmisval) {
 }
 gvars$misfun <- testmisfun()
 
-# Allows estimtr functions to use e.g., getOption("estimtr.verbose") to get verbose printing status
+# Allows stremr functions to use e.g., getOption("stremr.verbose") to get verbose printing status
 .onLoad <- function(libname, pkgname) {
   op <- options()
-  op.estimtr <- list(
-    estimtr.verbose = gvars$verbose
+  op.stremr <- list(
+    stremr.verbose = gvars$verbose
   )
   # reset all options to their defaults on load:
-  estimtr_options()
+  stremr_options()
 
-  toset <- !(names(op.estimtr) %in% names(op))
-  if(any(toset)) options(op.estimtr[toset])
+  toset <- !(names(op.stremr) %in% names(op))
+  if(any(toset)) options(op.stremr[toset])
 
   invisible()
 }
@@ -134,11 +134,11 @@ gvars$misfun <- testmisfun()
 # Runs when attached to search() path such as by library() or require()
 .onAttach <- function(...) {
   if (interactive()) {
-  	packageStartupMessage('estimtr')
-  	# packageStartupMessage('Version: ', utils::packageDescription('estimtr')$Version)
-  	packageStartupMessage('Package created on ', utils::packageDescription('estimtr')$Date, '\n')
-  	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/estimtr.', '\n')
-  	# packageStartupMessage('To see the vignette use vignette("estimtr_vignette", package="estimtr"). To see all available package documentation use help(package = "estimtr") and ?estimtr.', '\n')
-  	# packageStartupMessage('To see the latest updates for this version, use news(package = "estimtr").', '\n')
+  	packageStartupMessage('stremr')
+  	# packageStartupMessage('Version: ', utils::packageDescription('stremr')$Version)
+  	packageStartupMessage('Package created on ', utils::packageDescription('stremr')$Date, '\n')
+  	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/stremr.', '\n')
+  	# packageStartupMessage('To see the vignette use vignette("stremr_vignette", package="stremr"). To see all available package documentation use help(package = "stremr") and ?stremr.', '\n')
+  	# packageStartupMessage('To see the latest updates for this version, use news(package = "stremr").', '\n')
   }
 }

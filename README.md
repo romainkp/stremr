@@ -1,26 +1,26 @@
-estimtr
+stremr
 ==========
 
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/estimtr)](http://cran.r-project.org/package=estimtr)
-[![](http://cranlogs.r-pkg.org/badges/estimtr)](http://cran.rstudio.com/web/packages/estimtr/index.html)
-[![Travis-CI Build Status](https://travis-ci.org/osofr/estimtr.svg?branch=master)](https://travis-ci.org/osofr/estimtr)
-[![Coverage Status](https://coveralls.io/repos/osofr/estimtr/badge.svg?branch=master&service=github)](https://coveralls.io/github/osofr/estimtr?branch=master)
+[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/stremr)](http://cran.r-project.org/package=stremr)
+[![](http://cranlogs.r-pkg.org/badges/stremr)](http://cran.rstudio.com/web/packages/stremr/index.html)
+[![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
+[![Coverage Status](https://coveralls.io/repos/osofr/stremr/badge.svg?branch=master&service=github)](https://coveralls.io/github/osofr/stremr?branch=master)
 
-The `estimtr` R package implementes the Inverse Probability Weighted Estimator (IPTW) of the causal survival hazard function for longitudinal right-censored data. The user-specified interventions on time-varying exposures and monitoring variables can be either stochastic, dynamic or static. The exposure, monitoring and censoring can be binary, categorical or multivariate (e.g., can use more than one column of dummy indicators for different censoring events or can code such censoring events with a single categorical censoring variable). The output includes the estimated survival curve, which is obtained as a mapping from the estimated discrete hazard function. When several interventions for exposure/monitoring are specified, the package will produce one survivial estimate for each intervention. The input data needs to be in long format, with a specific **fixed** temporal ordering of the variables.
+The `stremr` R package implementes the Inverse Probability Weighted Estimator (IPTW) of the causal survival hazard function for longitudinal right-censored data. The user-specified interventions on time-varying exposures and monitoring variables can be either stochastic, dynamic or static. The exposure, monitoring and censoring can be binary, categorical or multivariate (e.g., can use more than one column of dummy indicators for different censoring events or can code such censoring events with a single categorical censoring variable). The output includes the estimated survival curve, which is obtained as a mapping from the estimated discrete hazard function. When several interventions for exposure/monitoring are specified, the package will produce one survivial estimate for each intervention. The input data needs to be in long format, with a specific **fixed** temporal ordering of the variables.
 
 ### Installation
 
-<!-- To install the CRAN release version of `estimtr`: 
+<!-- To install the CRAN release version of `stremr`: 
 
 ```R
-install.packages('estimtr')
+install.packages('stremr')
 ```
  -->
 
 To install the development version (requires the `devtools` package):
 
 ```R
-devtools::install_github('osofr/estimtr', build_vignettes = FALSE)
+devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 ```
 
 ### Documentation
@@ -28,33 +28,33 @@ devtools::install_github('osofr/estimtr', build_vignettes = FALSE)
  For the general overview of the package:
 
 ```R
-?estimtr-package
+?stremr-package
 ```
 
-For specific documentation on how to run `estimtr()` function:
+For specific documentation on how to run `stremr()` function:
 ```R
-?estimtr
+?stremr
 ```
 
-<!-- Once the package is installed, see the [vignette](http://cran.r-project.org/web/packages/estimtr/vignettes/estimtr_vignette.pdf), consult the internal package documentation and examples. 
+<!-- Once the package is installed, see the [vignette](http://cran.r-project.org/web/packages/stremr/vignettes/stremr_vignette.pdf), consult the internal package documentation and examples. 
 
 * To see the vignette in R:
 
 ```R
-vignette("estimtr_vignette", package="estimtr")
+vignette("stremr_vignette", package="stremr")
 ```
 
 * To see all available package documentation:
 
 ```R
-?estimtr
-help(package = 'estimtr')
+?stremr
+help(package = 'stremr')
 ```
 
 * To see the latest updates for the currently installed version of the package:
 
 ```r
-news(package = "estimtr")
+news(package = "stremr")
 ```
  -->
 
@@ -64,7 +64,7 @@ news(package = "estimtr")
 <!-- Below is an example simulating data with 4 covariates specified by 4 structural equations (nodes). New equations are added by using successive calls to `+ node()` function and data are simulated by calling `sim` function:
 
 ```R
-library(estimtr)
+library(stremr)
 D <- DAG.empty() + 
   node("CVD", distr="rcategor.int", probs = c(0.5, 0.25, 0.25)) +
   node("A1C", distr="rnorm", mean = 5 + (CVD > 1)*10 + (CVD > 2)*5) +
@@ -83,7 +83,7 @@ plotDAG(D)
 To allow the above nodes `A1C`, `TI` and `Y` to change over time, for time points t = 0,...,7, and keeping `CVD` the same, simply add `t` argument to `node` function and use the square bracket `[...]` vector indexing to reference time-varying nodes inside the `node` function expressions:
 
 ```R
-library(estimtr)
+library(stremr)
 D <- DAG.empty() + 
   node("CVD", distr="rcategor.int", probs = c(0.5, 0.25, 0.25)) +
   node("A1C", t=0, distr="rnorm", mean=5 + (CVD > 1)*10 + (CVD > 2)*5) + 
@@ -104,8 +104,8 @@ In addition, the functions `set.targetE`, `set.targetMSM` and `eval.target` prov
 ### Citation
 
 ...
-<!-- To cite `estimtr` in publications, please use:
-> Sofrygin O, van der Laan MJ, Neugebauer R (2015). *estimtr: Simulating Longitudinal Data with Causal Inference Applications.* R package version 0.1.
+<!-- To cite `stremr` in publications, please use:
+> Sofrygin O, van der Laan MJ, Neugebauer R (2015). *stremr: Simulating Longitudinal Data with Causal Inference Applications.* R package version 0.1.
  -->
 
 ### Funding

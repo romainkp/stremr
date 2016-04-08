@@ -100,7 +100,7 @@ test.model.fits.categorCENSOR <- function() {
   gform.MONITOR <- "N ~ 1"
   system.time(
   res <-
-    estimtr(OdataCatCENS, ID = "ID", t = "t",
+    stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
@@ -122,7 +122,7 @@ test.model.fits.categorCENSOR <- function() {
 
   system.time(
   res <-
-    estimtr(OdataCatCENS, ID = "ID", t = "t",
+    stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
@@ -142,7 +142,7 @@ test.model.fits.categorCENSOR <- function() {
   gform.MONITOR <- "N ~ 1"
   system.time(
   res <-
-    estimtr(OdataCatCENS, ID = "ID", t = "t",
+    stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
@@ -167,7 +167,7 @@ test.model.fits.categorCENSOR <- function() {
 
   system.time(
   res <-
-    estimtr(OdataCatCENS, ID = "ID", t = "t",
+    stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,

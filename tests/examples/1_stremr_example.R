@@ -52,7 +52,7 @@ res <- follow.rule.d.DT(OdataDT,
 # Merge rule definitions into main dataset:
   merge(OdataDT, ., by=c("ID", "t")) %>%
 # Estimate hazard and survival for a rule "dhigh":
-  estimtr(gstar.TRT = "dhigh", gstar.MONITOR = "gstar.N",
+  stremr(gstar.TRT = "dhigh", gstar.MONITOR = "gstar.N",
         ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
         CENS = "CatC", gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
         TRT = "TI", gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,

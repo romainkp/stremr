@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // logit_linkinv
 NumericVector logit_linkinv(NumericVector eta);
-RcppExport SEXP estimtr_logit_linkinv(SEXP etaSEXP) {
+RcppExport SEXP stremr_logit_linkinv(SEXP etaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;

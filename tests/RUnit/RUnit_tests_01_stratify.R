@@ -112,7 +112,7 @@ test.model.fits.stratify <- function() {
   gform.MONITOR <- "N ~ 1"
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    stremr(O.data, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
@@ -133,7 +133,7 @@ test.model.fits.stratify <- function() {
 
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    stremr(O.data, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
@@ -152,7 +152,7 @@ test.model.fits.stratify <- function() {
   gform.MONITOR <- "N ~ 1"
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    stremr(O.data, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
@@ -177,7 +177,7 @@ test.model.fits.stratify <- function() {
 
   system.time(
   res <-
-    estimtr(O.data, ID = "ID", t = "t",
+    stremr(O.data, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
@@ -194,7 +194,7 @@ test.model.fits.stratify <- function() {
   gform.CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
   stratify.CENS <- list(wrongC = NULL, TI = c("t == 0L", "t > 0"), N = c("t == 0L", "t > 0"))
   checkException(
-      estimtr(O.data, ID = "ID", t = "t",
+      stremr(O.data, ID = "ID", t = "t",
             covars = c("highA1c", "lastNat1"),
             CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
             gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,

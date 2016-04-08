@@ -41,7 +41,7 @@ Define the indicators of following/not-following specific dynamic treatment rule
 
 * This function takes an input data.frame or data.table data
   and produces an output data.table with indicators/probabilities of following not following a specific treatment rule.
-  The resulting data.table is used internally by the estimtr() function to determine which observation is following each specific rule at each time point t.
+  The resulting data.table is used internally by the stremr() function to determine which observation is following each specific rule at each time point t.
 
 * Evaluates which observations were following the dynamic-decision treatment rule defined by the measured biomarker I
   and pre-defined cutoffs of the input vector theta.
@@ -54,7 +54,7 @@ Define the indicators of following/not-following specific dynamic treatment rule
     (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
 }
 
-* The format (time-ordering) of data is the same as required by the estimtr() function: (I(t), CENS(t), TRT(t), MONITOR(t)).
+* The format (time-ordering) of data is the same as required by the stremr() function: (I(t), CENS(t), TRT(t), MONITOR(t)).
   MONITOR(t) at time-point t is defined as the indicator of being observed (having an office visit) at time point t+1 (next timepoint after t)
   It is assumed that imp.I(t) is always 0 for the very first time-point.
 }
