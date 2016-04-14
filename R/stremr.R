@@ -352,27 +352,34 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #' @example tests/examples/1_stremr_example.R
 #' @export
 # ------------------------------------------------------------------------------------------------------------------------------
-# TO DO:
+# **** BUILDING BLOCKS ****
+# ------------------------------------------------------------------------------------------------------------------------------
+# - The first building block preps the data and fits the propensity score for observed data.
+#   Perhaps worthwhile spliting into building blocks. One function returns the data object Odata.
+#   Next building block uses that to fit the summary.go, which is then fed to next stage (weights)?
+
 # ------------------------------------------------------------------------------------------------------------------------------
 # **** TO DO: ****
+# ------------------------------------------------------------------------------------------------------------------------------
+# ALLOW SPECIFICATION OF COUNTERFACTUAL TRT & MONITOR VAULES / COUNTERFACTUAL PROBABILITIES OF TRT & MONITOR = 1. MAP AUTOMATICALLY INTO RULE FOLLORS/NON-FOLLOWERS
+# Split the main function into building blocks that can be piped together
+# WHEN NODE NAME IS "NULL" (NOT SPECIFIED), DO NOT FIT A MODEL FOR IT. CREATE A DUMMY CLASS WHICH WOULD ALWAYS PUT MASS 1 ON THE OBERVED O
 # Write a helper method for SummaryModel class which goes down the nested tree of objects and obtains the model fits for each regression/outcome
 # - NEED TO IMPLEMENT $get.fits() METHOD IN SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression + coefficients)
 #   The method needs to appropriately format the output based on several model predictions (for stratified, categorical or continuous outcome)
-# **** TO DO: ****
-# IF A CERTAIN REGRESSION FORMULA / INTERVENTION NODE IS NOT SPECIFIED CREATE A DUMMY CLASS WHICH WOULD ALWAYS PUT MASS 1 ON THE OBERVED O
-# TO DO: CONSIDER NOT THROWING AN ERROR WHEN stratify.VAR list is unnamed for cases where VAR is univariate (only one variable name)
+# - CONSIDER NOT THROWING AN ERROR WHEN stratify.VAR list is unnamed for cases where VAR is univariate (only one variable name)
 # - Implement automatic function calling for gstar.TRT & gstar.MONITOR based on user-specified rule functions
 #   If its a list of functions or if function returns more than one rule, apply the whole estimation procedure to each combination of TRT/MONITORING rules
 # - Save the weights at each t and save the cummulative weights for all observations who were following the rule (g.CAN(O_i)>0)
 # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
 # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
 # ------------------------------------------------------------------------------------------------------------------------------
-# - (IMPLEMENTED) Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
-# - (IMPLEMENTED) When CENS[i] is binary and length(CENS)>1:
+# - (DONE) Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
+# - (DONE) When CENS[i] is binary and length(CENS)>1:
   # (1) Specify subset rule for i>1: (CENS[1]==0 & CENS[2]==0 & ... & CENS[i-1]==0)
   # (2) An alternative: collapse CENS into a categorical (automatically), based on the ordering in CENS. Then the fitting of categoricals will perform all the subsetting correctly.
   # (3) Alternative: set the indicators of missingness in the right way for CENS[i] if any CENS[1], ..., CENS[i-1] are 1.
-# - (IMPLEMENTED) Stratification - allows K models on the SAME OUTCOME by stratifying rule
+# - (DONE) Stratification - allows K models on the SAME OUTCOME by stratifying rule
   # (1) User specified rule function creates strata. (stratify.CENS, stratify.TRT, stratify.MONITOR) Note that if the rule is based on data.table syntax it will be VERY FAST!
   # A nice trick would be to be able to AUTOMATICALLY convert logical subset expressions to data.table statements -> Its possible with some meta-programming and parsing
   # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
@@ -515,6 +522,24 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
 
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------
+# * The next part forms a separate building block, that takes input from previous step(s).
+# The input can be either Odata object or combination of Odata Object with summeas.gN or summeas.gN alone (probably best)
+# .....This building block needs to somehow obtain access to Odata and summeas.g0......
+# This also requires specification of the regimens of interest (either as rule followers or as counterfactual indicators)
+# The output is person-specific data with evaluated weights.
+# Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
+# Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
+# ---------------------------------------------------------------------------------------
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
@@ -570,6 +595,15 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
   # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
 
+
+
+
+# ---------------------------------------------------------------------------------------
+# * The next part forms a separate building block, that takes input from previous step(s)
+# The input can be a dataset or a list of datasets with weights applied
+# This may also be a MSM regression (weighted regression) that uses the outcomes from many regimens,
+# with dummy indicators for each input regime
+# ---------------------------------------------------------------------------------------
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
   sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
@@ -577,6 +611,16 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
+
+
+
+
+# ---------------------------------------------------------------------------------------
+# * The next part forms a separate building block, that takes input from previous step(s).
+# Provides a report with weight distributions, etc.
+# ---------------------------------------------------------------------------------------
+# .....
+
 
 return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, model.R6.fits = summeas.g0, data.R6.object = OData))
 }
