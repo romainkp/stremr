@@ -351,6 +351,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/1_stremr_example.R
 #' @export
+
 # ------------------------------------------------------------------------------------------------------------------------------
 # **** BUILDING BLOCKS ****
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -388,26 +389,22 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 stremr <- function(data, ID = "Subj_ID", t = "time_period",
                               covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                               gform.CENS, gform.TRT, gform.MONITOR,
-                              stratify.CENS = NULL, stratify.TRT = NULL,
-                              stratify.MONITOR = NULL,
-                              gstar.TRT = NULL, gstar.MONITOR = NULL,
-                              noCENS.cat = 0L,
+                              stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL,
+                              gstar.TRT = NULL, gstar.MONITOR = NULL, noCENS.cat = 0L,
                               verbose = FALSE, optPars = list()) {
 
+# ------------------------------------------------------------------
+# (I) BUILDING BLOCK: Process inputs and define Odata R6 object
+# ------------------------------------------------------------------
   gvars$verbose <- TRUE
   gvars$noCENS.cat <- noCENS.cat
   # if (verbose) {
     message("Running with the following setting: ");
     str(gvars$opts)
   # }
-
-  gform.CENS.default <- "Cnodes ~ Lnodes"
-  gform.TRT.default <- "Anodes ~ Lnodes"
-  gform.MONITOR.default <- "Nnodes ~ Anodes + Lnodes"
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
     covars <- setdiff(colnames(data), c(ID, t, CENS, TRT, MONITOR, OUTCOME))
   }
-
   # The ordering of variables in this list is the assumed temporal order!
   nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
@@ -430,43 +427,46 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
     new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
     # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
   }
-
   # ---------------------------------------------------------------------------
   # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
   # Might expand this in the future to allow defining arbitrary summaries
   # ---------------------------------------------------------------------------
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
-
-  # print(str(lagnodes))
-  # print(OData$dat.sVar)
-
   OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
-
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
   for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
+  # return(OData)
+
+# ------------------------------------------------------------------
+# (II) BUILDING BLOCK: DEFINE REGRESSION MODELS & FIT REGRESSION MODELS FOR g0 (C,A,N)
+# ------------------------------------------------------------------
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
   # Define regression classes for g.C, g.A, g.N and put them in a single list of regressions.
   # ------------------------------------------------------------------------------------------------
+  gform.CENS.default <- "Cnodes ~ Lnodes"
+  gform.TRT.default <- "Anodes ~ Lnodes"
+  gform.MONITOR.default <- "Nnodes ~ Anodes + Lnodes"
+
   g_CAN_regs_list <- vector(mode = "list", length = 3)
   names(g_CAN_regs_list) <- c("gC", "gA", "gN")
   class(g_CAN_regs_list) <- c(class(g_CAN_regs_list), "ListOfRegressionForms")
 
   gC.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
-                                OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
   g_CAN_regs_list[["gC"]] <- gC.sVars$regs
 
   gA.sVars <- process_regforms(regforms = gform.TRT, default.reg = gform.TRT.default, stratify.EXPRS = stratify.TRT,
-                                OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
+                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
   g_CAN_regs_list[["gA"]] <- gA.sVars$regs
 
   gN.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, stratify.EXPRS = stratify.MONITOR,
-                                OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
+                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
   g_CAN_regs_list[["gN"]] <- gN.sVars$regs
 
   # ------------------------------------------------------------------------------------------
@@ -476,11 +476,11 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # ------------------------------------------------------------------------------------------
   ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
   ALL_g_regs$S3class <- "generic"
-  summeas.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
-  summeas.g0$fit(data = OData)
-  # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...))
-  h_gN <- summeas.g0$predictAeqa(newdata = OData)
-
+  modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
+  modelfits.g0$fit(data = OData)
+  # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
+  # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes
+  h_gN <- modelfits.g0$predictAeqa(newdata = OData)
   # ------------------------------------------------------------------------------------------
   # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
   # ..... NOT REALLY NEEDED ......
@@ -505,41 +505,30 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # ..... NOT REALLY NEEDED ......
   # ------------------------------------------------------------------------------------------
 
- # ------------------------------------------------------------------------------------------
-  # Observed likelihood of (A,C,N) at each t
-  # ------------------------------------------------------------------------------------------
-  summeas.gC <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
-  # summeas.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
-  summeas.gA <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
-  # summeas.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
-  summeas.gN <- summeas.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
-  # summeas.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
-
-  g0.A <- summeas.gA$getcumprodAeqa()
-  g0.C <- summeas.gC$getcumprodAeqa()
-  g0.N <- summeas.gN$getcumprodAeqa()
-  N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
-  OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
-  # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
-
-
-
-
-
-
-
-
-
-
 # ---------------------------------------------------------------------------------------
-# * The next part forms a separate building block, that takes input from previous step(s).
-# The input can be either Odata object or combination of Odata Object with summeas.gN or summeas.gN alone (probably best)
-# .....This building block needs to somehow obtain access to Odata and summeas.g0......
+# weights(): Forms a separate building block, that takes input from previous block(s).
+# The input can be either Odata object or combination of Odata Object with modelfit.gN or modelfit.gN alone (probably best)
+# .....This building block needs to somehow obtain access to Odata and modelfits.g0 at the same time (as one arg)......
 # This also requires specification of the regimens of interest (either as rule followers or as counterfactual indicators)
 # The output is person-specific data with evaluated weights.
 # Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
+  # ------------------------------------------------------------------------------------------
+  # Observed likelihood of (A,C,N) at each t, based on fitted object models in object modelfits.g0
+  # ------------------------------------------------------------------------------------------
+  modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
+  # modelfit.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
+  modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
+  # modelfit.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
+  modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
+  # modelfit.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
+  g0.A <- modelfit.gA$getcumprodAeqa()
+  g0.C <- modelfit.gC$getcumprodAeqa()
+  g0.N <- modelfit.gN$getcumprodAeqa()
+  N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
+  OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
+  # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
@@ -551,7 +540,6 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # indicator that the person is uncensored at each t (continuation of follow-up)
   # gstar.C <- "gstar.C"
   OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD) == eval(noCENS.cat)), .SDcols = CENS]
-
   # probability of following the rule at t, under intervention gstar.A on A(t)
   # **** NOTE ****
   # if gstar.TRT is a function then call it, if its a list of functions, then call one at a time.
@@ -562,7 +550,6 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
     gstar.A <- as.name("g0.A") # use the actual observed exposure probability (no intervention on TRT)
   }
   # OData$dat.sVar[, "gstar.A" := get(gstar.A)]
-
   # probability of monitoring N(t)=1 under intervention gstar.N on N(t)
   # **** NOTE ****
   # if gstar.MONITOR is a function then call it, if its a list of functions, then call one at a time.
@@ -573,13 +560,11 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
     gstar.N <- as.name("g0.N") # use the actual observed monitoring probability (no intervention on MONITOR)
   }
   # OData$dat.sVar[, "gstar.N" := get(gstar.N)]
-
   # Joint probability for all 3:
   OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
   # Weights by time and cummulative weights by time:
   OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(ID)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(ID)]
   # OData$dat.sVar[1:100,]
-
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
   # NOTE: DO THIS AT THE VERY BEGINNING INSTEAD????
@@ -588,7 +573,6 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   shifted.OUTCOME <- OUTCOME%+%".tplus1"
   OData$dat.sVar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = eval(ID)]
   OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
-
   # multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
   OData$dat.sVar[, "Wt.OUTCOME" := get(shifted.OUTCOME)*cumm.IPAW]
   # OData$dat.sVar[101:200, ]
@@ -596,12 +580,10 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
 
 
-
-
 # ---------------------------------------------------------------------------------------
-# * The next part forms a separate building block, that takes input from previous step(s)
-# The input can be a dataset or a list of datasets with weights applied
-# This may also be a MSM regression (weighted regression) that uses the outcomes from many regimens,
+# surv(): This part forms a separate building block, takes input from previous step(s)
+# The input is a dataset or a list of datasets, each contains estimated weights
+# This block may run an MSM regression (weighted regression) that uses the outcomes from many regimens,
 # with dummy indicators for each input regime
 # ---------------------------------------------------------------------------------------
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
@@ -612,17 +594,12 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
 
-
-
-
 # ---------------------------------------------------------------------------------------
 # * The next part forms a separate building block, that takes input from previous step(s).
 # Provides a report with weight distributions, etc.
 # ---------------------------------------------------------------------------------------
 # .....
-
-
-return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, model.R6.fits = summeas.g0, data.R6.object = OData))
+return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, modelfits.g0.R6 = modelfits.g0, OData.R6 = OData))
 }
 
 
