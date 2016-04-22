@@ -351,14 +351,16 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/1_stremr_example.R
 #' @export
-
 # ------------------------------------------------------------------------------------------------------------------------------
 # **** BUILDING BLOCKS ****
 # ------------------------------------------------------------------------------------------------------------------------------
-# - The first building block preps the data and fits the propensity score for observed data.
-#   Perhaps worthwhile spliting into building blocks. One function returns the data object Odata.
-#   Next building block uses that to fit the summary.go, which is then fed to next stage (weights)?
-
+# - BLOCK 1: Process inputs and define OData R6 object
+# - BLOCK 2: define regression models, define a single RegressionClass & fit the propensity score for observed data, summary.g0 g0 (C,A,N)
+# - BLOCK 3: evaluate weights based gstar.TRT, gstar.MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
+# - BLOCK 4A: Non-parametric MSM for survival, no weight stabilization, input either single weights dataset or a list of weights datasets
+# - BLOCK 4B: Saturated MSM pooling many regimens, includes weight stabilization and using closed-form soluaton for the MSM (can only do saturated MSM)
+# - BLOCK 4C: Parametric MSM pooling many regimens, includes weight stabilization and parametric MSM (can include saturated MSM)
+# - BLOCK 5: Builds a report with weight distributions, survival estimates, etc.
 # ------------------------------------------------------------------------------------------------------------------------------
 # **** TO DO: ****
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -394,7 +396,7 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
                               verbose = FALSE, optPars = list()) {
 
 # ------------------------------------------------------------------
-# (I) BUILDING BLOCK: Process inputs and define Odata R6 object
+# - BLOCK 1: Process inputs and define OData R6 object
 # ------------------------------------------------------------------
   gvars$verbose <- TRUE
   gvars$noCENS.cat <- noCENS.cat
@@ -443,7 +445,7 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # return(OData)
 
 # ------------------------------------------------------------------
-# (II) BUILDING BLOCK: DEFINE REGRESSION MODELS & FIT REGRESSION MODELS FOR g0 (C,A,N)
+# - BLOCK 2: define regression models, define a single RegressionClass & fit the propensity score for observed data, summary.g0 g0 (C,A,N)
 # ------------------------------------------------------------------
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
@@ -506,11 +508,10 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # ------------------------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------------------
-# weights(): Forms a separate building block, that takes input from previous block(s).
-# The input can be either Odata object or combination of Odata Object with modelfit.gN or modelfit.gN alone (probably best)
-# .....This building block needs to somehow obtain access to Odata and modelfits.g0 at the same time (as one arg)......
-# This also requires specification of the regimens of interest (either as rule followers or as counterfactual indicators)
-# The output is person-specific data with evaluated weights.
+# - BLOCK 3: evaluate weights based gstar.TRT, gstar.MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
+# ---------------------------------------------------------------------------------------
+# Requires specification of probabilities for regimens of interest (either as rule followers or as counterfactual indicators)
+# The output is person-specific data with evaluated weights, wts.DT, only observation-times with non-zero weight are kept
 # Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
@@ -579,12 +580,9 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
   # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
 
-
 # ---------------------------------------------------------------------------------------
-# surv(): This part forms a separate building block, takes input from previous step(s)
-# The input is a dataset or a list of datasets, each contains estimated weights
-# This block may run an MSM regression (weighted regression) that uses the outcomes from many regimens,
-# with dummy indicators for each input regime
+# - BLOCK 4A: Non-parametric MSM for survival, no weight stabilization, input either single weights dataset or a list of weights datasets,
+# Each dataset containing weights non-zero weights for single regimen
 # ---------------------------------------------------------------------------------------
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
   sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
@@ -595,11 +593,18 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
 
 # ---------------------------------------------------------------------------------------
-# * The next part forms a separate building block, that takes input from previous step(s).
-# Provides a report with weight distributions, etc.
+# - BLOCK 4B: Saturated MSM pooling many regimens, includes weight stabilization and using closed-form soluaton for the MSM (can only do saturated MSM)
+# - BLOCK 4C: Parametric MSM pooling many regimens, includes weight stabilization and parametric MSM (can include saturated MSM)
+# ---------------------------------------------------------------------------------------
+# ...
+
+# ---------------------------------------------------------------------------------------
+# - BLOCK 5: Builds a report with weight distributions, survival estimates, etc.
 # ---------------------------------------------------------------------------------------
 # .....
+
 return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, modelfits.g0.R6 = modelfits.g0, OData.R6 = OData))
+# return(list(IPW_estimates = St_ht_IPAW, dataDT = OData$dat.sVar, modelfits.g0.R6 = modelfits.g0, OData.R6 = OData))
 }
 
 

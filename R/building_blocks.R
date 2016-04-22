@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------
-# (I) BUILDING BLOCK: Process inputs and define Odata R6 object
+# - BLOCK 1: Process inputs and define OData R6 object
 # ------------------------------------------------------------------
 get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                       noCENS.cat = 0L, verbose = FALSE) {
@@ -34,6 +34,8 @@ get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C
     new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
     # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
   }
+  OData$new.factor.names <- new.factor.names
+
   # ---------------------------------------------------------------------------
   # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
   # Might expand this in the future to allow defining arbitrary summaries
@@ -41,20 +43,25 @@ get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
   OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
+
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
   for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
 
-  return(OData)
+  OData.R6 <- OData
+  return(OData.R6)
 }
 
 # ------------------------------------------------------------------
-# (II) BUILDING BLOCK: DEFINE REGRESSION MODELS & FIT REGRESSION MODELS FOR g0 (C,A,N)
+# - BLOCK 2: define regression models, define a single RegressionClass & fit the propensity score for observed data, summary.g0 g0 (C,A,N)
 # ------------------------------------------------------------------
 get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
                     stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL) {
+  nodes <- OData$nodes
+  new.factor.names <- OData$new.factor.names
+
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
   # Define regression classes for g.C, g.A, g.N and put them in a single list of regressions.
@@ -122,30 +129,21 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
 }
 
 # ---------------------------------------------------------------------------------------
-# (III) The next part forms a separate building block, that takes input from previous step(s).
-# The input can be either Odata object or combination of Odata Object with modelfit.gN or modelfit.gN alone (probably best)
-# .....This building block needs to somehow obtain access to Odata and modelfits.g0 at the same time (as one arg)......
-# This also requires specification of the regimens of interest (either as rule followers or as counterfactual indicators)
-# The output is person-specific data with evaluated weights.
+# - BLOCK 3: evaluate weights based gstar.TRT, gstar.MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
+# ---------------------------------------------------------------------------------------
+# Requires specification of probabilities for regimens of interest (either as rule followers or as counterfactual indicators)
+# The output is person-specific data with evaluated weights, wts.DT, only observation-times with non-zero weight are kept
 # Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
-get_weights <- function(modelfits.g0, OData, gstar.TRT, gstar.MONITOR) {
+get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   nodes <- OData$nodes
   # ------------------------------------------------------------------------------------------
   # Observed likelihood of (A,C,N) at each t, based on fitted object models in object modelfits.g0
   # ------------------------------------------------------------------------------------------
-
-
-
-  # **** need some how to automatically save these without having to pass around g_CAN_regs_list ***
-  browser()
+  # get back g_CAN_regs_list:
   ALL_g_regs <- modelfits.g0$reg
   g_CAN_regs_list <- ALL_g_regs$RegressionForms
-  # ^ need to verify this works as expected ^
-
-
-
 
   modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
   # modelfit.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
@@ -172,7 +170,7 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT, gstar.MONITOR) {
   # ------------------------------------------------------------------------------------------------------------------------------
   # indicator that the person is uncensored at each t (continuation of follow-up)
   # gstar.C <- "gstar.C"
-  OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD) == eval(gvars$noCENS.cat)), .SDcols = CENS]
+  OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD) == eval(OData$noCENS.cat)), .SDcols = nodes$Cnodes]
 
   # probability of following the rule at t, under intervention gstar.A on A(t)
   # **** NOTE ****
@@ -218,23 +216,22 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT, gstar.MONITOR) {
   # OData$dat.sVar[101:200, ]
 
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
-  wts.DT <- Odata$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "shifted.OUTCOME", "Wt.OUTCOME"), with = FALSE][wt.by.t > 0, ]
+  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE][wt.by.t > 0, ]
   return(wts.DT)
 }
 
 # ---------------------------------------------------------------------------------------
-# * This is a building block, that takes input from previous step(s)
-# The input is a dataset or a list of datasets, each contains estimated weights
-# This block may run an MSM regression (weighted regression) that uses the outcomes from many regimens,
-# with dummy indicators for each input regime
+# - BLOCK 4A: Non-parametric MSM for survival, no weight stabilization, input either single weights dataset or a list of weights datasets,
+# Each dataset containing weights non-zero weights for single regimen
 # ---------------------------------------------------------------------------------------
-get_survNP <- function(data.wts, t) {
+get_survNP <- function(data.wts, OData) {
+  t <- OData$nodes$tnode
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- data[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols = t)
+  sum_Ywt <- data.wts[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols = t)
   # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
   # (equivalent to summing cummulative weights cumm.IPAW by t)
-  sum_Allwt <- data[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols = t)
+  sum_Allwt <- data.wts[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols = t)
   # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
@@ -243,14 +240,25 @@ get_survNP <- function(data.wts, t) {
 }
 
 
-# Alternative for MSM, takes a list of data sets with weights and MSMregform
-get_survMSM <- function(data.wts.list, t, MSMregform) {
+# ---------------------------------------------------------------------------------------
+# - BLOCK 4B: Saturated MSM pooling many regimens, includes weight stabilization and using closed-form soluaton for the MSM (can only do saturated MSM)
+# ---------------------------------------------------------------------------------------
+# This block runs an closed-form MSM regression for saturated MSM (dummy indicators for every interaction of t and regimen)
+get_survMSM_1 <- function(data.wts.list, t) {
   # ....
   # NOTE IMPLEMENTED
   # ....
   # return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
-
-
-
-
+# ---------------------------------------------------------------------------------------
+# - BLOCK 4C: Parametric MSM pooling many regimens, includes weight stabilization and parametric MSM (can include saturated MSM)
+# ---------------------------------------------------------------------------------------
+# Alternative for MSM, takes a list of data sets with weights and MSMregform
+# This block runs glm.fit got obtain MSM estimates (weighted regression) that uses the outcomes from many regimens, with dummy indicators for each input regime
+# Might choose between two types of MSMs (sat vs. parametric) with S3 dispatch or by missing arg
+get_survMSM_2 <- function(data.wts.list, t, MSMregform) {
+  # ....
+  # NOTE IMPLEMENTED
+  # ....
+  # return(list(IPW_estimates = data.frame(St_ht_IPAW)))
+}

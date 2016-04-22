@@ -180,6 +180,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
   portable = TRUE,
   class = TRUE,
   public = list(
+    new.factor.names = NULL,
     noCENS.cat = 0L,        # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables
     YnodeVals = NULL,       # Values of the binary outcome (Ynode) in observed data where det.Y = TRUE obs are set to NA
     det.Y = NULL,           # Logical vector, where YnodeVals[det.Y==TRUE] are deterministic (0 or 1)
