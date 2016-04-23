@@ -163,7 +163,6 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
   for (dtheta in theta) {
     DT[, "d.follow_r3" := (get(CENS)==0L) & (eval(lastN.t) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L))), by = eval(ID.expression), with = FALSE]
     # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
-
     # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
     DT[, "d.follow_allr" := eval(parse(text="d.follow_r1 | d.follow_r2 | d.follow_r3")), by = eval(ID.expression)]
     # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:

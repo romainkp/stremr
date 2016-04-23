@@ -361,22 +361,23 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 # - BLOCK 4B: Saturated MSM pooling many regimens, includes weight stabilization and using closed-form soluaton for the MSM (can only do saturated MSM)
 # - BLOCK 4C: Parametric MSM pooling many regimens, includes weight stabilization and parametric MSM (can include saturated MSM)
 # - BLOCK 5: Builds a report with weight distributions, survival estimates, etc.
+
 # ------------------------------------------------------------------------------------------------------------------------------
 # **** TO DO: ****
 # ------------------------------------------------------------------------------------------------------------------------------
-# ALLOW SPECIFICATION OF COUNTERFACTUAL TRT & MONITOR VAULES / COUNTERFACTUAL PROBABILITIES OF TRT & MONITOR = 1. MAP AUTOMATICALLY INTO RULE FOLLORS/NON-FOLLOWERS
-# Split the main function into building blocks that can be piped together
-# WHEN NODE NAME IS "NULL" (NOT SPECIFIED), DO NOT FIT A MODEL FOR IT. CREATE A DUMMY CLASS WHICH WOULD ALWAYS PUT MASS 1 ON THE OBERVED O
-# Write a helper method for SummaryModel class which goes down the nested tree of objects and obtains the model fits for each regression/outcome
-# - NEED TO IMPLEMENT $get.fits() METHOD IN SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression + coefficients)
+# - Allow looping over regimens to return regimen-specific non-zero weight datasets or list of such dataset (data.tables) that can be then all stacked and used for one MSM
+# - Implement automatic function calling for gstar.TRT & gstar.MONITOR if its a function or a list of functions
+# - When node name is "NULL" (not specified), do not fit a model for it. create a dummy class which would always put mass 1 on the oberved o
+# - Need to implement $get.fits() method in SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression + coefficients)
 #   The method needs to appropriately format the output based on several model predictions (for stratified, categorical or continuous outcome)
-# - CONSIDER NOT THROWING AN ERROR WHEN stratify.VAR list is unnamed for cases where VAR is univariate (only one variable name)
-# - Implement automatic function calling for gstar.TRT & gstar.MONITOR based on user-specified rule functions
+# - Allow specification of counterfactual trt & monitor vaules / counterfactual probabilities of trt & monitor = 1. map automatically into rule follors/non-followers
+# - Consider not throwing an error when stratify.VAR list is unnamed for cases where VAR is univariate (only one variable name)
 #   If its a list of functions or if function returns more than one rule, apply the whole estimation procedure to each combination of TRT/MONITORING rules
-# - Save the weights at each t and save the cummulative weights for all observations who were following the rule (g.CAN(O_i)>0)
 # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
 # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
 # ------------------------------------------------------------------------------------------------------------------------------
+# - (DONE) Save the weights at each t and save the cummulative weights for all observations who were following the rule (g.CAN(O_i)>0)
+# - (DONE) Split the main function into building blocks that can be piped together
 # - (DONE) Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
 # - (DONE) When CENS[i] is binary and length(CENS)>1:
   # (1) Specify subset rule for i>1: (CENS[1]==0 & CENS[2]==0 & ... & CENS[i-1]==0)
@@ -566,6 +567,30 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # Weights by time and cummulative weights by time:
   OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(ID)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(ID)]
   # OData$dat.sVar[1:100,]
+
+  # -------------------------------------------------------------------------------------------
+  # Weight stabilization - get emp P(followed rule at time t | followed rule up to now)
+  # -------------------------------------------------------------------------------------------
+  nIDs <- OData$nuniqueIDs
+  # THE ENUMERATOR: the total sum of subjects followed the rule gstar.A at t
+  # THE DENOMINATOR: divide above by the total number of subjects who were still at risk of NOT FOLLOWING the rule at t
+  # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
+  # (The total sum of all subjects who WERE AT RISK at t)
+  # In memory version (all at once inside data.table, by reference):
+  # OData$dat.sVar[, N.follow.rule := sum(eval(gstar.A), na.rm = TRUE), by = eval(t)]
+  # OData$dat.sVar[, cum.stab.P2 := cumprod(N.follow.rule / shift(N.follow.rule, fill = nIDs, type = "lag")), by = eval(ID)]
+
+  # (MUCH FASTER) Version outside data.table, then merge back results:
+  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(t)]
+  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
+  n.follow.rule.t[, c("N.risk", "stab.P"):=list(NULL, NULL)]
+  setkeyv(n.follow.rule.t, cols=nodes$tnode)
+  OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by="t")
+  OData$dat.sVar[cumm.IPAW<(10^-5), cum.stab.P:=0]
+  setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
+  OData$dat.sVar[cumm.IPAW > 0, ]
+  # all.equal(OData$dat.sVar[["cum.stab.P"]], OData$dat.sVar[["cum.stab.P2"]])
+
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
   # NOTE: DO THIS AT THE VERY BEGINNING INSTEAD????
@@ -602,7 +627,6 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
 # - BLOCK 5: Builds a report with weight distributions, survival estimates, etc.
 # ---------------------------------------------------------------------------------------
 # .....
-
 return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, modelfits.g0.R6 = modelfits.g0, OData.R6 = OData))
 # return(list(IPW_estimates = St_ht_IPAW, dataDT = OData$dat.sVar, modelfits.g0.R6 = modelfits.g0, OData.R6 = OData))
 }

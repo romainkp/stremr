@@ -1,3 +1,4 @@
+
 # ------------------------------------------------------------------
 # - BLOCK 1: Process inputs and define OData R6 object
 # ------------------------------------------------------------------
@@ -15,7 +16,6 @@ get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C
   # The ordering of variables in this list is the assumed temporal order!
   nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
-
   # --------------------------------------------------------------------------------------------------------
   # Create dummies for factors
   # --------------------------------------------------------------------------------------------------------
@@ -35,7 +35,6 @@ get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C
     # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
   }
   OData$new.factor.names <- new.factor.names
-
   # ---------------------------------------------------------------------------
   # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
   # Might expand this in the future to allow defining arbitrary summaries
@@ -61,7 +60,6 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
                     stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL) {
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
   # Define regression classes for g.C, g.A, g.N and put them in a single list of regressions.
@@ -69,11 +67,9 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   gform.CENS.default <- "Cnodes ~ Lnodes"
   gform.TRT.default <- "Anodes ~ Lnodes"
   gform.MONITOR.default <- "Nnodes ~ Anodes + Lnodes"
-
   g_CAN_regs_list <- vector(mode = "list", length = 3)
   names(g_CAN_regs_list) <- c("gC", "gA", "gN")
   class(g_CAN_regs_list) <- c(class(g_CAN_regs_list), "ListOfRegressionForms")
-
   gC.sVars <- process_regforms(regforms = gform.CENS, default.reg = gform.CENS.default, stratify.EXPRS = stratify.CENS,
                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
   g_CAN_regs_list[["gC"]] <- gC.sVars$regs
@@ -85,7 +81,6 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   gN.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, stratify.EXPRS = stratify.MONITOR,
                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
   g_CAN_regs_list[["gN"]] <- gN.sVars$regs
-
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
   # Perform S3 method dispatch on ALL_g_regs, which will determine the nested tree of SummaryModel objects
@@ -95,12 +90,10 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   ALL_g_regs$S3class <- "generic"
   modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
   modelfits.g0$fit(data = OData)
-
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
   h_gN <- modelfits.g0$predictAeqa(newdata = OData)
-
   # ------------------------------------------------------------------------------------------
   # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
   # ..... NOT REALLY NEEDED ......
@@ -144,22 +137,18 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = N
   # get back g_CAN_regs_list:
   ALL_g_regs <- modelfits.g0$reg
   g_CAN_regs_list <- ALL_g_regs$RegressionForms
-
   modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
   # modelfit.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
   modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
   # modelfit.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
   modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
   # modelfit.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
-
   g0.A <- modelfit.gA$getcumprodAeqa()
   g0.C <- modelfit.gC$getcumprodAeqa()
   g0.N <- modelfit.gN$getcumprodAeqa()
-
   N_IDs <- length(unique(OData$dat.sVar[[nodes$IDnode]])) # Total number of observations
   OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
-
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
@@ -171,7 +160,6 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = N
   # indicator that the person is uncensored at each t (continuation of follow-up)
   # gstar.C <- "gstar.C"
   OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD) == eval(OData$noCENS.cat)), .SDcols = nodes$Cnodes]
-
   # probability of following the rule at t, under intervention gstar.A on A(t)
   # **** NOTE ****
   # if gstar.TRT is a function then call it, if its a list of functions, then call one at a time.
@@ -201,6 +189,29 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = N
   # OData$dat.sVar[1:100,]
 
   # -------------------------------------------------------------------------------------------
+  # Weight stabilization - get emp P(followed rule at time t | followed rule up to now)
+  # -------------------------------------------------------------------------------------------
+  nIDs <- OData$nuniqueIDs
+  # THE ENUMERATOR: the total sum of subjects followed the rule gstar.A at t
+  # THE DENOMINATOR: divide above by the total number of subjects who were still at risk of NOT FOLLOWING the rule at t
+  # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
+  # (The total sum of all subjects who WERE AT RISK at t)
+  # In memory version (all at once inside data.table, by reference):
+  # OData$dat.sVar[, N.follow.rule := sum(eval(gstar.A), na.rm = TRUE), by = eval(t)]
+  # OData$dat.sVar[, cum.stab.P2 := cumprod(N.follow.rule / shift(N.follow.rule, fill = nIDs, type = "lag")), by = eval(ID)]
+
+  # (MUCH FASTER) Version outside data.table, then merge back results:
+  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
+  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
+  n.follow.rule.t[, c("N.risk", "stab.P"):=list(NULL, NULL)]
+  setkeyv(n.follow.rule.t, cols=nodes$tnode)
+  OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by = nodes$tnode)
+  OData$dat.sVar[cumm.IPAW<(10^-5), cum.stab.P:=0]
+  setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
+  OData$dat.sVar[cumm.IPAW > 0, ]
+  # all.equal(OData$dat.sVar[["cum.stab.P"]], OData$dat.sVar[["cum.stab.P2"]])
+
+  # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
   # NOTE: DO THIS AT THE VERY BEGINNING INSTEAD????
   # DEPENDS ON STRUCTURE OF THE DATA AND IF ANY C events ACTUALLY OCCURRED IN LAST ROW -> THIS IS THE CASE FOR ADMINISTRATIVE CENSORING
@@ -216,7 +227,7 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = N
   # OData$dat.sVar[101:200, ]
 
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
-  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE][wt.by.t > 0, ]
+  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE][wt.by.t > 0, ]
   return(wts.DT)
 }
 
@@ -239,14 +250,13 @@ get_survNP <- function(data.wts, OData) {
   return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
 
-
 # ---------------------------------------------------------------------------------------
 # - BLOCK 4B: Saturated MSM pooling many regimens, includes weight stabilization and using closed-form soluaton for the MSM (can only do saturated MSM)
 # ---------------------------------------------------------------------------------------
 # This block runs an closed-form MSM regression for saturated MSM (dummy indicators for every interaction of t and regimen)
 get_survMSM_1 <- function(data.wts.list, t) {
-  # ....
   # NOTE IMPLEMENTED
+  # ....
   # ....
   # return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
@@ -257,8 +267,50 @@ get_survMSM_1 <- function(data.wts.list, t) {
 # This block runs glm.fit got obtain MSM estimates (weighted regression) that uses the outcomes from many regimens, with dummy indicators for each input regime
 # Might choose between two types of MSMs (sat vs. parametric) with S3 dispatch or by missing arg
 get_survMSM_2 <- function(data.wts.list, t, MSMregform) {
-  # ....
-  # NOTE IMPLEMENTED
-  # ....
+
+  ##############################################################
+    ## Weighted logistic regression for hazard FINER time discretization
+  ##############################################################
+    glmterm.names <- paste(sapply(all.d.dummies,function(x){
+      return(paste(paste("I(",paste(all.t.dummies2,x,sep=" * "),")",sep="")))
+    }))
+  #### Fit manually
+    NPIPAW.h2 <- rep(NA,2*16)
+    names(NPIPAW.h2) <- glmterm.names
+    NPcrude.h2 <- NPIPAWtrunc.h2 <- NPIPAW.h2
+    count <- 0
+    for(dtheta in c("dlow","dhigh"))for(t in 1:16){
+      count <- count+1
+      relevantObs <- (long.IPAW.data[,"t"]%in%t & long.IPAW.data[,dtheta]%in%1)
+      NPIPAW.h2[count] <- sum(long.IPAW.data[relevantObs, Yname]*long.IPAW.data[relevantObs, "IPAW"])/sum(long.IPAW.data[relevantObs, "IPAW"])
+      NPIPAWtrunc.h2[count] <- sum(long.IPAW.data[relevantObs, Yname]*long.IPAW.data[relevantObs, "IPAWtrunc"])/sum(long.IPAW.data[relevantObs, "IPAWtrunc"])
+      NPcrude.h2[count] <- sum(long.IPAW.data[relevantObs, Yname])/length(long.IPAW.data[relevantObs, "IPAWtrunc"])
+    }
+    glm.IPAW.h.coef2 <- log(NPIPAW.h2/(1-NPIPAW.h2))
+    glm.IPAWtrunc.h.coef2 <- log(NPIPAWtrunc.h2/(1-NPIPAWtrunc.h2))
+    glm.h.coef2 <- log(NPcrude.h2/(1-NPcrude.h2))
+
+  ##############################################################
+    ## Compute the Survival curves under each d
+  ##############################################################
+    (mint <- min(long.IPAW.data[,"t"]))
+    (maxt <- max(long.IPAW.data[,"t"]))
+    S2.IPAW <- S2.IPAWtrunc <- S2 <- rep(list(rep(NA,maxt-mint+1)),2)
+    names(S2)  <- names(S2.IPAW) <- names(S2.IPAWtrunc) <- c("dlow","dhigh")
+    for(d.j in names(S2))for(period.j in mint:maxt){
+      rev.term <- paste("I(",paste("Periods.",tjmin2[max(which(tjmin2<=period.j))],"to",tjmax2[min(which(tjmax2>=period.j))],sep="")," * ",d.j,")",sep="")
+
+      S2[[d.j]][period.j] <- (1-1/(1+exp(-glm.h.coef2[rev.term])))
+      S2.IPAW[[d.j]][period.j] <- (1-1/(1+exp(-glm.IPAW.h.coef2[rev.term])))
+      S2.IPAWtrunc[[d.j]][period.j] <- (1-1/(1+exp(-glm.IPAWtrunc.h.coef2[rev.term])))
+    }
+    S2 <- lapply(S2,cumprod)
+    S2.IPAW <- lapply(S2.IPAW,cumprod)
+    S2.IPAWtrunc <- lapply(S2.IPAWtrunc,cumprod)
+    nrow.long.IPAW.data <- nrow(long.IPAW.data)
+
+    ## Need this to compute inference
+    IC.data <- long.IPAW.data[ ,c("ID","t","theta",Yname,"IPAW","IPAWtrunc",all.t.dummies2,rules)] # contains data for all obs compatible with at least one rule
+    return(list("nID"=nID,"mint"=mint,"maxt"=maxt,"IPAWdist"=IPAWdist,"quant99"=quant99,"quant999"=quant999,"nabove20"=nabove20,"glm.IPAW.h.coef2"=glm.IPAW.h.coef2,"glm.IPAWtrunc.h.coef2"=glm.IPAWtrunc.h.coef2,"glm.h.coef2"=glm.h.coef2,"S2"=S2,"S2.IPAW"=S2.IPAW,"S2.IPAWtrunc"=S2.IPAWtrunc,"all.t.dummies2"=all.t.dummies2,"IC.data"=IC.data,"rules"=rules))
   # return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }

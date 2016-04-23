@@ -1,35 +1,6 @@
 library("R6")
 library("data.table")
 
-# DatNetTEMP <- R6Class(classname = "DatNetTEMP",
-#   portable = TRUE,
-#   class = TRUE,
-#   public = list(
-#     dataDT = NULL,
-#     initialize = function() {
-#       invisible(self)
-#     }
-#   ),
-#   active = list(
-#     temp = function() { NULL }
-#   ),
-#   private = list(
-#     .tmp = NULL
-#   )
-# )
-
-# returnDT <- function() {
-#   DT <- data.table(A = c(1,2,3), B = c("a", "b", "c"))
-#   DatNetTEMP$dataDT <- DT
-#   return(list(dataDT = DT, DatNet = DatNetTEMP))
-#   # return(list(DT = DT, rn = runif(100)))
-# }
-
-# datOBJR6 <- returnDT()
-# datOBJR6$dataDT
-# datOBJR6$DatNet$dataDT
-# datDT$DT
-
 test.buildingblocks <- function() {
   library("data.table")
   # ------------------------------------------------------------------------------------------------------
@@ -58,8 +29,7 @@ test.buildingblocks <- function() {
   survNP_ests$IPW_estimates
   # get_survMSM(data.wts.list, t, MSMregform)
 
-  res <-
-    stremr(O.data, ID = "ID", t = "t",
+  res <- stremr(O.data, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
           gform.CENS = gform.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)

@@ -189,10 +189,12 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     initialize = function(Odata, nodes, YnodeVals, det.Y, noCENS.cat,...) {
       assert_that(is.data.frame(Odata) | is.data.table(Odata))
       self$curr_data_A_g0 <- TRUE
-
       self$dat.sVar <- data.table(Odata) # makes a copy of the input data (shallow)
       # alternative is to set it without copying Odata
       # setDT(Odata); self$dat.sVar <- Odata
+
+      # set the keys for quick search!
+      setkeyv(self$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
 
       if (!missing(noCENS.cat)) {
         self$noCENS.cat <- noCENS.cat
@@ -471,6 +473,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
   ),
   active = list(
     nobs = function() { nrow(self$dat.sVar) },
+    nuniqueIDs = function() {
+      # sum(!duplicated(OData$dat.sVar[[nodes$IDnode]]))
+      length(unique(self$dat.sVar[[self$nodes$IDnode]]))
+    },
+
+    nuniquets = function() {
+      # sum(!duplicated(OData$dat.sVar[[nodes$IDnode]]))
+      length(unique(self$dat.sVar[[self$nodes$tnode]]))
+    },
+
     names.sVar = function() { colnames(self$dat.sVar) },
     ncols.sVar = function() { length(self$names.sVar) },
 
