@@ -50,9 +50,11 @@ test.buildingblocks <- function() {
 
   OData <- get_Odata(O.data, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
   modelfits.g0 <- get_fits(OData = OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
-  get_weights(modelfits.g0 = modelfits.g0, OData = OData, gstar.TRT = ..., gstar.MONITOR = ...)
-  get_survNP(data.wts, t)
-  get_survMSM(data.wts.list, t, MSMregform)
+  wts.DT <- get_weights(modelfits.g0 = modelfits.g0, OData = OData)
+    # , gstar.TRT = ..., gstar.MONITOR = ...)
+  survNP_ests <- get_survNP(wts.DT, OData)
+  # get_survMSM(data.wts.list, t, MSMregform)
+  survNP_ests$IPW_estimates
 
   # system.time(
   # res <-
@@ -83,9 +85,11 @@ test.buildingblocks <- function() {
 
   OData <- get_Odata(O.data, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
   modelfits.g0 <- get_fits(OData = OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
-  get_weights(modelfits.g0 = modelfits.g0, OData = OData, gstar.TRT = ..., gstar.MONITOR = ...)
-  get_survNP(data.wts, t)
-  get_survMSM(data.wts.list, t, MSMregform)
+  wts.DT <- get_weights(modelfits.g0 = modelfits.g0, OData = OData)
+    # , gstar.TRT = ..., gstar.MONITOR = ...)
+  survNP_ests <- get_survNP(wts.DT, OData)
+  # get_survMSM(data.wts.list, t, MSMregform)
+  survNP_ests$IPW_estimates
 
   # system.time(
   # res <-

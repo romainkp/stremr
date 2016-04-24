@@ -528,9 +528,10 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   g0.A <- modelfit.gA$getcumprodAeqa()
   g0.C <- modelfit.gC$getcumprodAeqa()
   g0.N <- modelfit.gN$getcumprodAeqa()
-  N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
   OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
+
+  # N_IDs <- length(unique(OData$dat.sVar[[ID]])) # Total number of observations
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
@@ -585,11 +586,18 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
   n.follow.rule.t[, c("N.risk", "stab.P"):=list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols=nodes$tnode)
-  OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by="t")
-  OData$dat.sVar[cumm.IPAW<(10^-5), cum.stab.P:=0]
+
+  OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]
+  # equivalent: OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by = nodes$tnode)
+
+  OData$dat.sVar[cumm.IPAW < (10^-5), cum.stab.P := 0]
   setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
-  OData$dat.sVar[cumm.IPAW > 0, ]
-  # all.equal(OData$dat.sVar[["cum.stab.P"]], OData$dat.sVar[["cum.stab.P2"]])
+
+  # OData$dat.sVar[cumm.IPAW > 0, ]
+  # all.equal(dat.sVar1[["cum.stab.P"]], dat.sVar2[["cum.stab.P"]])
+
+  # multiply the weight by stabilization factor (numerator):
+  # OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
 
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
@@ -598,7 +606,7 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # -------------------------------------------------------------------------------------------
   shifted.OUTCOME <- OUTCOME%+%".tplus1"
   OData$dat.sVar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = eval(ID)]
-  OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
+  # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
   # multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
   OData$dat.sVar[, "Wt.OUTCOME" := get(shifted.OUTCOME)*cumm.IPAW]
   # OData$dat.sVar[101:200, ]

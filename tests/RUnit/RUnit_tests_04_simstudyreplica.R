@@ -1,3 +1,5 @@
+require("data.table")
+
 delta.shift.minus <- seq(-0.9, -0.1, by=0.1)
 delta.shift.plus <- seq(0.1, 0.9, by=0.1)
 delta.shifts <- c(delta.shift.minus, delta.shift.plus)
@@ -132,6 +134,27 @@ add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", 
   O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
   return(O.dataDT)
 }
+# --------------------------------
+# (II) Define event indicator and right-censoring indicator, define total follow-up length
+# --------------------------------
+define_indicators <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", MONITOR = "N", I = "highA1c") {
+  # Add indicator Delta=I(T<=C) (Y is 1 at some point for the subject):
+  O.dataDT <- data.table(O.data, key = c(ID, t))
+  EVENT_IND <- "Delta";
+  O.dataDT[,(EVENT_IND) := as.integer(any(get(outcome) %in% 1)), by=eval(ID)]
+  # Add indicator Delta=I(T>C) (subject was right-censored at some point):
+  CENS_IND <- "AnyCensored"; noCENS.cat <- 0L; CENS <- c("C")
+  O.dataDT[, (CENS_IND) := FALSE, by=eval(ID)]
+  for (Cvar in CENS) {
+    O.dataDT[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
+  }
+  O.dataDT[, (CENS_IND) := as.integer(get(CENS_IND))]
+  ## Add variable that indicates if TI initiation occured previously, relevant for model of TI continuation
+  TIcovarname <- "barTIm1eq0"
+  O.dataDT[, (TIcovarname) := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
+  # O.dataDT[1:100,]
+  return(O.dataDT)
+}
 
 # -----------------------------------------------------------
 # SIMULATION PARAMS:
@@ -168,32 +191,16 @@ O.data.simstudy <- sim(DAG = DAGrm, n = Nsize, wide = FALSE, rndseed = 55466)
 O.data.simstudy[O.data.simstudy[,"t"]%in%16,"lastNat1"] <- NA
 O.data <- O.data.simstudy[,!names(O.data.simstudy)%in%c("highA1c.UN", "timelowA1c.UN")]
 
+ID <- "ID"; t <- "t"; TRT <- "TI"; outcome <- "Y"; I <- "highA1c";
+
 # --------------------------------
 # (II) Define event indicator and right-censoring indicator, define total follow-up length
 # --------------------------------
-ID <- "ID"; t <- "t"; TRT <- "TI"; outcome <- "Y"; I <- "highA1c";
-# Add indicator Delta=I(T<=C) (Y is 1 at some point for the subject)
-O.dataDT <- data.table(O.data, key = c(ID, t))
-EVENT_IND <- "Delta";
-O.dataDT[,(EVENT_IND) := as.integer(any(get(outcome) %in% 1)), by=eval(ID)]
-# Add indicator Delta=I(T>C) (subject was right-censored at some point)
-CENS_IND <- "AnyCensored"; noCENS.cat <- 0L; CENS <- c("C")
-O.dataDT[, (CENS_IND) := FALSE, by=eval(ID)]
-for (Cvar in CENS) {
-  O.dataDT[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
-}
-O.dataDT[, (CENS_IND) := as.integer(get(CENS_IND))]
-
-## Add variable that indicates if TI initiation occured previously, relevant for model of TI continuation
-TIcovarname <- "barTIm1eq0"
-O.dataDT[, (TIcovarname) := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
-# O.dataDT[1:100,]
-
+O.dataDT <- define_indicators(O.data)
 # --------------------------------
 # (III) Define rules for dlow & dhigh
 # --------------------------------
 O.dataDT_rules <- add.gtheta.to.O(O.dataDT)
-
 # --------------------------------
 # (IV) Define monitoring regimen probabilit(ies):
 # --------------------------------
@@ -202,7 +209,6 @@ gstar1.N.Pois1.biyearly <- g.Pois(O.dataDT_rules, lambda = 1)
 length(gstar1.N.Pois1.biyearly)
 gstar2.N.p05 <- g.p(O.dataDT_rules, p = 0.5)
 length(gstar2.N.p05)
-
 O.dataDT_rules_Nstar <- cbind(O.dataDT_rules, gstar1.N.Pois3.yearly = gstar1.N.Pois3.yearly, gstar1.N.Pois1.biyearly = gstar1.N.Pois1.biyearly, gstar2.N.p05 = gstar2.N.p05)
 
 # --------------------------------
@@ -228,29 +234,57 @@ gform.MONITOR <- "N ~ 1"
 # gform.TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
 #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
 system.time(
-res <-
-  stremr(data = O.dataDT_rules_Nstar, ID = "ID", t = "t",
-        covars = c("highA1c", "lastNat1"),
-        CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-        gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
-        gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
-        gform.MONITOR = gform.MONITOR,
-        gstar.TRT = "dlow",
-        # gstar.TRT = "dhigh",
-        gstar.MONITOR = "gstar1.N.Pois3.yearly"
-        # gstar.MONITOR = "gstar2.N.p05"
-        )
+  res <- stremr(data = O.dataDT_rules_Nstar, ID = "ID", t = "t",
+                covars = c("highA1c", "lastNat1"),
+                CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
+                gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
+                gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
+                gform.MONITOR = gform.MONITOR,
+                # gstar.TRT = "dlow",
+                gstar.TRT = "dhigh",
+                gstar.MONITOR = "gstar1.N.Pois3.yearly"
+                # gstar.MONITOR = "gstar2.N.p05"
+                )
   )
 # Benchmark for N=50K:
 #  user  system elapsed
 # 9.269   2.121  11.345
 names(res)
 
+OData <- get_Odata(O.dataDT_rules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
+modelfits.g0 <- get_fits(OData = OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
+
+wts.DT.dlow <- get_weights(modelfits.g0, OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+survNP_ests.dlow <- get_survNP(wts.DT.dlow, OData)
+
+wts.DT.dhigh <- get_weights(modelfits.g0, OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+survNP_ests.dhigh <- get_survNP(wts.DT.dhigh, OData)
+
+OData$dat.sVar[]
 # res$OData[1:100, ]
-res[["St_ht_IPAW"]]
-survS_dlow[13, St]-survS_dhigh[13, St]
+res[["IPW_estimates"]]
+survS_dlow[13, "St"]-survS_dhigh[13, "St"]
 # [1] 0.1655584 # CLOSE ENOUGH TO WHAT IS REPORTED on page 11, FIGURE 4: psi.N=0.173 (POISSON YEARLY)
-survS_dhigh <- res[["St_ht_IPAW"]]
+survS_dhigh <- res[["IPW_estimates"]]
+# new results dhigh:
+#     t sum_Y_IPAW sum_all_IPAW          ht      m1ht        St
+# 1   0   401.9918     49952.47 0.008047486 0.9919525 0.9919525
+# 2   1   791.3740     50300.01 0.015733079 0.9842669 0.9763460
+# 3   2  1564.1657     52158.19 0.029988877 0.9700111 0.9470665
+# 4   3  2382.6140     56438.84 0.042215854 0.9577841 0.9070853
+# 5   4  2530.2771     61485.51 0.041152411 0.9588476 0.8697566
+# 6   5  2554.2661     66669.77 0.038312205 0.9616878 0.8364343
+# 7   6  2614.1039     69971.42 0.037359593 0.9626404 0.8051854
+# 8   7  2440.5948     72709.85 0.033566222 0.9664338 0.7781584
+# 9   8  2050.3095     75970.86 0.026988105 0.9730119 0.7571574
+# 10  9  1628.8897     74635.48 0.021824602 0.9781754 0.7406327
+# 11 10  2109.0414     74228.24 0.028412926 0.9715871 0.7195892
+# 12 11   564.9994     74996.10 0.007533718 0.9924663 0.7141680
+# 13 12  1527.5176     75442.47 0.020247450 0.9797526 0.6997079
+# 14 13   717.9634     77283.87 0.009289951 0.9907100 0.6932077
+# 15 14   536.0347     80384.55 0.006668380 0.9933316 0.6885851
+# 16 15  1929.0838     73191.46 0.026356679 0.9736433 0.6704363
+# prev results:
 # dhigh, gstar1.N.Pois3 (yearly):
 #  1:  0   403.3415     50263.36 0.008024563 0.9919754 0.9919754
 #  2:  1   846.9490     50265.85 0.016849393 0.9831506 0.9752613
@@ -268,7 +302,26 @@ survS_dhigh <- res[["St_ht_IPAW"]]
 # 14: 13   764.1360     64659.01 0.011817935 0.9881821 0.6749323
 # 15: 14   634.0271     64003.22 0.009906176 0.9900938 0.6682463
 # 16: 15   210.8290     63797.74 0.003304647 0.9966954 0.6660380
-survS_dlow <- res[["St_ht_IPAW"]]
+survS_dlow <- res[["IPW_estimates"]]
+# new results:
+#     t sum_Y_IPAW sum_all_IPAW          ht      m1ht        St
+# 1   0   410.4467     48624.36 0.008441174 0.9915588 0.9915588
+# 2   1   496.1539     47567.03 0.010430625 0.9895694 0.9812162
+# 3   2   487.9412     47098.47 0.010360022 0.9896400 0.9710508
+# 4   3   357.0419     46909.43 0.007611304 0.9923887 0.9636599
+# 5   4   397.0764     45988.38 0.008634276 0.9913657 0.9553394
+# 6   5   640.4270     43429.09 0.014746500 0.9852535 0.9412514
+# 7   6   718.1066     42472.89 0.016907411 0.9830926 0.9253373
+# 8   7   419.0272     42755.80 0.009800477 0.9901995 0.9162686
+# 9   8   595.5196     41638.50 0.014302136 0.9856979 0.9031640
+# 10  9   414.2803     42053.07 0.009851368 0.9901486 0.8942666
+# 11 10   842.6631     41863.64 0.020128761 0.9798712 0.8762661
+# 12 11   228.3822     41177.78 0.005546248 0.9944538 0.8714061
+# 13 12   287.3439     40782.04 0.007045845 0.9929542 0.8652663
+# 14 13  1407.9491     40637.70 0.034646376 0.9653536 0.8352880
+# 15 14   499.0048     40388.69 0.012355063 0.9876449 0.8249679
+# 16 15  1396.3100     41049.10 0.034015607 0.9659844 0.7969062
+# prev results:
 #      t sum_Y_IPAW sum_all_IPAW          ht      m1ht        St
 #  1:  0   427.1815     49609.03 0.008610962 0.9913890 0.9913890
 #  2:  1   469.7380     49211.71 0.009545247 0.9904548 0.9819260
@@ -326,6 +379,7 @@ survS_dlow <- res[["St_ht_IPAW"]]
 # 15: 14  1278.4194     81767.37 0.015634836 0.9843652 0.7081112
 # 16: 15  1177.7936     80517.99 0.014627708 0.9853723 0.6977532
 res$OData
+res$dataDT
 summary(res$h_gN)
 #     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
 # 0.006341 0.090590 0.322000 0.250300 0.340400 1.000000
