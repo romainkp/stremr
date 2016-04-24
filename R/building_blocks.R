@@ -5,7 +5,7 @@
 #' @export
 get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                       noCENS.cat = 0L, verbose = FALSE) {
-  gvars$verbose <- FALSE
+  gvars$verbose <- TRUE
   gvars$noCENS.cat <- noCENS.cat
   # if (verbose) {
     message("Running with the following setting: ");
@@ -42,7 +42,7 @@ get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C
   # ---------------------------------------------------------------------------
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
-  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
+  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=1L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
 
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
@@ -226,7 +226,7 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = N
   # remove all observation-times that got zero weight:
   # OData$dat.sVar[cumm.IPAW > 0, ]
   # multiply the weight by stabilization factor (numerator) (doesn't do anything, since it cancels):
-  # OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
+  OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
 
   # Drop all observations with NA outcome:
   Ynode <- nodes$Ynode

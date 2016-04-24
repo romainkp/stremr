@@ -436,7 +436,7 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # ---------------------------------------------------------------------------
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
-  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
+  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=1L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
   for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
