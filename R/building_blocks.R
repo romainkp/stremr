@@ -127,7 +127,31 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   # Evaluate the total duration of the follow-up for each observation
   # ..... NOT REALLY NEEDED ......
   # ------------------------------------------------------------------------------------------
-  return(modelfits.g0)
+
+  # ------------------------------------------------------------------------------------------
+  # Observed likelihood of (A,C,N) at each t, based on fitted object models in object modelfits.g0
+  # ------------------------------------------------------------------------------------------
+  # get back g_CAN_regs_list:
+  OData$modelfits.g0 <- modelfits.g0
+
+  ALL_g_regs <- modelfits.g0$reg
+  g_CAN_regs_list <- ALL_g_regs$RegressionForms
+
+  OData$modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
+  # OData$modelfit.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
+  OData$modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
+  # OData$modelfit.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
+  OData$modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
+  # OData$modelfit.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
+
+  g0.A <- OData$modelfit.gA$getcumprodAeqa()
+  g0.C <- OData$modelfit.gC$getcumprodAeqa()
+  g0.N <- OData$modelfit.gN$getcumprodAeqa()
+
+  OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
+  # newdat <- OData$dat.sVar[, list("g0.A" = g0.A, "g0.C" = g0.C, "g0.N" = g0.N, "g0.CAN" = g0.A*g0.C*g0.N)]
+
+  return(OData)
   # return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, modelfits.g0.R6 = modelfits.g0, OData.R6 = OData))
 }
 
@@ -140,27 +164,9 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
 #' @export
-get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
+#modelfits.g0,
+get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   nodes <- OData$nodes
-  # ------------------------------------------------------------------------------------------
-  # Observed likelihood of (A,C,N) at each t, based on fitted object models in object modelfits.g0
-  # ------------------------------------------------------------------------------------------
-  # get back g_CAN_regs_list:
-  ALL_g_regs <- modelfits.g0$reg
-  g_CAN_regs_list <- ALL_g_regs$RegressionForms
-  modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
-  # modelfit.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
-  modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
-  # modelfit.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
-  modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
-  # modelfit.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
-  g0.A <- modelfit.gA$getcumprodAeqa()
-  g0.C <- modelfit.gC$getcumprodAeqa()
-  g0.N <- modelfit.gN$getcumprodAeqa()
-
-  OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
-  # newdat <- OData$dat.sVar[, list("g0.A" = g0.A, "g0.C" = g0.C, "g0.N" = g0.N, "g0.CAN" = g0.A*g0.C*g0.N)]
-
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
@@ -246,7 +252,8 @@ get_weights <- function(modelfits.g0, OData, gstar.TRT = NULL, gstar.MONITOR = N
   # -------------------------------------------------------------------------------------------
   # NEED TO CLEAN UP OData$dat.sVar TO MAKE SURE ITS IN EXACTLY THE SAME STATE WHEN THIS FUNCTION WAS CALLED
   # -------------------------------------------------------------------------------------------
-  OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN", "gstar.C", "gstar.CAN", "Wt.OUTCOME", "cumm.IPAW", "wt.by.t", "cum.stab.P", "N.follow.rule") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
+  # "g0.A", "g0.C", "g0.N", "g0.CAN",
+  OData$dat.sVar[, c("gstar.C", "gstar.CAN", "Wt.OUTCOME", "cumm.IPAW", "wt.by.t", "cum.stab.P", "N.follow.rule") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
   return(wts.DT)
 }
 

@@ -221,7 +221,7 @@ stratify.TRT <- list(
   TI=c("t == 0L",                                            # MODEL TI AT t=0
        "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
        "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
-       "(t > 0L) & (barTIm1eq0 == 1L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
+       "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
        # "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)"
       ))
 gform.CENS <- c("C ~ highA1c")
