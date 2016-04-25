@@ -597,7 +597,7 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # all.equal(dat.sVar1[["cum.stab.P"]], dat.sVar2[["cum.stab.P"]])
 
   # multiply the weight by stabilization factor (numerator):
-  # OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
+  OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
 
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)

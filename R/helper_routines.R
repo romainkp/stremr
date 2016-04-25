@@ -90,6 +90,8 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #'  The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observed/measured.
 #' @param rule.names Vector of column names for indicators of following/not following each rule (must be the same dimension as theta).
 #'  When not supplied the following convention is adopted for naming these columns: paste0("d",theta).
+#' @param return.allcolumns Set to \code{TRUE} to return the original data columns along with new columns that define each rule
+#' (can be useful when employing piping/sequencing operators such as %>%).
 #'
 #' @section Details:
 #'
@@ -126,14 +128,16 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #'  with the original data.
 #' @export
 #'
-follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL){
+follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL, return.allcolumns = FALSE){
   # require('data.table')
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   chgTRT <- as.name("chgTRT")
   lastN.t <- as.name("lastN.t")
 
-  if (is.data.table(data)) {
+  if (return.allcolumns) {
+    DT <- data.table(data, key=c(ID,t))
+  } else if (is.data.table(data)) {
     DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR), with = FALSE], key=c(ID,t))
   } else if (is.data.frame(data)) {
     DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR)], key=c(ID,t))
@@ -171,12 +175,16 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
     DT[, paste0("d",dtheta) := eval(parse(text="as.logical(cumprod(d.follow_allr))")), by = eval(ID.expression)]
   }
 
-  DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]
+  DT[, "chgTRT" := NULL]; DT[, "d.follow_r1" := NULL]; DT[, "d.follow_r2" := NULL]; DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]
   if (!is.null(rule.names)) {
     stopifnot(length(rule.names)==length(theta))
     setnames(DT, old = paste0("d",theta), new = rule.names)
   } else {
     rule.names <- paste0("d",theta)
   }
-  return(DT[, c(ID, t, rule.names), with=FALSE])
+
+  if (!return.allcolumns) {
+    DT <- DT[, c(ID, t, rule.names), with=FALSE]
+  }
+  return(DT)
 }
