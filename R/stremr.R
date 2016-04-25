@@ -618,10 +618,10 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
 # Each dataset containing weights non-zero weights for single regimen
 # ---------------------------------------------------------------------------------------
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
+  sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
   # (equivalent to summing cummulative weights cumm.IPAW by t)
-  sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
+  sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
 
