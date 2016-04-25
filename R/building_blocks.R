@@ -249,6 +249,8 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
   # , na.rm = TRUE
   wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
+  wts.DT[, "rule.name.TRT" := eval(as.character(gstar.A))]
+  wts.DT[, "rule.name.MONITOR" := eval(as.character(gstar.N))]
 
   # -------------------------------------------------------------------------------------------
   # NEED TO CLEAN UP OData$dat.sVar TO MAKE SURE ITS IN EXACTLY THE SAME STATE WHEN THIS FUNCTION WAS CALLED
