@@ -247,7 +247,7 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # OData$dat.sVar[101:200, ]
 
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
-  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE][wt.by.t > 0, ]
+  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
 
   # -------------------------------------------------------------------------------------------
   # NEED TO CLEAN UP OData$dat.sVar TO MAKE SURE ITS IN EXACTLY THE SAME STATE WHEN THIS FUNCTION WAS CALLED
@@ -263,17 +263,27 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
 # ---------------------------------------------------------------------------------------
 #' @export
 get_survNP <- function(data.wts, OData) {
-  t <- OData$nodes$tnode
+  nodes <- OData$nodes
+  t <- nodes$tnode
+  Ynode <- nodes$Ynode
+  shifted.OUTCOME <- as.name(Ynode%+%".tplus1")
+
+  # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
+  ht.crude <- data.wts[cumm.IPAW > 0, .(ht.KM = sum(eval(shifted.OUTCOME), na.rm = TRUE) / .N), by = eval(t)][, St.KM := cumprod(1 - ht.KM)]
+  setkeyv(ht.crude, cols = t)
+
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- data.wts[, .(sum_Y_IPAW = sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols = t)
+  sum_Ywt <- data.wts[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Ywt, cols = t)
   # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
   # (equivalent to summing cummulative weights cumm.IPAW by t)
-  sum_Allwt <- data.wts[, .(sum_all_IPAW = sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols = t)
+  sum_Allwt <- data.wts[, .(sum_all_IPAW = sum(cumm.IPAW, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Allwt, cols = t)
   # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
-  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1 - ht, cumprod(1 - ht))]
+  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
   # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
+
+  St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all=TRUE)
   return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
 
