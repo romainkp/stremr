@@ -53,15 +53,17 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   if (is.data.table(data)) {
-    DT <- data.table(data[,c(ID, t, imp.I), with = FALSE], key=c(ID, t))
+    DT <- data.table(data, key=c(ID, t))
+    # DT <- data.table(data[,c(ID, t, imp.I), with = FALSE], key=c(ID, t))
   } else if (is.data.frame(data)) {
-    DT <- data.table(data[,c(ID, t, imp.I)], key=c(ID, t))
+    DT <- data.table(data, key=c(ID, t))
+    # DT <- data.table(data[,c(ID, t, imp.I)], key=c(ID, t))
   } else {
     stop("input data must be either a data.table or a data.frame")
   }
   # "Leading" (shifting up) and inverting indicator of observing I, renaming it to MONITOR value;
   # N(t-1)=1 indicates that I(t) is observed. Note that the very first I(t) is assumed to be always observed.
-  DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID.expression), .SDcols=(imp.I)]
+  DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID.expression), .SDcols = (imp.I)]
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, ("indx") := cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID.expression)]
@@ -69,7 +71,7 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   # DT[, (tsinceNis1) := seq(.N)-1, by = .(eval(ID.expression), indx)]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
   DT[, ("indx") := NULL]
-  DT[, (imp.I) := NULL]
+  # DT[, (imp.I) := NULL]
   return(DT)
 }
 
