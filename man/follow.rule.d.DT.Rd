@@ -30,7 +30,7 @@ The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observe
 When not supplied the following convention is adopted for naming these columns: paste0("d",theta).}
 
 \item{return.allcolumns}{Set to \code{TRUE} to return the original data columns along with new columns that define each rule
-(can be useful when employing piping/sequencing operators such as %>%).}
+(can be useful when employing piping/sequencing operators).}
 }
 \value{
 A data.table with a separate column for each value in \code{theta}. Each column consists of indicators of following/not-following

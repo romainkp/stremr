@@ -91,7 +91,7 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #' @param rule.names Vector of column names for indicators of following/not following each rule (must be the same dimension as theta).
 #'  When not supplied the following convention is adopted for naming these columns: paste0("d",theta).
 #' @param return.allcolumns Set to \code{TRUE} to return the original data columns along with new columns that define each rule
-#' (can be useful when employing piping/sequencing operators such as %>%).
+#' (can be useful when employing piping/sequencing operators).
 #'
 #' @section Details:
 #'
