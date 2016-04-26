@@ -374,7 +374,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
                             }))
   print("all_dummies: "); print(all_dummies)
 
-  message("...runngin speedglm::speedglm.wfit...")
+  message("...fitting MSM speedglm::speedglm.wfit...")
   m.fit_spdglm <- speedglm::speedglm.wfit(
                                    X = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
                                    y = as.numeric(wts.all.rules[["outcome.tplus1"]]),
@@ -406,23 +406,16 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
   maxt <- max(wts.all.rules[[t.name]])
   periods <- mint:maxt
   S2.IPAW <- rep(list(rep(NA,maxt-mint+1)),length(rules.TRT))
-  # S2.IPAW <- S2.IPAWtrunc <- S2 <- rep(list(rep(NA,maxt-mint+1)),length(rules.TRT))
-  names(S2) <- rules.TRT
-  # names(S2) <- names(S2.IPAW) <- names(S2.IPAWtrunc) <- rules.TRT
+  names(S2.IPAW) <- rules.TRT
 
-  for(d.j in names(S2)) {
+  for(d.j in names(S2.IPAW)) {
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
       rev.term <- paste0("Periods.",tjmin[max(which(tjmin<=period.j))],"to",tjmax[min(which(tjmax>=period.j))],"_",d.j)
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1+exp(-m.fit_spdglm$coef[rev.term])))
-      # print("rev.term: "); print(rev.term)
-      # S2[[d.j]][period.j] <- (1-1/(1+exp(-glm.h.coef2[rev.term])))
-      # S2.IPAWtrunc[[d.j]][period.j] <- (1-1/(1+exp(-glm.IPAWtrunc.h.coef2[rev.term])))
     }
   }
-  # S2 <- lapply(S2,cumprod)
   S2.IPAW <- lapply(S2.IPAW,cumprod)
-  # S2.IPAWtrunc <- lapply(S2.IPAWtrunc,cumprod)
   # nrow.long.IPAW.data <- nrow(wts.all.rules)
   return(list(S2.IPAW = S2.IPAW, output.MSM=output.MSM, m.fit = m.fit_spdglm))
 }
