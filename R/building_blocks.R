@@ -312,8 +312,8 @@ get_survSaturatedMSM <- function(data.wts.list, t) {
   # data.wts.list <- list(wts.St.d7, wts.St.d7.5, wts.St.d8, wts.St.d8.5)
 
 # 2. Pass the indicators of time-points to use:
-# tjmin2 <- c(1:8,9,13,17,25)-1
-# tjmax2 <- c(1:8,12,16,24,35)-1
+# tjmin <- c(1:8,9,13,17,25)-1
+# tjmax <- c(1:8,12,16,24,35)-1
 # ---------------------------------------------------------------------------------------
 ##############################################################
 ## TO DO:
@@ -321,7 +321,7 @@ get_survSaturatedMSM <- function(data.wts.list, t) {
 ## * (DONE) Add truncated weights
 ##############################################################
 #' @export
-get_survMSM <- function(data.wts.list, tjmin2, tjmax2, t.name = "t", use.weights = TRUE, trunc.weights = Inf) {
+get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights = TRUE, trunc.weights = Inf) {
   # 2a. Stack the weighted data sets:
   wts.all.rules <- rbindlist(data.wts.list)
   rules.TRT <- sort(unique(wts.all.rules[["rule.name.TRT"]]))
@@ -354,10 +354,10 @@ get_survMSM <- function(data.wts.list, tjmin2, tjmax2, t.name = "t", use.weights
 
   # 4. Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
   all.t.dummies <- NULL
-  for( year.j in 1:length(tjmin2)){
-    print("Periods: " %+% tjmin2[year.j] %+% " to " %+% tjmax2[year.j])
-    dummy.j <- paste("Periods.",tjmin2[year.j],"to",tjmax2[year.j],sep="")
-    wts.all.rules[, (dummy.j) := as.integer(eval(as.name(t.name)) >= tjmin2[year.j] & eval(as.name(t.name)) <= tjmax2[year.j])]
+  for( year.j in 1:length(tjmin)){
+    print("Periods: " %+% tjmin[year.j] %+% " to " %+% tjmax[year.j])
+    dummy.j <- paste("Periods.",tjmin[year.j],"to",tjmax[year.j],sep="")
+    wts.all.rules[, (dummy.j) := as.integer(eval(as.name(t.name)) >= tjmin[year.j] & eval(as.name(t.name)) <= tjmax[year.j])]
     all.t.dummies <- c(all.t.dummies, dummy.j)
   }
   print("all.t.dummies: "); print(all.t.dummies)
@@ -412,7 +412,7 @@ get_survMSM <- function(data.wts.list, tjmin2, tjmax2, t.name = "t", use.weights
   for(d.j in names(S2)) {
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
-      rev.term <- paste0("Periods.",tjmin2[max(which(tjmin2<=period.j))],"to",tjmax2[min(which(tjmax2>=period.j))],"_",d.j)
+      rev.term <- paste0("Periods.",tjmin[max(which(tjmin<=period.j))],"to",tjmax[min(which(tjmax>=period.j))],"_",d.j)
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1+exp(-m.fit_spdglm$coef[rev.term])))
       # print("rev.term: "); print(rev.term)
       # S2[[d.j]][period.j] <- (1-1/(1+exp(-glm.h.coef2[rev.term])))
