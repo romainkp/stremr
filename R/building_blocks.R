@@ -374,7 +374,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
                             }))
   print("all_dummies: "); print(all_dummies)
 
-  message("...fitting MSM speedglm::speedglm.wfit...")
+  message("...fitting hazard MSM speedglm::speedglm.wfit...")
   m.fit_spdglm <- speedglm::speedglm.wfit(
                                    X = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
                                    y = as.numeric(wts.all.rules[["outcome.tplus1"]]),
@@ -419,5 +419,5 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
 
   S2.IPAW <- lapply(S2.IPAW,cumprod)
   # nrow.long.IPAW.data <- nrow(wts.all.rules)
-  return(list(S2.IPAW = S2.IPAW, output.MSM=output.MSM, m.fit = m.fit_spdglm))
+  return(list(St = S2.IPAW, output.MSM=output.MSM, m.fit = m.fit_spdglm))
 }
