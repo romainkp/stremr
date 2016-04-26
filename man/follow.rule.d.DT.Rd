@@ -4,7 +4,8 @@
 \alias{follow.rule.d.DT}
 \title{Define the indicators of following/not-following specific dynamic treatment rules indexed by theta.}
 \usage{
-follow.rule.d.DT(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL)
+follow.rule.d.DT(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL,
+  return.allcolumns = FALSE)
 }
 \arguments{
 \item{data}{Input data.frame or data.table in long format, see below for the description of the assumed format.}
@@ -27,6 +28,9 @@ The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observe
 
 \item{rule.names}{Vector of column names for indicators of following/not following each rule (must be the same dimension as theta).
 When not supplied the following convention is adopted for naming these columns: paste0("d",theta).}
+
+\item{return.allcolumns}{Set to \code{TRUE} to return the original data columns along with new columns that define each rule
+(can be useful when employing piping/sequencing operators such as %>%).}
 }
 \value{
 A data.table with a separate column for each value in \code{theta}. Each column consists of indicators of following/not-following
