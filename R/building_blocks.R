@@ -374,6 +374,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
                             }))
   print("all_dummies: "); print(all_dummies)
 
+  message("...runngin speedglm::speedglm.wfit...")
   m.fit_spdglm <- speedglm::speedglm.wfit(
                                    X = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
                                    y = as.numeric(wts.all.rules[["outcome.tplus1"]]),
@@ -396,7 +397,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
   m.fit_spdglm <- list(coef = m.fit_spdglm$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
   output.MSM <- round(m.fit_spdglm$coef,2)
   output.MSM <- cbind("Terms" = names(m.fit_spdglm$coef), output.MSM)
-  colnames(output.MSM) <- ifelse(trunc.weights == Inf && use.weights, "IPAW", ifelse(trunc.weights < Inf && use.weights, "truncated IPAW", "no weights"))
+  colnames(output.MSM) <- c("Terms",ifelse(trunc.weights == Inf && use.weights, "IPAW", ifelse(trunc.weights < Inf && use.weights, "truncated IPAW", "no weights")))
   # rownames(output.MSM) <- NULL
   print("output.MSM: "); print(output.MSM)
 
