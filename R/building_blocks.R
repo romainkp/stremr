@@ -398,8 +398,8 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
   output.MSM <- round(m.fit_spdglm$coef,2)
   output.MSM <- cbind("Terms" = names(m.fit_spdglm$coef), output.MSM)
   colnames(output.MSM) <- c("Terms",ifelse(trunc.weights == Inf && use.weights, "IPAW", ifelse(trunc.weights < Inf && use.weights, "truncated IPAW", "no weights")))
-  # rownames(output.MSM) <- NULL
-  print("output.MSM: "); print(output.MSM)
+  rownames(output.MSM) <- NULL
+  # print("output.MSM: "); print(output.MSM)
 
   # 7. Compute the Survival curves under each d
   mint <- min(wts.all.rules[[t.name]])
@@ -408,6 +408,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
   S2.IPAW <- rep(list(rep(NA,maxt-mint+1)),length(rules.TRT))
   names(S2.IPAW) <- rules.TRT
 
+  message("...evaluating survival based on MSM hazard fit...")
   for(d.j in names(S2.IPAW)) {
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
@@ -415,6 +416,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1+exp(-m.fit_spdglm$coef[rev.term])))
     }
   }
+
   S2.IPAW <- lapply(S2.IPAW,cumprod)
   # nrow.long.IPAW.data <- nrow(wts.all.rules)
   return(list(S2.IPAW = S2.IPAW, output.MSM=output.MSM, m.fit = m.fit_spdglm))
