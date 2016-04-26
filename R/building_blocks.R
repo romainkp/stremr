@@ -423,10 +423,6 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, t
   }
   S2.IPAW <- lapply(S2.IPAW,cumprod)
 
-  browser()
-
-  pander(summary_table)
-
   # nrow.long.IPAW.data <- nrow(wts.all.rules)
   # summary(wts.all.rules["cumm.IPAW"])
   (quant99 <- quantile(wts.all.rules[["cumm.IPAW"]],p=0.99))
@@ -435,6 +431,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, t
   IPAWdist <- makeSumFreqTable(table(wts.all.rules[["cumm.IPAW"]]),c(0,0.5,1,10,20,30,40,50,100,150),"Stabilized IPAW")
   # to cat print the result directly for markdown:
   # pander(IPAWdist)
+  # browser()
 
   # library(Hmisc)
   # sink(file.path(res_outf_newdat, "NewIPAWdistNonITTm0.tex"))
