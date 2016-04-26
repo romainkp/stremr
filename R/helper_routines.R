@@ -9,6 +9,54 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
   return(T.tilde)
 }
 
+# ----------------------------------------------------------------
+#### SUMMARY STATISTICS
+# ----------------------------------------------------------------
+makeFreqTable <- function(rawFreq){
+  ntot <- sum(rawFreq)
+  rawFreqPercent <- rawFreq/ntot*100
+  fineFreq <- cbind("Frequency"=rawFreq,"\\%"=round(rawFreqPercent,2),"Cumulative Frequency"=cumsum(rawFreq),"Cumulative \\%"=round(cumsum(rawFreqPercent),2))
+  fineFreq <- as.data.frame(fineFreq)
+  eval(parse(text=paste('fineFreq <- cbind(',deparse(substitute(rawFreq)),'=factor(c("',paste(names(rawFreq),collapse='","'),'")),fineFreq)',sep="")))
+  rownames(fineFreq) <- 1:nrow(fineFreq)
+  fineFreq <- as.matrix(fineFreq)
+  return(fineFreq)
+}
+
+# ----------------------------------------------------------------
+#### SUMMARY STATISTICS
+# ----------------------------------------------------------------
+makeSumFreqTable <- function(x.freq,cutoffs,varName){
+  if(class(cutoffs)=="Date"){
+    x.values <- as.Date(names(x.freq))
+  }else{
+    x.values <- names(x.freq)
+  }
+  na.yes <- as.logical(sum(is.na( as.numeric(x.values))))
+  x.freq.sum <- rep(NA,length(cutoffs)+1+as.numeric(na.yes))
+  x.freq.sum[1] <- sum(x.freq[ as.numeric(x.values)<cutoffs[1] ], na.rm=TRUE)
+  for(i in 1:(length(cutoffs)-1))
+    x.freq.sum[1+i] <- sum(x.freq[ as.numeric(x.values)>=cutoffs[i] & as.numeric(x.values)<cutoffs[i+1] ], na.rm=TRUE)
+  x.freq.sum[length(cutoffs)+1] <- sum(x.freq[ as.numeric(x.values)>=cutoffs[length(cutoffs)] ], na.rm=TRUE)
+  if(na.yes){
+      x.freq.sum[length(cutoffs)+2] <- x.freq[ is.na(as.numeric(x.values)) ]
+    }
+
+  catNames <- rep(NA,length(cutoffs)+1+as.numeric(na.yes))
+  catNames[1] <- paste("<",cutoffs[1],sep="")
+  for(i in 1:(length(cutoffs)-1))
+    catNames[i+1] <- paste("$[$",cutoffs[i],", ",cutoffs[i+1],"$[$",sep="")
+  catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
+  if(na.yes)catNames[length(cutoffs)+2] <- "Missing"
+  names(x.freq.sum) <- catNames
+
+  x.freq.sum <- makeFreqTable(x.freq.sum)
+  colnames(x.freq.sum)[1] <- varName
+  x.freq.sum[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
+  return(x.freq.sum)
+}
+
+
 # ---------------------------------------------------------------------------------------------
 #' Helper routine to convert the data into the format data.table required by estmr() function.
 #'
