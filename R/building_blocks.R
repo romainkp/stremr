@@ -3,7 +3,7 @@
 # - BLOCK 1: Process inputs and define OData R6 object
 # ------------------------------------------------------------------
 #' @export
-get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
+get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                       noCENS.cat = 0L, verbose = FALSE) {
   gvars$verbose <- TRUE
   gvars$noCENS.cat <- noCENS.cat
@@ -12,10 +12,10 @@ get_Odata <- function(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C
     str(gvars$opts)
   # }
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
-    covars <- setdiff(colnames(data), c(ID, t, CENS, TRT, MONITOR, OUTCOME))
+    covars <- setdiff(colnames(data), c(ID, t.name, CENS, TRT, MONITOR, OUTCOME))
   }
   # The ordering of variables in this list is the assumed temporal order!
-  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t)
+  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t.name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
   # --------------------------------------------------------------------------------------------------------
   # Create dummies for factors
@@ -217,7 +217,7 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
   # (The total sum of all subjects who WERE AT RISK at t)
   # In memory version (all at once inside data.table, by reference):
-  # OData$dat.sVar[, N.follow.rule := sum(eval(gstar.A), na.rm = TRUE), by = eval(t)]
+  # OData$dat.sVar[, N.follow.rule := sum(eval(gstar.A), na.rm = TRUE), by = eval(t.name)]
   # OData$dat.sVar[, cum.stab.P2 := cumprod(N.follow.rule / shift(N.follow.rule, fill = nIDs, type = "lag")), by = eval(ID)]
 
   # (MUCH FASTER) Version outside data.table, then merge back results:
@@ -267,21 +267,21 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
 #' @export
 get_survNP <- function(data.wts, OData) {
   nodes <- OData$nodes
-  t <- nodes$tnode
+  t.name <- nodes$tnode
   Ynode <- nodes$Ynode
   shifted.OUTCOME <- as.name(Ynode%+%".tplus1")
 
   # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
-  ht.crude <- data.wts[cumm.IPAW > 0, .(ht.KM = sum(eval(shifted.OUTCOME), na.rm = TRUE) / .N), by = eval(t)][, St.KM := cumprod(1 - ht.KM)]
+  ht.crude <- data.wts[cumm.IPAW > 0, .(ht.KM = sum(eval(shifted.OUTCOME), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t)
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- data.wts[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Ywt, cols = t)
-  # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
+  sum_Ywt <- data.wts[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Ywt, cols = t.name)
+  # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t.name)]; setkeyv(sum_Ywt, cols=t)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
   # (equivalent to summing cummulative weights cumm.IPAW by t)
-  sum_Allwt <- data.wts[, .(sum_all_IPAW = sum(cumm.IPAW, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Allwt, cols = t)
-  # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
+  sum_Allwt <- data.wts[, .(sum_all_IPAW = sum(cumm.IPAW, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Allwt, cols = t.name)
+  # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t.name)]; setkeyv(sum_Allwt, cols=t)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
   # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
@@ -321,7 +321,12 @@ get_survSaturatedMSM <- function(data.wts.list, t) {
 ## * (DONE) Add truncated weights
 ##############################################################
 #' @export
-get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights = TRUE, trunc.weights = Inf) {
+get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, trunc.weights = Inf) {
+  nodes <- OData$nodes
+  t.name <- nodes$tnode
+  Ynode <- nodes$Ynode
+  shifted.OUTCOME <- Ynode%+%".tplus1"
+
   # 2a. Stack the weighted data sets:
   wts.all.rules <- rbindlist(data.wts.list)
   rules.TRT <- sort(unique(wts.all.rules[["rule.name.TRT"]]))
@@ -329,9 +334,9 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
   print("performing estimation for rules: " %+% paste(rules.TRT, collapse=","))
 
   # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
-  wts.all.rules <- wts.all.rules[!is.na(cumm.IPAW) & !is.na(outcome.tplus1) & (cumm.IPAW > 0), ]
+  wts.all.rules <- wts.all.rules[!is.na(cumm.IPAW) & !is.na(eval(as.name(shifted.OUTCOME))) & (cumm.IPAW > 0), ]
   print(object.size(wts.all.rules), units = "Gb")
-  print(any(is.na(as.numeric(wts.all.rules[["outcome.tplus1"]]))))
+  print(any(is.na(as.numeric(wts.all.rules[[shifted.OUTCOME]]))))
 
   # 2c. If trunc.weights < Inf, do truncation of the weights
   if (trunc.weights < Inf) {
@@ -377,7 +382,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
   message("...fitting hazard MSM speedglm::speedglm.wfit...")
   m.fit_spdglm <- speedglm::speedglm.wfit(
                                    X = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
-                                   y = as.numeric(wts.all.rules[["outcome.tplus1"]]),
+                                   y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
                                    intercept=FALSE,
                                    family = binomial(),
                                    weights = wts.all.rules[["cumm.IPAW"]],
@@ -387,7 +392,7 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
   #  glm.IPAW.h2 <- glm.fit(
   #                        # x = wts.all.rules[, all_dummies, with = FALSE],
   #                        x = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
-  #                        y = as.numeric(wts.all.rules[["outcome.tplus1"]]),
+  #                        y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
   #                        family=binomial(),
   #                        weights = wts.all.rules[["cumm.IPAW"]])$coefficients
   # #  user  system elapsed
@@ -416,15 +421,21 @@ get_survMSM <- function(data.wts.list, tjmin, tjmax, t.name = "t", use.weights =
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1+exp(-m.fit_spdglm$coef[rev.term])))
     }
   }
-
   S2.IPAW <- lapply(S2.IPAW,cumprod)
-  # nrow.long.IPAW.data <- nrow(wts.all.rules)
 
+  browser()
+
+  pander(summary_table)
+
+  # nrow.long.IPAW.data <- nrow(wts.all.rules)
   # summary(wts.all.rules["cumm.IPAW"])
-  (quant99 <- quantile(wts.all.rules["cumm.IPAW"],p=0.99))
-  (quant999 <- quantile(wts.all.rules["cumm.IPAW"],p=0.999))
+  (quant99 <- quantile(wts.all.rules[["cumm.IPAW"]],p=0.99))
+  (quant999 <- quantile(wts.all.rules[["cumm.IPAW"]],p=0.999))
   cutoffs <- c(0,0.5,1,10,20,30,40,50,100,150)
-  IPAWdist <- makeSumFreqTable(table(wts.all.rules["cumm.IPAW"]),c(0,0.5,1,10,20,30,40,50,100,150),"Stabilized IPAW")
+  IPAWdist <- makeSumFreqTable(table(wts.all.rules[["cumm.IPAW"]]),c(0,0.5,1,10,20,30,40,50,100,150),"Stabilized IPAW")
+  # to cat print the result directly for markdown:
+  # pander(IPAWdist)
+
   # library(Hmisc)
   # sink(file.path(res_outf_newdat, "NewIPAWdistNonITTm0.tex"))
   # latex(IPAWdist,file="",where="!htpb",colheads=colnames(IPAWdist),

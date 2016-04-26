@@ -4,7 +4,7 @@
 \alias{stremr}
 \title{Estimate Survival with Interventions on Exposure and MONITORing Process in Right Censored Longitudinal Data.}
 \usage{
-stremr(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C",
+stremr(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C",
   TRT = "A", MONITOR = "N", OUTCOME = "Y", gform.CENS, gform.TRT,
   gform.MONITOR, stratify.CENS = NULL, stratify.TRT = NULL,
   stratify.MONITOR = NULL, gstar.TRT = NULL, gstar.MONITOR = NULL,
@@ -17,7 +17,7 @@ and the survival OUTCOME variable (\code{OUTCOME}).}
 
 \item{ID}{Unique subject identifier column name in \code{data}.}
 
-\item{t}{The name of the time/period variable in \code{data}.}
+\item{t.name}{The name of the time/period variable in \code{data}.}
 
 \item{covars}{Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
 that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.}

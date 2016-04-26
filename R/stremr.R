@@ -204,7 +204,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #'  and the survival OUTCOME variable (\code{OUTCOME}).
 # @param estimators (NOT IMPLEMENTED) Character vector with estimator names.
 #' @param ID Unique subject identifier column name in \code{data}.
-#' @param t The name of the time/period variable in \code{data}.
+#' @param t.name The name of the time/period variable in \code{data}.
 #' @param covars Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
 #' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.
 #' @param CENS Column name of the censoring variable(s) in \code{data}.
@@ -389,7 +389,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
   # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
   # Can specify K regressions in gform.CENS/gform.TRT/gform.MONITOR. If only one regression is specified it will be aplied to ALL stratas.
   # Otherwise stratas should be specified as a named list of K items
-stremr <- function(data, ID = "Subj_ID", t = "time_period",
+stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
                               covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                               gform.CENS, gform.TRT, gform.MONITOR,
                               stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL,
@@ -409,7 +409,7 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
     covars <- setdiff(colnames(data), c(ID, t, CENS, TRT, MONITOR, OUTCOME))
   }
   # The ordering of variables in this list is the assumed temporal order!
-  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t)
+  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t.name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
 
   # --------------------------------------------------------------------------------------------------------
@@ -618,10 +618,10 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
 # Each dataset containing weights non-zero weights for single regimen
 # ---------------------------------------------------------------------------------------
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Ywt, cols=t)
+  sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Ywt, cols=t.name)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
   # (equivalent to summing cummulative weights cumm.IPAW by t)
-  sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW, na.rm = TRUE)), by = eval(t)]; setkeyv(sum_Allwt, cols=t)
+  sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Allwt, cols=t.name)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
 
