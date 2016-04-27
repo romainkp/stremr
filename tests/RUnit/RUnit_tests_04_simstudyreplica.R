@@ -1,6 +1,6 @@
 require("magrittr")
 require("data.table")
-require("stremr")
+# require("stremr")
 
 delta.shift.minus <- seq(-0.9, -0.1, by=0.1)
 delta.shift.plus <- seq(0.1, 0.9, by=0.1)
@@ -202,22 +202,23 @@ O.dataDT <- define_indicators(O.data)
 # --------------------------------
 # (III) Define rules for dlow & dhigh
 # --------------------------------
-O.dataDT_rules <- add.gtheta.to.O(O.dataDT)
+O.dataDTrules <- add.gtheta.to.O(O.dataDT)
 # --------------------------------
 # (IV) Define monitoring regimen probabilit(ies):
 # --------------------------------
-gstar1.N.Pois3.yearly <- g.Pois(O.dataDT_rules, lambda = 3)
-gstar1.N.Pois1.biyearly <- g.Pois(O.dataDT_rules, lambda = 1)
+gstar1.N.Pois3.yearly <- g.Pois(O.dataDTrules, lambda = 3)
+gstar1.N.Pois1.biyearly <- g.Pois(O.dataDTrules, lambda = 1)
 length(gstar1.N.Pois1.biyearly)
-gstar2.N.p05 <- g.p(O.dataDT_rules, p = 0.5)
+gstar2.N.p05 <- g.p(O.dataDTrules, p = 0.5)
 length(gstar2.N.p05)
-O.dataDT_rules_Nstar <- cbind(O.dataDT_rules, gstar1.N.Pois3.yearly = gstar1.N.Pois3.yearly, gstar1.N.Pois1.biyearly = gstar1.N.Pois1.biyearly, gstar2.N.p05 = gstar2.N.p05)
+
+O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := gstar1.N.Pois3.yearly][, gstar1.N.Pois1.biyearly := gstar1.N.Pois1.biyearly][, gstar2.N.p05 := gstar2.N.p05]
 
 # --------------------------------
 # (IV) Estimate weights under observed (A,C,N)
 # --------------------------------
-# O.dataDT_rules[1:100,]
-# O.dataDT_rules_Nstar[1:100, ]
+# O.dataDTrules[1:100,]
+# O.dataDTrules_Nstar[1:100, ]
 gform.TRT <- "TI ~ CVD + highA1c + N.tminus1"
 stratify.TRT <- list(
   TI=c("t == 0L",                                            # MODEL TI AT t=0
@@ -237,7 +238,7 @@ gform.MONITOR <- "N ~ 1"
 # gform.TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
 #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
 
-OData <- get_Odata(O.dataDT_rules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
+OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
 OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
 
 St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
@@ -259,22 +260,34 @@ wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 
 tjmin <- c(1:8,9,13)-1
+
 tjmax <- c(1:8,12,16)-1
+
 # MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = TRUE)
+MSM.IPAW <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = TRUE, est.name = "IPAW")
 # MSM for hazard with truncated weights:
-MSM.trunc <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = TRUE, trunc.weights = 20)
+MSM.trunc <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = TRUE, trunc.weights = 20, est.name = "IPAWtrunc")
 # crude MSM for hazard without any weights:
-MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = FALSE)
+MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = FALSE, est.name = "crude")
 
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report")
 
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report")
+report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
+# html doc:
+make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
+make_report_rmd(OData, MSM = MSM.trunc, file.path = report.path)
+make_report_rmd(OData, MSM = MSM.crude, file.path = report.path)
+
+# pdf doc:
+make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
+make_report_rmd(OData, MSM = MSM.trunc, format = "pdf", file.path = report.path)
+make_report_rmd(OData, MSM = MSM.crude, format = "pdf", file.path = report.path)
+# word doc:
+make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)
 
 # make_report(OData, S.t = MSM.crude$St)
 
 # system.time(
-#   res <- stremr(data = O.dataDT_rules_Nstar, ID = "ID", t = "t",
+#   res <- stremr(data = O.dataDTrules_Nstar, ID = "ID", t = "t",
 #                 covars = c("highA1c", "lastNat1"),
 #                 CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
 #                 gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,

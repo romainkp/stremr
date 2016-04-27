@@ -50,13 +50,32 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
     # ...
   }
 
-# browser()
+  # -------------------------------------------------------------------------------------
+  # DISCRIPTIVE STATISTICS:
+  # -------------------------------------------------------------------------------------
+  # For each covariate in OData$nodes, create either:
+    # 1) a density plot for each  OData$type.sVar[varnames] %in% sVartypes$cont
+    # 2) a histogram plot for each variable OData$type.sVar[varnames] %in% c(sVartypes$cont, sVartypes$cat, sVartypes$bin)
+    # 3) a frequency table for each c(sVartypes$cat, sVartypes$bin)
+  # For each factor coverted to binary dummies from OData$new.factor.names do the same
+  # * Report number lost to follow-up by time for nodes$Cnodes, by nodes$tnode
+  # * Report number lost to follow-up by nodes$Ynode, by nodes$tnode
+  # * Report number in each exposure cat in nodes$Anodes, by nodes$tnode
 
+  # -------------------------------------------------------------------------------------
+  # MODEL FITS:
+  # -------------------------------------------------------------------------------------
+  # NEED TO ADD *****NUMBER OF OBSERVATIONS USED**** for each model within each:
   fitted.coefs.gC <- OData$modelfit.gC$get.fits(format_table = TRUE)
-
   fitted.coefs.gA <- OData$modelfit.gA$get.fits(format_table = TRUE)
-
   fitted.coefs.gN <- OData$modelfit.gN$get.fits(format_table = TRUE)
+  # -------------------------------------------------------------------------------------
+  # **** NEED TO ADD RD tables ****
+  # -------------------------------------------------------------------------------------
+  RD.IPAW_tperiod1 <- MSM.IPAW$RD.IPAW_tperiod1
+  RD.IPAW_tperiod2 <- MSM.IPAW$RD.IPAW_tperiod2
+  RR.IPAW_tperiod1 <- MSM.IPAW$RR.IPAW_tperiod1
+  RR.IPAW_tperiod2 <- MSM.IPAW$RR.IPAW_tperiod2
 
   ## path issue on Windows
   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
@@ -69,17 +88,37 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   setwd(file.path)
 
   format_pandoc <- format %+% "_document"
-  outfile <- file.name %+% "." %+% format
+  outfile <- file.name %+% "." %+% ifelse(format %in% "word", "docx", format)
 
   print("writing report to directory: " %+% getwd())
-  library('rmarkdown')
-  rmarkdown::render(report.file, output_dir = getwd(), output_file = file.name%+%".html", output_format = "html_document", output_options = list(keep_md = TRUE))
 
-  if (!format %in% "html")
-    rmarkdown::render(report.file, output_dir = getwd(), output_file = outfile, output_format = format_pandoc, clean = FALSE)
+  figure.dir <- file.path(getwd(), "figure/stremr-")
+  # output_format = "html_document",
+  report.html <- tryCatch(rmarkdown::render(report.file, output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE, output_options = list(keep_md = TRUE)), error = function(e) e)
+
+  if (inherits(report.html, 'error')) {
+    options(opts.bak)
+    setwd(wd.bak)
+    stop(report.html$message)
+  }
+
+  if (!format %in% "html"){
+      if (format %in% "pdf") {
+        output_options <- list(keep_tex = TRUE)
+        # output_options <- list(keep_tex = TRUE, pandoc = list(arg="+escaped_line_breaks"))
+        # output_options <- list(keep_tex = TRUE, pandoc = list(arg="markdown+escaped_line_breaks"))
+      } else {
+        output_options <- NULL
+      }
+    report.other <- tryCatch(rmarkdown::render(report.file, output_dir = getwd(), intermediates_dir = getwd(), output_file = outfile, output_format = format_pandoc, clean = TRUE, output_options = output_options), error = function(e) e)
+    if (inherits(report.other, 'error')) {
+      options(opts.bak)
+      setwd(wd.bak)
+      stop(report.other$message)
+    }
+  }
 
   openFileInOS(outfile)
-
   # resetting directory and other options
   options(opts.bak)
   setwd(wd.bak)
@@ -179,44 +218,7 @@ make_report <- function(OData, Surv.byregimen, file.name = getOption('stremr.fil
               # graph.name, graph.dir, graph.hi.res = FALSE, text = NULL,
 
   Pandoc.convert(file.name %+% "." %+% myReport$format, format = 'html', open = TRUE)
-
   getwd()
-
-  # -------------------------------------------------------------------------------------
-  # DISCRIPTIVE STATISTICS:
-  # -------------------------------------------------------------------------------------
-  # For each covariate in OData$nodes, create either:
-    # 1) a density plot for each  OData$type.sVar[varnames] %in% sVartypes$cont
-    # 2) a histogram plot for each variable OData$type.sVar[varnames] %in% c(sVartypes$cont, sVartypes$cat, sVartypes$bin)
-    # 3) a frequency table for each c(sVartypes$cat, sVartypes$bin)
-  # For each factor coverted to binary dummies from OData$new.factor.names do the same
-
-  # * Report number lost to follow-up by time for nodes$Cnodes, by nodes$tnode
-
-  # * Report number lost to follow-up by nodes$Ynode, by nodes$tnode
-
-  # * Report number in each exposure cat in nodes$Anodes, by nodes$tnode
-
-  # -------------------------------------------------------------------------------------
-  # MODEL FITS:
-  # -------------------------------------------------------------------------------------
-  # Coefficients and *****NUMBER OF OBSERVATIONS USED**** for each model within each:
-  # OData$modelfit.gC
-  # OData$modelfit.gA
-  # OData$modelfit.gN
-
-
-  # -------------------------------------------------------------------------------------
-  # Weights distributions
-  # -------------------------------------------------------------------------------------
-
-  # -------------------------------------------------------------------------------------
-  # Survival estimates
-  # -------------------------------------------------------------------------------------
-
-  # -------------------------------------------------------------------------------------
-  # RD tables
-  # -------------------------------------------------------------------------------------
   # resetting directory and other options
   options(opts.bak)
   setwd(wd.bak)

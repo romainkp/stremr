@@ -19,7 +19,7 @@ logisfit.glmS3 <- function(datsum_obj) {
       m.fit <- stats::glm.fit(x = Xmat, y = Y_vals, family = binomial() , control = ctrl)
     }, GetWarningsToSuppress())
   }
-  fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "glm")
+  fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "glm", nobs = nrow(Xmat))
   if (gvars$verbose) print(fit$coef)
   class(fit) <- c(class(fit), c("glmS3"))
   return(fit)
@@ -41,7 +41,7 @@ logisfit.speedglmS3 <- function(datsum_obj) {
       return(logisfit.glmS3(datsum_obj))
     }
   }
-  fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+  fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm", nobs = nrow(Xmat))
   if (gvars$verbose) print(fit$coef)
   class(fit) <- c(class(fit), c("speedglmS3"))
   return(fit)
@@ -192,7 +192,8 @@ BinDat <- R6Class(classname = "BinDat",
 
     # printing regression:
     show = function() {
-      "P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=",") %+% ")" %+% "; Stratify: " %+% self$subset_expr
+      "P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=",") %+% ")" %+% "; \\
+       Stratify: " %+% self$subset_expr
     },
 
     newdata = function(newdata, getoutvar = TRUE, ...) {
@@ -590,13 +591,14 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
 
     get.fits = function(format_table = FALSE) {
       coef_out <- private$m.fit$coef
+      nobs <- private$m.fit$nobs
       if (format_table) {
         coef_out <- data.frame(Coef = coef_out)
         coef_out <- cbind(names(private$m.fit$coef), coef_out)
         rownames(coef_out) <- NULL
         colnames(coef_out) <- c("Terms", "Coefficients")
       }
-      return(list(reg=list(regression = self$show(), coef = coef_out)))
+      return(list(reg=list(regression = self$show(), nobs = nobs, coef = coef_out)))
     },
 
     show = function() {self$bindat$show()}

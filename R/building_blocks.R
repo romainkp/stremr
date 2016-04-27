@@ -321,7 +321,7 @@ get_survSaturatedMSM <- function(data.wts.list, t) {
 ## * (DONE) Add truncated weights
 ##############################################################
 #' @export
-get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, trunc.weights = Inf) {
+get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf, est.name = "IPAW") {
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
@@ -421,6 +421,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, t
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1+exp(-m.fit_spdglm$coef[rev.term])))
     }
   }
+
   S2.IPAW <- lapply(S2.IPAW,cumprod)
 
   # nrow.long.IPAW.data <- nrow(wts.all.rules)
@@ -448,5 +449,25 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, t
   #   label= "NewIPAWdistNonITTm0",booktabs=TRUE,rowname=NULL,landscape=FALSE)
   # sink()
 
-  return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm, IPAWdist = IPAWdist, output.MSM=output.MSM))
+  ## RD:
+  RD.IPAW_tperiod1 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = 12, nobs = nrow(wts.all.rules), esti = est.name)
+  RD.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = 15, nobs = nrow(wts.all.rules), esti = est.name)
+  ## RR:
+  RR.IPAW_tperiod1 <- make.table.m0(S2.IPAW, RDscale = FALSE, t.period = 12, nobs = nrow(wts.all.rules), esti = est.name)
+  RR.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = FALSE, t.period = 15, nobs = nrow(wts.all.rules), esti = est.name)
+
+  # (RD.IPAWtrunc13 <- make.table.m0(S2.IPAWtrunc,RDscale=TRUE,t.period=12,se.RD.Sdt13.IPAWtrunc,nobs = ,esti="IPAWtrunc"))
+  # (RD.IPAWtrunc16 <- make.table.m0(S2.IPAWtrunc,RDscale=TRUE,t.period=15,se.RD.Sdt16.IPAWtrunc,nobs = ,esti="IPAWtrunc"))
+  # (RD.13 <- make.table.m0(S2,RDscale=TRUE,t.period=12,se.RD.Sdt13,nobs = ,esti="crude"))
+  # (RD.16 <- make.table.m0(S2,RDscale=TRUE,t.period=15,se.RD.Sdt16,nobs = ,esti="crude"))
+  # (RR.IPAWtrunc13 <- make.table.m0(S2.IPAWtrunc, RDscale=FALSE, t.period=12, se.RR.Sdt13.IPAWtrunc, nobs = , esti="IPAWtrunc"))
+  # (RR.IPAWtrunc16 <- make.table.m0(S2.IPAWtrunc, RDscale=FALSE, t.period=15, se.RR.Sdt16.IPAWtrunc, nobs = , esti="IPAWtrunc"))
+  # (RR.13 <- make.table.m0(S2, RDscale=FALSE, t.period=12, se.RR.Sdt13, nobs = , esti="crude"))
+  # (RR.16 <- make.table.m0(S2, RDscale=FALSE, t.period=15, se.RR.Sdt16, nobs = , esti="crude"))
+
+  return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm,
+              output.MSM = output.MSM,
+              IPAWdist = IPAWdist,
+              RD.IPAW_tperiod1 = RD.IPAW_tperiod1, RD.IPAW_tperiod2 = RD.IPAW_tperiod2,
+              RR.IPAW_tperiod1 = RR.IPAW_tperiod1, RR.IPAW_tperiod2 = RR.IPAW_tperiod2))
 }

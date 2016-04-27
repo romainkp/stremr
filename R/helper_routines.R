@@ -34,18 +34,18 @@ makeSumFreqTable <- function(x.freq,cutoffs,varName){
   }
   na.yes <- as.logical(sum(is.na( as.numeric(x.values))))
   x.freq.sum <- rep(NA,length(cutoffs)+1+as.numeric(na.yes))
-  x.freq.sum[1] <- sum(x.freq[ as.numeric(x.values)<cutoffs[1] ], na.rm=TRUE)
+  x.freq.sum[1] <- sum(x.freq[ as.numeric(x.values) < cutoffs[1] ], na.rm=TRUE)
   for(i in 1:(length(cutoffs)-1))
-    x.freq.sum[1+i] <- sum(x.freq[ as.numeric(x.values)>=cutoffs[i] & as.numeric(x.values)<cutoffs[i+1] ], na.rm=TRUE)
+    x.freq.sum[1+i] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[i] & as.numeric(x.values)<cutoffs[i+1] ], na.rm=TRUE)
   x.freq.sum[length(cutoffs)+1] <- sum(x.freq[ as.numeric(x.values)>=cutoffs[length(cutoffs)] ], na.rm=TRUE)
   if(na.yes){
       x.freq.sum[length(cutoffs)+2] <- x.freq[ is.na(as.numeric(x.values)) ]
-    }
+  }
 
   catNames <- rep(NA,length(cutoffs)+1+as.numeric(na.yes))
   catNames[1] <- paste("<",cutoffs[1],sep="")
   for(i in 1:(length(cutoffs)-1))
-    catNames[i+1] <- paste("$[$",cutoffs[i],", ",cutoffs[i+1],"$[$",sep="")
+    catNames[i+1] <- paste("[",cutoffs[i],", ",cutoffs[i+1],"[",sep="")
   catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
   if(na.yes)catNames[length(cutoffs)+2] <- "Missing"
   names(x.freq.sum) <- catNames
@@ -54,6 +54,80 @@ makeSumFreqTable <- function(x.freq,cutoffs,varName){
   colnames(x.freq.sum)[1] <- varName
   x.freq.sum[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
   return(x.freq.sum)
+}
+
+
+make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.period, se.RDscale.Sdt.K){
+  if (missing(se.RDscale.Sdt.K)) {
+    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S.IPAW), ncol = length(S.IPAW))
+    colnames(se.RDscale.Sdt.K) <- names(S.IPAW)
+    rownames(se.RDscale.Sdt.K) <- names(S.IPAW)
+  }
+  dtheta <- names(S.IPAW)
+  RDtable <- matrix(NA, nrow = factorial(length(dtheta)), ncol = length(dtheta)-1)
+  # RDtable <- matrix(NA,nrow=2*3,ncol=3)
+
+  ContrastScale <- ifelse(RDscale,"-","/")
+
+  H0val <- ifelse(RDscale,0,1)
+  ## Compare mean bootstrap to point estimates - should be similar
+  PYK1.IPAW <- allRDtable <- vector("list",length(S.IPAW))
+  names(PYK1.IPAW) <- names(allRDtable) <- names(S.IPAW)
+  PYK1.IPAW <- lapply(S.IPAW,function(x,y)return(1-x[y+1]),y=t.period)
+
+  rownames(RDtable) <- rep(rev(dtheta)[-length(dtheta)],each=2)
+  colnames(RDtable) <- dtheta[-length(dtheta)]
+
+  for(rule1 in rev(dtheta)[-length(dtheta)]) {
+    for(rule2 in dtheta[ 1:(which(dtheta==rule1)-1) ]){
+      RD <- mapply(ContrastScale,PYK1.IPAW[[rule1]],PYK1.IPAW[[rule2]])
+      (pt <- round(RD,4))
+      (CI <- round(RD+c(qnorm(0.025),-qnorm(0.025))*se.RDscale.Sdt.K[rule1,rule2],4))
+      (ptCI <- paste(pt," [",CI[1],";",CI[2],"]",sep=""))
+      (pval <- paste("SE=",round(se.RDscale.Sdt.K[rule1,rule2],4),", p=", round(2*pnorm( abs((RD-H0val)/se.RDscale.Sdt.K[rule1, rule2]), lower=FALSE ),2) ,sep=""))
+      RDtable[ rownames(RDtable)%in%rule1,rule2] <- c(ptCI,pval)
+    }
+  }
+
+  # browser()
+  # (seq_along(dtheta)-1) *
+
+  RDtable[is.na(RDtable)] <- ""
+  RDtable <- cbind("d1 (row) | d2 (col)"=rep(rev(dtheta)[-length(dtheta)],each=2) , RDtable)
+  RDtable[,1] <- paste(gsub("d","$d_{",RDtable[,1]),sep="")
+  RDtable[,1] <- paste(gsub("g","}g_{",RDtable[,1]),"}$",sep="")
+
+  # RDtable[ c(0,1,2) * 2 + rep(2, each = 3), 1] <- ""
+  # colnames(RDtable)[-1] <- paste(gsub("d","$d_{",colnames(RDtable)[-1]),sep="")
+  # colnames(RDtable)[-1] <- paste(gsub("g","}g_{",colnames(RDtable)[-1]),"}$",sep="")
+  # colnames(RDtable)[1] <- c("$d_1$ (row) - $d_2$ (col)")
+
+  fileText <- paste(esti,ifelse(RDscale,"RD","RR"),sep="")
+  captionText2 <- ifelse(RDscale,"differences","ratios")
+  captionText3 <- ifelse(RDscale,"$-$","$/$")
+  if(esti=="IPAW")estimates <- "Stabilized inverse weighting"
+  if(esti=="IPAWtrunc")estimates <- "Stabilized, truncated inverse weighting"
+  if(esti=="crude")estimates <- "Crude"
+  model <- "MSM"
+  if(esti=="crude")model <- "model"
+  est <- "IPAW"
+  ##     browser()
+
+  caption <- paste(estimates,
+      " estimates of the (cumulative) RD progression risk ",
+      captionText2,", $d_1$",
+      captionText3,"$d_2$, (with ",gsub("g","",0),
+      " grace period(s) allowed) over ",
+      (t.period+1)/4," years (",t.period+1," periods). The risk contrasts are derived from a logistic ", model,
+      " for the discrete-time hazards fitted based on ", nobs,
+      " observations. Variance estimates are derived based on the influence curve of the estimator.",sep="")
+
+  # sink(file.path(res_outf_newdat, paste0(fileText,est,K,"Cm",0,"hICbased.tex")))
+  # latex(RDtable,file="",where="!htpb",colheads=colnames(RDtable),
+  #   caption = caption,
+  #   label= paste(fileText,est,K,"Cm",0,"hbased",sep=""),booktabs=TRUE,rowname=NULL,landscape=TRUE,n.rgroup=rep(2,3))
+  # sink()
+  return(list(RDtable = RDtable, caption = caption))
 }
 
 
