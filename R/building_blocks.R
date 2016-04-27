@@ -273,15 +273,15 @@ get_survNP <- function(data.wts, OData) {
 
   # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
   ht.crude <- data.wts[cumm.IPAW > 0, .(ht.KM = sum(eval(shifted.OUTCOME), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
-  setkeyv(ht.crude, cols = t)
+  setkeyv(ht.crude, cols = t.name)
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
   sum_Ywt <- data.wts[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Ywt, cols = t.name)
-  # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t.name)]; setkeyv(sum_Ywt, cols=t)
+  # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t.name)]; setkeyv(sum_Ywt, cols=t.name)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
   # (equivalent to summing cummulative weights cumm.IPAW by t)
   sum_Allwt <- data.wts[, .(sum_all_IPAW = sum(cumm.IPAW, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Allwt, cols = t.name)
-  # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t.name)]; setkeyv(sum_Allwt, cols=t)
+  # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t.name)]; setkeyv(sum_Allwt, cols=t.name)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
   # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
@@ -430,6 +430,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, t
   cutoffs <- c(0,0.5,1,10,20,30,40,50,100,150)
   IPAWdist <- makeSumFreqTable(table(wts.all.rules[["cumm.IPAW"]]),c(0,0.5,1,10,20,30,40,50,100,150),"Stabilized IPAW")
   # to cat print the result directly for markdown:
+  # set.caption("Distribution of the weights")
   # pander(IPAWdist)
   # browser()
 
@@ -447,5 +448,5 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax,use.weights = TRUE, t
   #   label= "NewIPAWdistNonITTm0",booktabs=TRUE,rowname=NULL,landscape=FALSE)
   # sink()
 
-  return(list(St = S2.IPAW, output.MSM=output.MSM, m.fit = m.fit_spdglm, IPAWdist = IPAWdist))
+  return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm, IPAWdist = IPAWdist, output.MSM=output.MSM))
 }

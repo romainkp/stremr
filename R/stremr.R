@@ -368,7 +368,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 # - Allow looping over regimens to return regimen-specific non-zero weight datasets or list of such dataset (data.tables) that can be then all stacked and used for one MSM
 # - Implement automatic function calling for gstar.TRT & gstar.MONITOR if its a function or a list of functions
 # - When node name is "NULL" (not specified), do not fit a model for it. create a dummy class which would always put mass 1 on the oberved o
-# - Need to implement $get.fits() method in SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression + coefficients)
+# - Need to implement $get.fits() method in SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression $show() + coefficients)
 #   The method needs to appropriately format the output based on several model predictions (for stratified, categorical or continuous outcome)
 # - Allow specification of counterfactual trt & monitor vaules / counterfactual probabilities of trt & monitor = 1. map automatically into rule follors/non-followers
 # - Consider not throwing an error when stratify.VAR list is unnamed for cases where VAR is univariate (only one variable name)

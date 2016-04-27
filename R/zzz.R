@@ -118,15 +118,19 @@ gvars$misfun <- testmisfun()
 
 # Allows stremr functions to use e.g., getOption("stremr.verbose") to get verbose printing status
 .onLoad <- function(libname, pkgname) {
-  op <- options()
-  op.stremr <- list(
-    stremr.verbose = gvars$verbose
-  )
   # reset all options to their defaults on load:
   stremr_options()
 
+  op <- options()
+  op.stremr <- list(
+    stremr.verbose = gvars$verbose,
+    stremr.file.path = tempdir(),
+    # stremr.file.name = 'stremr-report-%T-%N-%n'
+    stremr.file.name = 'stremr-report-'%+%Sys.Date()
+  )
+
   toset <- !(names(op.stremr) %in% names(op))
-  if(any(toset)) options(op.stremr[toset])
+  if (any(toset)) options(op.stremr[toset])
 
   invisible()
 }

@@ -1,0 +1,92 @@
+% Gergely Daróczi
+% Minimal example for `Pandoc.brew`
+
+# Introduction
+
+We have two meta-information above:
+
+  * author
+  * title
+
+A third field could be there too: date. For details, please check out [Pandoc's homepage](http://johnmacfarlane.net/pandoc/README.html#title-block) or just use `pandoc.title` function of this package.
+
+As you can see writing and formatting paragraphs cannot be easier :)
+
+But what about [R](http://www.r-project.org/)? Let us return pi: <%=pi%>
+
+# R objects
+
+`Pander.brew` would transform any returned R object to Pandoc's markdown in each code block.
+
+For example `mtcars`'s first 5 cases look like:
+
+<%=mtcars[1:5, ]%>
+
+As you can see some formatting was added to the returned table and was also split up as the original table would have been too wide to fit on the screen (any `pander`er still using a VT100 terminal?) or standard paper. If you do not like that split up, just set the according [`panderOption`](http://rapporter.github.com/pander/#pander-options)!
+
+We could try other R objects too, for example let us check `chisq.test` on some variables of `mtcars`:
+
+<%=chisq.test(mtcars$am, mtcars$gear)%>
+
+And we got a warning above!
+
+## Returning plot
+
+Plots are automatically grabbed between `brew` tags and some custom formatting applied (if `evalsOptions('graph.unify')` is set to `TRUE`):
+
+<%=
+if (require(lattice, quietly = TRUE)) {
+    histogram(mtcars$hp)
+}
+%>
+
+The above `lattice` looks (IMHO) pretty cool, but what about using `base` plot?
+
+<%=
+hist(mtcars$hp)
+%>
+
+This should be quite similar by my intention :)
+
+What about `ggplot2`?
+
+<%=
+if (require(ggplot2, quietly = TRUE)) {
+    ggplot(mtcars) + geom_histogram(aes(x = hp))
+}
+%>
+
+And adding a caption is easy with even some modified `panderOptions`:
+
+<%=
+temp <- panderOptions('graph.grid.color')
+panderOptions('graph.grid.color', 'red')
+set.caption('This is a caption, right?')
+histogram(mtcars$hp)
+panderOptions('graph.grid.color', temp)
+%>
+
+# Captions
+
+Just like with tables:
+
+<%=
+set.caption('Here goes the first two lines of USArrests')
+USArrests[1:2,]
+%>
+
+# Multiple results
+
+And the chunks can result in multiple R objects of course:
+
+<%=
+list(1:5)
+list(pi)
+list(mtcars$hp)
+%>
+
+# It happens
+
+<%=
+mean(unknown.R.object)
+%>

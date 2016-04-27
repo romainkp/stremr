@@ -24,9 +24,11 @@ Depends:
 Imports:
     assertthat,
     data.table,
+    ggplot2,
     methods,
     R6,
     Rcpp,
+    pander,
     speedglm,
     stats,
     stringr

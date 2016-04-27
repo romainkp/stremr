@@ -1,3 +1,4 @@
+require("magrittr")
 require("data.table")
 
 delta.shift.minus <- seq(-0.9, -0.1, by=0.1)
@@ -44,16 +45,16 @@ N.Pois.1 <- function(x,lambda=1){
   return(g.N)
 }
 
-Sim.and.Est.params <- list(
-  gcont       = list(name = "Continuous",         gInt.N = g.p(1),        Nprob.t0 = 1,                                  Nprob.tplus = 1,                                     Nt.form = "N.t ~ 1",                  delta.shift = NULL),
-  g05         = list(name = "Sporadic 0.5",       gInt.N = g.p(0.5),      Nprob.t0 = 0.5,                                Nprob.tplus = 0.5,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  g035        = list(name = "Sporadic 0.35",      gInt.N = g.p(0.35),     Nprob.t0 = 0.35,                               Nprob.tplus = 0.35,                                  Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  g02         = list(name = "Sporadic 0.2",       gInt.N = g.p(0.2),      Nprob.t0 = 0.2,                                Nprob.tplus = 0.2,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  g01         = list(name = "Sporadic 0.1",       gInt.N = g.p(0.1),      Nprob.t0 = 0.1,                                Nprob.tplus = 0.1,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  # gSpoYear    = list(name = "Sporadic yearly",    gInt.N = g.sporadic.4,  Nprob.t0 = 0,                                  Nprob.tplus = substitute(N.sporadic.4(lastNat1[t])), Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = delta.shifts),
-  # gSpoBiyear  = list(name = "Sporadic bi-yearly", gInt.N = g.sporadic.2,  Nprob.t0 = 0.25,                               Nprob.tplus = substitute(N.sporadic.2(lastNat1[t])), Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = 0.1),
-  gPois3      = list(name = "Poisson yearly",     gInt.N = g.Pois(3),     Nprob.t0 = substitute(N.Pois.3(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.3(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = delta.shifts, gradual.t.vec = 4),
-  gPois1      = list(name = "Poisson bi-yearly",  gInt.N = g.Pois(1),     Nprob.t0 = substitute(N.Pois.1(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.1(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = 0.1)
+SimParams <- list(
+  gcont       = list(name = "Continuous",         Nprob.t0 = 1,                                  Nprob.tplus = 1,                                     Nt.form = "N.t ~ 1",                  delta.shift = NULL),
+  g05         = list(name = "Sporadic 0.5",       Nprob.t0 = 0.5,                                Nprob.tplus = 0.5,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+  g035        = list(name = "Sporadic 0.35",      Nprob.t0 = 0.35,                               Nprob.tplus = 0.35,                                  Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+  g02         = list(name = "Sporadic 0.2",       Nprob.t0 = 0.2,                                Nprob.tplus = 0.2,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+  g01         = list(name = "Sporadic 0.1",       Nprob.t0 = 0.1,                                Nprob.tplus = 0.1,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+  # gSpoYear    = list(name = "Sporadic yearly",  Nprob.t0 = 0,                                  Nprob.tplus = substitute(N.sporadic.4(lastNat1[t])), Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = delta.shifts),
+  # gSpoBiyear  = list(name = "Sporadic bi-yearly",Nprob.t0 = 0.25,                               Nprob.tplus = substitute(N.sporadic.2(lastNat1[t])), Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = 0.1),
+  gPois3      = list(name = "Poisson yearly",     Nprob.t0 = substitute(N.Pois.3(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.3(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = delta.shifts, gradual.t.vec = 4),
+  gPois1      = list(name = "Poisson bi-yearly",  Nprob.t0 = substitute(N.Pois.1(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.1(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = 0.1)
   # Two interventions below are never used for generating obs. data, only as g^* for estimating \psi_0:
   # g0delta.shift.p = list(name = "Delta shift p",        gInt.N = g.delta.p,               Nprob.t0 = NULL, Nprob.tplus = NULL, Nt.form = "not used", NOT.USE.AS.g0 = TRUE),
   # g0gradual.t     = list(name = "Shift gradual t",      gInt.N = g.delta.p.byt,           Nprob.t0 = NULL, Nprob.tplus = NULL, Nt.form = "not used", NOT.USE.AS.g0 = TRUE),
@@ -159,11 +160,11 @@ define_indicators <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C"
 # -----------------------------------------------------------
 # SIMULATION PARAMS:
 # -----------------------------------------------------------
-Nsize <- 50000
+Nsize <- 10000
 # set to TRUE to only run scenarios dealing with bias for g.N w and w/out past N(t), no intervention on N(t)
 run_only_bias_noN <- FALSE
 NoIntNt <- FALSE
-SimParams <- Sim.and.Est.params
+# SimParams <- Sim.and.Est.params
 # override the scenario name to run for just one scenario:
 scen.names <- "g05"
 # scen.names <- c("g01_gcont", "g01_gcont_rndHighA1c", "g01_gcont_rndHighA1cNULL", "g01_gcont_Nstar")
@@ -249,6 +250,7 @@ St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Po
 OData$dat.sVar[]
 # res$OData[1:100, ]
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"]
+St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
 # [1] 0.1779744 # CLOSE ENOUGH TO WHAT IS REPORTED on page 11, FIGURE 4: psi.N=0.173 (POISSON YEARLY)
 
 wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
@@ -264,7 +266,9 @@ MSM.trunc <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.
 # crude MSM for hazard without any weights:
 MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = FALSE)
 
+make_report_rmd(OData, MSM = MSM.IPAW)
 
+make_report(OData, S.t = MSM.crude$St)
 
 # system.time(
 #   res <- stremr(data = O.dataDT_rules_Nstar, ID = "ID", t = "t",

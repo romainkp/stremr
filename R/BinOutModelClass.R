@@ -588,6 +588,17 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
       return(sampleA)
     },
 
+    get.fits = function(format_table = FALSE) {
+      coef_out <- private$m.fit$coef
+      if (format_table) {
+        coef_out <- data.frame(Coef = coef_out)
+        coef_out <- cbind(names(private$m.fit$coef), coef_out)
+        rownames(coef_out) <- NULL
+        colnames(coef_out) <- c("Terms", "Coefficients")
+      }
+      return(list(reg=list(regression = self$show(), coef = coef_out)))
+    },
+
     show = function() {self$bindat$show()}
     # ,
     # # return new R6 object that only contains a copy of the fits in self
