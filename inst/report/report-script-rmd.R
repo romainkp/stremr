@@ -5,7 +5,8 @@
 #' ---
 
 #+ setup, include=FALSE
-library("knitr")
+require("knitr")
+require("pander")
 opts_chunk$set(fig.path = 'figure/stremr-')
 
 

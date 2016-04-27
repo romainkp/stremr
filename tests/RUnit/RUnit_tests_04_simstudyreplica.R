@@ -1,5 +1,6 @@
 require("magrittr")
 require("data.table")
+require("stremr")
 
 delta.shift.minus <- seq(-0.9, -0.1, by=0.1)
 delta.shift.plus <- seq(0.1, 0.9, by=0.1)
@@ -266,9 +267,11 @@ MSM.trunc <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.
 # crude MSM for hazard without any weights:
 MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = FALSE)
 
-make_report_rmd(OData, MSM = MSM.IPAW)
+make_report_rmd(OData, MSM = MSM.IPAW, file.path = "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report")
 
-make_report(OData, S.t = MSM.crude$St)
+make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report")
+
+# make_report(OData, S.t = MSM.crude$St)
 
 # system.time(
 #   res <- stremr(data = O.dataDT_rules_Nstar, ID = "ID", t = "t",

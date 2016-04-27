@@ -36,7 +36,7 @@ openFileInOS <- function(f) {
 
 
 #' @export
-make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path')) {
+make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html", file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path')) {
   sVartypes <- gvars$sVartypes
 
   if (!missing(MSM)) {
@@ -68,12 +68,15 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, file.name = ge
   wd.bak   <- getwd()
   setwd(file.path)
 
-  format <- "html_document"
-  outfile <- file.name %+% "." %+% "html"
+  format_pandoc <- format %+% "_document"
+  outfile <- file.name %+% "." %+% format
 
   print("writing report to directory: " %+% getwd())
   library('rmarkdown')
-  rmarkdown::render(report.file, output_dir = getwd(), output_file = outfile, output_format = format)
+  rmarkdown::render(report.file, output_dir = getwd(), output_file = file.name%+%".html", output_format = "html_document", output_options = list(keep_md = TRUE))
+
+  if (!format %in% "html")
+    rmarkdown::render(report.file, output_dir = getwd(), output_file = outfile, output_format = format_pandoc, clean = FALSE)
 
   openFileInOS(outfile)
 
