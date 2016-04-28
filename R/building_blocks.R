@@ -227,10 +227,13 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   setkeyv(n.follow.rule.t, cols=nodes$tnode)
   OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]
   # equivalent: OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by = nodes$tnode)
-  OData$dat.sVar[cumm.IPAW < (10^-5), cum.stab.P := 0]
   setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
-  # remove all observation-times that got zero weight:
+
+  # Disabled: causes a bug (resuts in cumm.IPAW=0 when it shouldn't be)
+  # OData$dat.sVar[cumm.IPAW < (10^-5), cum.stab.P := 0]
+  # Disabled: remove all observation-times that got zero weight:
   # OData$dat.sVar[cumm.IPAW > 0, ]
+
   # multiply the weight by stabilization factor (numerator) (doesn't do anything, since it cancels):
   OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
 

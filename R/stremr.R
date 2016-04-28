@@ -590,7 +590,7 @@ stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
   OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]
   # equivalent: OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by = nodes$tnode)
 
-  OData$dat.sVar[cumm.IPAW < (10^-5), cum.stab.P := 0]
+  # OData$dat.sVar[cumm.IPAW < (10^-5), cum.stab.P := 0] # disabled
   setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
 
   # OData$dat.sVar[cumm.IPAW > 0, ]
