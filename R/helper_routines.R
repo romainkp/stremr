@@ -64,7 +64,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
     rownames(se.RDscale.Sdt.K) <- names(S.IPAW)
   }
   dtheta <- names(S.IPAW)
-  RDtable <- matrix(NA, nrow = factorial(length(dtheta)), ncol = length(dtheta)-1)
+  RDtable <- matrix(NA, nrow = (length(dtheta)-1)*2, ncol = length(dtheta)-1)
   # RDtable <- matrix(NA,nrow=2*3,ncol=3)
 
   ContrastScale <- ifelse(RDscale,"-","/")
