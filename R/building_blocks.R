@@ -222,7 +222,9 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
 
   # (MUCH FASTER) Version outside data.table, then merge back results:
   n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
+
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
+
   n.follow.rule.t[, c("N.risk", "stab.P"):=list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols=nodes$tnode)
   OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]

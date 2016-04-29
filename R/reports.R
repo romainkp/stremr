@@ -69,6 +69,8 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   fitted.coefs.gC <- OData$modelfit.gC$get.fits(format_table = TRUE)
   fitted.coefs.gA <- OData$modelfit.gA$get.fits(format_table = TRUE)
   fitted.coefs.gN <- OData$modelfit.gN$get.fits(format_table = TRUE)
+
+  # outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr)
   # -------------------------------------------------------------------------------------
   # **** NEED TO ADD RD tables ****
   # -------------------------------------------------------------------------------------
@@ -94,7 +96,14 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
 
   figure.dir <- file.path(getwd(), "figure/stremr-")
   # output_format = "html_document",
-  report.html <- tryCatch(rmarkdown::render(report.file, output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE, output_options = list(keep_md = TRUE)), error = function(e) e)
+  report.html <- tryCatch(rmarkdown::render(report.file,
+                          output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE,
+                          output_options = list(keep_md = TRUE, toc = TRUE, toc_float = TRUE,
+                                                number_sections = TRUE, fig_caption = TRUE,
+                                                # mathjax = "local", self_contained = FALSE)
+                                                md_extensions = "+escaped_line_breaks")
+                          ),
+                  error = function(e) e)
 
   if (inherits(report.html, 'error')) {
     options(opts.bak)
@@ -104,13 +113,18 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
 
   if (!format %in% "html"){
       if (format %in% "pdf") {
-        output_options <- list(keep_tex = TRUE)
+        output_options <- list(keep_tex = TRUE, toc = TRUE, number_sections = TRUE, fig_caption = TRUE,
+                               md_extensions = "+escaped_line_breaks")
         # output_options <- list(keep_tex = TRUE, pandoc = list(arg="+escaped_line_breaks"))
         # output_options <- list(keep_tex = TRUE, pandoc = list(arg="markdown+escaped_line_breaks"))
       } else {
         output_options <- NULL
       }
-    report.other <- tryCatch(rmarkdown::render(report.file, output_dir = getwd(), intermediates_dir = getwd(), output_file = outfile, output_format = format_pandoc, clean = TRUE, output_options = output_options), error = function(e) e)
+    report.other <- tryCatch(rmarkdown::render(report.file,
+                            output_dir = getwd(), intermediates_dir = getwd(), output_file = outfile,
+                            output_format = format_pandoc, clean = TRUE,
+                            output_options = output_options),
+                    error = function(e) e)
     if (inherits(report.other, 'error')) {
       options(opts.bak)
       setwd(wd.bak)

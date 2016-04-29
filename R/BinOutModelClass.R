@@ -191,9 +191,20 @@ BinDat <- R6Class(classname = "BinDat",
     },
 
     # printing regression:
-    show = function() {
-      "P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=",") %+% ")" %+% "; \\
-       Stratify: " %+% self$subset_expr
+    show = function(print_format = TRUE) {
+      if (print_format) {
+        return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% ";\\ Stratify: " %+% self$subset_expr)
+      } else {
+        return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr))
+        # n_per_row <- 5
+        # vec <- self$predvars
+        # vec <- c(paste0(vec[-length(vec)], ", "), vec[length(vec)])
+        # new_vec <- c(vec, rep("", length(vec) %/% n_per_row))
+        # vec_byrow <- matrix(new_vec, ncol = n_per_row, byrow = TRUE)
+        # new_pred_form <- paste0(as.vector(t(cbind(vec_byrow, c(rep(" \\", nrow(vec_byrow)-1), "")))), collapse="")
+        # "P(" %+% self$outvar %+% "|" %+% paste(new_pred_form, collapse="") %+% ")" %+% "; \\
+        #  Stratify: " %+% self$subset_expr
+      }
     },
 
     newdata = function(newdata, getoutvar = TRUE, ...) {
@@ -598,10 +609,9 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
         rownames(coef_out) <- NULL
         colnames(coef_out) <- c("Terms", "Coefficients")
       }
-      return(list(reg=list(regression = self$show(), nobs = nobs, coef = coef_out)))
+      return(list(c(self$show(print_format = FALSE), list(nobs = nobs, coef = coef_out))))
     },
-
-    show = function() {self$bindat$show()}
+    show = function(print_format = TRUE) {self$bindat$show(print_format)}
     # ,
     # # return new R6 object that only contains a copy of the fits in self
     # clone = function(deep = TRUE) {

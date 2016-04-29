@@ -227,7 +227,7 @@ RegressionClass <- R6Class("RegressionClass",
       }
       return(invisible(self))
     },
-    show = function() {
+    show = function(print_format = TRUE) {
       print(str(self$get.reg))
       return(invisible(self))
     },

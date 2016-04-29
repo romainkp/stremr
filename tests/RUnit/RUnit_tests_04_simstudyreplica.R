@@ -259,9 +259,7 @@ wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.
 wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 
-tjmin <- c(1:8,9,13)-1
-
-tjmax <- c(1:8,12,16)-1
+tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 
 # MSM for hazard with regular weights:
 MSM.IPAW <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = TRUE, est.name = "IPAW")
@@ -270,12 +268,12 @@ MSM.trunc <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.
 # crude MSM for hazard without any weights:
 MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = FALSE, est.name = "crude")
 
-OData$emptydat.sVar
-OData$dat.sVar
-save(list = c("OData", "MSM.IPAW", "MSM.trunc", "MSM.crude"), file = "MSM_results.RData")
 
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
-report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/data_analysis/Reports"
+# report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/data_analysis/Reports"
+# OData$emptydat.sVar
+# save(list = c("OData", "MSM.IPAW", "MSM.trunc", "MSM.crude"), file = "MSM_results.RData")
+
 # html doc:
 make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
 make_report_rmd(OData, MSM = MSM.trunc, file.path = report.path)

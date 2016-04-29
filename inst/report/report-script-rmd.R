@@ -2,7 +2,6 @@
 #' title: "stremr Analysis Report"
 #' author: "Insert Author"
 #' date: "`r Sys.Date()`"
-#' md_extensions: +escaped_line_breaks
 #' ---
 
 #+ setup, include=FALSE
@@ -11,7 +10,7 @@ require("pander")
 # opts_chunk$set(fig.path = 'figure/stremr-')
 opts_chunk$set(fig.path = figure.dir)
 
-#+ echo=FALSE
+#+ echo=FALSE, include=FALSE
 f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny) {
   ptsize <- 0.7
   counter <- 0
@@ -27,66 +26,73 @@ f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny) {
   }
   legend(12,0.96,legend=names(surv_res_est),col=c(1:length(names(surv_res_est))), cex=ptsize, pch=1)
 }
+f_create_model_caption <- function(reg.model) {
+  return(
+  "Model: " %+% reg.model$outvar %+% " ~ " %+% paste0(reg.model$predvars, collapse = " + ") %+% "; \\
+   Stratify: " %+% reg.model$stratify %+% "; \\
+   N: " %+% prettyNum(reg.model$nobs, big.mark = ",", scientific = FALSE)
+  )
+}
 
 #' # Model fits for propensity scores
-
-#' ### Model(s) for censoring variable(s):
+#'
+#' ## Model(s) for censoring variable(s):
 
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
+set.alignment('left', row.names = 'right')
 for (reg.model in fitted.coefs.gC) {
-  # print("Nobs: " %+% reg.model$nobs)
-  pander::set.caption("Regression: " %+% reg.model$regression %+% "; \\
-    N: " %+% prettyNum(reg.model$nobs,big.mark=",",scientific=FALSE))
-  pander::pander(reg.model$coef, justify = c('right', 'center'))
+  pander::set.caption(f_create_model_caption(reg.model))
+  pander::pander(reg.model$coef, justify = c('right', 'left'))
 }
 
-#' ### Model(s) for exposure variable(s):
+#' ## Model(s) for exposure variable(s):
 
 #+ echo=FALSE, results='asis'
 # pander::set.caption("Regression: " %+% fitted.coefs.gA$regression)
-# pander::pander(fitted.coefs.gA$coef, justify = c('right', 'center'))
 for (reg.model in fitted.coefs.gA) {
-  # print("Nobs: " %+% reg.model$nobs)
-  pander::set.caption("Regression: " %+% reg.model$regression %+% "; \\
-    N: " %+% prettyNum(reg.model$nobs,big.mark=",",scientific=FALSE))
-  pander::pander(reg.model$coef, justify = c('right', 'center'))
+  pander::set.caption(f_create_model_caption(reg.model))
+  pander::pander(reg.model$coef, justify = c('right', 'left'))
 }
 
-#' ### Model(s) for monitoring variable(s):
+#' ## Model(s) for monitoring variable(s):
 
 #+ echo=FALSE, results='asis'
 # pander::set.caption("Regression: " %+% fitted.coefs.gN$regression)
 # pander::pander(fitted.coefs.gN$coef, justify = c('right', 'center'))
 for (reg.model in fitted.coefs.gN) {
-  # print("Nobs: " %+% reg.model$nobs)
-  pander::set.caption("Regression: " %+% reg.model$regression %+% "; \\
-    N: " %+% prettyNum(reg.model$nobs,big.mark=",",scientific=FALSE))
-  pander::pander(reg.model$coef, justify = c('right', 'center'))
+  pander::set.caption(f_create_model_caption(reg.model))
+  pander::pander(reg.model$coef, justify = c('right', 'left'))
 }
 
 #+ include=FALSE
 panderOptions('knitr.auto.asis', TRUE)
 
+#'\pagebreak
+#'
 #' # Distribution of the weights
 
 #+ echo=FALSE
 pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
-pander::pander(MSM$IPAWdist, justify = c('right', rep("center",ncol(MSM$IPAWdist)-1)))
+pander::pander(MSM$IPAWdist, justify = c('right', rep("left",ncol(MSM$IPAWdist)-1)))
 
-
+#'\pagebreak
+#'
 #' # MSM fits
 
 #+ echo=FALSE
 pander::set.caption("Coefficients of MSM")
-pander::pander(MSM$output.MSM, justify = c('right', 'center'))
+pander::pander(MSM$output.MSM, justify = c('right', 'left'))
 
-
+#'\pagebreak
+#'
 #' # Survival estimates
 
 #+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "Survival Estimates.\\label{fig:survPlot}"
 f_plot_survest(Surv.byregimen)
 
+#'\pagebreak
+#'
 #' # RD tables
 
 #+ echo=FALSE
