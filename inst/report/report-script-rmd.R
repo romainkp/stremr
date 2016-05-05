@@ -36,6 +36,10 @@ f_create_model_caption <- function(reg.model) {
 
 #' # Model fits for propensity scores
 #'
+#' Number of unique IDs in the input data:  {{prettyNum(OData$nuniqueIDs, big.mark = ",", scientific = FALSE)}}
+#'
+#' Number of person-time observations in the input data:  {{prettyNum(OData$nobs, big.mark = ",", scientific = FALSE)}}
+#'
 #' ## Model(s) for censoring variable(s):
 
 #+ echo=FALSE, results='asis'

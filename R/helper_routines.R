@@ -94,8 +94,9 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
 
   RDtable[is.na(RDtable)] <- ""
   RDtable <- cbind("d1 (row) | d2 (col)"=rep(rev(dtheta)[-length(dtheta)],each=2) , RDtable)
-  RDtable[,1] <- paste(gsub("d","$d_{",RDtable[,1]),sep="")
-  RDtable[,1] <- paste(gsub("g","}g_{",RDtable[,1]),"}$",sep="")
+
+  # RDtable[,1] <- paste(gsub("d","$d_{",RDtable[,1]),sep="")
+  # RDtable[,1] <- paste(gsub("g","}g_{",RDtable[,1]),"}$",sep="")
 
   # RDtable[ c(0,1,2) * 2 + rep(2, each = 3), 1] <- ""
   # colnames(RDtable)[-1] <- paste(gsub("d","$d_{",colnames(RDtable)[-1]),sep="")
@@ -127,6 +128,8 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
   #   caption = caption,
   #   label= paste(fileText,est,K,"Cm",0,"hbased",sep=""),booktabs=TRUE,rowname=NULL,landscape=TRUE,n.rgroup=rep(2,3))
   # sink()
+  rownames(RDtable) <- NULL
+
   return(list(RDtable = RDtable, caption = caption))
 }
 
