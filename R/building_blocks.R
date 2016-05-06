@@ -4,7 +4,7 @@
 # ------------------------------------------------------------------
 #' @export
 get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
-                      noCENS.cat = 0L, verbose = FALSE) {
+                      noCENS.cat = 0L, SHIFTUPoutcome = TRUE, verbose = FALSE) {
   gvars$verbose <- TRUE
   gvars$noCENS.cat <- noCENS.cat
   # if (verbose) {
@@ -49,7 +49,12 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   # -------------------------------------------------------------------------------------------
   Ynode <- nodes$Ynode
   shifted.OUTCOME <- Ynode%+%".tplus1"
-  OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
+
+  if (SHIFTUPoutcome) {
+    OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
+  } else {
+    OData$dat.sVar[, (shifted.OUTCOME) := get(Ynode)]
+  }
   # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
 
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
@@ -242,6 +247,7 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # Drop all observations with NA outcome:
   Ynode <- nodes$Ynode
   shifted.OUTCOME <- Ynode%+%".tplus1"
+
   # OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
   # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
 
