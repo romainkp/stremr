@@ -26,6 +26,9 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
 
   xDT <- data.table(ID = IC.data[[ID]], t(D.O.beta))
   setkeyv(xDT, cols = "ID")
+  print("xDT: "); print(xDT)
+  browser()
+
   D.O.beta.alt <- as.matrix(xDT[, lapply(.SD, sum), by = ID])
   D.O.beta.alt <- D.O.beta.alt[,-1]
   D.O.beta.alt <- t(D.O.beta.alt)
