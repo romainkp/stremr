@@ -77,8 +77,6 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
 ##############################################################
 ### IC.O below is the first output of previous function:
 getSE.S <- function(nID, S.d.t.predict, h.d.t.predict, design.d.t, IC.O){
-  # browser()
-
   ### SE for S(t) for all t's
   h.by.dl.dt <- matrix(NA, nrow = length(S.d.t.predict), ncol = ncol(design.d.t))
   for(t.val in 1:length(S.d.t.predict)) {
