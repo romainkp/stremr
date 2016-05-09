@@ -11,6 +11,7 @@ if(FALSE) {
 
   setwd("..");
   install("stremr", build_vignettes = FALSE) # INSTALL W/ devtools:
+  library("stremr")
   # system("echo $PATH") # see the current path env var
   # system("R CMD Rd2pdf stremr")  # just create the pdf manual from help files
   # CHECK AND BUILD PACKAGE:

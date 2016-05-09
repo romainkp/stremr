@@ -1,6 +1,13 @@
 require("magrittr")
 require("data.table")
-require("stremr")
+# require("stremr")
+# options(width=140)
+# to install from github:
+# devtools::install_github('osofr/simcausal', build_vignettes = FALSE)
+# devtools::install_github('osofr/stremr', build_vignettes = FALSE)
+# require(stremr)
+# require("simcausal")
+`%+%` <- function(a, b) paste0(a, b)
 
 delta.shift.minus <- seq(-0.9, -0.1, by=0.1)
 delta.shift.plus <- seq(0.1, 0.9, by=0.1)
@@ -67,15 +74,6 @@ SimParams <- list(
 ###########################################################################################################
 # Run the simulation for one scenario on N(t) and perform estimation for two scenarios:
 ###########################################################################################################
-# options(width=140)
-# to install from github:
-# devtools::install_github('osofr/simcausal', build_vignettes = FALSE)
-# devtools::install_github('osofr/stremr', build_vignettes = FALSE)
-# require(stremr)
-require("simcausal")
-require("data.table")
-`%+%` <- function(a, b) paste0(a, b)
-
 # wdir <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_legacyRcode"
 # setwd(wdir)
 # source("666_fit_g.C.A.N_calcIPAW_simfcts.R") # estimation functions + DAG for the data generating distribution
@@ -268,62 +266,21 @@ MSM.trunc <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.
 # crude MSM for hazard without any weights:
 MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = FALSE, est.name = "crude")
 
-
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 # report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/data_analysis/Reports"
 # OData$emptydat.sVar
 # save(list = c("OData", "MSM.IPAW", "MSM.trunc", "MSM.crude"), file = "MSM_results.RData")
 
 # html doc:
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
-make_report_rmd(OData, MSM = MSM.trunc, file.path = report.path)
-make_report_rmd(OData, MSM = MSM.crude, file.path = report.path)
+# make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
+# make_report_rmd(OData, MSM = MSM.trunc, file.path = report.path)
+# make_report_rmd(OData, MSM = MSM.crude, file.path = report.path)
 
 # pdf doc:
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
-make_report_rmd(OData, MSM = MSM.trunc, format = "pdf", file.path = report.path)
-make_report_rmd(OData, MSM = MSM.crude, format = "pdf", file.path = report.path)
+# make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
+# make_report_rmd(OData, MSM = MSM.trunc, format = "pdf", file.path = report.path)
+# make_report_rmd(OData, MSM = MSM.crude, format = "pdf", file.path = report.path)
 # word doc:
-make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)
+# make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)
 
 # make_report(OData, S.t = MSM.crude$St)
-
-# system.time(
-#   res <- stremr(data = O.dataDTrules_Nstar, ID = "ID", t = "t",
-#                 covars = c("highA1c", "lastNat1"),
-#                 CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-#                 gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
-#                 gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
-#                 gform.MONITOR = gform.MONITOR,
-#                 # gstar.TRT = "dlow",
-#                 gstar.TRT = "dhigh",
-#                 gstar.MONITOR = "gstar1.N.Pois3.yearly"
-#                 # gstar.MONITOR = "gstar2.N.p05"
-#                 )
-#   )
-# # Benchmark for N=50K:
-# #  user  system elapsed
-# # 9.269   2.121  11.345
-# names(res)
-
-# # ------------------------------------------------------------------------------------------------------
-# # (IB) Simulate data with exacly the same variable ordering as in real data
-# # ------------------------------------------------------------------------------------------------------
-# DAGrm.realData <- set.DAG.realData()
-# DAGrm.realData <- set.DAG(DAGrm.realData)
-
-# # t1.wide <- system.time(O.data.w <- sim(DAG = DAGrm.realData, n = 10000, wide = TRUE))
-# # print(t1.wide)
-# #  user  system elapsed
-# # 3.339   0.102   3.445
-# # ncol(O.data.w)
-
-# t1.long <- system.time(O.data <- sim(DAG = DAGrm.realData, n = 10000, wide = FALSE))
-# print(t1.long)
-# # for 10K (with pre-alloc)
-# #  user  system elapsed
-# # 6.723   1.206   8.705
-
-# O.data[,"StudyID"] <- O.data[,"ID"]
-# O.data <- O.data[,!colnames(O.data)%in%c("ID","t")]
-# head(O.data[,1:5])

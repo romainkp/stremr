@@ -108,11 +108,3 @@ pander::pander(RD.IPAW_tperiod1$RDtable)
 #+ echo=FALSE
 pander::set.caption(RD.IPAW_tperiod2$caption)
 pander::pander(RD.IPAW_tperiod2$RDtable)
-
-#+ echo=FALSE
-pander::set.caption(RR.IPAW_tperiod1$caption)
-pander::pander(RR.IPAW_tperiod1$RDtable)
-
-#+ echo=FALSE
-pander::set.caption(RR.IPAW_tperiod2$caption)
-pander::pander(RR.IPAW_tperiod2$RDtable)

@@ -23,6 +23,7 @@ makeFreqTable <- function(rawFreq){
   return(fineFreq)
 }
 
+
 # ----------------------------------------------------------------
 #### SUMMARY STATISTICS
 # ----------------------------------------------------------------
@@ -55,6 +56,20 @@ makeSumFreqTable <- function(x.freq,cutoffs,varName){
   x.freq.sum[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
   return(x.freq.sum)
 }
+
+# library(Hmisc)
+# sink(file.path(res_outf_newdat, "NewIPAWdistNonITTm0.tex"))
+# latex(IPAWdist,file="",where="!htpb",colheads=colnames(IPAWdist),
+#   caption = paste("Distribution of the stabilized IPA weights for all rule-person-time observations (",
+#             length(wts.all.rules[,est.name]),
+#             ") consistent with following any of the 4 non-ITT rules with no grace period.",
+#             "Note that if a patient follows more than one rule at a given time point,",
+#             "her corresponding person-time observation is replicated as many times as the",
+#             "number of rules followed and each replicate is assigned a separate stabilized IPA weight.",
+#             "The 99\\% and 99.9\\% quantiles of the distribution of these weights are ",
+#             round(quant99,2)," and ",round(quant999,2)," respectively.",sep=""),
+#   label= "NewIPAWdistNonITTm0",booktabs=TRUE,rowname=NULL,landscape=FALSE)
+# sink()
 
 
 make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.period, se.RDscale.Sdt.K){
@@ -252,7 +267,6 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #'  each rule indexed by a value form \code{theta}. In addition, the returned data.table contains \code{ID} and \code{t} columns for easy merging
 #'  with the original data.
 #' @export
-#'
 follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL, return.allcolumns = FALSE){
   # require('data.table')
   ID.expression <- as.name(ID)
