@@ -103,10 +103,13 @@ f_plot_survest(Surv.byregimen)
 #'
 #' # RD tables
 
-#+ echo=FALSE
-pander::set.caption(RD.IPAW_tperiod1$caption)
-pander::pander(RD.IPAW_tperiod1$RDtable)
+#+ echo=FALSE, results='asis'
+panderOptions('knitr.auto.asis', FALSE)
+for (RDs.IPAW.t.table in RDs.IPAW.tperiods) {
+  pander::set.caption(RDs.IPAW.t.table$caption)
+  pander::pander(RDs.IPAW.t.table$RDtable)
+}
 
-#+ echo=FALSE
-pander::set.caption(RD.IPAW_tperiod2$caption)
-pander::pander(RD.IPAW_tperiod2$RDtable)
+#+ include=FALSE
+panderOptions('knitr.auto.asis', TRUE)
+

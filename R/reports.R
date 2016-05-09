@@ -65,19 +65,19 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   # -------------------------------------------------------------------------------------
   # MODEL FITS:
   # -------------------------------------------------------------------------------------
-  # NEED TO ADD *****NUMBER OF OBSERVATIONS USED**** for each model within each:
   fitted.coefs.gC <- OData$modelfit.gC$get.fits(format_table = TRUE)
   fitted.coefs.gA <- OData$modelfit.gA$get.fits(format_table = TRUE)
   fitted.coefs.gN <- OData$modelfit.gN$get.fits(format_table = TRUE)
 
   # outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr)
   # -------------------------------------------------------------------------------------
-  # **** NEED TO ADD RD tables ****
+  # **** ADD RD tables ****
   # -------------------------------------------------------------------------------------
-  RD.IPAW_tperiod1 <- MSM.IPAW$RD.IPAW_tperiod1
-  RD.IPAW_tperiod2 <- MSM.IPAW$RD.IPAW_tperiod2
-  RR.IPAW_tperiod1 <- MSM.IPAW$RR.IPAW_tperiod1
-  RR.IPAW_tperiod2 <- MSM.IPAW$RR.IPAW_tperiod2
+  RDs.IPAW.tperiods <- MSM.IPAW$RDs.IPAW.tperiods
+  # RD.IPAW_tperiod1 <- MSM.IPAW$RD.IPAW_tperiod1
+  # RD.IPAW_tperiod2 <- MSM.IPAW$RD.IPAW_tperiod2
+  # RR.IPAW_tperiod1 <- MSM.IPAW$RR.IPAW_tperiod1
+  # RR.IPAW_tperiod2 <- MSM.IPAW$RR.IPAW_tperiod2
 
   ## path issue on Windows
   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)

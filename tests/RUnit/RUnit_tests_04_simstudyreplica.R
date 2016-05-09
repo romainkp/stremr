@@ -263,18 +263,18 @@ tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 MSM.IPAW <- get_survMSM(wts.all.list, OData,
                         tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, est.name = "IPAW",
-                        t.periods.RDs = c(13, 16))
+                        t.periods.RDs = c(12, 15))
 
 # MSM for hazard with truncated weights:
 MSM.trunc <- get_survMSM(wts.all.list, OData,
                         tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, trunc.weights = 20, est.name = "IPAWtrunc",
-                        t.periods.RDs = c(13, 16))
+                        t.periods.RDs = c(12, 15))
 
 # crude MSM for hazard without any weights:
 MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax,
                         use.weights = FALSE, est.name = "crude",
-                        t.periods.RDs = c(13, 16))
+                        t.periods.RDs = c(12, 15))
 
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 # report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/data_analysis/Reports"
@@ -282,9 +282,9 @@ report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_r
 # save(list = c("OData", "MSM.IPAW", "MSM.trunc", "MSM.crude"), file = "MSM_results.RData")
 
 # html doc:
-# make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
-# make_report_rmd(OData, MSM = MSM.trunc, file.path = report.path)
-# make_report_rmd(OData, MSM = MSM.crude, file.path = report.path)
+make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
+make_report_rmd(OData, MSM = MSM.trunc, file.path = report.path)
+make_report_rmd(OData, MSM = MSM.crude, file.path = report.path)
 
 # pdf doc:
 # make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
