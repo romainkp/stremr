@@ -375,7 +375,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   for( dummy.j in rules.TRT ){
     print("dummy.j: " %+% dummy.j)
     wts.all.rules[, (dummy.j) := as.integer(rule.name.TRT %in% dummy.j)]
-    all.d.dummies <- c(all.d.dummies,dummy.j)
+    all.d.dummies <- c(all.d.dummies, dummy.j)
   }
   print("all.d.dummies: "); print(all.d.dummies)
 
@@ -396,6 +396,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
       wts.all.rules[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
     }
   }
+
+  setkeyv(wts.all.rules, cols = c(nodes$IDnode, nodes$tnode))
 
   all_dummies <-  paste(sapply(all.d.dummies, function(x) {
                         return(paste(paste(paste(all.t.dummies, x, sep="_"), sep="")))
