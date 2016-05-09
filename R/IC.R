@@ -32,9 +32,10 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
 
 
   #***BOTTLENECK***: consider replacing with data.table or something else
-  system.time(
-    D.O.beta <- apply(D.O.beta, 1, function(x,y) { return(tapply(x, y, sum)) }, y = as.factor(IC.data[,ID]))
+  t.eval <- system.time(
+    D.O.beta <- apply(D.O.beta, 1, function(x,y) { return(tapply(x, y, sum)) }, y = as.factor(IC.data[[ID]]))
   )
+  print("t.eval: "); print(t.eval)
   # for 10K:
   #  user  system elapsed
   # 0.518   0.050   0.583
