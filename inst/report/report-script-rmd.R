@@ -9,6 +9,8 @@ require("knitr")
 require("pander")
 # opts_chunk$set(fig.path = 'figure/stremr-')
 opts_chunk$set(fig.path = figure.dir)
+panderOptions("table.split.table", Inf)
+
 
 #+ echo=FALSE, include=FALSE
 f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny) {

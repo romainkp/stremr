@@ -260,11 +260,21 @@ wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 
 # MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = TRUE, est.name = "IPAW")
+MSM.IPAW <- get_survMSM(wts.all.list, OData,
+                        tjmin = tjmin, tjmax = tjmax,
+                        use.weights = TRUE, est.name = "IPAW",
+                        t.periods.RDs = c(13, 16))
+
 # MSM for hazard with truncated weights:
-MSM.trunc <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = TRUE, trunc.weights = 20, est.name = "IPAWtrunc")
+MSM.trunc <- get_survMSM(wts.all.list, OData,
+                        tjmin = tjmin, tjmax = tjmax,
+                        use.weights = TRUE, trunc.weights = 20, est.name = "IPAWtrunc",
+                        t.periods.RDs = c(13, 16))
+
 # crude MSM for hazard without any weights:
-MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax, use.weights = FALSE, est.name = "crude")
+MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax,
+                        use.weights = FALSE, est.name = "crude",
+                        t.periods.RDs = c(13, 16))
 
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 # report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/data_analysis/Reports"

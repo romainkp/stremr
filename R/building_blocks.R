@@ -340,7 +340,7 @@ logispredict = function(m.fit, X_mat) {
 ## * (DONE) Add truncated weights
 ##############################################################
 #' @export
-get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf, est.name = "IPAW") {
+get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf, est.name = "IPAW", t.periods.RDs = c(13, 16)) {
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
   t.name <- nodes$tnode
@@ -459,7 +459,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     design.t[t.indx, col.idx] <- 1
   }
 
-  message("...evaluating survival based on MSM hazard fit...")
+  message("...evaluating survival & SEs based on MSM hazard fit and the estimated IC...")
   for(d.j in names(S2.IPAW)) {
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
@@ -512,13 +512,17 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     return(se.RDscale.Sdt.K)
   }
 
-  t.period.val <- 12
-  se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
-  RD.IPAW_tperiod1 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
+  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
+  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
+  for (t.period.val.idx in seq(t.periods.RDs)) {
+    # t.period.val <- 12;   # t.period.val <- 15
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.periods.RDs[t.period.val.idx])
+    RDs.IPAW.tperiods[[t.period.val.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.periods.RDs[t.period.val.idx], nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
 
-  t.period.val <- 15
-  se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
-  RD.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
+  }
+
+  # se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
+  # RD.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
 
   ## RR:
   # RR.IPAW_tperiod1 <- make.table.m0(S2.IPAW, RDscale = FALSE, t.period = 12, nobs = nrow(wts.all.rules), esti = est.name)
@@ -535,6 +539,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm,
               output.MSM = output.MSM,
               IPAWdist = IPAWdist,
-              RD.IPAW_tperiod1 = RD.IPAW_tperiod1, RD.IPAW_tperiod2 = RD.IPAW_tperiod2
+              RDs.IPAW.tperiods = RDs.IPAW.tperiods
+              # RD.IPAW_tperiod1 = RD.IPAW_tperiod1, RD.IPAW_tperiod2 = RD.IPAW_tperiod2
               ))
 }
