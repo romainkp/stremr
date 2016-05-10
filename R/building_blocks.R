@@ -42,7 +42,7 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   # ---------------------------------------------------------------------------
   lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
   newVarnames <- lagnodes %+% ".tminus1"
-  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=1L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
+  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
 
   # -------------------------------------------------------------------------------------------
   # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
