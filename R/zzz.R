@@ -44,6 +44,7 @@ print_stremr_opts <- function() {
 #'  requires registering a parallel backend prior to running \code{stremr} function, e.g.,
 #'  using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
 #'  \code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".
+#' @param tortureglm Set to true to increase the maximum number of glm.fit & speedglm iterations from default to 500.
 #' @param nbins Set the default number of bins when discretizing a continous outcome variable under setting
 #'  \code{bin.method = "equal.len"}.
 #'  If left as \code{NA} the total number of equal intervals (bins) is determined by the nearest integer of
@@ -59,6 +60,7 @@ print_stremr_opts <- function() {
 #' @seealso \code{\link{print_stremr_opts}}
 #' @export
 stremr_options <- function(useglm = FALSE,
+                            tortureglm = FALSE,
                             parfit = FALSE,
                             bin.method = c("equal.len", "equal.mass", "dhist"),
                             nbins = NA,
@@ -79,6 +81,7 @@ stremr_options <- function(useglm = FALSE,
 
   opts <- list(
     useglm = useglm,
+    tortureglm =  tortureglm,
     bin.method = bin.method,
     parfit = parfit,
     nbins = nbins,
