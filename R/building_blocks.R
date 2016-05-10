@@ -240,10 +240,8 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # Disabled: remove all observation-times that got zero weight:
   # OData$dat.sVar[cumm.IPAW > 0, ]
 
-
   # multiply the weight by stabilization factor (numerator) (doesn't do anything, since it cancels):
-  # OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
-
+  OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
 
   # Drop all observations with NA outcome:
   Ynode <- nodes$Ynode
