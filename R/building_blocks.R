@@ -227,7 +227,6 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
 
   # (MUCH FASTER) Version outside data.table, then merge back results:
   n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
-
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
 
   n.follow.rule.t[, c("N.risk", "stab.P"):=list(NULL, NULL)]
@@ -241,8 +240,10 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # Disabled: remove all observation-times that got zero weight:
   # OData$dat.sVar[cumm.IPAW > 0, ]
 
+
   # multiply the weight by stabilization factor (numerator) (doesn't do anything, since it cancels):
-  OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
+  # OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
+
 
   # Drop all observations with NA outcome:
   Ynode <- nodes$Ynode
