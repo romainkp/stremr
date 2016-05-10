@@ -73,11 +73,11 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   # -------------------------------------------------------------------------------------
   # **** ADD RD tables ****
   # -------------------------------------------------------------------------------------
-  RDs.IPAW.tperiods <- MSM.IPAW$RDs.IPAW.tperiods
-  # RD.IPAW_tperiod1 <- MSM.IPAW$RD.IPAW_tperiod1
-  # RD.IPAW_tperiod2 <- MSM.IPAW$RD.IPAW_tperiod2
-  # RR.IPAW_tperiod1 <- MSM.IPAW$RR.IPAW_tperiod1
-  # RR.IPAW_tperiod2 <- MSM.IPAW$RR.IPAW_tperiod2
+  RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
+  # RD.IPAW_tperiod1 <- MSM$RD.IPAW_tperiod1
+  # RD.IPAW_tperiod2 <- MSM$RD.IPAW_tperiod2
+  # RR.IPAW_tperiod1 <- MSM$RR.IPAW_tperiod1
+  # RR.IPAW_tperiod2 <- MSM$RR.IPAW_tperiod2
 
   ## path issue on Windows
   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
