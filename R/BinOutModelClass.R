@@ -13,8 +13,8 @@ logisfit.glmS3 <- function(datsum_obj) {
   if (nrow(Xmat) == 0L) {
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
-    ctrl <- glm.control(trace = FALSE)
-    # ctrl <- glm.control(trace = FALSE, maxit = 1000)
+    # ctrl <- glm.control(trace = FALSE)
+    ctrl <- glm.control(trace = FALSE, maxit = 500)
     SuppressGivenWarnings({
       m.fit <- stats::glm.fit(x = Xmat, y = Y_vals, family = binomial() , control = ctrl)
     }, GetWarningsToSuppress())
