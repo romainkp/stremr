@@ -468,6 +468,9 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
       hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit_spdglm$coef[rev.term]))
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit_spdglm$coef[rev.term])))
     }
+
+    S2.IPAW[[d.j]] <- cumprod(S2.IPAW[[d.j]])
+
     d.idx <- which(names(S2.IPAW) %in% d.j)
     set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
     design.t.d[[d.j]][,set_cols] <- design.t
@@ -477,10 +480,14 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     # h.d.t.predict - MSM hazard estimates for one regimen
     # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
     # IC.O - observation-sepcific IC estimates for MSM coefs
-    IC.Var.S.d[[d.j]] <- getSE.S(nID = nID, S.d.t.predict = S2.IPAW[[d.j]], h.d.t.predict = hazard.IPAW[[d.j]], design.d.t = design.t.d[[d.j]], IC.O = beta.IC.O.SEs[["IC.O"]])
+    IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
+                                 S.d.t.predict = S2.IPAW[[d.j]],
+                                 h.d.t.predict = hazard.IPAW[[d.j]],
+                                 design.d.t = design.t.d[[d.j]],
+                                 IC.O = beta.IC.O.SEs[["IC.O"]])
   }
-
-  S2.IPAW <- lapply(S2.IPAW, cumprod)
+  # was sending S2.IPAW for evaluating SE on survival above prior to doing cumprod on it!!!!
+  # S2.IPAW <- lapply(S2.IPAW, cumprod)
 
   output.MSM <- round(m.fit_spdglm$coef,2)
   output.MSM <- cbind("Terms" = names(m.fit_spdglm$coef), output.MSM)
@@ -518,11 +525,10 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   for (t.period.val.idx in seq(t.periods.RDs)) {
     # t.period.val <- 12;   # t.period.val <- 15
     t.period.val <- t.periods.RDs[t.period.val.idx]
-    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val-1)
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val-2)
     RDs.IPAW.tperiods[[t.period.val.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
 
-browser()
 
   # se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
   # RD.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
