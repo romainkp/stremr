@@ -525,7 +525,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   for (t.period.val.idx in seq(t.periods.RDs)) {
     # t.period.val <- 12;   # t.period.val <- 15
     t.period.val <- t.periods.RDs[t.period.val.idx]
-    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val-2)
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
     RDs.IPAW.tperiods[[t.period.val.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
 
