@@ -522,6 +522,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     RDs.IPAW.tperiods[[t.period.val.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
 
+browser()
+
   # se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
   # RD.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
 

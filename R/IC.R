@@ -23,23 +23,24 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   #OS: multiply each column of t(MSMdesign) by sweep.tmp:
   D.O.beta <- sweep(t(MSMdesign), 2, sweep.tmp, "*")
 
-  xDT <- data.table(ID = IC.data[[ID]], t(D.O.beta))
-  setkeyv(xDT, cols = "ID")
-  D.O.beta.alt <- as.matrix(xDT[, lapply(.SD, sum), by = ID][, ID := NULL])
-  D.O.beta.alt <- t(D.O.beta.alt)
+  # new approach:
+  # xDT <- data.table(ID = IC.data[[ID]], t(D.O.beta))
+  # setkeyv(xDT, cols = "ID")
+  # D.O.beta.alt <- as.matrix(xDT[, lapply(.SD, sum), by = ID][, ID := NULL])
+  # D.O.beta.alt <- t(D.O.beta.alt)
 
   # old approach:
-  # t.eval <- system.time(
-  #   D.O.beta <- apply(D.O.beta, 1, function(x, y) {
-  #     return(tapply(x, y, sum))
-  #     # browser()
-  #     # res1 <- tapply(x, y, sum)
-  #     # res2 <- IC.data[,sum(x), by = ID][["V1"]]
-  #     # res1[1]
-  #     # res2[2]
-  #   }, y = as.factor(IC.data[[ID]]))
-  # )
-  # D.O.beta <- t(D.O.beta)
+  t.eval <- system.time(
+    D.O.beta <- apply(D.O.beta, 1, function(x, y) {
+      return(tapply(x, y, sum))
+      # browser()
+      # res1 <- tapply(x, y, sum)
+      # res2 <- IC.data[,sum(x), by = ID][["V1"]]
+      # res1[1]
+      # res2[2]
+    }, y = as.factor(IC.data[[ID]]))
+  )
+  D.O.beta.alt <- t(D.O.beta)
 
   # head(D.O.beta)
   # dim(D.O.beta)
