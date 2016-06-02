@@ -8,7 +8,8 @@ stremr(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C",
   TRT = "A", MONITOR = "N", OUTCOME = "Y", gform.CENS, gform.TRT,
   gform.MONITOR, stratify.CENS = NULL, stratify.TRT = NULL,
   stratify.MONITOR = NULL, gstar.TRT = NULL, gstar.MONITOR = NULL,
-  noCENS.cat = 0L, verbose = FALSE, optPars = list())
+  noCENS.cat = 0L, verbose = getOption("stremr.verbose"),
+  optPars = list())
 }
 \arguments{
 \item{data}{Input data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
