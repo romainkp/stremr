@@ -394,7 +394,7 @@ stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
                               gform.CENS, gform.TRT, gform.MONITOR,
                               stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL,
                               gstar.TRT = NULL, gstar.MONITOR = NULL, noCENS.cat = 0L,
-                              verbose = FALSE, optPars = list()) {
+                              verbose = getOption("stremr.verbose"), optPars = list()) {
 
   # ------------------------------------------------------------------
   # - BLOCK 1: Process inputs and define OData R6 object
