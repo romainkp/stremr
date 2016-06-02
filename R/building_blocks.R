@@ -4,7 +4,7 @@
 # ------------------------------------------------------------------
 #' @export
 get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
-                      noCENS.cat = 0L, SHIFTUPoutcome = TRUE, verbose =  = getOption("stremr.verbose")) {
+                      noCENS.cat = 0L, SHIFTUPoutcome = TRUE, verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
   gvars$noCENS.cat <- noCENS.cat
@@ -73,7 +73,7 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
 #' @export
 get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
                     stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL,
-                    verbose =  = getOption("stremr.verbose")) {
+                    verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -320,7 +320,7 @@ logispredict = function(m.fit, X_mat) {
 # ---------------------------------------------------------------------------------------
 #' @export
 get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
-                        est.name = "IPAW", t.periods.RDs, verbose =  = getOption("stremr.verbose")) {
+                        est.name = "IPAW", t.periods.RDs, verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
