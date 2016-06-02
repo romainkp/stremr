@@ -328,12 +328,6 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   Ynode <- nodes$Ynode
   shifted.OUTCOME <- Ynode%+%".tplus1"
 
-  # all observed periods (t's)
-  mint <- min(wts.all.rules[[t.name]])
-  maxt <- max(wts.all.rules[[t.name]])
-  periods <- mint:maxt
-  periods_idx <- seq_along(periods)
-
   if (verbose) {
     print("periods"); print(periods)
   }
@@ -341,6 +335,11 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   # 2a. Stack the weighted data sets:
   wts.all.rules <- rbindlist(data.wts.list)
   rules.TRT <- sort(unique(wts.all.rules[["rule.name.TRT"]]))
+  # all observed periods (t's)
+  mint <- min(wts.all.rules[[t.name]])
+  maxt <- max(wts.all.rules[[t.name]])
+  periods <- mint:maxt
+  periods_idx <- seq_along(periods)
 
   if (verbose) print("performing estimation for rules: " %+% paste(rules.TRT, collapse=","))
 
