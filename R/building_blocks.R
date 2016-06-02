@@ -321,6 +321,7 @@ logispredict = function(m.fit, X_mat) {
 #' @export
 get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
                         est.name = "IPAW", t.periods.RDs, verbose = getOption("stremr.verbose")) {
+
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
@@ -328,18 +329,9 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   Ynode <- nodes$Ynode
   shifted.OUTCOME <- Ynode%+%".tplus1"
 
-  if (verbose) {
-    print("periods"); print(periods)
-  }
-
   # 2a. Stack the weighted data sets:
   wts.all.rules <- rbindlist(data.wts.list)
   rules.TRT <- sort(unique(wts.all.rules[["rule.name.TRT"]]))
-  # all observed periods (t's)
-  mint <- min(wts.all.rules[[t.name]])
-  maxt <- max(wts.all.rules[[t.name]])
-  periods <- mint:maxt
-  periods_idx <- seq_along(periods)
 
   if (verbose) print("performing estimation for rules: " %+% paste(rules.TRT, collapse=","))
 
@@ -353,6 +345,16 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   if (use.weights == FALSE) {
     wts.all.rules[cumm.IPAW > 0, cumm.IPAW := 1L]
   }
+
+  # 2.e. define all observed sequence of periods (t's)
+  mint <- min(wts.all.rules[[t.name]])
+  maxt <- max(wts.all.rules[[t.name]])
+  periods <- mint:maxt
+  periods_idx <- seq_along(periods)
+  if (verbose) {
+    print("periods"); print(periods)
+  }
+
   # 3. Create the dummies I(d == gstar.TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
   for( dummy.j in rules.TRT ){
@@ -369,7 +371,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   # 5. Create interaction dummies I(t in interval.j & d == gstar.TRT)
   for (d.dummy in all.d.dummies) {
     for (t.dummy in all.t.dummies) {
-      print(t.dummy %+% "_" %+% d.dummy)
+      if (verbose) print(t.dummy %+% "_" %+% d.dummy)
       wts.all.rules[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
     }
   }
@@ -474,7 +476,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
   for (t.idx in seq(t.periods.RDs)) {
     # t.period.val <- t.periods.RDs[t.period.val.idx]
-    t.period.val.idx <- periods_idx[periods %in% t.periods.RDs[t.period.val.idx]]
+    t.period.val.idx <- periods_idx[periods %in% t.periods.RDs[t.idx]]
     se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx)
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val.idx, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
