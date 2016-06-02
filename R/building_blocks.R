@@ -4,13 +4,14 @@
 # ------------------------------------------------------------------
 #' @export
 get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
-                      noCENS.cat = 0L, SHIFTUPoutcome = TRUE, verbose = FALSE) {
-  gvars$verbose <- TRUE
+                      noCENS.cat = 0L, SHIFTUPoutcome = TRUE, verbose = options("stremr.verbose")) {
+
+  gvars$verbose <- verbose
   gvars$noCENS.cat <- noCENS.cat
-  # if (verbose) {
+  if (verbose) {
     message("Running with the following setting: ");
     str(gvars$opts)
-  # }
+  }
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
     covars <- setdiff(colnames(data), c(ID, t.name, CENS, TRT, MONITOR, OUTCOME))
   }
@@ -71,7 +72,10 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
 # ------------------------------------------------------------------
 #' @export
 get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
-                    stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL) {
+                    stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL,
+                    verbose = options("stremr.verbose")) {
+
+  gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
   # ------------------------------------------------------------------------------------------------
@@ -157,7 +161,6 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   # newdat <- OData$dat.sVar[, list("g0.A" = g0.A, "g0.C" = g0.C, "g0.N" = g0.N, "g0.CAN" = g0.A*g0.C*g0.N)]
 
   return(OData)
-  # return(list(IPW_estimates = data.frame(St_ht_IPAW), dataDT = OData$dat.sVar, modelfits.g0.R6 = modelfits.g0, OData.R6 = OData))
 }
 
 # ---------------------------------------------------------------------------------------
@@ -314,35 +317,33 @@ logispredict = function(m.fit, X_mat) {
 # Alternative for MSM, takes a list of data sets with weights and MSMregform
 # This block runs glm.fit got obtain MSM estimates (weighted regression) that uses the outcomes from many regimens, with dummy indicators for each input regime
 # Might choose between two types of MSMs (sat vs. parametric) with S3 dispatch or by missing arg
-
-# 1. Obtain weighted data sets by rule. Each dataset must have an column identifying the rule:
-  # wts.St.d7 <- get_weights(OData, gstar.TRT = "new.d7", gstar.MONITOR = "g.star.N")
-  # wts.St.d7.5 <- get_weights(OData, gstar.TRT = "new.d7.5")
-  # wts.St.d8 <- get_weights(OData, gstar.TRT = "new.d8")
-  # wts.St.d8.5 <- get_weights(OData, gstar.TRT = "new.d8.5")
-  # data.wts.list <- list(wts.St.d7, wts.St.d7.5, wts.St.d8, wts.St.d8.5)
-
-# 2. Pass the indicators of time-points to use:
-# tjmin <- c(1:8,9,13,17,25)-1
-# tjmax <- c(1:8,12,16,24,35)-1
 # ---------------------------------------------------------------------------------------
-##############################################################
-## TO DO:
-## * Generate the summary statistics for the weights
-## * (DONE) Add truncated weights
-##############################################################
 #' @export
-get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf, est.name = "IPAW", t.periods.RDs = c(13, 16)) {
+get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
+                        est.name = "IPAW", t.periods.RDs, verbose = options("stremr.verbose")) {
+  gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
   shifted.OUTCOME <- Ynode%+%".tplus1"
 
+  # all observed periods (t's)
+  mint <- min(wts.all.rules[[t.name]])
+  maxt <- max(wts.all.rules[[t.name]])
+  periods <- mint:maxt
+  periods_idx <- seq_along(periods)
+
+  if (verbose) {
+    print("periods"); print(periods)
+  }
+
   # 2a. Stack the weighted data sets:
   wts.all.rules <- rbindlist(data.wts.list)
   rules.TRT <- sort(unique(wts.all.rules[["rule.name.TRT"]]))
-  print("performing estimation for rules: " %+% paste(rules.TRT, collapse=","))
+
+  if (verbose) print("performing estimation for rules: " %+% paste(rules.TRT, collapse=","))
+
   # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
   wts.all.rules <- wts.all.rules[!is.na(cumm.IPAW) & !is.na(eval(as.name(shifted.OUTCOME))) & (cumm.IPAW > 0), ]
   # 2c. If trunc.weights < Inf, do truncation of the weights
@@ -380,7 +381,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                         }))
 
   # 6. fit the hazard MSM
-  message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+  if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+
   Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
   m.fit_spdglm <- speedglm::speedglm.wfit(
                                    X = Xdesign.mat,
@@ -399,11 +401,6 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                             MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
 
   # 7. Compute the Survival curves under each d
-  mint <- min(wts.all.rules[[t.name]])
-  maxt <- max(wts.all.rules[[t.name]])
-  periods <- mint:maxt
-  print("periods"); print(periods)
-
   S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,maxt-mint+1)), length(rules.TRT))
   design.t.d <- rep(list(matrix(0L, ncol = ncol(Xdesign.mat), nrow = length(mint:maxt))), length(rules.TRT))
   IC.Var.S.d <- vector(mode = "list", length(rules.TRT))
@@ -420,7 +417,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     design.t[t.indx, col.idx] <- 1
   }
 
-  message("...evaluating survival & SEs based on MSM hazard fit and the estimated IC...")
+  if (verbose) message("...evaluating survival & SEs based on MSM hazard fit and the estimated IC...")
+
   for(d.j in names(S2.IPAW)) {
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
@@ -446,14 +444,11 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                                  design.d.t = design.t.d[[d.j]],
                                  IC.O = beta.IC.O.SEs[["IC.O"]])
   }
-  # was sending S2.IPAW for evaluating SE on survival above prior to doing cumprod on it!!!!
-  # S2.IPAW <- lapply(S2.IPAW, cumprod)
 
   output.MSM <- round(m.fit_spdglm$coef,2)
   output.MSM <- cbind("Terms" = names(m.fit_spdglm$coef), output.MSM)
   colnames(output.MSM) <- c("Terms",ifelse(trunc.weights == Inf && use.weights, "IPAW", ifelse(trunc.weights < Inf && use.weights, "truncated IPAW", "no weights")))
   rownames(output.MSM) <- NULL
-  # print("output.MSM: "); print(output.MSM)
 
   (quant99 <- quantile(wts.all.rules[["cumm.IPAW"]],p=0.99))
   (quant999 <- quantile(wts.all.rules[["cumm.IPAW"]],p=0.999))
@@ -461,20 +456,16 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   IPAWdist <- makeSumFreqTable(table(wts.all.rules[["cumm.IPAW"]]),c(0,0.5,1,10,20,30,40,50,100,150),"Stabilized IPAW")
 
   ## RD:
-  getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val) {
-    # if (missing(t.period.val)) {
-    # }
+  getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx) {
     se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
     colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
     rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
-
     for (d1.idx in seq_along(names(S2.IPAW))) {
       for (d2.idx in seq_along(names(S2.IPAW))) {
         #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
-        # test.RD.d7.minus.d7.5 <- getSE.RD.d1.minus.d2(nID = nID, IC.S.d1 = IC.Var.S.d[[names(S2.IPAW)[1]]][["IC.S"]], IC.S.d2 = IC.Var.S.d[[names(S2.IPAW)[2]]][["IC.S"]])
         se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
                                                                 IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
-                                                                IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val]
+                                                                IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
       }
     }
     return(se.RDscale.Sdt.K)
@@ -482,31 +473,13 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
 
   RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
   names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
-  for (t.period.val.idx in seq(t.periods.RDs)) {
-    t.period.val <- t.periods.RDs[t.period.val.idx]
-    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
-    RDs.IPAW.tperiods[[t.period.val.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
+  for (t.idx in seq(t.periods.RDs)) {
+    # t.period.val <- t.periods.RDs[t.period.val.idx]
+    t.period.val.idx <- periods_idx[periods %in% t.periods.RDs[t.period.val.idx]]
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx)
+    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val.idx, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
 
-  # se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val)
-  # RD.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
-
-  ## RR:
-  # RR.IPAW_tperiod1 <- make.table.m0(S2.IPAW, RDscale = FALSE, t.period = 12, nobs = nrow(wts.all.rules), esti = est.name)
-  # RR.IPAW_tperiod2 <- make.table.m0(S2.IPAW, RDscale = FALSE, t.period = 15, nobs = nrow(wts.all.rules), esti = est.name)
-  # (RD.IPAWtrunc13 <- make.table.m0(S2.IPAWtrunc,RDscale=TRUE,t.period=12,se.RD.Sdt13.IPAWtrunc,nobs = ,esti="IPAWtrunc"))
-  # (RD.IPAWtrunc16 <- make.table.m0(S2.IPAWtrunc,RDscale=TRUE,t.period=15,se.RD.Sdt16.IPAWtrunc,nobs = ,esti="IPAWtrunc"))
-  # (RD.13 <- make.table.m0(S2,RDscale=TRUE,t.period=12,se.RD.Sdt13,nobs = ,esti="crude"))
-  # (RD.16 <- make.table.m0(S2,RDscale=TRUE,t.period=15,se.RD.Sdt16,nobs = ,esti="crude"))
-  # (RR.IPAWtrunc13 <- make.table.m0(S2.IPAWtrunc, RDscale=FALSE, t.period=12, se.RR.Sdt13.IPAWtrunc, nobs = , esti="IPAWtrunc"))
-  # (RR.IPAWtrunc16 <- make.table.m0(S2.IPAWtrunc, RDscale=FALSE, t.period=15, se.RR.Sdt16.IPAWtrunc, nobs = , esti="IPAWtrunc"))
-  # (RR.13 <- make.table.m0(S2, RDscale=FALSE, t.period=12, se.RR.Sdt13, nobs = , esti="crude"))
-  # (RR.16 <- make.table.m0(S2, RDscale=FALSE, t.period=15, se.RR.Sdt16, nobs = , esti="crude"))
-
-  return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm,
-              output.MSM = output.MSM,
-              IPAWdist = IPAWdist,
-              RDs.IPAW.tperiods = RDs.IPAW.tperiods
-              # RD.IPAW_tperiod1 = RD.IPAW_tperiod1, RD.IPAW_tperiod2 = RD.IPAW_tperiod2
-              ))
+  return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm, output.MSM = output.MSM,
+              IPAWdist = IPAWdist, RDs.IPAW.tperiods = RDs.IPAW.tperiods))
 }

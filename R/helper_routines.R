@@ -88,7 +88,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
   ## Compare mean bootstrap to point estimates - should be similar
   PYK1.IPAW <- allRDtable <- vector("list",length(S.IPAW))
   names(PYK1.IPAW) <- names(allRDtable) <- names(S.IPAW)
-  PYK1.IPAW <- lapply(S.IPAW,function(x,y)return(1-x[y+1]),y=t.period)
+  PYK1.IPAW <- lapply(S.IPAW,function(x,y)return(1-x[y]),y=t.period)
 
   rownames(RDtable) <- rep(rev(dtheta)[-length(dtheta)],each=2)
   colnames(RDtable) <- dtheta[-length(dtheta)]
