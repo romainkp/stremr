@@ -23,29 +23,15 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   #OS: multiply each column of t(MSMdesign) by sweep.tmp:
   D.O.beta <- sweep(t(MSMdesign), 2, sweep.tmp, "*")
 
-  # new faster approach with data.table:
+  # new faster approach using data.table:
   xDT <- data.table(ID = IC.data[[ID]], t(D.O.beta))
   setkeyv(xDT, cols = "ID")
   D.O.beta.alt <- as.matrix(xDT[, lapply(.SD, sum), by = ID][, ID := NULL])
   D.O.beta.alt <- t(D.O.beta.alt)
 
-  # old approach:
-  # t.eval <- system.time(
-  #   D.O.beta <- apply(D.O.beta, 1, function(x, y) {
-  #     return(tapply(x, y, sum))
-  #   }, y = as.factor(IC.data[[ID]]))
-  # )
-  # D.O.beta.alt <- t(D.O.beta)
-
-  # head(D.O.beta)
-  # dim(D.O.beta)
-  # print("t.eval tapply: "); print(t.eval)
-  # for 10K:
-  #  user  system elapsed
-  # 0.518   0.050   0.583
-
-  print("Should all be very small: "); print(abs(apply(D.O.beta.alt, 1, mean)))
-  # print("Should all be very small: "); print(abs(apply(D.O.beta, 1, mean)))
+  if (gvars$verbose) {
+    print("Should all be very small: "); print(abs(apply(D.O.beta.alt, 1, mean)))
+  }
 
   if(IPW_MSMestimator){
     sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[[MSMpredict]] * (1-IC.data[[MSMpredict]])
@@ -60,7 +46,9 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   IC.O <- Cm1 %*% D.O.beta.alt
   # IC.O <- Cm1 %*% D.O.beta
 
-  print("Should all be very small: "); print(abs(apply(IC.O, 1, mean)))
+  if (gvars$verbose) {
+    print("Should all be very small: "); print(abs(apply(IC.O, 1, mean)))
+  }
 
   var.beta <- (IC.O %*% t(IC.O)) / (nID^2)
   se.beta <- sqrt(diag(var.beta))
@@ -82,7 +70,10 @@ getSE.S <- function(nID, S.d.t.predict, h.d.t.predict, design.d.t, IC.O){
   S.by.sum.h.by.dl.dt <- sweep(sum.h.by.dl.dt, 1, S.d.t.predict, "*")
   IC.S <- -S.by.sum.h.by.dl.dt %*% IC.O
 
-  print("Should all be very small: "); print(abs(apply(IC.S, 1, mean)))
+  if (gvars$verbose) {
+    print("Should all be very small: "); print(abs(apply(IC.S, 1, mean)))
+  }
+
   var.S <- (IC.S %*% t(IC.S)) / (nID^2)
   se.S <- sqrt(diag(var.S))
   return(list(IC.S = IC.S, se.S = se.S))
