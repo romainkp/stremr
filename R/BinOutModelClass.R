@@ -56,11 +56,11 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
     browser()
-
-    h2o_df <- h2o::as.h2o(cbind(Y = Y_vals, Xmat))
+    # newmat <- cbind(Y = Y_vals, Xmat[,-1])
+    h2o_df <- h2o::as.h2o(cbind(Y = Y_vals, Xmat[,-1]))
     m.fit <- try(h2o::h2o.glm(y = "Y",
-                              x = colnames(Xmat),
-                              intercept = FALSE,
+                              x = colnames(Xmat)[-1],
+                              intercept = TRUE,
                               training_frame = h2o_df,
                               family = "binomial",
                               lambda = 0L), silent = TRUE)
@@ -73,6 +73,7 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
       return(logisfit.glmS3(datsum_obj))
     }
   }
+
   fit <- list(coef = m.fit@model$coefficients, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = nrow(Xmat))
   if (gvars$verbose) print(fit$coef)
   class(fit) <- c(class(fit), c("h2oglmS3"))
