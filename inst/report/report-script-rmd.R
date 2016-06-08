@@ -13,20 +13,21 @@ panderOptions("table.split.table", Inf)
 
 
 #+ echo=FALSE, include=FALSE
-f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny) {
+f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny, x_legend, y_legend) {
   ptsize <- 0.7
   counter <- 0
   if (missing(y_lab)) y_lab <- ""
   if (missing(t_int_sel)) t_int_sel <- seq_along(surv_res_est[[1]])
-  if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, min)))
-
+  if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, function(x)min(x[t_int_sel]))))
+  if (missing(x_legend))x_legend <- (max(t_int_sel)-min(t_int_sel))*2/3+min(t_int_sel)
+  if (missing(y_legend))y_legend <- (1-miny)*4/5+miny
   for(d.j in names(surv_res_est)){
     counter <- counter+1
     plot(t_int_sel,surv_res_est[[d.j]][t_int_sel],col=counter,type='b',cex=ptsize,ylim=c(miny,1),
       ylab = y_lab, xlab="Quarter since study entry")
     par(new=TRUE)
   }
-  legend(12,0.96,legend=names(surv_res_est),col=c(1:length(names(surv_res_est))), cex=ptsize, pch=1)
+  legend(x_legend,y_legend,legend=names(surv_res_est),col=c(1:length(names(surv_res_est))), cex=ptsize, pch=1)
 }
 f_create_model_caption <- function(reg.model) {
   return(
@@ -35,6 +36,7 @@ f_create_model_caption <- function(reg.model) {
    N: " %+% prettyNum(reg.model$nobs, big.mark = ",", scientific = FALSE)
   )
 }
+
 
 #' # Model fits for propensity scores
 #'
@@ -97,7 +99,11 @@ pander::pander(MSM$output.MSM, justify = c('right', 'left'))
 #' # Survival estimates
 
 #+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "Survival Estimates.\\label{fig:survPlot}"
-f_plot_survest(Surv.byregimen)
+sysArg <- list()
+sysArg$surv_res_est <- Surv.byregimen
+userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
+if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+do.call(f_plot_survest, sysArg)
 
 #'\pagebreak
 #'

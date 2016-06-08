@@ -36,9 +36,9 @@ openFileInOS <- function(f) {
 
 
 #' @export
-make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html", file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path')) {
+make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html", file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
   sVartypes <- gvars$sVartypes
-
+  optArgReport <- list(...)
   if (!missing(MSM)) {
     # if ()
     # handle separately if MSM is a list of many MSMs -> will need to do the plotting for each MSM in the list
