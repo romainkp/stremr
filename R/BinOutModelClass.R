@@ -47,6 +47,38 @@ logisfit.speedglmS3 <- function(datsum_obj) {
   return(fit)
 }
 
+# S3 method for h2o binomial family fit, takes BinDat data object:
+logisfit.h2oglmS3 <- function(datsum_obj) {
+  if (gvars$verbose) print("calling h2o.glm...")
+  Xmat <- datsum_obj$getXmat
+  Y_vals <- datsum_obj$getY
+  if (nrow(Xmat) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
+    m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
+  } else {
+    browser()
+
+    h2o_df <- h2o::as.h2o(cbind(Y = Y_vals, Xmat))
+    m.fit <- try(h2o::h2o.glm(y = "Y",
+                              x = colnames(Xmat),
+                              intercept = FALSE,
+                              training_frame = h2o_df,
+                              family = "binomial",
+                              lambda = 0L), silent = TRUE)
+
+    print("h2o.glm fit"); print(m.fit)
+    print("h2o.glm coefficients"); print(m.fit@model$coefficients)
+
+    if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
+      message("h2o::h2o.glm failed, falling back on stats:glm.fit; ", m.fit)
+      return(logisfit.glmS3(datsum_obj))
+    }
+  }
+  fit <- list(coef = m.fit@model$coefficients, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = nrow(Xmat))
+  if (gvars$verbose) print(fit$coef)
+  class(fit) <- c(class(fit), c("h2oglmS3"))
+  return(fit)
+}
+
 # S3 methods for getting coefs from fitted BinOutModel class object
 coef.BinOutModel <- function(binoutmodel) {
   assert_that(binoutmodel$is.fitted)
@@ -430,13 +462,15 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
     predvars = character(), # names of predictor vars
     cont.sVar.flag = logical(),
     bw.j = numeric(),
-    glmfitclass = "glmS3", # default glm fit class
+    # glmfitclass = "glmS3", # default glm fit class
+    glmfitclass = "h2oglmS3", # default glm fit class
     is.fitted = FALSE,
     bindat = NULL, # object of class BinDat that is used in fitting / prediction, never saved (need to be initialized with $new())
 
     initialize = function(reg, ...) {
       assert_that(is.flag(reg$useglm))
-      if (!reg$useglm) self$glmfitclass <- "speedglmS3"
+      # if (!reg$useglm) self$glmfitclass <- "speedglmS3"
+      self$glmfitclass <- "h2oglmS3"
 
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
