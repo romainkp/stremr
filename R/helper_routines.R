@@ -130,11 +130,9 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
   ##     browser()
 
   caption <- paste(estimates,
-      " estimates of the (cumulative) RD progression risk ",
+      " estimates of the (cumulative) risk ",
       captionText2,", $d_1$",
-      captionText3,"$d_2$, (with ",gsub("g","",0),
-      " grace period(s) allowed) over ",
-      (t.period+1)/4," years (",t.period+1," periods). The risk contrasts are derived from a logistic ", model,
+      captionText3,"$d_2$, over ", t.period," periods. The risk contrasts are derived from a logistic ", model,
       " for the discrete-time hazards fitted based on ", nobs,
       " observations. Variance estimates are derived based on the influence curve of the estimator.",sep="")
 

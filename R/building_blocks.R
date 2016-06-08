@@ -175,6 +175,7 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
 #modelfits.g0,
 get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   nodes <- OData$nodes
+  browser()
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
