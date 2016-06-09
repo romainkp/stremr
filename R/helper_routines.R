@@ -130,11 +130,9 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
   ##     browser()
 
   caption <- paste(estimates,
-      " estimates of the (cumulative) RD progression risk ",
+      " estimates of the (cumulative) risk ",
       captionText2,", $d_1$",
-      captionText3,"$d_2$, (with ",gsub("g","",0),
-      " grace period(s) allowed) over ",
-      (t.period+1)/4," years (",t.period+1," periods). The risk contrasts are derived from a logistic ", model,
+      captionText3,"$d_2$, over ", t.period," periods. The risk contrasts are derived from a logistic ", model,
       " for the discrete-time hazards fitted based on ", nobs,
       " observations. Variance estimates are derived based on the influence curve of the estimator.",sep="")
 
@@ -228,6 +226,7 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #' @param MONITOR The indicator of having a visit and having measured or observed biomarker I(t+1) (the biomarker value at THE NEXT TIME CYCLE).
 #'  In other words the value of MONITOR(t-1) (at t-1) being 1 indicates that I(t) at time point t was observed/measured.
 #'  The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observed/measured.
+#' @param tsinceNis1 Character vector for the column in data, same meaning as described in convertdata(), must be already defined
 #' @param rule.names Vector of column names for indicators of following/not following each rule (must be the same dimension as theta).
 #'  When not supplied the following convention is adopted for naming these columns: paste0("d",theta).
 #' @param return.allcolumns Set to \code{TRUE} to return the original data columns along with new columns that define each rule
@@ -267,12 +266,12 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #'  each rule indexed by a value form \code{theta}. In addition, the returned data.table contains \code{ID} and \code{t} columns for easy merging
 #'  with the original data.
 #' @export
-follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.names = NULL, return.allcolumns = FALSE){
+follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1 = "tsinceNis1", rule.names = NULL, return.allcolumns = FALSE){
   # require('data.table')
   ID.expression <- as.name(ID)
-  indx <- as.name("indx")
+  # indx <- as.name("indx")
   chgTRT <- as.name("chgTRT")
-  lastN.t <- as.name("lastN.t")
+  # lastN.t <- as.name("lastN.t")
 
   if (return.allcolumns) {
     DT <- data.table(data, key=c(ID,t))
@@ -284,11 +283,11 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
     stop("input data must be either a data.table or a data.frame")
   }
   # Create "indx" vector that goes up by 1 every time MONITOR(t-1) shifts from 1 to 0 or from 0 to 1
-  DT[, "indx" := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID.expression)]
+  # DT[, "indx" := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID.expression)]
   # Intermediate variable lastN.t to count number of cycles since last visit at t-1. Reset lastN.t(t)=0 when MONITOR(t-1)=1.
-  DT[, "lastN.t" := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
-  DT[is.na(DT[["indx"]]), "lastN.t" := NA]
-  DT[, "indx" := NULL]
+  # DT[, "lastN.t" := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
+  # DT[is.na(DT[["indx"]]), "lastN.t" := NA]
+  # DT[, "indx" := NULL]
 
   # Define chgTRT=TRT(t)-TRT(t-1), switching to treatment (+1), not changing treatment (0), going off treatment (-1). Assume people were off treatment prior to t=0.
   DT[, "chgTRT" := diff(c(0L, .SD[[1]])), by = eval(ID.expression), .SDcols=(TRT)]
@@ -300,13 +299,13 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, rule.nam
   # rule1: (C[t] == 0L) & (A[t-1] == 1L) & (A[t] == 1)
 
   # (2) Follow rule at t if uncensored, haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
-  DT[, "d.follow_r2" := (get(CENS)==0L) & (eval(lastN.t) > 0L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
+  DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
   # rule2: (C[t] == 0L) & (N[t-1] == 0) & (A[t-1] == A[t])
 
   # (3) Follow rule at t if uncensored, was monitored (MONITOR(t-1)=0) and either:
   # (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
   for (dtheta in theta) {
-    DT[, "d.follow_r3" := (get(CENS)==0L) & (eval(lastN.t) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L))), by = eval(ID.expression), with = FALSE]
+    DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L))), by = eval(ID.expression), with = FALSE]
     # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
     # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
     DT[, "d.follow_allr" := eval(parse(text="d.follow_r1 | d.follow_r2 | d.follow_r3")), by = eval(ID.expression)]
