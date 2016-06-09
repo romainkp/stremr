@@ -58,7 +58,6 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
     yname <- datsum_obj$outvar
     xnames <- datsum_obj$predvars
     subset_idx <- which(datsum_obj$subset_idx)
-
     # Random Forests:
     # my.rf = h2o::h2o.randomForest(x = xnames, y = yname, training_frame = newH2Oframe, ntree = 100)
 
@@ -75,23 +74,27 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
                               # training_frame = newH2Oframe,
                               training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
                               family = "binomial",
-                              standardize = FALSE,
+                              standardize = TRUE,
+                              solver = c("L_BFGS"),
+                              # solver = c("IRLSM"),
                               # remove_collinear_columns = TRUE,
+                              max_iterations = 50,
                               lambda = 0L),
               silent = TRUE)
 
-    browser()
-
+    # browser()
+    # length(subset_idx)
     # print("h2o.glm fit"); print(m.fit)
     # print("h2o.glm coefficients"); print(m.fit@model$coefficients)
     # print("h2o.glm coefficients");
     # print(m.fit@parameters)
     # print(m.fit@allparameters)
     # print(m.fit@model)
+    # str(m.fit@model)
 
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
-      message("h2o::h2o.glm failed, falling back on stats:glm.fit; ", m.fit)
-      return(logisfit.glmS3(datsum_obj))
+      message("h2o::h2o.glm failed, falling back on speedglm; ", m.fit)
+      return(logisfit.speedglmS3(datsum_obj))
     }
   }
 
