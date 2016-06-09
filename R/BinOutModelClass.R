@@ -55,51 +55,37 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
   if (nrow(Xmat) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
-    # newmat <- cbind(Y = Y_vals, Xmat[,-1])
-    # h2o_df <- h2o::as.h2o(cbind(Y = Y_vals, Xmat[,-1]))
-
-    browser()
-
     yname <- datsum_obj$outvar
     xnames <- datsum_obj$predvars
     subset_idx <- which(datsum_obj$subset_idx)
 
-    class(datsum_obj$DataStorageObject$dat.sVar[["race_1"]])
-    unique(datsum_obj$DataStorageObject$dat.sVar[["race_1"]])
-
-    unique(datsum_obj$DataStorageObject$dat.sVar[subset_idx,race_1])
-
-    # length(which(subset_idx))
-    # nrow(datsum_obj$DataStorageObject$H2O.dat.sVar)
-    newH2Oframe <- datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,]
-    nrow(newH2Oframe)
-    nrow(Xmat)
-
-    newH2Oframe[,yname] <- h2o::as.factor(newH2Oframe[,yname])
-    h2o.unique(newH2Oframe[,"race_1"])
-
-    newH2Oframe[,"race_1"] <- h2o::as.numeric(newH2Oframe[,"race_1"])
-
-    # Random Forrests:
+    # Random Forests:
     # my.rf = h2o::h2o.randomForest(x = xnames, y = yname, training_frame = newH2Oframe, ntree = 100)
+
     # GBM:
+    # for GBM to run need to make outcome into a factor:
+    # newH2Oframe <- datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,]
+    # newH2Oframe[,yname] <- h2o::as.factor(newH2Oframe[,yname])
     # my.gbm <- h2o::h2o.gbm(x = xnames, y = yname, training_frame = newH2Oframe, distribution = "bernoulli")
+
+    # GLM:
     m.fit <- try(h2o::h2o.glm(y = yname,
                               x = xnames,
                               intercept = TRUE,
-                              training_frame = newH2Oframe,
-                              # training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
+                              # training_frame = newH2Oframe,
+                              training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
                               family = "binomial",
-                              remove_collinear_columns = TRUE,
+                              standardize = FALSE,
+                              # remove_collinear_columns = TRUE,
                               lambda = 0L),
               silent = TRUE)
 
-    # TO DO 1: NEED TO DEAL WITH THE FACT THAT h2o.glm automatically drops NA columns
-    # need to put those back as coef = NA
-    # TO DO 2: NEED TO BE ABLE TO PASS subset index to fitting procedure: data[row, col, drop = TRUE]
-
-    print("h2o.glm fit"); print(m.fit)
-    print("h2o.glm coefficients"); print(m.fit@model$coefficients)
+    # print("h2o.glm fit"); print(m.fit)
+    # print("h2o.glm coefficients"); print(m.fit@model$coefficients)
+    # print("h2o.glm coefficients");
+    # print(m.fit@parameters)
+    # print(m.fit@allparameters)
+    # print(m.fit@model)
 
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
       message("h2o::h2o.glm failed, falling back on stats:glm.fit; ", m.fit)
@@ -107,7 +93,13 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
     }
   }
 
-  fit <- list(coef = m.fit@model$coefficients, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = nrow(Xmat))
+  # assign the fitted coefficients in correct order (same as predictor order in xnames)
+  out_coef <- vector(mode = "numeric", length = length(xnames)+1)
+  out_coef[] <- NA
+  names(out_coef) <- c("Intercept", xnames)
+  out_coef[names(m.fit@model$coefficients)] <- m.fit@model$coefficients
+
+  fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = nrow(Xmat))
   if (gvars$verbose) print(fit$coef)
   class(fit) <- c(class(fit), c("h2oglmS3"))
   return(fit)
