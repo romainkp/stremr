@@ -55,15 +55,27 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
   if (nrow(Xmat) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
-    browser()
     # newmat <- cbind(Y = Y_vals, Xmat[,-1])
-    h2o_df <- h2o::as.h2o(cbind(Y = Y_vals, Xmat[,-1]))
-    m.fit <- try(h2o::h2o.glm(y = "Y",
-                              x = colnames(Xmat)[-1],
+    # h2o_df <- h2o::as.h2o(cbind(Y = Y_vals, Xmat[,-1]))
+
+    browser()
+
+    yname <- datsum_obj$outvar
+    xnames <- datsum_obj$predvars
+    subset_idx <- datsum_obj$subset_idx
+
+    m.fit <- try(h2o::h2o.glm(y = yname,
+                              x = xnames,
                               intercept = TRUE,
-                              training_frame = h2o_df,
+                              training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
                               family = "binomial",
-                              lambda = 0L), silent = TRUE)
+                              remove_collinear_columns = TRUE,
+                              lambda = 0L),
+              silent = TRUE)
+
+    # TO DO 1: NEED TO DEAL WITH THE FACT THAT h2o.glm automatically drops NA columns
+    # need to put those back as coef = NA
+    # TO DO 2: NEED TO BE ABLE TO PASS subset index to fitting procedure: data[row, col, drop = TRUE]
 
     print("h2o.glm fit"); print(m.fit)
     print("h2o.glm coefficients"); print(m.fit@model$coefficients)
@@ -193,6 +205,7 @@ BinDat <- R6Class(classname = "BinDat",
     ID = NULL,
     pooled_bin_name = NULL,
     # binID_seq = NULL,
+    DataStorageObject = NULL,
     nbins = integer(),
     outvar = character(),   # outcome name(s)
     predvars = character(), # names of predictor vars
@@ -295,6 +308,9 @@ BinDat <- R6Class(classname = "BinDat",
         # To find and replace misvals in X_mat:
         if (self$ReplMisVal0) private$X_mat[gvars$misfun(private$X_mat)] <- gvars$misXreplace
       }
+
+      self$DataStorageObject <- data
+
       invisible(self)
     },
 
@@ -337,6 +353,7 @@ BinDat <- R6Class(classname = "BinDat",
         print("private$X_mat[1:10,]"); print(private$X_mat[1:10,])
         print("head(private$Y_vals)"); print(head(private$Y_vals, 100))
       }
+
       # **************************************
       # TO FINISH...
       # **************************************
@@ -463,15 +480,22 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
     predvars = character(), # names of predictor vars
     cont.sVar.flag = logical(),
     bw.j = numeric(),
-    # glmfitclass = "glmS3", # default glm fit class
-    glmfitclass = "h2oglmS3", # default glm fit class
+    glmfitclass = "glmS3", # default glm fit class
     is.fitted = FALSE,
     bindat = NULL, # object of class BinDat that is used in fitting / prediction, never saved (need to be initialized with $new())
 
     initialize = function(reg, ...) {
-      assert_that(is.flag(reg$useglm))
-      # if (!reg$useglm) self$glmfitclass <- "speedglmS3"
-      self$glmfitclass <- "h2oglmS3"
+      # assert_that(is.flag(reg$useglm))
+      assert_that(is.character(reg$GLMpackage))
+      if (reg$GLMpackage %in% "glm") {
+        self$glmfitclass <- "glmS3"
+      } else if (reg$GLMpackage %in% "speedglm") {
+        self$glmfitclass <- "speedglmS3"
+      } else if (reg$GLMpackage %in% "h2o") {
+        self$glmfitclass <- "h2oglmS3"
+      } else {
+        stop("reg$GLMpackage is of unrecognized type")
+      }
 
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
@@ -647,7 +671,7 @@ BinOutModel  <- R6Class(classname = "BinOutModel",
       return(list(c(self$show(print_format = FALSE), list(nobs = nobs, coef = coef_out))))
     },
     show = function(print_format = TRUE) {self$bindat$show(print_format)}
-    # ,
+
     # # return new R6 object that only contains a copy of the fits in self
     # clone = function(deep = TRUE) {
     #   BinOutModel$new(reg = reg, ...)

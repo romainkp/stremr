@@ -155,6 +155,7 @@ RegressionClass <- R6Class("RegressionClass",
     nbins = NULL,                  # actual nbins used, for cont. outvar, defined in ContinSummaryModel$new()
     bin_nms = NULL,                # column names for bin indicators
     useglm = logical(),            # TRUE to fit reg with glm.fit(), FALSE to fit with speedglm.wfit
+    GLMpackage = character(),      # 'glm', 'speedglm' or 'h2o'
     parfit = logical(),            # TRUE for fitting binary regressions in parallel
     bin_bymass = logical(),        # for cont outvar, create bin cutoffs based on equal mass distribution?
     bin_bydhist = logical(),       # if TRUE, use dhist approach for bin definitions
@@ -173,6 +174,7 @@ RegressionClass <- R6Class("RegressionClass",
                           intrvls,
                           ReplMisVal0 = TRUE, # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
                           useglm = getopt("useglm"),
+                          GLMpackage = getopt("GLMpackage"),
                           parfit = getopt("parfit"),
                           nbins = getopt("nbins"),
                           bin_bymass = getopt("bin.method")%in%"equal.mass",
@@ -184,6 +186,7 @@ RegressionClass <- R6Class("RegressionClass",
       if (!missing(RegressionForms)) self$RegressionForms <- RegressionForms
       self$ReplMisVal0 <- ReplMisVal0
       self$useglm <- useglm
+      self$GLMpackage <- GLMpackage
       self$parfit <- parfit
       self$nbins <- nbins
       self$bin_bymass <- bin_bymass
