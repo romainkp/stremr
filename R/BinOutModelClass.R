@@ -28,11 +28,8 @@ logisfit.glmS3 <- function(datsum_obj) {
 # S3 method for speedglm binomial family fit, takes BinDat data object:
 logisfit.speedglmS3 <- function(datsum_obj) {
   if (gvars$verbose) print("calling speedglm.wfit...")
-  browser()
-
   Xmat <- datsum_obj$getXmat
   Y_vals <- datsum_obj$getY
-
   if (nrow(Xmat) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
@@ -75,12 +72,11 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
     m.fit <- try(h2o::h2o.glm(y = yname,
                               x = xnames,
                               intercept = TRUE,
-                              # training_frame = newH2Oframe,
                               training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
+                              # training_frame = newH2Oframe,
                               family = "binomial",
                               standardize = TRUE,
-                              solver = c("L_BFGS"),
-                              # solver = c("IRLSM"),
+                              solver = c("L_BFGS"), # solver = c("IRLSM"),
                               # remove_collinear_columns = TRUE,
                               max_iterations = 50,
                               lambda = 0L),
