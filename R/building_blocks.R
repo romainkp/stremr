@@ -46,7 +46,6 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   logical.Ls <- unlist(lapply(OData$dat.sVar, is.logical))
   logical.Ls <- names(logical.Ls)[logical.Ls]
   for (logical.varnm in logical.Ls) {
-    logical.varnm <- logical.Ls[5]
     OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   }
 
