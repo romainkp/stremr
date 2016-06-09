@@ -21,8 +21,8 @@ f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny, x_legend, y_leg
   counter <- 0
   if (missing(y_lab)) y_lab <- ""
   if (missing(t_int_sel)) t_int_sel <- seq_along(surv_res_est[[1]])
-  if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, function(x)min(x[t_int_sel]))))
-  if (missing(x_legend))x_legend <- (max(t_int_sel)-min(t_int_sel))*2/3+min(t_int_sel)
+  if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, function(x) min(x[t_int_sel], na.rm = TRUE))))
+  if (missing(x_legend))x_legend <- (max(t_int_sel, na.rm = TRUE)-min(t_int_sel, na.rm = TRUE))*2/3+min(t_int_sel, na.rm = TRUE)
   if (missing(y_legend))y_legend <- (1-miny)*4/5+miny
   for(d.j in names(surv_res_est)){
     counter <- counter+1

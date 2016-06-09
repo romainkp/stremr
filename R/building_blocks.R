@@ -441,7 +441,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   for(d.j in names(S2.IPAW)) {
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
-      rev.term <- paste0("Periods.",tjmin[max(which(tjmin<=period.j))],"to",tjmax[min(which(tjmax>=period.j))],"_",d.j)
+      rev.term <- paste0("Periods.",tjmin[max(which(tjmin <= period.j))], "to", tjmax[min(which(tjmax >= period.j))],"_",d.j)
       hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit$coef[rev.term]))
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit$coef[rev.term])))
     }
