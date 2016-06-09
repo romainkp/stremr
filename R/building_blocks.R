@@ -18,6 +18,7 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   # The ordering of variables in this list is the assumed temporal order!
   nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t.name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
+
   # --------------------------------------------------------------------------------------------------------
   # Create dummies for factors
   # --------------------------------------------------------------------------------------------------------
@@ -25,10 +26,9 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   factor.Ls <- names(factor.Ls)[factor.Ls]
   new.factor.names <- vector(mode="list", length=length(factor.Ls))
   names(new.factor.names) <- factor.Ls
-  if (length(factor.Ls)>0)
+  if (length(factor.Ls)>0 && verbose)
     message("found factors in the data, these are being converted to binary indicators (first level excluded): " %+% paste0(factor.Ls, collapse=","))
   for (factor.varnm in factor.Ls) {
-    browser()
     factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
     factor.levs <- factor.levs[-1] # remove the first level (reference class)
     # use levels to define cat indicators:
@@ -38,6 +38,18 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
     # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
   }
   OData$new.factor.names <- new.factor.names
+
+  # --------------------------------------------------------------------------------------------------------
+  # Convert all logical vars to binary integers
+  # --------------------------------------------------------------------------------------------------------
+  if (verbose) message("converting all logical columns to binary integers")
+  logical.Ls <- unlist(lapply(OData$dat.sVar, is.logical))
+  logical.Ls <- names(logical.Ls)[logical.Ls]
+  for (logical.varnm in logical.Ls) {
+    logical.varnm <- logical.Ls[5]
+    OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
+  }
+
   # ---------------------------------------------------------------------------
   # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
   # Might expand this in the future to allow defining arbitrary summaries
