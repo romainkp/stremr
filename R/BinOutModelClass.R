@@ -80,6 +80,8 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
                               lambda = 0L),
               silent = TRUE)
 
+    browser()
+
     # print("h2o.glm fit"); print(m.fit)
     # print("h2o.glm coefficients"); print(m.fit@model$coefficients)
     # print("h2o.glm coefficients");
