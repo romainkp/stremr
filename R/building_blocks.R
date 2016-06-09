@@ -28,6 +28,7 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   if (length(factor.Ls)>0)
     message("found factors in the data, these are being converted to binary indicators (first level excluded): " %+% paste0(factor.Ls, collapse=","))
   for (factor.varnm in factor.Ls) {
+    browser()
     factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
     factor.levs <- factor.levs[-1] # remove the first level (reference class)
     # use levels to define cat indicators:

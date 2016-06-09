@@ -62,12 +62,33 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
 
     yname <- datsum_obj$outvar
     xnames <- datsum_obj$predvars
-    subset_idx <- datsum_obj$subset_idx
+    subset_idx <- which(datsum_obj$subset_idx)
 
+    class(datsum_obj$DataStorageObject$dat.sVar[["race_1"]])
+    unique(datsum_obj$DataStorageObject$dat.sVar[["race_1"]])
+
+    unique(datsum_obj$DataStorageObject$dat.sVar[subset_idx,race_1])
+
+    # length(which(subset_idx))
+    # nrow(datsum_obj$DataStorageObject$H2O.dat.sVar)
+    newH2Oframe <- datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,]
+    nrow(newH2Oframe)
+    nrow(Xmat)
+
+    newH2Oframe[,yname] <- h2o::as.factor(newH2Oframe[,yname])
+    h2o.unique(newH2Oframe[,"race_1"])
+
+    newH2Oframe[,"race_1"] <- h2o::as.numeric(newH2Oframe[,"race_1"])
+
+    # Random Forrests:
+    # my.rf = h2o::h2o.randomForest(x = xnames, y = yname, training_frame = newH2Oframe, ntree = 100)
+    # GBM:
+    # my.gbm <- h2o::h2o.gbm(x = xnames, y = yname, training_frame = newH2Oframe, distribution = "bernoulli")
     m.fit <- try(h2o::h2o.glm(y = yname,
                               x = xnames,
                               intercept = TRUE,
-                              training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
+                              training_frame = newH2Oframe,
+                              # training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
                               family = "binomial",
                               remove_collinear_columns = TRUE,
                               lambda = 0L),
