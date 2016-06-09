@@ -396,7 +396,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                       silent = TRUE)
 
   if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
-    message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
+    if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
     ctrl <- glm.control(trace = FALSE)
     SuppressGivenWarnings({
       m.fit <- stats::glm.fit(x = Xdesign.mat,
@@ -407,6 +407,10 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   }
 
   m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+  if (verbose) {
+    print("MSM fits")
+    print(m.fit$coef)
+  }
 
   wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
 
