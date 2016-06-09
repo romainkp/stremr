@@ -386,16 +386,29 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
 
   Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
-  m.fit_spdglm <- speedglm::speedglm.wfit(
-                                   X = Xdesign.mat,
-                                   y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
-                                   intercept=FALSE,
-                                   family = binomial(),
-                                   weights = wts.all.rules[["cumm.IPAW"]],
-                                   trace = FALSE)
-  m.fit_spdglm <- list(coef = m.fit_spdglm$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+  m.fit <- try(speedglm::speedglm.wfit(
+                                     X = Xdesign.mat,
+                                     y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
+                                     intercept = FALSE,
+                                     family = binomial(),
+                                     weights = wts.all.rules[["cumm.IPAW"]],
+                                     trace = FALSE),
+                      silent = TRUE)
 
-  wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit_spdglm, Xdesign.mat)]
+  if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
+    message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
+    ctrl <- glm.control(trace = FALSE)
+    SuppressGivenWarnings({
+      m.fit <- stats::glm.fit(x = Xdesign.mat,
+                              y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
+                              family = binomial(),
+                              intercept = FALSE, control = ctrl)
+    }, GetWarningsToSuppress())
+  }
+
+  m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+
+  wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
 
   #### For variable estimation, GET IC and SE FOR BETA's
   beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = shifted.OUTCOME,
@@ -425,8 +438,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
       rev.term <- paste0("Periods.",tjmin[max(which(tjmin<=period.j))],"to",tjmax[min(which(tjmax>=period.j))],"_",d.j)
-      hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit_spdglm$coef[rev.term]))
-      S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit_spdglm$coef[rev.term])))
+      hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit$coef[rev.term]))
+      S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit$coef[rev.term])))
     }
 
     S2.IPAW[[d.j]] <- cumprod(S2.IPAW[[d.j]])
@@ -447,8 +460,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                                  IC.O = beta.IC.O.SEs[["IC.O"]])
   }
 
-  output.MSM <- round(m.fit_spdglm$coef,2)
-  output.MSM <- cbind("Terms" = names(m.fit_spdglm$coef), output.MSM)
+  output.MSM <- round(m.fit$coef,2)
+  output.MSM <- cbind("Terms" = names(m.fit$coef), output.MSM)
   colnames(output.MSM) <- c("Terms",ifelse(trunc.weights == Inf && use.weights, "IPAW", ifelse(trunc.weights < Inf && use.weights, "truncated IPAW", "no weights")))
   rownames(output.MSM) <- NULL
 
@@ -482,6 +495,6 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val.idx, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
 
-  return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm, output.MSM = output.MSM,
+  return(list(St = S2.IPAW, MSM.fit = m.fit, output.MSM = output.MSM,
               IPAWdist = IPAWdist, RDs.IPAW.tperiods = RDs.IPAW.tperiods))
 }
