@@ -28,6 +28,8 @@ logisfit.glmS3 <- function(datsum_obj) {
 # S3 method for speedglm binomial family fit, takes BinDat data object:
 logisfit.speedglmS3 <- function(datsum_obj) {
   if (gvars$verbose) print("calling speedglm.wfit...")
+  browser()
+
   Xmat <- datsum_obj$getXmat
   Y_vals <- datsum_obj$getY
 
@@ -52,12 +54,14 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
   if (gvars$verbose) print("calling h2o.glm...")
   Xmat <- datsum_obj$getXmat
   Y_vals <- datsum_obj$getY
+
+  yname <- datsum_obj$outvar
+  xnames <- datsum_obj$predvars
+  subset_idx <- which(datsum_obj$subset_idx)
+
   if (nrow(Xmat) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
-    yname <- datsum_obj$outvar
-    xnames <- datsum_obj$predvars
-    subset_idx <- which(datsum_obj$subset_idx)
     # Random Forests:
     # my.rf = h2o::h2o.randomForest(x = xnames, y = yname, training_frame = newH2Oframe, ntree = 100)
 
