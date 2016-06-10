@@ -1,7 +1,9 @@
-logisfit <- function(datsum_obj) UseMethod("logisfit") # Generic for fitting the logistic model
+
+# Generic for fitting the logistic (binomial family) GLM model
+logisfit <- function(datsum_obj, ...) UseMethod("logisfit")
 
 # S3 method for glm binomial family fit, takes BinDat data object:
-logisfit.glmS3 <- function(datsum_obj) {
+logisfit.glmS3 <- function(datsum_obj, ...) {
   if (gvars$verbose) print("calling glm.fit...")
   Xmat <- datsum_obj$getXmat
   Y_vals <- datsum_obj$getY
@@ -22,7 +24,7 @@ logisfit.glmS3 <- function(datsum_obj) {
 }
 
 # S3 method for speedglm binomial family fit, takes BinDat data object:
-logisfit.speedglmS3 <- function(datsum_obj) {
+logisfit.speedglmS3 <- function(datsum_obj, ...) {
   if (gvars$verbose) print("calling speedglm.wfit...")
   Xmat <- datsum_obj$getXmat
   Y_vals <- datsum_obj$getY
@@ -43,7 +45,7 @@ logisfit.speedglmS3 <- function(datsum_obj) {
 }
 
 # S3 method for h2o binomial family fit, takes BinDat data object:
-logisfit.h2oglmS3 <- function(datsum_obj) {
+logisfit.h2oglmS3 <- function(datsum_obj, ...) {
   if (gvars$verbose) print("calling h2o.glm...")
   # Xmat <- datsum_obj$getXmat
   # Y_vals <- datsum_obj$getY
@@ -100,7 +102,7 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
   names(out_coef) <- c("Intercept", xnames)
   out_coef[names(m.fit@model$coefficients)] <- m.fit@model$coefficients
 
-  fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = length(subset_idx))
+  fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = length(subset_idx), H2O.model.object = m.fit)
   if (gvars$verbose) print(fit$coef)
   class(fit) <- c(class(fit), c("h2oglmS3"))
   return(fit)
@@ -290,6 +292,7 @@ BinDat <- R6Class(classname = "BinDat",
         if (length(self$predvars)==0L) {
           private$X_mat <- as.matrix(rep.int(1L, sum(self$subset_idx)), ncol=1)
         } else {
+          browser()
           private$X_mat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(self$subset_idx, self$predvars)))
         }
         colnames(private$X_mat)[1] <- "Intercept"

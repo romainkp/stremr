@@ -83,7 +83,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
 
-      self$bindat <- BinDat$new(reg = reg, ...) # postponed adding data in BinDat until self$fit() is called
+      self$bindat <- BinDat$new(reg = reg, ...)
       class(self$bindat) <- c(class(self$bindat), self$glmfitclass)
       if (gvars$verbose) {
         print("New instance of BinaryOutcomeModel:"); print(self$show())
@@ -157,7 +157,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (self$bindat$pool_cont && length(self$bindat$outvars_to_pool) > 1) {
         probAeqa <- self$bindat$logispredict.long(m.fit = private$m.fit) # overwrite probA1 with new predictions:
       } else {
-        # get predictions for P(sA[j]=1|sW=newdata) from newdata:
+        # get predictions for P(A[j]=1|W=newdata) from newdata:
         probA1 <- self$bindat$logispredict(m.fit = private$m.fit)
         indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
         assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
@@ -242,7 +242,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     getoutvarnm = function() { self$bindat$outvar }
   ),
   private = list(
-    m.fit = list(),   # the model fit (coefficients)
+    m.fit = list(),   # the model fit (either coefficients or the model fit object)
     probA1 = NULL,    # Predicted probA^s=1 conditional on X_mat
     probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on X_mat
   )

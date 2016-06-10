@@ -332,6 +332,7 @@ logispredict = function(m.fit, X_mat) {
 # ----------------------------------------------------------------------
 runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
   if (getopt("GLMpackage") %in% "h2o") {
+    if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
     data.table::fwrite(wts.all.rules, "./wts.all.rules.csv~", turbo = TRUE)
     designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv~", parse_type = "CSV", destination_frame = "designmat.H2O")
     m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
@@ -455,7 +456,6 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                         }))
 
   # 6. fit the hazard MSM
-  if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
   resglmMSM <- runglmMSM(wts.all.rules, all_dummies, shifted.OUTCOME, verbose)
   wts.all.rules <- resglmMSM$wts.all.rules
   m.fit <- resglmMSM$m.fit
