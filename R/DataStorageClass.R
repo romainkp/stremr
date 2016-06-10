@@ -128,7 +128,7 @@ is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 #'  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
 #'  For continous sVar this class provides methods for detecting / setting bin intervals,
 #'  normalization, disretization and construction of bin indicators.
-#'  The pointers to this class get passed on to \code{SummariesModel} functions: \code{$fit()},
+#'  The pointers to this class get passed on to \code{GenericModel} functions: \code{$fit()},
 #'  \code{$predict()} and \code{$predictAeqa()}.
 #'
 #' @docType class
@@ -268,7 +268,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     # ---------------------------------------------------------------------
-    # Functions for subsetting/returning covariate design mat for BinOutModelClass or outcome variable
+    # Functions for subsetting/returning covariate design mat for BinaryOutcomeModel Class or outcome variable
     # ---------------------------------------------------------------------
     get.dat.sVar = function(rowsubset = TRUE, covars) {
       if (!missing(covars)) {

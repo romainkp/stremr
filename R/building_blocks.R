@@ -324,20 +324,26 @@ logispredict = function(m.fit, X_mat) {
   return(pAout)
 }
 
+
+# ----------------------------------------------------------------------
+# TO DO: 0. START A NEW CLASS THAT INHERITS FROM BinaryOutcomeModel SPECIFICALLY FOR RUNNING H20 MODELS
+# TO DO: 1. MAKE THIS INTO A CALL TO BinaryOutcomeModel OR ITS CHILD
+# TO DO: 2. SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
+# ----------------------------------------------------------------------
 runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME) {
   if (getopt("GLMpackage") %in% "h2o") {
     data.table::fwrite(wts.all.rules, "./wts.all.rules.csv", turbo = TRUE)
     designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv", parse_type = "CSV", destination_frame = "designmat.H2O")
     m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
-                              x = all_dummies,
-                              intercept = FALSE,
-                              weights_column = "cumm.IPAW",
-                              training_frame = designmat.H2O,
-                              family = "binomial",
-                              standardize = FALSE,
-                              solver = c("IRLSM"), # solver = c("L_BFGS"),
-                              max_iterations = 50,
-                              lambda = 0L),
+                                  x = all_dummies,
+                                  intercept = FALSE,
+                                  weights_column = "cumm.IPAW",
+                                  training_frame = designmat.H2O,
+                                  family = "binomial",
+                                  standardize = FALSE,
+                                  solver = c("IRLSM"), # solver = c("L_BFGS"),
+                                  max_iterations = 50,
+                                  lambda = 0L),
                 silent = TRUE)
     #  user  system elapsed w/ L_BFGS:
     # 0.307   0.003   1.329

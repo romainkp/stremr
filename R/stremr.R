@@ -238,7 +238,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @param optPars A named list of additional optional parameters to be passed to \code{stremr}, such as
 #'  \code{alpha}, \code{lbound}, \code{family}, \code{YnodeDET},
-#'  \code{h_g0_SummariesModel} and \code{h_gstar_SummariesModel}. See Details below for the description of each parameter.
+#'  \code{h_g0_GenericModel} and \code{h_gstar_GenericModel}. See Details below for the description of each parameter.
 # (REMOVED) \code{n_MCsims}
 #((NOT IMPLEMENTED)) @param Q.SL.library SuperLearner libraries for OUTCOME, Q
 #((NOT IMPLEMENTED)) @param g.SL.library SuperLearner libraries for treatment mechanism, g
@@ -292,12 +292,12 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #    These newly generated exposures are utilized when fitting the conditional densities P(\code{sA}|\code{sW})
 #    and when evaluating the substitution estimators \strong{GCOMP} and \strong{TMLE}
 #    under stochastic interventions \code{f_gstar1} or \code{f_gstar2}.
-#(REMOVED) \item \code{h_g0_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under observed exposure mechanism \code{g0},
+#(REMOVED) \item \code{h_g0_GenericModel} - Previously fitted model for P(\code{sA}|\code{sW}) under observed exposure mechanism \code{g0},
 #    returned by the previous runs of the \code{stremr} function.
-#    This has to be an object of \code{SummariesModel} \pkg{R6} class. When this argument is specified, all predictions
+#    This has to be an object of \code{GenericModel} \pkg{R6} class. When this argument is specified, all predictions
 #    P(\code{sA}=\code{sa}|\code{sW}=\code{sw}) under \code{g0} will be based on the model fits provided by this argument.
-#(REMOVED) \item \code{h_gstar_SummariesModel} - Previously fitted model for P(\code{sA}|\code{sW}) under (stochastic) intervention
-#    specified by \code{f_gstar1} or \code{f_gstar2}. Also an object of \code{SummariesModel} \pkg{R6} class.
+#(REMOVED) \item \code{h_gstar_GenericModel} - Previously fitted model for P(\code{sA}|\code{sW}) under (stochastic) intervention
+#    specified by \code{f_gstar1} or \code{f_gstar2}. Also an object of \code{GenericModel} \pkg{R6} class.
 #    When this argument is specified, the predictions P(\code{sA}=\code{sa}|\code{sW}=\code{sw})
 #    under \code{f_gstar1} or \code{f_gstar2} will be based on the model fits provided by this argument.
 #' }
@@ -338,10 +338,10 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #'  \item \code{vars} - the asymptotic variance estimates for \strong{IPTW}.
 #'  \item \code{CIs} - CI estimates at \code{alpha} level for \strong{IPTW}.
 #'  \item \code{other.vars} - Placeholder for future versions.
-# \item \code{h_g0_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under observed exposure mechanism
-#    \code{g0}. This is an object of \code{SummariesModel} \pkg{R6} class.
-#  \item \code{h_gstar_SummariesModel} - The model fits for P(\code{sA}|\code{sW}) under intervention \code{f_gstar1}
-#    or \code{f_gstar2}. This is an object of \code{SummariesModel} \pkg{R6} class.
+# \item \code{h_g0_GenericModel} - The model fits for P(\code{sA}|\code{sW}) under observed exposure mechanism
+#    \code{g0}. This is an object of \code{GenericModel} \pkg{R6} class.
+#  \item \code{h_gstar_GenericModel} - The model fits for P(\code{sA}|\code{sW}) under intervention \code{f_gstar1}
+#    or \code{f_gstar2}. This is an object of \code{GenericModel} \pkg{R6} class.
 #' }
 #'
 #' Currently implemented estimators are:
@@ -368,7 +368,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 # - Allow looping over regimens to return regimen-specific non-zero weight datasets or list of such dataset (data.tables) that can be then all stacked and used for one MSM
 # - Implement automatic function calling for gstar.TRT & gstar.MONITOR if its a function or a list of functions
 # - When node name is "NULL" (not specified), do not fit a model for it. create a dummy class which would always put mass 1 on the oberved o
-# - Need to implement $get.fits() method in SummariesModel which recursively calls itself down the model tree until it reaches BinOutModel and returns its fit (regression $show() + coefficients)
+# - Need to implement $get.fits() method in GenericModel which recursively calls itself down the model tree until it reaches BinaryOutcomeModel and returns its fit (regression $show() + coefficients)
 #   The method needs to appropriately format the output based on several model predictions (for stratified, categorical or continuous outcome)
 # - Allow specification of counterfactual trt & monitor vaules / counterfactual probabilities of trt & monitor = 1. map automatically into rule follors/non-followers
 # - Consider not throwing an error when stratify.VAR list is unnamed for cases where VAR is univariate (only one variable name)

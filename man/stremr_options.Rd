@@ -4,15 +4,15 @@
 \alias{stremr_options}
 \title{Setting Options for \code{stremr}}
 \usage{
-stremr_options(useglm = FALSE, tortureglm = FALSE, parfit = FALSE,
-  bin.method = c("equal.len", "equal.mass", "dhist"), nbins = NA,
-  maxncats = 20, poolContinVar = FALSE, maxNperBin = 1000)
+stremr_options(useglm = FALSE, GLMpackage = c("glm", "speedglm", "h2o"),
+  parfit = FALSE, bin.method = c("equal.len", "equal.mass", "dhist"),
+  nbins = NA, maxncats = 20, poolContinVar = FALSE, maxNperBin = 1000)
 }
 \arguments{
 \item{useglm}{Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
 \code{\link[stats]{glm.fit}}.}
 
-\item{tortureglm}{Set to true to increase the maximum number of glm.fit & speedglm iterations from default to 500.}
+\item{GLMpackage}{Pick which package and function to use for fitting the GLM models ("glm", "speedglm" or "h2o")}
 
 \item{parfit}{Default is \code{FALSE}. Set to \code{TRUE} to use \code{foreach} package and its functions
 \code{foreach} and \code{dopar} to perform
