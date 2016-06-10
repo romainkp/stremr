@@ -418,8 +418,9 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   names(out_coef) <- c(all_dummies)
   out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
   m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
-  glm.IPAW.predictP1.h2o <- as.data.table(h2o.predict(m.fit, newdata = designmat.H2O)[,"p1"])[["p1"]]
-  wts.all.rules[, glm.IPAW.predictP1.h2o := as.data.table(h2o.predict(m.fit, newdata = designmat.H2O)[,"p1"])[["p1"]]]
+
+  glm.IPAW.predictP1.h2o <- as.data.table(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])[["p1"]]
+  wts.all.rules[, glm.IPAW.predictP1.h2o := as.data.table(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])[["p1"]]]
 
   # if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
   Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
