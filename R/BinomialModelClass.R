@@ -132,6 +132,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         stop("BinaryOutcomeModel$predict is not applicable to pooled regression, call BinaryOutcomeModel$predictAeqa instead")
       } else {
         private$probA1 <- logispredict(m.fit = private$m.fit, BinDatObject = self$bindat)
+        # private$probA1 <- predictP1(m.fit = private$m.fit, BinDatObject = self$bindat)
       }
       self$bindat$emptydata  # Xmat in bindat is no longer needed, but subset, outvar & probA1 may be needed for private$probA1
       invisible(self)
@@ -156,9 +157,11 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       # obtain predictions (likelihood) for response on fitted data (from long pooled regression):
       if (self$bindat$pool_cont && length(self$bindat$outvars_to_pool) > 1) {
         probAeqa <- logispredict.long(m.fit = private$m.fit, BinDatObject = self$bindat) # overwrite probA1 with new predictions:
+        # probAeqa <- predictP1.long(m.fit = private$m.fit, BinDatObject = self$bindat) # overwrite probA1 with new predictions:
       } else {
         # get predictions for P(A[j]=1|W=newdata) from newdata:
         probA1 <- logispredict(m.fit = private$m.fit, BinDatObject = self$bindat)
+        # probA1 <- predictP1(m.fit = private$m.fit, BinDatObject = self$bindat)
         indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
         assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
         probAeqa <- rep.int(1L, n) # for missing, the likelihood is always set to P(A = a) = 1.
@@ -201,6 +204,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       } else {
         # get probability P(sA[j]=1|sW=newdata) from newdata, then sample from rbinom
         probA1 <- logispredict(m.fit = private$m.fit, BinDatObject = self$bindat)
+        # probA1 <- predictP1(m.fit = private$m.fit, BinDatObject = self$bindat)
         sampleA <- rep.int(0L, n)
         sampleA[self$getsubset] <- rbinom(n = n, size = 1, prob = probA1)
       }

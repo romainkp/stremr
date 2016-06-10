@@ -316,14 +316,6 @@ get_survNPMSM <- function(data.wts, OData) {
   return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
 
-# Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
-# Does not handle cases with deterministic Anodes in the original data.
-logispredict = function(m.fit, X_mat) {
-  eta <- X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-  pAout <- match.fun(FUN = m.fit$linkfun)(eta)
-  return(pAout)
-}
-
 
 # ----------------------------------------------------------------------
 # TO DO: 0. START A NEW CLASS THAT INHERITS FROM BinaryOutcomeModel SPECIFICALLY FOR RUNNING H20 MODELS
@@ -331,6 +323,14 @@ logispredict = function(m.fit, X_mat) {
 # TO DO: 2. SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
 # ----------------------------------------------------------------------
 runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
+  # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
+  # Does not handle cases with deterministic Anodes in the original data.
+  logispredict = function(m.fit, X_mat) {
+    eta <- X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
+    pAout <- match.fun(FUN = m.fit$linkfun)(eta)
+    return(pAout)
+  }
+
   if (getopt("GLMpackage") %in% "h2o") {
     if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
     data.table::fwrite(wts.all.rules, "./wts.all.rules.csv~", turbo = TRUE)
