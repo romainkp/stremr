@@ -384,7 +384,6 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
 
   # 6. fit the hazard MSM
   if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
-
   Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
   m.fit <- try(speedglm::speedglm.wfit(
                                      X = Xdesign.mat,
@@ -405,13 +404,11 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                               intercept = FALSE, control = ctrl)
     }, GetWarningsToSuppress())
   }
-
   m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
   if (verbose) {
     print("MSM fits")
     print(m.fit$coef)
   }
-
   wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
 
   #### For variable estimation, GET IC and SE FOR BETA's
