@@ -462,12 +462,12 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
 
   #### For variable estimation, GET IC and SE FOR BETA's
   beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = shifted.OUTCOME,
-                            MSMdata = wts.all.rules, MSMdesign = Xdesign.mat,
+                            MSMdata = wts.all.rules, MSMdesign = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
                             MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
 
   # 7. Compute the Survival curves under each d
   S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,maxt-mint+1)), length(rules.TRT))
-  design.t.d <- rep(list(matrix(0L, ncol = ncol(Xdesign.mat), nrow = length(mint:maxt))), length(rules.TRT))
+  design.t.d <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:maxt))), length(rules.TRT))
   IC.Var.S.d <- vector(mode = "list", length(rules.TRT))
   names(S2.IPAW) <- names(hazard.IPAW) <- names(design.t.d) <- names(IC.Var.S.d) <- rules.TRT
 
