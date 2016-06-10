@@ -483,7 +483,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       # if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
       dat.sVar <- self$dat.sVar
       assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))
-      H2O.dat.sVar <- h2o::as.h2o(dat.sVar)
+      H2O.dat.sVar <- h2o::as.h2o(dat.sVar, destination_frame = "H2O.dat.sVar")
       self$H2O.dat.sVar <- H2O.dat.sVar
       return(invisible(self))
     }
