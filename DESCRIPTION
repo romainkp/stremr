@@ -38,7 +38,7 @@ Suggests:
     h2o,
     h2oEnsemble,
     knitr,
-    magrittr
+    magrittr,
     RUnit,
     simcausal
 License: GPL-2
