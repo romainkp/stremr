@@ -324,6 +324,62 @@ logispredict = function(m.fit, X_mat) {
   return(pAout)
 }
 
+runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME) {
+  if (getopt("GLMpackage") %in% "h2o") {
+    data.table::fwrite(wts.all.rules, "./wts.all.rules.csv", turbo = TRUE)
+    designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv", parse_type = "CSV", destination_frame = "designmat.H2O")
+    m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
+                              x = all_dummies,
+                              intercept = FALSE,
+                              weights_column = "cumm.IPAW",
+                              training_frame = designmat.H2O,
+                              family = "binomial",
+                              standardize = FALSE,
+                              solver = c("IRLSM"), # solver = c("L_BFGS"),
+                              max_iterations = 50,
+                              lambda = 0L),
+                silent = TRUE)
+    #  user  system elapsed w/ L_BFGS:
+    # 0.307   0.003   1.329
+    #  user  system elapsed w/ IRLSM:
+    # 0.691   0.005   5.738
+    out_coef <- vector(mode = "numeric", length = length(all_dummies))
+    out_coef[] <- NA
+    names(out_coef) <- c(all_dummies)
+    out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
+    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
+    wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])]
+  } else {
+    if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+    Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
+    m.fit <- try(speedglm::speedglm.wfit(
+                                       X = Xdesign.mat,
+                                       y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
+                                       intercept = FALSE,
+                                       family = binomial(),
+                                       weights = wts.all.rules[["cumm.IPAW"]],
+                                       trace = FALSE),
+                        silent = TRUE)
+    if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
+      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
+      ctrl <- glm.control(trace = FALSE)
+      SuppressGivenWarnings({
+        m.fit <- stats::glm.fit(x = Xdesign.mat,
+                                y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
+                                family = binomial(),
+                                intercept = FALSE, control = ctrl)
+      }, GetWarningsToSuppress())
+    }
+    m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+    if (verbose) {
+      print("MSM fits"); print(m.fit$coef)
+    }
+    wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+  }
+  return(list(wts.all.rules = wts.all.rules, m.fit = m.fit))
+}
+
+
 # ---------------------------------------------------------------------------------------
 # - BLOCK 4C: Parametric MSM pooling many regimens, includes weight stabilization and parametric MSM (can include saturated MSM)
 # Alternative for MSM, takes a list of data sets with weights and MSMregform
@@ -388,50 +444,15 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     }
   }
   setkeyv(wts.all.rules, cols = c(nodes$IDnode, nodes$tnode))
-
   all_dummies <-  paste(sapply(all.d.dummies, function(x) {
                         return(paste(paste(paste(all.t.dummies, x, sep="_"), sep="")))
                         }))
 
   # 6. fit the hazard MSM
   if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
-
-  data.table::fwrite(wts.all.rules, "./wts.all.rules.csv", turbo = TRUE)
-  designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv", parse_type = "CSV", destination_frame = "designmat.H2O")
-
-  m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
-                            x = all_dummies,
-                            intercept = FALSE,
-                            weights_column = "cumm.IPAW",
-                            training_frame = designmat.H2O,
-                            family = "binomial",
-                            standardize = FALSE,
-                            solver = c("IRLSM"), # solver = c("L_BFGS"),
-                            max_iterations = 50,
-                            lambda = 0L),
-              silent = TRUE)
-  #  user  system elapsed w/ L_BFGS:
-  # 0.307   0.003   1.329
-  #  user  system elapsed w/ IRLSM:
-  # 0.691   0.005   5.738
-  out_coef <- vector(mode = "numeric", length = length(all_dummies))
-  out_coef[] <- NA
-  names(out_coef) <- c(all_dummies)
-  out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
-  m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
-  wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])]
-
-  # # if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
-  # Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
-  # m.fit_spdglm <- speedglm::speedglm.wfit(
-  #                                  X = Xdesign.mat,
-  #                                  y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
-  #                                  intercept=FALSE,
-  #                                  family = binomial(),
-  #                                  weights = wts.all.rules[["cumm.IPAW"]],
-  #                                  trace = FALSE)
-  # m.fit <- list(coef = m.fit_spdglm$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
-  # wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+  resglmMSM <- runglmMSM(wts.all.rules, all_dummies, shifted.OUTCOME)
+  wts.all.rules <- resglmMSM$wts.all.rules
+  m.fit <- resglmMSM$m.fit
 
   #### For variable estimation, GET IC and SE FOR BETA's
   beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = shifted.OUTCOME,
