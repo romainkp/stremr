@@ -1,18 +1,19 @@
+#' @import data.table
+NULL
 
 # Generic for fitting the logistic (binomial family) GLM model
-logisfit <- function(datsum_obj, ...) UseMethod("logisfit")
+logisfit <- function(BinDatObject, ...) UseMethod("logisfit")
 
 # S3 method for glm binomial family fit, takes BinDat data object:
-logisfit.glmS3 <- function(datsum_obj, ...) {
+logisfit.glmS3 <- function(BinDatObject, ...) {
   if (gvars$verbose) print("calling glm.fit...")
-  Xmat <- datsum_obj$getXmat
-  Y_vals <- datsum_obj$getY
-    # Xmat has 0 rows: return NA's and avoid throwing exception:
+  Xmat <- BinDatObject$getXmat
+  Y_vals <- BinDatObject$getY
+  # Xmat has 0 rows: return NA's and avoid throwing exception:
   if (nrow(Xmat) == 0L) {
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
     ctrl <- glm.control(trace = FALSE)
-    # ctrl <- glm.control(trace = FALSE, maxit = 500)
     SuppressGivenWarnings({
       m.fit <- stats::glm.fit(x = Xmat, y = Y_vals, family = binomial() , control = ctrl)
     }, GetWarningsToSuppress())
@@ -24,18 +25,18 @@ logisfit.glmS3 <- function(datsum_obj, ...) {
 }
 
 # S3 method for speedglm binomial family fit, takes BinDat data object:
-logisfit.speedglmS3 <- function(datsum_obj, ...) {
+logisfit.speedglmS3 <- function(BinDatObject, ...) {
   if (gvars$verbose) print("calling speedglm.wfit...")
-  Xmat <- datsum_obj$getXmat
-  Y_vals <- datsum_obj$getY
-  if (nrow(Xmat) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
+  Xmat <- BinDatObject$getXmat
+  Y_vals <- BinDatObject$getY
+  # Xmat has 0 rows: return NA`s and avoid throwing exception
+  if (nrow(Xmat) == 0L) {
     m.fit <- list(coef = rep.int(NA_real_, ncol(Xmat)))
   } else {
-    # , maxit=1000
     m.fit <- try(speedglm::speedglm.wfit(X = Xmat, y = Y_vals, family = binomial(), trace = FALSE), silent = TRUE)
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
       message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
-      return(logisfit.glmS3(datsum_obj))
+      return(logisfit.glmS3(BinDatObject))
     }
   }
   fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm", nobs = nrow(Xmat))
@@ -45,24 +46,24 @@ logisfit.speedglmS3 <- function(datsum_obj, ...) {
 }
 
 # S3 method for h2o binomial family fit, takes BinDat data object:
-logisfit.h2oglmS3 <- function(datsum_obj, ...) {
+logisfit.h2oglmS3 <- function(BinDatObject, ...) {
   if (gvars$verbose) print("calling h2o.glm...")
-  # Xmat <- datsum_obj$getXmat
-  # Y_vals <- datsum_obj$getY
-  yname <- datsum_obj$outvar
-  xnames <- datsum_obj$predvars
-  subset_idx <- which(datsum_obj$subset_idx)
+  # Xmat <- BinDatObject$getXmat
+  # Y_vals <- BinDatObject$getY
+  yname <- BinDatObject$outvar
+  xnames <- BinDatObject$predvars
+  subset_idx <- which(BinDatObject$subset_idx)
   if (length(subset_idx) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
     m.fit <- list(coef = rep.int(NA_real_, length(xnames)))
   } else if (length(xnames) == 0L) {
-    return(logisfit.speedglmS3(datsum_obj))
+    return(logisfit.speedglmS3(BinDatObject))
   } else {
     # Random Forests:
     # my.rf = h2o::h2o.randomForest(x = xnames, y = yname, training_frame = newH2Oframe, ntree = 100)
 
     # GBM:
     # for GBM to run need to make outcome into a factor:
-    # newH2Oframe <- datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,]
+    # newH2Oframe <- BinDatObject$DataStorageObject$H2O.dat.sVar[subset_idx,]
     # newH2Oframe[,yname] <- h2o::as.factor(newH2Oframe[,yname])
     # my.gbm <- h2o::h2o.gbm(x = xnames, y = yname, training_frame = newH2Oframe, distribution = "bernoulli")
 
@@ -70,7 +71,7 @@ logisfit.h2oglmS3 <- function(datsum_obj, ...) {
     m.fit <- try(h2o::h2o.glm(y = yname,
                               x = xnames,
                               intercept = TRUE,
-                              training_frame = datsum_obj$DataStorageObject$H2O.dat.sVar[subset_idx,],
+                              training_frame = BinDatObject$DataStorageObject$H2O.dat.sVar[subset_idx,],
                               # training_frame = newH2Oframe,
                               family = "binomial",
                               standardize = TRUE,
@@ -92,7 +93,7 @@ logisfit.h2oglmS3 <- function(datsum_obj, ...) {
 
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
       message("h2o::h2o.glm failed, falling back on speedglm; ", m.fit)
-      return(logisfit.speedglmS3(datsum_obj))
+      return(logisfit.speedglmS3(BinDatObject))
     }
   }
 
@@ -108,9 +109,45 @@ logisfit.h2oglmS3 <- function(datsum_obj, ...) {
   return(fit)
 }
 
+# Generic prediction fun for logistic regression coefs, predicts P(A = 1 | newXmat)
+# No need for S3 for now, until need different pred. funs for different classes
+# Does not handle cases with deterministic Anodes in the original data..
+logispredict <- function(m.fit, BinDatObject) {
+  assert_that(!is.null(BinDatObject$getXmat)); assert_that(!is.null(BinDatObject$subset_idx))
+  # Set to default missing value for A[i] degenerate/degerministic/misval:
+  # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
+  pAout <- rep.int(gvars$misval, BinDatObject$n)
+  if (sum(BinDatObject$subset_idx > 0)) {
+    eta <- BinDatObject$getXmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
+    pAout[BinDatObject$subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
+  }
+  return(pAout)
+}
 
-#' @import data.table
-NULL
+logispredict.long <- function(m.fit, BinDatObject) {
+  assert_that(!is.null(BinDatObject$getXmat)); assert_that(!is.null(BinDatObject$subset_idx))
+  assert_that(nrow(BinDatObject$getXmat)==length(private$Y_vals))
+  pAout <- rep.int(gvars$misval, BinDatObject$n)
+  if (sum(BinDatObject$subset_idx > 0)) {
+    # -----------------------------------------------------------------
+    # OBTAINING PREDICTIONS FOR LONG FORMAT P(Ind_j = 1 | Bin_j, W) BASED ON EXISTING POOLED FIT:
+    # -----------------------------------------------------------------
+    eta <- BinDatObject$getXmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
+    probA1 <- match.fun(FUN = m.fit$linkfun)(eta)
+    # -----------------------------------------------------------------
+    # GETTING ID-BASED PREDICTIONS (n) as cumprod of P(Ind_j = 1 | Bin_j, W) for j = 1, ..., K
+    # -----------------------------------------------------------------
+    ProbAeqa_long <- as.vector(probA1^(private$Y_vals) * (1L - probA1)^(1L - private$Y_vals))
+    res_DT <- data.table(ID = BinDatObject$ID, ProbAeqa_long = ProbAeqa_long)
+    res_DT <- res_DT[, list(cumprob = cumprod(ProbAeqa_long)), by = ID]
+    data.table::setkeyv(res_DT, c("ID")) # sort by ID
+    res_DT_short <- res_DT[unique(res_DT[, key(res_DT), with = FALSE]), mult = 'last']
+    ProbAeqa <- res_DT_short[["cumprob"]]
+    pAout[BinDatObject$subset_idx] <- ProbAeqa
+  }
+  return(pAout)
+}
+
 
 # Convert existing Bin matrix (Bin indicators) for continuous self$outvar into long format data.table with 3 columns:
 # ID - row number; sVar_allB.j - bin indicators collapsed into one col; bin_ID - bin number identify for prev. columns
@@ -151,7 +188,7 @@ join.Xmat = function(X_mat, sVar_melt_DT, ID) {
 }
 
 ## ---------------------------------------------------------------------
-#' R6 class for storing the design matrix and binary outcome for a single logistic regression
+#' R6 class for storing the design matrix and the binary outcome for a single GLM (logistic) regression
 #'
 #' This R6 class can request, store and manage the design matrix Xmat, as well as the binary outcome Bin for the
 #'  logistic regression P(Bin|Xmat).
@@ -183,9 +220,7 @@ join.Xmat = function(X_mat, sVar_melt_DT, ID) {
 #'   \item{\code{newdata()}}{...}
 #'   \item{\code{define.subset_idx(...)}}{...}
 #'   \item{\code{setdata()}}{...}
-#'   \item{\code{logispredict()}}{...}
 #'   \item{\code{setdata.long()}}{...}
-#'   \item{\code{logispredict.long()}}{...}
 #' }
 #' @section Active Bindings:
 #' \describe{
@@ -225,11 +260,9 @@ BinDat <- R6Class(classname = "BinDat",
       assert_that(is.character(reg$predvars))
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
-
       self$subset_vars <- reg$subset_vars
       self$subset_expr <- reg$subset_exprs
       assert_that(length(self$subset_expr) <= 1)
-
       self$pool_cont <- reg$pool_cont
       self$outvars_to_pool <- reg$outvars_to_pool
       self$ReplMisVal0 <- reg$ReplMisVal0
@@ -292,16 +325,13 @@ BinDat <- R6Class(classname = "BinDat",
         if (length(self$predvars)==0L) {
           private$X_mat <- as.matrix(rep.int(1L, sum(self$subset_idx)), ncol=1)
         } else {
-          browser()
           private$X_mat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(self$subset_idx, self$predvars)))
         }
         colnames(private$X_mat)[1] <- "Intercept"
         # To find and replace misvals in X_mat:
         if (self$ReplMisVal0) private$X_mat[gvars$misfun(private$X_mat)] <- gvars$misXreplace
       }
-
       self$DataStorageObject <- data
-
       invisible(self)
     },
 
@@ -354,53 +384,14 @@ BinDat <- R6Class(classname = "BinDat",
       # } else {
       #   # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DataStorageClass$get.dat.sVar() IS MADE ***
       #   private$X_mat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(self$subset_idx, self$predvars)))
-        # To find and replace misvals in X_mat:
+      # To find and replace misvals in X_mat:
         if (self$ReplMisVal0) private$X_mat[gvars$misfun(private$X_mat)] <- gvars$misXreplace
       # }
-    },
-
-    logispredict.long = function(m.fit) {
-      assert_that(!is.null(private$X_mat)); assert_that(!is.null(self$subset_idx))
-      assert_that(nrow(private$X_mat)==length(private$Y_vals))
-      pAout <- rep.int(gvars$misval, self$n)
-      if (sum(self$subset_idx > 0)) {
-        # -----------------------------------------------------------------
-        # OBTAINING PREDICTIONS FOR LONG FORMAT P(Ind_j = 1 | Bin_j, W) BASED ON EXISTING POOLED FIT:
-        # -----------------------------------------------------------------
-        eta <- private$X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-        probA1 <- match.fun(FUN = m.fit$linkfun)(eta)
-        # -----------------------------------------------------------------
-        # GETTING ID-BASED PREDICTIONS (n) as cumprod of P(Ind_j = 1 | Bin_j, W) for j = 1, ..., K
-        # -----------------------------------------------------------------
-        ProbAeqa_long <- as.vector(probA1^(private$Y_vals) * (1L - probA1)^(1L - private$Y_vals))
-        res_DT <- data.table(ID = self$ID, ProbAeqa_long = ProbAeqa_long)
-        res_DT <- res_DT[, list(cumprob = cumprod(ProbAeqa_long)), by = ID]
-        data.table::setkeyv(res_DT, c("ID")) # sort by ID
-        res_DT_short <- res_DT[unique(res_DT[, key(res_DT), with = FALSE]), mult = 'last']
-        ProbAeqa <- res_DT_short[["cumprob"]]
-        pAout[self$subset_idx] <- ProbAeqa
-      }
-      return(pAout)
-    },
-
-    # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | newXmat)
-    # No need for S3 for now, until need different pred. funs for different classes
-    # Does not handle cases with deterministic Anodes in the original data..
-    logispredict = function(m.fit) {
-      assert_that(!is.null(private$X_mat)); assert_that(!is.null(self$subset_idx))
-      # Set to default missing value for A[i] degenerate/degerministic/misval:
-      # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newdatsum_obj$n)
-      pAout <- rep.int(gvars$misval, self$n)
-      if (sum(self$subset_idx > 0)) {
-        eta <- private$X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-        pAout[self$subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
-      }
-      return(pAout)
     }
   ),
 
   active = list( # 2 types of active bindings (w and wout args)
-    emptydata = function() { private$X_mat <- NULL },
+    emptydata = function() { private$X_mat <- NULL; self$DataStorageObject <- NULL },
     emptyY = function() { private$Y_vals <- NULL},
     emptySubset_idx = function() { self$subset_idx <- NULL },
     emptyN = function() { self$n <- NA_integer_ },

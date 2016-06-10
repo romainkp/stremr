@@ -104,7 +104,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (gvars$verbose) print("fitting the model: " %+% self$show())
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
       self$bindat$newdata(newdata = data, ...) # populate bindat with X_mat & Y_vals
-      private$m.fit <- logisfit(datsum_obj = self$bindat) # private$m.fit <- data_obj$logisfit or private$m.fit <- data_obj$logisfit()
+      private$m.fit <- logisfit(BinDatObject = self$bindat) # private$m.fit <- data_obj$logisfit or private$m.fit <- data_obj$logisfit()
       # alternative 2 is to apply data_obj method / method that fits the model
       self$is.fitted <- TRUE
       self$wipe.alldat
@@ -131,7 +131,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (self$bindat$pool_cont && length(self$bindat$outvars_to_pool) > 1) {
         stop("BinaryOutcomeModel$predict is not applicable to pooled regression, call BinaryOutcomeModel$predictAeqa instead")
       } else {
-        private$probA1 <- self$bindat$logispredict(m.fit = private$m.fit)
+        private$probA1 <- logispredict(m.fit = private$m.fit, BinDatObject = self$bindat)
       }
       self$bindat$emptydata  # Xmat in bindat is no longer needed, but subset, outvar & probA1 may be needed for private$probA1
       invisible(self)
@@ -155,10 +155,10 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       n <- newdata$nobs
       # obtain predictions (likelihood) for response on fitted data (from long pooled regression):
       if (self$bindat$pool_cont && length(self$bindat$outvars_to_pool) > 1) {
-        probAeqa <- self$bindat$logispredict.long(m.fit = private$m.fit) # overwrite probA1 with new predictions:
+        probAeqa <- logispredict.long(m.fit = private$m.fit, BinDatObject = self$bindat) # overwrite probA1 with new predictions:
       } else {
         # get predictions for P(A[j]=1|W=newdata) from newdata:
-        probA1 <- self$bindat$logispredict(m.fit = private$m.fit)
+        probA1 <- logispredict(m.fit = private$m.fit, BinDatObject = self$bindat)
         indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
         assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
         probAeqa <- rep.int(1L, n) # for missing, the likelihood is always set to P(A = a) = 1.
@@ -200,7 +200,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         stop("not implemented")
       } else {
         # get probability P(sA[j]=1|sW=newdata) from newdata, then sample from rbinom
-        probA1 <- self$bindat$logispredict(m.fit = private$m.fit)
+        probA1 <- logispredict(m.fit = private$m.fit, BinDatObject = self$bindat)
         sampleA <- rep.int(0L, n)
         sampleA[self$getsubset] <- rbinom(n = n, size = 1, prob = probA1)
       }
