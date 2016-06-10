@@ -5,8 +5,7 @@
 # S3 methods for getting model fit for BinaryOutcomeModel class object
 fit.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
   assert_that(BinaryOutcomeModel$is.fitted)
-  fit <- BinaryOutcomeModel$getfit
-  fit$coef
+  BinaryOutcomeModel$getfit
 }
 # S3 methods for getting model fit summary for BinaryOutcomeModel class object
 summary.BinaryOutcomeModel <- function(BinaryOutcomeModel) {

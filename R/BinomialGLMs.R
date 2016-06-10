@@ -198,7 +198,6 @@ join.Xmat = function(X_mat, sVar_melt_DT, ID) {
 #' @export
 BinDat <- R6Class(classname = "BinDat",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
-  # cloneable = FALSE,
   portable = TRUE,
   class = TRUE,
   public = list(

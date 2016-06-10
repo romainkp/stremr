@@ -332,8 +332,8 @@ logispredict = function(m.fit, X_mat) {
 # ----------------------------------------------------------------------
 runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME) {
   if (getopt("GLMpackage") %in% "h2o") {
-    data.table::fwrite(wts.all.rules, "./wts.all.rules.csv", turbo = TRUE)
-    designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv", parse_type = "CSV", destination_frame = "designmat.H2O")
+    data.table::fwrite(wts.all.rules, "./wts.all.rules.csv~", turbo = TRUE)
+    designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv~", parse_type = "CSV", destination_frame = "designmat.H2O")
     m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
                                   x = all_dummies,
                                   intercept = FALSE,
@@ -354,7 +354,7 @@ runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME) {
     names(out_coef) <- c(all_dummies)
     out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
     m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
-    wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])]
+    wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])]
   } else {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
     Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])

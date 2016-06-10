@@ -35,10 +35,12 @@ Imports:
     stringr
 LinkingTo: Rcpp
 Suggests:
-    RUnit,
+    h2o,
+    h2oEnsemble,
     knitr,
-    simcausal,
     magrittr
+    RUnit,
+    simcausal
 License: GPL-2
 LazyData: true
 RoxygenNote: 5.0.1
