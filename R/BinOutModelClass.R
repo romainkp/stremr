@@ -102,7 +102,7 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
   names(out_coef) <- c("Intercept", xnames)
   out_coef[names(m.fit@model$coefficients)] <- m.fit@model$coefficients
 
-  fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = nrow(Xmat))
+  fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm", nobs = length(subset_idx))
   if (gvars$verbose) print(fit$coef)
   class(fit) <- c(class(fit), c("h2oglmS3"))
   return(fit)
