@@ -394,8 +394,34 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                         }))
 
   # 6. fit the hazard MSM
-  if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+  # (VERY FAST)
+  if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
+  data.table::fwrite(wts.all.rules, "./wts.all.rules.csv", turbo = TRUE)
+  designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv", parse_type = "CSV", destination_frame = "designmat.H2O")
+  m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
+                            x = all_dummies,
+                            intercept = FALSE,
+                            weights_column = "cumm.IPAW",
+                            training_frame = designmat.H2O,
+                            family = "binomial",
+                            standardize = FALSE,
+                            solver = c("IRLSM"), # solver = c("L_BFGS"),
+                            max_iterations = 50,
+                            lambda = 0L),
+              silent = TRUE)
+  #  user  system elapsed w/ L_BFGS:
+  # 0.307   0.003   1.329
+  #  user  system elapsed w/ IRLSM:
+  # 0.691   0.005   5.738
+  out_coef <- vector(mode = "numeric", length = length(all_dummies))
+  out_coef[] <- NA
+  names(out_coef) <- c(all_dummies)
+  out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
+  m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
+  glm.IPAW.predictP1.h2o <- as.data.table(h2o.predict(m.fit, newdata = designmat.H2O)[,"p1"])[["p1"]]
+  wts.all.rules[, glm.IPAW.predictP1.h2o := as.data.table(h2o.predict(m.fit, newdata = designmat.H2O)[,"p1"])[["p1"]]]
 
+  # if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
   Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
   m.fit_spdglm <- speedglm::speedglm.wfit(
                                    X = Xdesign.mat,
@@ -404,9 +430,12 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                                    family = binomial(),
                                    weights = wts.all.rules[["cumm.IPAW"]],
                                    trace = FALSE)
-  m.fit_spdglm <- list(coef = m.fit_spdglm$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+  m.fit <- list(coef = m.fit_spdglm$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+  wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
 
-  wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit_spdglm, Xdesign.mat)]
+
+  browser()
+
 
   #### For variable estimation, GET IC and SE FOR BETA's
   beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = shifted.OUTCOME,
@@ -436,8 +465,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     for(period.idx in seq_along(periods)){
       period.j <- periods[period.idx]
       rev.term <- paste0("Periods.",tjmin[max(which(tjmin<=period.j))],"to",tjmax[min(which(tjmax>=period.j))],"_",d.j)
-      hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit_spdglm$coef[rev.term]))
-      S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit_spdglm$coef[rev.term])))
+      hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit$coef[rev.term]))
+      S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit$coef[rev.term])))
     }
 
     S2.IPAW[[d.j]] <- cumprod(S2.IPAW[[d.j]])
@@ -458,8 +487,8 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                                  IC.O = beta.IC.O.SEs[["IC.O"]])
   }
 
-  output.MSM <- round(m.fit_spdglm$coef,2)
-  output.MSM <- cbind("Terms" = names(m.fit_spdglm$coef), output.MSM)
+  output.MSM <- round(m.fit$coef,2)
+  output.MSM <- cbind("Terms" = names(m.fit$coef), output.MSM)
   colnames(output.MSM) <- c("Terms",ifelse(trunc.weights == Inf && use.weights, "IPAW", ifelse(trunc.weights < Inf && use.weights, "truncated IPAW", "no weights")))
   rownames(output.MSM) <- NULL
 
@@ -493,6 +522,6 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val.idx, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
 
-  return(list(St = S2.IPAW, MSM.fit = m.fit_spdglm, output.MSM = output.MSM,
+  return(list(St = S2.IPAW, MSM.fit = m.fit, output.MSM = output.MSM,
               IPAWdist = IPAWdist, RDs.IPAW.tperiods = RDs.IPAW.tperiods))
 }
