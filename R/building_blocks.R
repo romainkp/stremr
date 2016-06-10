@@ -394,10 +394,11 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                         }))
 
   # 6. fit the hazard MSM
-  # (VERY FAST)
   if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
+
   data.table::fwrite(wts.all.rules, "./wts.all.rules.csv", turbo = TRUE)
   designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv", parse_type = "CSV", destination_frame = "designmat.H2O")
+
   m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
                             x = all_dummies,
                             intercept = FALSE,
@@ -418,25 +419,19 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   names(out_coef) <- c(all_dummies)
   out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
   m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
+  wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])]
 
-  glm.IPAW.predictP1.h2o <- as.data.table(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])[["p1"]]
-  wts.all.rules[, glm.IPAW.predictP1.h2o := as.data.table(h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])[["p1"]]]
-
-  # if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
-  Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
-  m.fit_spdglm <- speedglm::speedglm.wfit(
-                                   X = Xdesign.mat,
-                                   y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
-                                   intercept=FALSE,
-                                   family = binomial(),
-                                   weights = wts.all.rules[["cumm.IPAW"]],
-                                   trace = FALSE)
-  m.fit <- list(coef = m.fit_spdglm$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
-  wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
-
-
-  browser()
-
+  # # if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+  # Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
+  # m.fit_spdglm <- speedglm::speedglm.wfit(
+  #                                  X = Xdesign.mat,
+  #                                  y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
+  #                                  intercept=FALSE,
+  #                                  family = binomial(),
+  #                                  weights = wts.all.rules[["cumm.IPAW"]],
+  #                                  trace = FALSE)
+  # m.fit <- list(coef = m.fit_spdglm$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+  # wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
 
   #### For variable estimation, GET IC and SE FOR BETA's
   beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = shifted.OUTCOME,
