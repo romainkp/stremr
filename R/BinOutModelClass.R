@@ -56,6 +56,8 @@ logisfit.h2oglmS3 <- function(datsum_obj) {
   subset_idx <- which(datsum_obj$subset_idx)
   if (length(subset_idx) == 0L) { # Xmat has 0 rows: return NA`s and avoid throwing exception
     m.fit <- list(coef = rep.int(NA_real_, length(xnames)))
+  } else if (length(xnames) == 0L) {
+    return(logisfit.speedglmS3(datsum_obj))
   } else {
     # Random Forests:
     # my.rf = h2o::h2o.randomForest(x = xnames, y = yname, training_frame = newH2Oframe, ntree = 100)
