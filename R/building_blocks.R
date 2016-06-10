@@ -330,7 +330,7 @@ logispredict = function(m.fit, X_mat) {
 # TO DO: 1. MAKE THIS INTO A CALL TO BinaryOutcomeModel OR ITS CHILD
 # TO DO: 2. SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
 # ----------------------------------------------------------------------
-runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME) {
+runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
   if (getopt("GLMpackage") %in% "h2o") {
     data.table::fwrite(wts.all.rules, "./wts.all.rules.csv~", turbo = TRUE)
     designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv~", parse_type = "CSV", destination_frame = "designmat.H2O")
@@ -456,7 +456,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
 
   # 6. fit the hazard MSM
   if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
-  resglmMSM <- runglmMSM(wts.all.rules, all_dummies, shifted.OUTCOME)
+  resglmMSM <- runglmMSM(wts.all.rules, all_dummies, shifted.OUTCOME, verbose)
   wts.all.rules <- resglmMSM$wts.all.rules
   m.fit <- resglmMSM$m.fit
 
