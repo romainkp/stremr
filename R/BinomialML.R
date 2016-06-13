@@ -110,16 +110,27 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     fit = function(data, outvar, predvars, subset_idx, ...) {
       self$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
       model.fit <- self$model.fit
-      browser()
 
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L)) {
         class(model.fit) <- "try-error"
       } else {
         rows_subset <- which(subset_idx)
         subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, ]
+
         outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
         # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there are no NAs in the original data
         NAfactors <- any(is.na(outfactors))
+
+        # fixing bug in h2o frame
+        if (NAfactors) {
+          NA_idx_h2o <- which(as.logical(is.na(subsetH2Oframe[,outvar])))
+          orig.vals <- data$dat.sVar[rows_subset, ][NA_idx_h2o, outvar, with = FALSE][[outvar]]
+          # require("h2o")
+          subsetH2Oframe[NA_idx_h2o, outvar] <- orig.vals[1]
+          outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
+          NAfactors <- any(is.na(outfactors))
+        }
+
         if (length(outfactors) < 2L | NAfactors) {
           class(model.fit) <- "try-error"
         } else if (length(outfactors) > 2L) {
