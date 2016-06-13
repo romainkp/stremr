@@ -37,8 +37,21 @@ openFileInOS <- function(f) {
 
 #' @export
 make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html", file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
-  sVartypes <- gvars$sVartypes
   optArgReport <- list(...)
+
+  if ("author" %in% names(optArgReport)) {
+    author <- optArgReport[['author']]
+    assert_that(is.character(author))
+  } else {
+    author <- "Insert Author"
+  }
+  if ("title" %in% names(optArgReport)) {
+    title <- optArgReport[['title']]
+    assert_that(is.character(author))
+  } else {
+    title <- "stremr Analysis Report"
+  }
+
   if (!missing(MSM)) {
     # if ()
     # handle separately if MSM is a list of many MSMs -> will need to do the plotting for each MSM in the list
@@ -51,8 +64,9 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   }
 
   # -------------------------------------------------------------------------------------
-  # DISCRIPTIVE STATISTICS:
+  # TO DO: DISCRIPTIVE STATISTICS
   # -------------------------------------------------------------------------------------
+  sVartypes <- gvars$sVartypes
   # For each covariate in OData$nodes, create either:
     # 1) a density plot for each  OData$type.sVar[varnames] %in% sVartypes$cont
     # 2) a histogram plot for each variable OData$type.sVar[varnames] %in% c(sVartypes$cont, sVartypes$cat, sVartypes$bin)
@@ -71,13 +85,9 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
 
   # outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr)
   # -------------------------------------------------------------------------------------
-  # **** ADD RD tables ****
+  # RD tables
+  # RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
   # -------------------------------------------------------------------------------------
-  RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
-  # RD.IPAW_tperiod1 <- MSM$RD.IPAW_tperiod1
-  # RD.IPAW_tperiod2 <- MSM$RD.IPAW_tperiod2
-  # RR.IPAW_tperiod1 <- MSM$RR.IPAW_tperiod1
-  # RR.IPAW_tperiod2 <- MSM$RR.IPAW_tperiod2
 
   ## path issue on Windows
   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
@@ -85,15 +95,14 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   report.file <- system.file('report', "report-script-rmd.R", package = 'stremr')
 
   ## set working directory where to write the report:
-  opts.bak <- options()                      # backup options
+  opts.bak <- options() # backup options
   wd.bak   <- getwd()
   setwd(file.path)
 
   format_pandoc <- format %+% "_document"
   outfile <- file.name %+% "." %+% ifelse(format %in% "word", "docx", format)
 
-  print("writing report to directory: " %+% getwd())
-
+  message("writing report to directory: " %+% getwd())
   figure.dir <- file.path(getwd(), "figure/stremr-")
   # output_format = "html_document",
   report.html <- tryCatch(rmarkdown::render(report.file,
@@ -186,7 +195,6 @@ make_report <- function(OData, Surv.byregimen, file.name = getOption('stremr.fil
 
   ## Initialize a new Pandoc object
   myReport <- Pandoc$new()
-
   ## Add author, title and date of document
   myReport$author <- 'Gergely Daróczi'
   myReport$title  <- 'Demo'

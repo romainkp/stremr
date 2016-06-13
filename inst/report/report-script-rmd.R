@@ -1,6 +1,6 @@
 #' ---
-#' title: "stremr Analysis Report"
-#' author: "Insert Author"
+#' title: "`r title`"
+#' author: "`r author`"
 #' date: "`r Sys.Date()`"
 #' ---
 
@@ -18,16 +18,16 @@ f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny, x_legend, y_leg
   counter <- 0
   if (missing(y_lab)) y_lab <- ""
   if (missing(t_int_sel)) t_int_sel <- seq_along(surv_res_est[[1]])
-  if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, function(x)min(x[t_int_sel]))))
-  if (missing(x_legend))x_legend <- (max(t_int_sel)-min(t_int_sel))*2/3+min(t_int_sel)
-  if (missing(y_legend))y_legend <- (1-miny)*4/5+miny
+  if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, function(x) min(x[t_int_sel], na.rm = TRUE))))
+  if (missing(x_legend)) x_legend <- (max(t_int_sel, na.rm = TRUE) - min(t_int_sel, na.rm = TRUE)) * 2/3 + min(t_int_sel, na.rm = TRUE)
+  if (missing(y_legend)) y_legend <- (1 - miny) * 4/5 + miny
   for(d.j in names(surv_res_est)){
-    counter <- counter+1
-    plot(t_int_sel,surv_res_est[[d.j]][t_int_sel],col=counter,type='b',cex=ptsize,ylim=c(miny,1),
+    counter <- counter + 1
+    plot(t_int_sel, surv_res_est[[d.j]][t_int_sel], col = counter, type = 'b', cex = ptsize, ylim = c(miny, 1),
       ylab = y_lab, xlab="Quarter since study entry")
     par(new=TRUE)
   }
-  legend(x_legend,y_legend,legend=names(surv_res_est),col=c(1:length(names(surv_res_est))), cex=ptsize, pch=1)
+  legend(x_legend, y_legend, legend = names(surv_res_est), col = c(1:length(names(surv_res_est))), cex = ptsize, pch = 1)
 }
 f_create_model_caption <- function(reg.model) {
   return(
@@ -111,11 +111,10 @@ do.call(f_plot_survest, sysArg)
 
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
-for (RDs.IPAW.t.table in RDs.IPAW.tperiods) {
+for (RDs.IPAW.t.table in MSM$RDs.IPAW.tperiods) {
   pander::set.caption(RDs.IPAW.t.table$caption)
   pander::pander(RDs.IPAW.t.table$RDtable)
 }
 
 #+ include=FALSE
 panderOptions('knitr.auto.asis', TRUE)
-

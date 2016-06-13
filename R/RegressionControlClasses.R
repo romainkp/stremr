@@ -1,82 +1,3 @@
-# ---------------------------------------------------------------------------------
-# S3 methods for regression subsetting/stratification/interval subsetting
-# ---------------------------------------------------------------------------------
-select_reg <- function(RegressionForms, reg, k_i, self) { UseMethod("select_reg") }
-select_reg.ListOfRegressionForms <- function(RegressionForms, reg, k_i, self) {
-  self$RegressionForms <- RegressionForms[[k_i]]
-  return(invisible(self))
-}
-select_reg.SingleRegressionFormClass <- function(RegressionForms, reg, k_i, self) {
-  n_regs <- get_n_regs(RegressionForms)
-  self$RegressionForms <- RegressionForms$clone()
-  self$outvar.class <- RegressionForms$outvar.class[[k_i]]
-  self$outvar <- RegressionForms$outvar[[k_i]] # An outcome variable that is being modeled
-  if (self$reg_hazard) {
-    # Modeling hazards of bin indicators, no need to condition on previous outcomes as they will all be degenerate. P(A,B,C|D) -> P(A|D),P(B|D),P(C|D)
-    self$predvars <- RegressionForms$predvars # Predictors
-  } else {
-    # Factorizating the joint prob as P(A,B,C|D):=P(A|D)*P(B|A,D)*P(C|A,B,D)
-    self$predvars <- c(RegressionForms$outvar[-c(k_i:n_regs)], RegressionForms$predvars) # Predictors
-    # The subset_vars is a list when RegressionClass is used to specify several regression models.
-    # Obtain appropriate subset_vars for this regression (k_i) and set it to self.
-    # On the other hand, if subset_vars is a vector of variable names, all of those variables will be used for
-    # choosing the subset_vars for all n_regs regressions.
-  }
-  if (is.list(RegressionForms$subset_vars)) {
-    self$subset_vars <- RegressionForms$subset_vars[[k_i]]
-  }
-  # Doing the same for subset_exprs for stratified models on subsets
-  if (is.list(RegressionForms$subset_exprs)) {
-    self$subset_exprs <- RegressionForms$subset_exprs[[k_i]]
-  }
-  # Doing the same for intervals when modeling continuous outcomes
-  # if (("contin" %in% class(self)) && is.list(reg$intrvls)) {
-  if (is.list(reg$intrvls)) {
-    outvar_idx <- which(names(reg$intrvls) %in% self$outvar)
-    self$intrvls <- reg$intrvls[[outvar_idx]]
-  }
-  return(invisible(self))
-}
-
-# ---------------------------------------------------------------------------
-# S3 methods for SingleRegressionFormClass and ListOfRegressionForms
-# ---------------------------------------------------------------------------
-print.SingleRegressionFormClass <- function(singleregobj) singleregobj$show()
-
-get_n_regs <- function(singleregobj) { UseMethod("get_n_regs") }
-get_n_regs.ListOfRegressionForms <- function(regobjlist) return(length(regobjlist))
-get_n_regs.SingleRegressionFormClass <- function(singleregobj) return(length(singleregobj$outvar))
-get_n_regs.RegressionClass <- function(regobj) return(get_n_regs(regobj$RegressionForms))
-
-get_outvars <- function(regobjlist) { UseMethod("get_outvars") }
-get_outvars.ListOfRegressionForms <- function(regobjlist) {
-  outvars <- NULL
-  for (idx in seq_along(regobjlist))
-    outvars <- c(outvars, regobjlist[[idx]]$outvar)
-  return(outvars)
-}
-get_subset_exprs <- function(regobjlist) { UseMethod("get_subset_exprs") }
-get_subset_exprs.ListOfRegressionForms <- function(regobjlist) {
-  subset_exprs <- NULL
-  for (idx in seq_along(regobjlist))
-    subset_exprs <- c(subset_exprs, regobjlist[[idx]]$subset_exprs)
-  return(subset_exprs)
-}
-set_subset_exprs <- function(regobjlist, idx, subset_expr) { UseMethod("set_subset_exprs") }
-set_subset_exprs.ListOfRegressionForms <- function(regobjlist, idx, subset_expr) {
-  subset_exprs <- NULL
-  idx_count <- 0
-  for (idx_reg in seq_along(regobjlist)) {
-    for (idx_outvar in seq_along(regobjlist[[idx_reg]]$outvar)) {
-      idx_count <- idx_count + 1
-      if (idx == idx_count) {
-        regobjlist[[idx_reg]]$subset_exprs[[idx_outvar]] <- subset_expr
-        return(invisible(regobjlist[[idx_reg]]))
-      }
-    }
-  }
-}
-
 ## ---------------------------------------------------------------------
 #' R6 class that defines regression models evaluating P(sA|sW), for summary measures (sW,sA)
 #'
@@ -173,8 +94,14 @@ RegressionClass <- R6Class("RegressionClass",
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
     nbins = NULL,                  # actual nbins used, for cont. outvar, defined in ContinModel$new()
     bin_nms = NULL,                # column names for bin indicators
+
+
     useglm = logical(),            # TRUE to fit reg with glm.fit(), FALSE to fit with speedglm.wfit
     GLMpackage = character(),      # 'glm', 'speedglm' or 'h2o'
+    fit.package = character(),
+    fit.algorithm = character(),
+
+
     parfit = logical(),            # TRUE for fitting binary regressions in parallel
     bin_bymass = logical(),        # for cont outvar, create bin cutoffs based on equal mass distribution?
     bin_bydhist = logical(),       # if TRUE, use dhist approach for bin definitions
@@ -192,8 +119,16 @@ RegressionClass <- R6Class("RegressionClass",
                           RegressionForms,
                           intrvls,
                           ReplMisVal0 = TRUE, # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
+
+
                           useglm = getopt("useglm"),
                           GLMpackage = getopt("GLMpackage"),
+
+
+                          fit.package = getopt("fit.package"),
+                          fit.algorithm = getopt("fit.algorithm"),
+
+
                           parfit = getopt("parfit"),
                           nbins = getopt("nbins"),
                           bin_bymass = getopt("bin.method")%in%"equal.mass",
@@ -204,8 +139,14 @@ RegressionClass <- R6Class("RegressionClass",
 
       if (!missing(RegressionForms)) self$RegressionForms <- RegressionForms
       self$ReplMisVal0 <- ReplMisVal0
+
+
       self$useglm <- useglm
       self$GLMpackage <- GLMpackage
+      self$fit.package <- fit.package
+      self$fit.algorithm <- fit.algorithm
+
+
       self$parfit <- parfit
       self$nbins <- nbins
       self$bin_bymass <- bin_bymass
@@ -319,6 +260,85 @@ RegressionClass <- R6Class("RegressionClass",
   )
 )
 
+
+# ---------------------------------------------------------------------------------
+# S3 methods for regression subsetting/stratification/interval subsetting
+# ---------------------------------------------------------------------------------
+select_reg <- function(RegressionForms, reg, k_i, self) { UseMethod("select_reg") }
+select_reg.ListOfRegressionForms <- function(RegressionForms, reg, k_i, self) {
+  self$RegressionForms <- RegressionForms[[k_i]]
+  return(invisible(self))
+}
+select_reg.SingleRegressionFormClass <- function(RegressionForms, reg, k_i, self) {
+  n_regs <- get_n_regs(RegressionForms)
+  self$RegressionForms <- RegressionForms$clone()
+  self$outvar.class <- RegressionForms$outvar.class[[k_i]]
+  self$outvar <- RegressionForms$outvar[[k_i]] # An outcome variable that is being modeled
+  if (self$reg_hazard) {
+    # Modeling hazards of bin indicators, no need to condition on previous outcomes as they will all be degenerate. P(A,B,C|D) -> P(A|D),P(B|D),P(C|D)
+    self$predvars <- RegressionForms$predvars # Predictors
+  } else {
+    # Factorizating the joint prob as P(A,B,C|D):=P(A|D)*P(B|A,D)*P(C|A,B,D)
+    self$predvars <- c(RegressionForms$outvar[-c(k_i:n_regs)], RegressionForms$predvars) # Predictors
+    # The subset_vars is a list when RegressionClass is used to specify several regression models.
+    # Obtain appropriate subset_vars for this regression (k_i) and set it to self.
+    # On the other hand, if subset_vars is a vector of variable names, all of those variables will be used for
+    # choosing the subset_vars for all n_regs regressions.
+  }
+  if (is.list(RegressionForms$subset_vars)) {
+    self$subset_vars <- RegressionForms$subset_vars[[k_i]]
+  }
+  # Doing the same for subset_exprs for stratified models on subsets
+  if (is.list(RegressionForms$subset_exprs)) {
+    self$subset_exprs <- RegressionForms$subset_exprs[[k_i]]
+  }
+  # Doing the same for intervals when modeling continuous outcomes
+  # if (("contin" %in% class(self)) && is.list(reg$intrvls)) {
+  if (is.list(reg$intrvls)) {
+    outvar_idx <- which(names(reg$intrvls) %in% self$outvar)
+    self$intrvls <- reg$intrvls[[outvar_idx]]
+  }
+  return(invisible(self))
+}
+
+# ---------------------------------------------------------------------------
+# S3 methods for SingleRegressionFormClass and ListOfRegressionForms
+# ---------------------------------------------------------------------------
+print.SingleRegressionFormClass <- function(singleregobj) singleregobj$show()
+
+get_n_regs <- function(singleregobj) { UseMethod("get_n_regs") }
+get_n_regs.ListOfRegressionForms <- function(regobjlist) return(length(regobjlist))
+get_n_regs.SingleRegressionFormClass <- function(singleregobj) return(length(singleregobj$outvar))
+get_n_regs.RegressionClass <- function(regobj) return(get_n_regs(regobj$RegressionForms))
+
+get_outvars <- function(regobjlist) { UseMethod("get_outvars") }
+get_outvars.ListOfRegressionForms <- function(regobjlist) {
+  outvars <- NULL
+  for (idx in seq_along(regobjlist))
+    outvars <- c(outvars, regobjlist[[idx]]$outvar)
+  return(outvars)
+}
+get_subset_exprs <- function(regobjlist) { UseMethod("get_subset_exprs") }
+get_subset_exprs.ListOfRegressionForms <- function(regobjlist) {
+  subset_exprs <- NULL
+  for (idx in seq_along(regobjlist))
+    subset_exprs <- c(subset_exprs, regobjlist[[idx]]$subset_exprs)
+  return(subset_exprs)
+}
+set_subset_exprs <- function(regobjlist, idx, subset_expr) { UseMethod("set_subset_exprs") }
+set_subset_exprs.ListOfRegressionForms <- function(regobjlist, idx, subset_expr) {
+  subset_exprs <- NULL
+  idx_count <- 0
+  for (idx_reg in seq_along(regobjlist)) {
+    for (idx_outvar in seq_along(regobjlist[[idx_reg]]$outvar)) {
+      idx_count <- idx_count + 1
+      if (idx == idx_count) {
+        regobjlist[[idx_reg]]$subset_exprs[[idx_outvar]] <- subset_expr
+        return(invisible(regobjlist[[idx_reg]]))
+      }
+    }
+  }
+}
 # --------------------------------------------------------
 # DEFINES THE LOWEST LEVEL REPRESENTATION FOR A SINGLE REGRESSION FORMULA BASED WITH THE FOLLOWING STRUCTURE
 # --------------------------------------------------------

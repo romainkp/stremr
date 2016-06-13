@@ -486,7 +486,20 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       H2O.dat.sVar <- h2o::as.h2o(dat.sVar, destination_frame = "H2O.dat.sVar")
       self$H2O.dat.sVar <- H2O.dat.sVar
       return(invisible(self))
+    },
+    # -----------------------------------------------------------------------------
+    # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
+    # -----------------------------------------------------------------------------
+    fast.load.to.H2O = function() {
+      temp.csv.path <- file.path(tempdir(), "dat.sVar.csv~")
+      data.table::fwrite(OData$dat.sVar, temp.csv.path, turbo = TRUE)
+      # data.table::fwrite(OData$dat.sVar, "./dat.sVar.csv~", turbo = TRUE)
+      H2O.dat.sVar <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
+      # H2O.dat.sVar <- h2o::h2o.uploadFile(path = "./dat.sVar.csv~", parse_type = "CSV", destination_frame = "H2O.dat.sVar")
+      self$H2O.dat.sVar <- H2O.dat.sVar
+      return(invisible(self))
     }
+
   ),
 
   active = list(

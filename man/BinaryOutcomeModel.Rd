@@ -3,7 +3,7 @@
 \docType{class}
 \name{BinaryOutcomeModel}
 \alias{BinaryOutcomeModel}
-\title{R6 class for fitting and making predictions for a single logistic regression with binary outcome B, P(B | PredVars)}
+\title{R6 class for fitting and making predictions for a single binary outcome regression model P(B | PredVars)}
 \format{An \code{\link{R6Class}} generator object}
 \usage{
 BinaryOutcomeModel
@@ -19,8 +19,8 @@ This R6 class can request, store and manage the design matrix Xmat, as well as t
 \itemize{
 \item{cont.sVar.flag} - Is the original outcome variable continuous?
 \item{bw.j} - Bin width (interval length) for an outcome that is a bin indicator of a discretized continous outcome.
-\item{glmfitclass} - Controls which package will be used for performing model fits (\code{glm} or \code{speedglm}).
-\item{bindat} - Pointer to an instance of \code{BinDat} class that contains the data.
+\item{GLMpackage} - Controls which package will be used for performing model fits (\code{glm} or \code{speedglm}).
+\item{binomialModelObj} - Pointer to an instance of \code{binomialModelObj} class that contains the data.
 }
 }
 \section{Methods}{

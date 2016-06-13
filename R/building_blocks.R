@@ -331,10 +331,12 @@ runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
     return(pAout)
   }
 
-  if (getopt("GLMpackage") %in% "h2o") {
+  if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
     if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
-    data.table::fwrite(wts.all.rules, "./wts.all.rules.csv~", turbo = TRUE)
-    designmat.H2O <- h2o::h2o.uploadFile(path = "./wts.all.rules.csv~", parse_type = "CSV", destination_frame = "designmat.H2O")
+    temp.csv.path <- file.path(tempdir(), "wts.all.rules.csv~")
+    data.table::fwrite(wts.all.rules, temp.csv.path, turbo = TRUE)
+    designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "designmat.H2O")
+
     m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
                                   x = all_dummies,
                                   intercept = FALSE,

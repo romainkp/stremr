@@ -21,7 +21,7 @@
 data(OdataCatCENS)
 }
 \description{
-Simulated dataset containing 50,000 i.i.d. observations organized in long format as person-time row data.
+Simulated dataset containing 50,000 i.i.d. observations organized in long format as person-time rows.
 The binary exposure is \code{TI} and binary outcome is \code{Y}. See /tests/RUnit_tests_02_categCENS.R
 function \code{notrun.save.example.data} for R code that generated this data.
 }

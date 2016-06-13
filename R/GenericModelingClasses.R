@@ -8,10 +8,10 @@
 # S3 constructors for the summary model classes:
 # ---------------------------------------------------------------------------------
 newsummarymodel <- function(reg, DataStorageClass.g0, ...) { UseMethod("newsummarymodel") }
-# Summary model constructor for generic regression with multivariate outcome, but one set of predictors
-newsummarymodel.generic <- function(reg, DataStorageClass.g0, ...) GenericModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for binary outcome sA[j]:
 newsummarymodel.binary <- function(reg, ...) BinaryOutcomeModel$new(reg = reg, ...)
+# Summary model constructor for generic regression with multivariate outcome, but one set of predictors
+newsummarymodel.generic <- function(reg, DataStorageClass.g0, ...) GenericModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for continuous outcome sA[j]:
 newsummarymodel.contin <- function(reg, DataStorageClass.g0, ...) ContinModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for categorical outcome sA[j]:
