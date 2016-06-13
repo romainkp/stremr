@@ -110,6 +110,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     fit = function(data, outvar, predvars, subset_idx, ...) {
       self$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
       model.fit <- self$model.fit
+      browser()
 
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L)) {
         class(model.fit) <- "try-error"
