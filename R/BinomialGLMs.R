@@ -16,7 +16,10 @@ glmfit.glm <- function(fit, Xmat, Yvals, ...) {
                                 control = ctrl)
   }, GetWarningsToSuppress())
 
-  fit$coef <- model.fit$coef; fit$fitfunname <- "glm"; fit$linkfun <- "logit_linkinv"; fit$nobs <- nrow(Xmat)
+  fit$coef <- model.fit$coef;
+  fit$fitfunname <- "glm";
+  fit$linkfun <- "logit_linkinv";
+  fit$nobs <- nrow(Xmat)
 
   if (gvars$verbose) {
     print("glm fits:")
@@ -40,7 +43,10 @@ glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
     return(glmfit.glm(fit, Xmat, Yvals, ...))
   }
 
-  fit$coef <- model.fit$coef; fit$fitfunname <- "speedglm"; fit$linkfun <- "logit_linkinv"; fit$nobs <- nrow(Xmat)
+  fit$coef <- model.fit$coef;
+  fit$fitfunname <- "speedglm";
+  fit$linkfun <- "logit_linkinv";
+  fit$nobs <- nrow(Xmat)
 
   if (gvars$verbose) {
     print("speedglm fits:")
@@ -51,74 +57,15 @@ glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
   return(fit)
 }
 
-# S3 method for h2o binomial family fit, takes BinDat data object:
-glmfit.h2oglm <- function(fit, DataStorageObject, outvar, predvars, subset_idx, ...) {
-  if (length(predvars) == 0L) {
-    return(glmfit.speedglm(fit, ...))
-  }
-  rows_subset <- which(subset_idx)
-  subsetH2Oframe <- DataStorageObject$H2O.dat.sVar[rows_subset,]
-  outfactors <- as.vector(h2o.unique(subsetH2Oframe[, outvar]))
-  NAfactors <- any(is.na(outfactors)) # means that conversion H2O.FRAME produced errors, since there are no NAs in the original data
-
-  if (length(outfactors) < 2L | NAfactors) {
-    return(glmfit.speedglm(fit, ...))
-  } else if (length(outfactors) > 2L) {
-    stop("Attempting to run logistic regression for outcome with more than 2 categories")
-  }
-
-  if (gvars$verbose) print("calling h2o.glm...")
-
-  model.fit <- try(h2o::h2o.glm(x = predvars,
-                                y = outvar,
-                                intercept = TRUE,
-                                training_frame = subsetH2Oframe,
-                                family = "binomial",
-                                standardize = TRUE,
-                                solver = c("L_BFGS"), # solver = c("IRLSM"),
-                                # remove_collinear_columns = TRUE,
-                                max_iterations = 50,
-                                lambda = 0L),
-                   silent = TRUE)
-    # print("h2o.glm fit"); print(model.fit)
-    # print(model.fit@parameters)
-    # print(model.fit@allparameters)
-    # str(model.fit@model)
-  if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
-    message("h2o::h2o.glm failed, falling back on speedglm; ", model.fit)
-    return(glmfit.speedglm(fit, ...))
-  }
-
-  # assign the fitted coefficients in correct order (same as predictor order in predvars)
-  out_coef <- vector(mode = "numeric", length = length(predvars)+1)
-  out_coef[] <- NA
-  names(out_coef) <- c("Intercept", predvars)
-  out_coef[names(model.fit@model$coefficients)] <- model.fit@model$coefficients
-
-  fit$coef <- out_coef; fit$fitfunname <- "h2o.glm"; fit$linkfun <- "logit_linkinv"; fit$nobs <- length(subset_idx);
-  fit$H2O.model.object <- model.fit
-
-  if (gvars$verbose) {
-    print("h2oglm fits:")
-    print(fit$coef)
-  }
-
-  # class(fit)[2] <- "glmfit"
-  class(fit)[2] <- "h2ofit"
-  return(fit)
-}
-
 # ----------------------------------------------------------------
 # Generic for predicting P(A=1|...) from either logistic (binomial family) GLM model or H2O model
 # ----------------------------------------------------------------
 predictP1 <- function(m.fit, ...) UseMethod("predictP1")
 
 # ----------------------------------------------------------------
-# Generic prediction fun for logistic regression coefs, predicts P(A = 1 | newXmat)
-# predictP1.glmfit <- function(m.fit, Xmat, subset_idx, n, ...) {
+# Prediction for glmfit objects, predicts P(A = 1 | newXmat)
 # ----------------------------------------------------------------
 predictP1.glmfit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
-# predictP1.glm <- function(m.fit, ParentObject, subset_idx, n, ...) {
   ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
   Xmat <- ParentObject$getXmat
   assert_that(!is.null(Xmat)); assert_that(!is.null(subset_idx))
@@ -131,28 +78,21 @@ predictP1.glmfit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
   }
   return(pAout)
 }
-predictP1.speedglm <- function(m.fit, ...) predictP1.glm(m.fit, ...)
-
-# Two ways to perform prediction for GLM with H2O, BOTH SHOULD WORK THE SAME
-predictP1.h2oglm <- function(m.fit, ...) predictP1.glm(m.fit, ...)
-# predictP1.h2oglm <- function(m.fit, ...) predictP1.h2o(m.fit, ...)
 
 # ----------------------------------------------------------------
-# SAME PREDICTION FUNCTION SHOULD APPLY TO ALL H2O FITTED MODELS
+# Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 # ----------------------------------------------------------------
 predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
   assert_that(!is.null(subset_idx))
   rows_subset <- which(subset_idx)
   subsetH2Oframe <- DataStorageObject$H2O.dat.sVar[rows_subset,]
-
   ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
   pAout <- rep.int(gvars$misval, n)
-  if (sum(subset_idx > 0)) {
+  if (sum(subset_idx) > 0) {
     pAout[subset_idx] <- as.vector(h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)[,"p1"])
   }
   return(pAout)
 }
-
 
 ## ---------------------------------------------------------------------
 #' R6 class for storing the design matrix and the binary outcome for a single GLM (logistic) regression
@@ -200,9 +140,9 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
 
     # TO DO: THIS WILL CONTAIN ADDITIONAL USER-SPEC'ED CONTROLS/ARGS PASSED ON TO speedglm/glm
     model.controls = NULL,
+
     fit.class = c("glm", "speedglm", "h2oglm"),
     model.fit = list(coef = NA, fitfunname = NA, nobs = NA),
-    # fit.algorithm <- "glm"
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel
@@ -234,15 +174,11 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
     },
 
     predictP1 = function(data, subset_idx) {
-      # self$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
       P1 <- predictP1(self$model.fit,
                       ParentObject = self,
                       DataStorageObject = data,
                       subset_idx = subset_idx,
-                      n = self$ParentModel$n
-                      # Xmat = private$Xmat,
-                      # DataStorageObject = data,
-                      )
+                      n = self$ParentModel$n)
       return(P1)
     },
 

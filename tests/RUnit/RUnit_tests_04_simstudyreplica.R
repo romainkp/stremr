@@ -291,12 +291,17 @@ make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)
 
 
 # ----------------------------------------------------------------
-# Testing fits with h2o
+# Testing fits with h2o (GLM, RFs and GBM)
 # ----------------------------------------------------------------
 require("h2o")
 h2o::h2o.init(nthreads = 2)
 options(stremr.verbose = TRUE)
-stremr_options(fit.package = "h2o", fit.algorithm = "h2oGLM")
+
+# stremr_options(fit.package = "glm")
+# stremr_options(fit.package = "speedglm")
+# stremr_options(fit.package = "h2o", fit.algorithm = "h2oGLM")
+stremr_options(fit.package = "h2o", fit.algorithm = "h2oRF")
+# stremr_options(fit.package = "h2o", fit.algorithm = "h2oGBM")
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
 # h2oload_time <- system.time(OData$load.to.H2O())
@@ -305,6 +310,7 @@ h2oload_time_fast
 OData$H2O.dat.sVar
 
 OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
+
 
 require("magrittr")
 St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%

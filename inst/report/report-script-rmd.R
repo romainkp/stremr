@@ -13,18 +13,18 @@ panderOptions("table.split.table", Inf)
 
 
 #+ echo=FALSE, include=FALSE
-f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny, x_legend, y_legend) {
+f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, x_lab, miny, x_legend, y_legend) {
   ptsize <- 0.7
   counter <- 0
   if (missing(y_lab)) y_lab <- ""
+  if (missing(x_lab)) x_lab <- "Follow-up period since study entry"
   if (missing(t_int_sel)) t_int_sel <- seq_along(surv_res_est[[1]])
   if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, function(x) min(x[t_int_sel], na.rm = TRUE))))
   if (missing(x_legend)) x_legend <- (max(t_int_sel, na.rm = TRUE) - min(t_int_sel, na.rm = TRUE)) * 2/3 + min(t_int_sel, na.rm = TRUE)
   if (missing(y_legend)) y_legend <- (1 - miny) * 4/5 + miny
   for(d.j in names(surv_res_est)){
     counter <- counter + 1
-    plot(t_int_sel, surv_res_est[[d.j]][t_int_sel], col = counter, type = 'b', cex = ptsize, ylim = c(miny, 1),
-      ylab = y_lab, xlab="Quarter since study entry")
+    plot(t_int_sel, surv_res_est[[d.j]][t_int_sel], col = counter, type = 'b', cex = ptsize, ylim = c(miny, 1), ylab = y_lab, xlab = x_lab)
     par(new=TRUE)
   }
   legend(x_legend, y_legend, legend = names(surv_res_est), col = c(1:length(names(surv_res_est))), cex = ptsize, pch = 1)

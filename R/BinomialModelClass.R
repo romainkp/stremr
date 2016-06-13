@@ -91,9 +91,14 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
 
 
+
+
       self$GLMpackage <- reg$GLMpackage
       self$fit.package <- reg$fit.package
       self$fit.algorithm <- reg$fit.algorithm
+
+
+
 
 
       assert_that(is.string(reg$outvar))

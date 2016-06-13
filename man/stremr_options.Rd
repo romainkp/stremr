@@ -5,7 +5,7 @@
 \title{Setting Options for \code{stremr}}
 \usage{
 stremr_options(useglm = FALSE, GLMpackage = c("glm", "speedglm", "h2oglm"),
-  fit.package = c("speedglm", "h2oglm", "h2o"), fit.algorithm = c("GLM",
+  fit.package = c("glm", "speedglm", "h2o"), fit.algorithm = c("glm",
   "h2oGLM", "h2oGBM", "h2oRF", "h2oSL"), bin.method = c("equal.len",
   "equal.mass", "dhist"), parfit = FALSE, nbins = NA, maxncats = 20,
   poolContinVar = FALSE, maxNperBin = 1000)
