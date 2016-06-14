@@ -7,8 +7,6 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   cumm.IPAW <- "cumm.IPAW"
 
   IC.data <- MSMdata[ ,c(ID, t.var, Yname, cumm.IPAW, MSMpredict), with = FALSE] # contains data for all obs compatible with at least one rule
-  # IC.data <- MSMdata[ ,c(ID,t.var,Yname,cumm.IPAW), with = FALSE] # contains data for all obs compatible with at least one rule
-
   # MSMepsilon <- IC.data[,Yname, with = FALSE]-IC.data[,MSMpredict, with = FALSE]
   # IC.data <- cbind(IC.data,MSMepsilon)
 
@@ -44,7 +42,6 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   Cm1 <- solve(C)
 
   IC.O <- Cm1 %*% D.O.beta.alt
-  # IC.O <- Cm1 %*% D.O.beta
 
   if (gvars$verbose) {
     print("Should all be very small: "); print(abs(apply(IC.O, 1, mean)))

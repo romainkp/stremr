@@ -49,31 +49,31 @@ f_create_model_caption <- function(reg.model) {
 #' ## Model(s) for censoring variable(s):
 
 #+ echo=FALSE, results='asis'
-panderOptions('knitr.auto.asis', FALSE)
-set.alignment('left', row.names = 'right')
-for (reg.model in fitted.coefs.gC) {
-  pander::set.caption(f_create_model_caption(reg.model))
-  pander::pander(reg.model$coef, justify = c('right', 'left'))
-}
+# panderOptions('knitr.auto.asis', FALSE)
+# set.alignment('left', row.names = 'right')
+# for (reg.model in fitted.coefs.gC) {
+#   pander::set.caption(f_create_model_caption(reg.model))
+#   pander::pander(reg.model$coef, justify = c('right', 'left'))
+# }
 
 #' ## Model(s) for exposure variable(s):
 
 #+ echo=FALSE, results='asis'
 # pander::set.caption("Regression: " %+% fitted.coefs.gA$regression)
-for (reg.model in fitted.coefs.gA) {
-  pander::set.caption(f_create_model_caption(reg.model))
-  pander::pander(reg.model$coef, justify = c('right', 'left'))
-}
+# for (reg.model in fitted.coefs.gA) {
+#   pander::set.caption(f_create_model_caption(reg.model))
+#   pander::pander(reg.model$coef, justify = c('right', 'left'))
+# }
 
 #' ## Model(s) for monitoring variable(s):
 
 #+ echo=FALSE, results='asis'
 # pander::set.caption("Regression: " %+% fitted.coefs.gN$regression)
 # pander::pander(fitted.coefs.gN$coef, justify = c('right', 'center'))
-for (reg.model in fitted.coefs.gN) {
-  pander::set.caption(f_create_model_caption(reg.model))
-  pander::pander(reg.model$coef, justify = c('right', 'left'))
-}
+# for (reg.model in fitted.coefs.gN) {
+#   pander::set.caption(f_create_model_caption(reg.model))
+#   pander::pander(reg.model$coef, justify = c('right', 'left'))
+# }
 
 #+ include=FALSE
 panderOptions('knitr.auto.asis', TRUE)
