@@ -79,9 +79,9 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   # -------------------------------------------------------------------------------------
   # MODEL FITS:
   # -------------------------------------------------------------------------------------
-  fitted.coefs.gC <- OData$modelfit.gC$get.fits(format_table = TRUE)
-  fitted.coefs.gA <- OData$modelfit.gA$get.fits(format_table = TRUE)
-  fitted.coefs.gN <- OData$modelfit.gN$get.fits(format_table = TRUE)
+  # fitted.coefs.gC <- OData$modelfit.gC$get.fits(format_table = TRUE)
+  # fitted.coefs.gA <- OData$modelfit.gA$get.fits(format_table = TRUE)
+  # fitted.coefs.gN <- OData$modelfit.gN$get.fits(format_table = TRUE)
 
   # outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr)
   # -------------------------------------------------------------------------------------
