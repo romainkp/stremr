@@ -408,6 +408,8 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
 get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
                         est.name = "IPAW", t.periods.RDs, verbose = getOption("stremr.verbose")) {
 
+  getSEs <- FALSE
+
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
@@ -473,9 +475,11 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
 
 
   #### For variable estimation, GET IC and SE FOR BETA's
-  # beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
-  #                           MSMdata = wts.all.rules, MSMdesign = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
-  #                           MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
+  if (getSEs) {
+    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
+                              MSMdata = wts.all.rules, MSMdesign = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
+                              MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
+  }
 
   # 7. Compute the Survival curves under each d
   S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,maxt-mint+1)), length(rules.TRT))
@@ -516,15 +520,14 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
     # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
     # IC.O - observation-sepcific IC estimates for MSM coefs
 
-    # IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
-    #                              S.d.t.predict = S2.IPAW[[d.j]],
-    #                              h.d.t.predict = hazard.IPAW[[d.j]],
-    #                              design.d.t = design.t.d[[d.j]],
-    #                              IC.O = beta.IC.O.SEs[["IC.O"]])
+    if (getSEs) {
+      IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
+                                   S.d.t.predict = S2.IPAW[[d.j]],
+                                   h.d.t.predict = hazard.IPAW[[d.j]],
+                                   design.d.t = design.t.d[[d.j]],
+                                   IC.O = beta.IC.O.SEs[["IC.O"]])
+    }
   }
-
-  browser()
-
 
   output.MSM <- round(m.fit$coef,2)
   output.MSM <- cbind("Terms" = names(m.fit$coef), output.MSM)
@@ -544,9 +547,12 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
     for (d1.idx in seq_along(names(S2.IPAW))) {
       for (d2.idx in seq_along(names(S2.IPAW))) {
         #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
-        se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
-                                                                IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
-                                                                IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
+        if (getSEs) {
+          se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
+                                                                   IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
+                                                                   IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
+
+        }
       }
     }
     return(se.RDscale.Sdt.K)
@@ -560,6 +566,12 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
     se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx)
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val.idx, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
+
+  browser()
+  S2.IPAW[[1]][t.period.val.idx]
+  S2.IPAW[[2]][t.period.val.idx]
+  S2.IPAW[[3]][t.period.val.idx]
+  S2.IPAW[[4]][t.period.val.idx]
 
   return(list(St = S2.IPAW, MSM.fit = m.fit, output.MSM = output.MSM,
               IPAWdist = IPAWdist, RDs.IPAW.tperiods = RDs.IPAW.tperiods))
