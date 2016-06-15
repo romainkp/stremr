@@ -327,7 +327,7 @@ get_survNPMSM <- function(data.wts, OData) {
 # TO DO: 1. MAKE THIS INTO A CALL TO BinaryOutcomeModel OR ITS CHILD
 # TO DO: 2. SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
 # ----------------------------------------------------------------------
-runglmMSM <- function(wts.all.rules, all_dummies, Ynode, verbose) {
+runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
   # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
   # Does not handle cases with deterministic Anodes in the original data.
   logispredict = function(m.fit, X_mat) {
@@ -338,31 +338,35 @@ runglmMSM <- function(wts.all.rules, all_dummies, Ynode, verbose) {
 
   if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
     if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
-    temp.csv.path <- file.path(tempdir(), "wts.all.rules.csv~")
-    data.table::fwrite(wts.all.rules, temp.csv.path, turbo = TRUE)
-    designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "designmat.H2O")
+    loadframe_t <- system.time(
+      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts.all.rules,
+                                                  saveH2O = FALSE,
+                                                  destination_frame = "MSM.designmat.H2O")
+    )
+    if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
+    # OData$fast.load.to.H2O(wts.all.rules, )
+    # temp.csv.path <- file.path(tempdir(), "wts.all.rules.csv~")
+    # data.table::fwrite(wts.all.rules, temp.csv.path, turbo = TRUE)
+    # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
 
     m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
                                   x = all_dummies,
                                   intercept = FALSE,
                                   weights_column = "cumm.IPAW",
-                                  training_frame = designmat.H2O,
+                                  training_frame = MSM.designmat.H2O,
                                   family = "binomial",
                                   standardize = FALSE,
                                   solver = c("IRLSM"), # solver = c("L_BFGS"),
                                   max_iterations = 50,
                                   lambda = 0L),
                 silent = TRUE)
-    #  user  system elapsed w/ L_BFGS:
-    # 0.307   0.003   1.329
-    #  user  system elapsed w/ IRLSM:
-    # 0.691   0.005   5.738
+
     out_coef <- vector(mode = "numeric", length = length(all_dummies))
     out_coef[] <- NA
     names(out_coef) <- c(all_dummies)
     out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
     m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
-    wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = designmat.H2O)[,"p1"])]
+    wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
   } else {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
     Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
@@ -401,7 +405,7 @@ runglmMSM <- function(wts.all.rules, all_dummies, Ynode, verbose) {
 # Might choose between two types of MSMs (sat vs. parametric) with S3 dispatch or by missing arg
 # ---------------------------------------------------------------------------------------
 #' @export
-get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
+get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
                         est.name = "IPAW", t.periods.RDs, verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
@@ -463,7 +467,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                         }))
 
   # 6. fit the hazard MSM
-  resglmMSM <- runglmMSM(wts.all.rules, all_dummies, Ynode, verbose)
+  resglmMSM <- runglmMSM(OData, wts.all.rules, all_dummies, Ynode, verbose)
   wts.all.rules <- resglmMSM$wts.all.rules
   m.fit <- resglmMSM$m.fit
 
