@@ -86,10 +86,8 @@ h2ofit.h2oSL <- function(fit, subsetH2Oframe, outvar, predvars, subset_idx, ...)
   # ... SuperLearner TO BE IMPLEMENTED ...
 }
 
-# IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT DIRECTLY USES PRELOADED H20FRAME
-# DOES NOT NEED TO RETRIEVE ANY COVARS, NEEDS TO ONLY EVALUATE THE SUBSET_IDX
+# IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o
 # NEEDS TO be able to pass on THE REGRESSION SETTINGS FOR h2o-specific functions
-# POSSIBLY NEEDS A SEPARATE RegressionClass
 BinomialH2O  <- R6Class(classname = "BinomialH2O",
   inherit = BinomialGLM,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
@@ -112,39 +110,28 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     },
 
     fit = function(data, outvar, predvars, subset_idx, ...) {
-
       # a penalty for being able to obtain predictions from predictAeqA() right after fitting is the need to store Yvals:
       self$setdata(data, subset_idx = subset_idx, getoutvar = TRUE, getXmat = FALSE)
-      # self$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
-
       model.fit <- self$model.fit
-      if (is.null(data$H2O.dat.sVar)) {
-        # message("...loading the input data from data.table into H2OFRAME for the first time...")
-        # data$fast.load.to.H2O()
-      }
 
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L)) {
         class(model.fit) <- "try-error"
         message("unable to run " %+% self$fit.class %+% " with h2o for intercept only models or input data with zero observations, running speedglm as a backup...")
       } else {
         rows_subset <- which(subset_idx)
-        subset_t <- system.time(
-          subsetH2Oframe_1 <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
-        )
-        print("subset_t: "); print(subset_t)
-
+        # subset_t <- system.time(
+        #   subsetH2Oframe_1 <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
+        # )
+        # print("subset_t: "); print(subset_t)
         load_subset_t <- system.time(
-          subsetH2Oframe_2 <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+          subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
                                                     saveH2O = FALSE,
                                                     destination_frame = "newH2Osubset")
         )
-        print("load_subset_t: "); print(load_subset_t)
-
-        print("2 frames are equivalent?"); print(all.equal(subsetH2Oframe_1, subsetH2Oframe_2))
-
-        browser()
-        subsetH2Oframe <- subsetH2Oframe_2
-
+        print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
+        # print("length(rows_subset): "); print(length(rows_subset))
+        # print("2 frames are equivalent?"); print(all.equal(subsetH2Oframe_1, subsetH2Oframe_2))
+        # subsetH2Oframe <- subsetH2Oframe_2
 
         outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
         # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
@@ -173,12 +160,11 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
         private$subsetH2Oframe <- subsetH2Oframe
         model.fit <- try(
-                h2ofit(self$model.fit,
-                       # DataStorageObject = data,
-                       subsetH2Oframe = subsetH2Oframe,
-                       outvar = outvar,
-                       predvars = predvars,
-                       rows_subset = rows_subset, ...),
+                      h2ofit(self$model.fit,
+                             subsetH2Oframe = subsetH2Oframe,
+                             outvar = outvar,
+                             predvars = predvars,
+                             rows_subset = rows_subset, ...),
                 silent = TRUE)
         if (inherits(model.fit, "try-error")) { # failed, need to define the Xmat now and try fitting speedglm/glm
           self$emptydata

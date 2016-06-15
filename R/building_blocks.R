@@ -10,9 +10,9 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   gvars$verbose <- verbose
   gvars$noCENS.cat <- noCENS.cat
   if (verbose) {
-    message("Running with the following settings: ")
-    print("--------------")
-    str(gvars$opts)
+    current.options <- capture.output(str(gvars$opts))
+    message("Using the following stremr options/settings: ")
+    cat(paste0(current.options, collapse = '\n'), '\n')
   }
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
     covars <- setdiff(colnames(data), c(ID, t.name, CENS, TRT, MONITOR, OUTCOME))
@@ -29,7 +29,7 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   new.factor.names <- vector(mode="list", length=length(factor.Ls))
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0 && verbose)
-    message("found factors in the data, these are being converted to binary indicators (first level excluded): " %+% paste0(factor.Ls, collapse=","))
+    message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
   for (factor.varnm in factor.Ls) {
     factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
     factor.levs <- factor.levs[-1] # remove the first level (reference class)
@@ -44,7 +44,7 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   # --------------------------------------------------------------------------------------------------------
   # Convert all logical vars to binary integers
   # --------------------------------------------------------------------------------------------------------
-  if (verbose) message("converting all logical columns to binary integers")
+  if (verbose) message("...converting logical columns to binary integers (0 = FALSE)...")
   logical.Ls <- unlist(lapply(OData$dat.sVar, is.logical))
   logical.Ls <- names(logical.Ls)[logical.Ls]
   for (logical.varnm in logical.Ls) {

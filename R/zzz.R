@@ -61,6 +61,14 @@ print_stremr_opts <- function() {
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{print_stremr_opts}}
 #' @export
+#'
+# --------------------------------------------------------------------
+# 1) CHANGE TO stremrOptions()
+# 2) Use it to set options(stremr.... ), which then is read internally by gvars at startup
+# --------------------------------------------------------------------
+# strOptions(strict.width = "no", digits.d = 3, vec.len = 4,
+#            formatNum = function(x, ...)
+#                        format(x, trim = TRUE, drop0trailing = TRUE, ...))
 stremr_options <- function(
 
 
