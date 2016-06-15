@@ -11,7 +11,8 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   gvars$noCENS.cat <- noCENS.cat
   if (verbose) {
     current.options <- capture.output(str(gvars$opts))
-    message("Using the following stremr options/settings: ")
+    print("Using the following stremr options/settings: ")
+    cat('\n')
     cat(paste0(current.options, collapse = '\n'), '\n')
   }
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
