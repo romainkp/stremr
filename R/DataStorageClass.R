@@ -482,7 +482,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     load.to.H2O = function() {
       # if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
       dat.sVar <- self$dat.sVar
-      assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))
+      # assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))
       H2O.dat.sVar <- h2o::as.h2o(dat.sVar, destination_frame = "H2O.dat.sVar")
       self$H2O.dat.sVar <- H2O.dat.sVar
       return(invisible(self))
@@ -492,9 +492,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # -----------------------------------------------------------------------------
     fast.load.to.H2O = function() {
       tmpf <- tempfile(fileext = ".csv")
-      data.table::fwrite(OData$dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+      assert_that(is.data.table(self$dat.sVar))
+      data.table::fwrite(self$dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
 
-      types <- sapply(data$dat.sVar, class)
+      types <- sapply(self$dat.sVar, class)
       types <- gsub("integer64", "numeric", types)
       types <- gsub("integer", "numeric", types)
       types <- gsub("double", "numeric", types)
@@ -508,7 +509,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf,
                                           header = TRUE,
                                           col.types = types,
-                                          na.strings = rep(c("NA_h2o"), ncol(OData$dat.sVar)),
+                                          na.strings = rep(c("NA_h2o"), ncol(self$dat.sVar)),
                                           destination_frame = "H2O.dat.sVar")
       self$H2O.dat.sVar <- H2O.dat.sVar
 
