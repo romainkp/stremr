@@ -199,9 +199,9 @@ require("h2o")
 h2o::h2o.init(nthreads = 2)
 # stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "glm", fit.algorithm = "GLM")
-# stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
+stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF")
-stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
+# stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
 # OData$H2O.dat.sVar

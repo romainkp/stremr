@@ -91,7 +91,13 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
   if (sum(subset_idx) > 0) {
     pAout[subset_idx] <- as.vector(h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)[,"p1"])
   }
+
+
   browser()
+  head(pAout[subset_idx])
+  subsetDT <- DataStorageObject$dat.sVar[rows_subset, ]
+  subsetH2Oframe[which(is.na(pAout[subset_idx])),]
+  subsetDT[which(is.na(pAout[subset_idx])),]
 
   return(pAout)
 }
