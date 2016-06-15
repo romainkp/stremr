@@ -29,13 +29,14 @@ f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, x_lab, miny, x_legend
   }
   legend(x_legend, y_legend, legend = names(surv_res_est), col = c(1:length(names(surv_res_est))), cex = ptsize, pch = 1)
 }
-f_create_model_caption <- function(reg.model) {
-  return(
-  "Model: " %+% reg.model$outvar %+% " ~ " %+% paste0(reg.model$predvars, collapse = " + ") %+% "; \\
-   Stratify: " %+% reg.model$stratify %+% "; \\
-   N: " %+% prettyNum(reg.model$nobs, big.mark = ",", scientific = FALSE)
-  )
-}
+# f_create_model_caption <- function(reg.model) {
+#   return(
+#   "Model: " %+% reg.model$outvar %+% " ~ " %+% paste0(reg.model$predvars, collapse = " + ") %+% "; \\
+#    Stratify: " %+% reg.model$stratify %+% "; \\
+#    N: " %+% prettyNum(reg.model$nobs, big.mark = ",", scientific = FALSE) %+% "; \\
+#    Fit function: " %+% reg.model$fitfunname
+#   )
+# }
 
 
 #' # Model fits for propensity scores
@@ -49,31 +50,56 @@ f_create_model_caption <- function(reg.model) {
 #' ## Model(s) for censoring variable(s):
 
 #+ echo=FALSE, results='asis'
-# panderOptions('knitr.auto.asis', FALSE)
-# set.alignment('left', row.names = 'right')
-# for (reg.model in fitted.coefs.gC) {
-#   pander::set.caption(f_create_model_caption(reg.model))
-#   pander::pander(reg.model$coef, justify = c('right', 'left'))
-# }
+panderOptions('knitr.auto.asis', FALSE)
+set.alignment('left', row.names = 'right')
+for (reg.model in fitted.coefs.gC) {
+  print(reg.model)
+  # pander::set.caption(f_create_model_caption(reg.model))
+  # out_pander <- pander::pander_return(reg.model$coef, justify = c('right', 'left'))
+  # cat(paste(out_pander, collapse = "\n"))
+  # pander::pander(reg.model$coef, justify = c('right', 'left'))
+
+  # **** need to change this to: ****
+  # print(summary(reg.model, pander = TRUE))
+  # or
+  # print(reg.model, pander = TRUE)
+  # or
+  # summary(reg.model, pander = TRUE)
+
+  # # pander::pander(reg.model$model.summary)
+  # panderOptions('knitr.auto.asis', TRUE)
+  # print(reg.model$model.summary)
+  # panderOptions('knitr.auto.asis', FALSE)
+}
 
 #' ## Model(s) for exposure variable(s):
 
 #+ echo=FALSE, results='asis'
-# pander::set.caption("Regression: " %+% fitted.coefs.gA$regression)
-# for (reg.model in fitted.coefs.gA) {
-#   pander::set.caption(f_create_model_caption(reg.model))
-#   pander::pander(reg.model$coef, justify = c('right', 'left'))
-# }
+for (reg.model in fitted.coefs.gA) {
+  print(reg.model)
+  # pander::set.caption(f_create_model_caption(reg.model))
+  # pander::pander(reg.model$coef, justify = c('right', 'left'))
+
+  # # pander::pander(reg.model$model.summary)
+  # panderOptions('knitr.auto.asis', TRUE)
+  # print(reg.model$model.summary)
+  # panderOptions('knitr.auto.asis', FALSE)
+
+}
 
 #' ## Model(s) for monitoring variable(s):
 
 #+ echo=FALSE, results='asis'
-# pander::set.caption("Regression: " %+% fitted.coefs.gN$regression)
-# pander::pander(fitted.coefs.gN$coef, justify = c('right', 'center'))
-# for (reg.model in fitted.coefs.gN) {
-#   pander::set.caption(f_create_model_caption(reg.model))
-#   pander::pander(reg.model$coef, justify = c('right', 'left'))
-# }
+for (reg.model in fitted.coefs.gN) {
+  print(reg.model)
+  # pander::set.caption(f_create_model_caption(reg.model))
+  # pander::pander(reg.model$coef, justify = c('right', 'left'))
+
+  # # pander::pander(reg.model$model.summary)
+  # panderOptions('knitr.auto.asis', TRUE)
+  # print(reg.model$model.summary)
+  # panderOptions('knitr.auto.asis', FALSE)
+}
 
 #+ include=FALSE
 panderOptions('knitr.auto.asis', TRUE)

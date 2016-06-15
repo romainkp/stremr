@@ -29,9 +29,9 @@ print_stremr_opts <- function() {
 #' Setting Options for \code{stremr}
 #'
 #' Additional options that control the estimation algorithm in \code{stremr} package
-#' @param useglm Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
-#' \code{\link[stats]{glm.fit}}.
-#' @param GLMpackage Pick which package and function to use for fitting the GLM models ("glm", "speedglm" or "h2o")
+# @param useglm Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
+# \code{\link[stats]{glm.fit}}.
+# @param GLMpackage Pick which package and function to use for fitting the GLM models ("glm", "speedglm" or "h2o")
 #' @param fit.package
 #' @param fit.algorithm
 #' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
@@ -64,11 +64,16 @@ print_stremr_opts <- function() {
 stremr_options <- function(
 
 
-                            useglm = FALSE,
-                            GLMpackage = c("glm", "speedglm", "h2oglm"),
+                            # useglm = FALSE,
+                            # GLMpackage = c("glm", "speedglm", "h2oglm"),
 
-                            fit.package = c("glm", "speedglm", "h2o"),
-                            fit.algorithm = c("glm", "h2oGLM", "h2oGBM", "h2oRF", "h2oSL"),
+
+                            # fit.package = c("glm", "speedglm", "h2o"),
+                            fit.package = c("speedglm", "glm", "h2o"),
+
+                            # fit.algorithm = c("glm", "h2oGLM", "h2oGBM", "h2oRF", "h2oSL"),
+                            fit.algorithm = c("GLM", "GBM", "RF", "SL"),
+
 
                             bin.method = c("equal.len", "equal.mass", "dhist"),
                             parfit = FALSE,
@@ -82,16 +87,16 @@ stremr_options <- function(
   bin.method <- bin.method[1L]
 
 
-  GLMpackage <- GLMpackage[1L]
+  # GLMpackage <- GLMpackage[1L]
   fit.package <- fit.package[1L]
   fit.algorithm <- fit.algorithm[1L]
 
-  if (GLMpackage %in% "glm") {
-  } else if (GLMpackage %in% "speedglm") {
-  } else if (GLMpackage %in% "h2oglm") {
-  } else {
-    stop("GLMpackage argument must be either 'glm', 'speedglm' or 'h2oglm'")
-  }
+  # if (GLMpackage %in% "glm") {
+  # } else if (GLMpackage %in% "speedglm") {
+  # } else if (GLMpackage %in% "h2oglm") {
+  # } else {
+  #   stop("GLMpackage argument must be either 'glm', 'speedglm' or 'h2oglm'")
+  # }
 
   if (bin.method %in% "equal.len") {
   } else if (bin.method %in% "equal.mass") {
@@ -103,8 +108,8 @@ stremr_options <- function(
 
 
   opts <- list(
-    useglm = useglm,
-    GLMpackage = GLMpackage,
+    # useglm = useglm,
+    # GLMpackage = GLMpackage,
     fit.package = fit.package,
     fit.algorithm = fit.algorithm,
     bin.method = bin.method,

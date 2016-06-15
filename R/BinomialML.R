@@ -11,26 +11,40 @@ h2ofit.h2oGLM <- function(fit, DataStorageObject, subsetH2Oframe, outvar, predva
                             family = "binomial",
                             standardize = TRUE,
                             solver = c("L_BFGS"),
+                            lambda = 0L,
                             # solver = c("IRLSM"),
                             # remove_collinear_columns = TRUE,
                             max_iterations = 50,
-                            lambda = 0L)
+                            ignore_const_cols = FALSE,
+                            missing_values_handling = "Skip")
 
     # print("h2o.glm fit"); print(model.fit)
     # print(model.fit@parameters)
     # print(model.fit@allparameters)
     # str(model.fit@model)
+    # str(model.fit@model$model_summary)
+    # str(model.fit@model$model_summary$training_frame)
+    # model.fit@model$model_summary$training_frame
+    # str(model.fit@model$training_metrics)
+    # str(model.fit@model$training_metrics@metrics)
+    # str(model.fit@model$training_metrics@metrics$model)
+    # str(model.fit@model$training_metrics@metrics$frame)
+    # str(model.fit@model$coefficients_table)
+    # h2o.getModel("GLM_model_R_1465837154341_2081")
+    # h2o.getFrame("RTMP_sid_9c4b_381")
+    # model.fit@model$model_summary
 
   # assign the fitted coefficients in correct order (same as predictor order in predvars)
   out_coef <- vector(mode = "numeric", length = length(predvars)+1)
   out_coef[] <- NA
   names(out_coef) <- c("Intercept", predvars)
   out_coef[names(model.fit@model$coefficients)] <- model.fit@model$coefficients
-
   fit$coef <- out_coef;
-  fit$fitfunname <- "h2o.glm";
   fit$linkfun <- "logit_linkinv";
-  fit$nobs <- length(rows_subset);
+
+  fit$fitfunname <- "h2o.glm";
+  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
   fit$H2O.model.object <- model.fit
 
   if (gvars$verbose) {
@@ -51,9 +65,12 @@ h2ofit.h2oRF <- function(fit, DataStorageObject, subsetH2Oframe, outvar, predvar
                                      training_frame = subsetH2Oframe,
                                      ntree = 100,
                                      ignore_const_cols = FALSE)
-  fit$coef <- NA;
+
+  fit$coef <- NULL;
   fit$fitfunname <- "h2o.randomForest";
-  fit$nobs <- length(rows_subset);
+  # fit$nobs <- length(rows_subset);
+  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
   fit$H2O.model.object <- model.fit
 
   class(fit) <- c(class(fit)[1], c("h2ofit"))
@@ -63,17 +80,21 @@ h2ofit.h2oRF <- function(fit, DataStorageObject, subsetH2Oframe, outvar, predvar
 # S3 method for h2o GBM fit, takes BinDat data object:
 h2ofit.h2oGBM <- function(fit, DataStorageObject, subsetH2Oframe, outvar, predvars, rows_subset, ...) {
   if (gvars$verbose) print("calling h2o.gbm...")
-    model.fit <- h2o::h2o.gbm(x = predvars,
-                              y = outvar,
-                              training_frame = subsetH2Oframe,
-                              distribution = "bernoulli",
-                              ignore_const_cols = FALSE)
-    fit$coef <- NA;
-    fit$fitfunname <- "h2o.gbm";
-    fit$nobs <- length(rows_subset);
-    fit$H2O.model.object <- model.fit
-    class(fit) <- c(class(fit)[1], c("h2ofit"))
-    return(fit)
+  model.fit <- h2o::h2o.gbm(x = predvars,
+                            y = outvar,
+                            training_frame = subsetH2Oframe,
+                            distribution = "bernoulli",
+                            ignore_const_cols = FALSE)
+
+  fit$coef <- NULL;
+  fit$fitfunname <- "h2o.gbm";
+  # fit$nobs <- length(rows_subset);
+  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
+  fit$H2O.model.object <- model.fit
+
+  class(fit) <- c(class(fit)[1], c("h2ofit"))
+  return(fit)
 }
 
 h2ofit.h2oSL <- function(fit, DataStorageObject, outvar, predvars, subset_idx, ...) {
@@ -93,16 +114,17 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
   public = list(
 
     # TO DO: THIS WILL CONTAIN ADDITIONAL USER-SPEC'ED CONTROLS/ARGS PASSED ON TO h2o or h2oEnsemble
-    model.controls = NULL,
-    model.fit = list(coef = NA, fitfunname = NA, nobs = NA, H2O.model.object = NA),
+    # model.controls = NULL,
 
-    fit.class = c("h2oSL", "h2oGLM", "h2oRF", "h2oGBM"),
+    fit.class = c("GLM", "RF", "GBM", "SL"),
+    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA),
+    # model.fit = list(coef = NA, fitfunname = NA, nobs = NA),
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel
-      assert_that(any(c("h2o", "h2oglm") %in% fit.package))
+      assert_that("h2o" %in% fit.package)
       self$fit.class <- fit.algorithm
-      class(self$model.fit) <- c(class(self$model.fit), fit.algorithm)
+      class(self$model.fit) <- c(class(self$model.fit), "h2o" %+% self$fit.class)
 
       invisible(self)
     },
@@ -110,9 +132,14 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     fit = function(data, outvar, predvars, subset_idx, ...) {
       self$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
       model.fit <- self$model.fit
+      if (is.null(data$H2O.dat.sVar)) {
+        message("...loading the input data from data.table into H2OFRAME for the first time...")
+        data$fast.load.to.H2O()
+      }
 
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L)) {
         class(model.fit) <- "try-error"
+        message("unable to run " %+% self$fit.class %+% " with h2o for intercept only models or input data with zero observations, running speedglm as a backup...")
       } else {
         rows_subset <- which(subset_idx)
         subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, ]
@@ -132,9 +159,10 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         }
 
         if (length(outfactors) < 2L | NAfactors) {
+          message("unable to run " %+% self$fit.class %+% " with h2o for input data with constant outcome, running speedglm as a backup...")
           class(model.fit) <- "try-error"
         } else if (length(outfactors) > 2L) {
-          stop("Attempting to run Binary regression/classification for outcome with more than 2 categories")
+          stop("cannot run binary regression/classification for outcome with more than 2 categories")
         }
       }
 
@@ -148,10 +176,13 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
                        predvars = predvars,
                        rows_subset = rows_subset, ...),
                 silent = TRUE)
+        if (inherits(model.fit, "try-error")) { # failed, need to define the Xmat now and try fitting speedglm/glm
+          message("attempt at running " %+% self$fit.class %+% " with h2o failed, running speedglm as a backup...")
+        }
       }
 
       if (inherits(model.fit, "try-error")) { # failed, need to define the Xmat now and try fitting speedglm/glm
-        message(self$fit.class %+% " failed, falling back on speedglm...")
+        # message("unable to run " %+% self$fit.class %+% " with h2o, running speedglm as a backup...")
         class(self$model.fit)[2] <- "speedglm"
         model.fit <- super$fit(data, outvar, predvars, subset_idx, ...)
       }

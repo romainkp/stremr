@@ -142,9 +142,6 @@ notrun.save.example.data <- function() {
 
 data(O.data.simstudy.g05)
 O.data <- O.data.simstudy.g05
-
-O.data[O.data[, "ID"] %in% 3864,]
-
 ID <- "ID"; t <- "t"; TRT <- "TI"; outcome <- "Y"; I <- "highA1c";
 # --------------------------------
 # (II) Define event indicator and right-censoring indicator, define total follow-up length
@@ -195,156 +192,42 @@ gform.MONITOR <- "N ~ 1"
 #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
 
 # ----------------------------------------------------------------
-# Testing fits with speedglm
+# Testing fits with speedglm, h2oglm, RF and GBM
 # ----------------------------------------------------------------
 options(stremr.verbose = TRUE)
-stremr_options(fit.package = "speedglm")
-OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
-OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
-
-require("magrittr")
-St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-           get_survNPMSM(OData)  %$%
-           IPW_estimates
-St.dlow
-
-St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-            get_survNPMSM(OData) %$%
-            IPW_estimates
-St.dhigh
-
-OData$dat.sVar[]
-St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"]
-St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
-
-wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
-
-tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
-
-# MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(wts.all.list, OData,
-                        tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW",
-                        t.periods.RDs = c(12, 15))
-
-report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)
-
-# ----------------------------------------------------------------
-# Testing fits with h2oglm
-# ----------------------------------------------------------------
 require("h2o")
 h2o::h2o.init(nthreads = 2)
-options(stremr.verbose = TRUE)
-stremr_options(fit.package = "h2oglm")
+# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+# stremr_options(fit.package = "glm", fit.algorithm = "GLM")
+# stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
+stremr_options(fit.package = "h2o", fit.algorithm = "RF")
+# stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
-# h2oload_time <- system.time(OData$load.to.H2O())
-h2oload_time_fast <- system.time(OData$fast.load.to.H2O())
-h2oload_time_fast
-OData$H2O.dat.sVar
-
+# OData$H2O.dat.sVar
 OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
-
 require("magrittr")
 St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
            get_survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
-
 St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
             get_survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
-
-OData$dat.sVar[]
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"]
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
-
 wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
 wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
-
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
-
 # MSM for hazard with regular weights:
 MSM.IPAW <- get_survMSM(wts.all.list, OData,
                         tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, est.name = "IPAW",
                         t.periods.RDs = c(12, 15))
-
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
-# html doc:
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
 make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# pdf doc:
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
 make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# word doc:
-make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)
+make_report_rmd(OData, MSM = MSM.IPAW, format = "word",file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
-
-# ----------------------------------------------------------------
-# Testing fits with h2o (GLM, RFs and GBM)
-# ----------------------------------------------------------------
-require("h2o")
-h2o::h2o.init(nthreads = 2)
-options(stremr.verbose = TRUE)
-
-# stremr_options(fit.package = "glm")
-# stremr_options(fit.package = "speedglm")
-# stremr_options(fit.package = "h2o", fit.algorithm = "h2oGLM")
-stremr_options(fit.package = "h2o", fit.algorithm = "h2oRF")
-# stremr_options(fit.package = "h2o", fit.algorithm = "h2oGBM")
-
-OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
-# h2oload_time <- system.time(OData$load.to.H2O())
-h2oload_time_fast <- system.time(OData$fast.load.to.H2O())
-h2oload_time_fast
-OData$H2O.dat.sVar
-
-OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
-
-
-require("magrittr")
-St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-           get_survNPMSM(OData)  %$%
-           IPW_estimates
-St.dlow
-
-St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-            get_survNPMSM(OData) %$%
-            IPW_estimates
-St.dhigh
-
-OData$dat.sVar[]
-St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"]
-St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
-
-wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
-
-tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
-
-# MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(wts.all.list, OData,
-                        tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW",
-                        t.periods.RDs = c(12, 15))
-
-report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
-# html doc:
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# pdf doc:
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# word doc:
-make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)

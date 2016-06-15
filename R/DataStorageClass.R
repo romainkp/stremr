@@ -493,10 +493,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     fast.load.to.H2O = function() {
       tmpf <- tempfile(fileext = ".csv")
       data.table::fwrite(OData$dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
-
       H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
       self$H2O.dat.sVar <- H2O.dat.sVar
-
         # types <- sapply(data$dat.sVar, class)
         # types <- gsub("integer64", "numeric", types)
         # types <- gsub("integer", "numeric", types)
@@ -517,7 +515,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         #                                     col.types = types,
         #                                     col.names = colnames(OData$dat.sVar, do.NULL = FALSE, prefix = "C"),
         #                                     na.strings = rep(c("NA_h2o"), ncol(OData$dat.sVar)))
-
       file.remove(tmpf)
       return(invisible(self))
     }

@@ -1,18 +1,172 @@
 #----------------------------------------------------------------------------------
 # Classes for modelling regression models with binary outcome Bin ~ Xmat
 #----------------------------------------------------------------------------------
-
-
 # S3 methods for getting model fit for BinaryOutcomeModel class object
-fit.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
-  assert_that(BinaryOutcomeModel$is.fitted)
-  BinaryOutcomeModel$getfit
+# fit.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
+#   assert_that(BinaryOutcomeModel$is.fitted)
+#   BinaryOutcomeModel$getfit
+# }
+
+pander.H2OBinomialModel <- function(H2OBinomialModelObject) {
+  cat("\n")
+  show(H2OBinomialModelObject)
+  cat("\n")
+  return(invisible(H2OBinomialModelObject))
 }
+
+pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject) {
+  modelID <- H2OBinomialMetricsObject@metrics$model$name
+
+  metricsDF <- data.frame(
+      metric = c(
+          'MSE:       ',
+          'R^2:       ',
+          "LogLoss:   ",
+          "AUC:       ",
+          "Gini:      "),
+      value = c(
+          H2OBinomialMetricsObject@metrics$MSE,
+          H2OBinomialMetricsObject@metrics$r2,
+          H2OBinomialMetricsObject@metrics$logloss,
+          H2OBinomialMetricsObject@metrics$AUC,
+          H2OBinomialMetricsObject@metrics$Gini),
+      stringsAsFactors = FALSE)
+
+    if (H2OBinomialMetricsObject@algorithm == "glm") {
+      glmDF <- data.frame(
+        metric =
+          c("Null Deviance:      ",
+            "Residual Deviance:  ",
+            "AIC:                "),
+        value = c(H2OBinomialMetricsObject@metrics$null_deviance,
+              H2OBinomialMetricsObject@metrics$residual_deviance,
+              H2OBinomialMetricsObject@metrics$AIC),
+        stringsAsFactors = FALSE)
+      metricsDF <- rbind(metricsDF, glmDF)
+    }
+    colnames(metricsDF) <- NULL
+    pander::pander(metricsDF, justify = c('left', 'center'), caption = "Model ID: " %+% modelID)
+
+    cm <- h2o::h2o.confusionMatrix(H2OBinomialMetricsObject)
+    if( !is.null(cm) ) {
+      pander::pander(cm, caption = "Confusion Matrix for F1-optimal threshold" %+% " (Model ID: " %+% modelID %+%")" )
+      # cat("\n")
+    }
+
+    max_matrics <- H2OBinomialMetricsObject@metrics$max_criteria_and_metric_scores
+    caption <- attributes(max_matrics)$header %+% ": " %+% attributes(max_matrics)$description
+    pander::pander(max_matrics, caption = caption %+% " (Model ID: " %+% modelID %+%")")
+    # attributes(max_matrics)$formats
+
+    # cat("\nGains/Lift Table: Extract with `h2o.gainsLift(<model>, <data>)` or `h2o.gainsLift(<model>, valid=<T/F>, xval=<T/F>)`")
+
+    if (!is.null(H2OBinomialMetricsObject@metrics$gains_lift_table)) {
+     # print(H2OBinomialMetricsObject@metrics$gains_lift_table)
+     gain_tab <- H2OBinomialMetricsObject@metrics$gains_lift_table
+     pander::pander(gain_tab, caption = attributes(gain_tab)$header %+% " (Model ID: " %+% modelID %+%")")
+    }
+
+  return(invisible(H2OBinomialMetricsObject))
+}
+
 # S3 methods for getting model fit summary for BinaryOutcomeModel class object
 summary.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
   assert_that(BinaryOutcomeModel$is.fitted)
   fit <- BinaryOutcomeModel$getfit
   append(list(reg = BinaryOutcomeModel$show()), fit)
+}
+
+summary.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
+  assert_that(BinaryOutcomeModel$is.fitted)
+  fit <- BinaryOutcomeModel$getfit
+  append(list(reg = BinaryOutcomeModel$show()), fit)
+}
+
+makeModelCaption <- function(model.fit) {
+  return(
+    "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
+     Stratify: " %+% model.fit$params$stratify %+% "; \\
+     N: " %+% prettyNum(model.fit$nobs, big.mark = ",", scientific = FALSE) %+% "; \\
+     Fit function: " %+% model.fit$fitfunname
+  )
+}
+
+summary.glmfit <- function(model.fit, format_table = TRUE) {
+  nobs <- model.fit$nobs
+  coef_out <- model.fit$coef
+  if (format_table) {
+    if (is.null(coef_out)) {
+      coef_out <- "---"; names(coef_out) <- coef_out
+    }
+    coef_out <- data.frame(Terms = names(coef_out), Coefficients = as.vector(coef_out))
+    rownames(coef_out) <- NULL
+  }
+  pander::set.caption(makeModelCaption(model.fit))
+  out <- pander::pander_return(coef_out, justify = c('right', 'left'))
+  out
+}
+
+summary.h2ofit <- function(model.fit, format_table = TRUE) {
+  h2o.model <- model.fit$H2O.model.object
+  modelID <- h2o.model@model$training_metrics@metrics$model$name
+
+  out <- NULL
+
+  # -----------------------------------------------------------------
+  # some basic model info:
+  # -----------------------------------------------------------------
+  coef_summary_out <- summary.glmfit(model.fit, format_table)
+  out <- c(out, coef_summary_out)
+
+  # -----------------------------------------------------------------
+  # model summary:
+  # -----------------------------------------------------------------
+  model_summary <- h2o.model@model$model_summary
+  caption_summary <- attributes(model_summary)$header %+% " (Model ID: " %+% modelID %+%")"
+  model_summary_out <- pander::pander_return(model_summary, caption = caption_summary)
+  out <- c(out, model_summary_out)
+
+  # -----------------------------------------------------------------
+  # training data metrics:
+  # browser()
+  # -----------------------------------------------------------------
+  # unique model name identifier:
+  # h2o_modelname <- list(h2o.model@model$training_metrics@metrics$model$name)
+  # names(h2o_modelname) <- 'Model ID:'
+  # h2o_modelname_out <- pander::pander_return(h2o_modelname)
+  # out <- c(out, h2o_modelname_out)
+  H2OBinomialMetrics_training <- h2o.model@model$training_metrics
+  train_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_training)
+  # train_model_metrics_out <- pander::pander_return(h2o.model)
+  # train_model_metrics_out_list <- pander::pander_return(as.list(train_model_metrics_out))
+  # same thing, already included in above:
+  # model_perf <- h2o.performance(h2o.model)
+  # confusion matrix, already included:
+  # confMat <- h2o::h2o.confusionMatrix(h2o.model)
+  # header_confMat <- attributes(confMat)$header
+  # pander::set.caption(header_confMat)
+  # confMat_out <- pander::pander_return(confMat) # , justify = c('right', 'left')
+  out <- c(out, train_model_metrics_out)
+
+  # -----------------------------------------------------------------
+  # variable importance:
+  # -----------------------------------------------------------------
+  var_imp <- h2o.model@model$variable_importances
+  var_imp_cap <- attributes(var_imp)$header %+% "Model ID: " %+% modelID %+%")"
+  var_imp_out <- pander::pander_return(var_imp, caption = var_imp_cap)
+  out <- c(out, var_imp_out)
+
+  return(out)
+}
+
+print.glmfit <- function(model.fit, ...) {
+  model.summary <- summary(model.fit, ...)
+  cat(paste(model.summary, collapse = '\n'))
+}
+
+print.h2ofit <- function(model.fit, ...) {
+  model.summary <- summary(model.fit, ...)
+  cat(paste(model.summary, collapse = '\n'))
 }
 
 ## ---------------------------------------------------------------------
@@ -69,14 +223,15 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
 
+    # GLMpackage = c("glm", "speedglm", "h2oglm"),
+    # fit.package = c("speedglm", "h2o"),
 
-    GLMpackage = c("glm", "speedglm", "h2oglm"),
-    fit.package = c("speedglm", "h2o"),
+    fit.package = c("speedglm", "glm", "h2o"),
     # fit.package = c("glm", "speedglm", "h2o"),
-    fit.algorithm = c("glm", "gbm", "RandomForest", "SuperLearner"),
+    # fit.algorithm = c("glm", "gbm", "RandomForest", "SuperLearner"),
+    fit.algorithm = c("GLM", "GBM", "RF", "SL"),
     # fit.method = c("H2O", "GLM"),
     # fit.method = c("SuperLearner", "RandomForest", "GBM", "GLM")
-
 
     n = NA_integer_,        # number of rows in the input data
     nbins = integer(),
@@ -87,19 +242,10 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
-      assert_that(is.character(reg$GLMpackage))
-
-
-
-
-
-      self$GLMpackage <- reg$GLMpackage
+      # assert_that(is.character(reg$GLMpackage))
+      # self$GLMpackage <- reg$GLMpackage
       self$fit.package <- reg$fit.package
       self$fit.algorithm <- reg$fit.algorithm
-
-
-
-
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -141,7 +287,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       invisible(self)
     },
 
-
     fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       if (gvars$verbose) print("fitting the model: " %+% self$show())
@@ -150,12 +295,12 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       self$define.subset.idx(data)
 
       private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      private$model.fit$params <- self$show(print_format = FALSE)
 
       self$is.fitted <- TRUE
       self$wipe.alldat
       invisible(self)
     },
-
 
     # Predict the response P(Bin = 1|sW = sw);
     # uses private$model.fit to generate predictions for data:
@@ -171,7 +316,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
       return(invisible(self))
     },
-
 
     # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
     # Needs to know the values of b for prediction
@@ -206,7 +350,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       return(probAeqa)
     },
 
-
     sampleA = function(newdata, bw.j.sA_diff) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
       assert_that(self$is.fitted)
       assert_that(!missing(newdata))
@@ -226,7 +369,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       # **********************************************************************
       return(sampleA)
     },
-
 
     define.subset.idx = function(data) {
       if (is.logical(self$subset_vars)) {
@@ -262,19 +404,13 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       private$probA1 <- bin.out.model$getprobA1
     },
 
-    get.fits = function(format_table = FALSE) {
-      coef_out <- private$model.fit$coef
-      nobs <- private$model.fit$nobs
-      if (format_table) {
-        coef_out <- data.frame(Coef = coef_out)
-        coef_out <- cbind(names(private$model.fit$coef), coef_out)
-        rownames(coef_out) <- NULL
-        colnames(coef_out) <- c("Terms", "Coefficients")
-      }
-      return(list(c(self$show(print_format = FALSE), list(nobs = nobs, coef = coef_out))))
+    # Returns the object that contains the actual model fits (itself)
+    get.fits = function() {
+      model.fit <- self$getfit
+      return(list(model.fit))
     },
 
-    # printing regression:
+    # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE) {
       if (print_format) {
         return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% ";\\ Stratify: " %+% self$subset_expr)

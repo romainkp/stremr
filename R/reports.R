@@ -79,11 +79,12 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   # -------------------------------------------------------------------------------------
   # MODEL FITS:
   # -------------------------------------------------------------------------------------
-  # fitted.coefs.gC <- OData$modelfit.gC$get.fits(format_table = TRUE)
-  # fitted.coefs.gA <- OData$modelfit.gA$get.fits(format_table = TRUE)
-  # fitted.coefs.gN <- OData$modelfit.gN$get.fits(format_table = TRUE)
+  fitted.coefs.gC <- OData$modelfit.gC$get.fits()
+  fitted.coefs.gA <- OData$modelfit.gA$get.fits()
+  fitted.coefs.gN <- OData$modelfit.gN$get.fits()
 
-  # outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr)
+  # browser()
+
   # -------------------------------------------------------------------------------------
   # RD tables
   # RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
@@ -104,7 +105,6 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
 
   message("writing report to directory: " %+% getwd())
   figure.dir <- file.path(getwd(), "figure/stremr-")
-  # output_format = "html_document",
   report.html <- tryCatch(rmarkdown::render(report.file,
                           output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE,
                           output_options = list(keep_md = TRUE, toc = TRUE, toc_float = TRUE,

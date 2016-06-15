@@ -141,15 +141,16 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
     # TO DO: THIS WILL CONTAIN ADDITIONAL USER-SPEC'ED CONTROLS/ARGS PASSED ON TO speedglm/glm
     model.controls = NULL,
 
-    fit.class = c("glm", "speedglm", "h2oglm"),
-    model.fit = list(coef = NA, fitfunname = NA, nobs = NA),
+    # fit.class = c("glm", "speedglm", "h2oglm"),
+    fit.class = c("glm", "speedglm"),
+    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA),
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel
 
-      if (!("glm" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'glm', since fit.package was set to 'speedglm' or 'glm' or 'h2oglm'")
+      if (!("GLM" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'GLM', since fit.package was set to 'speedglm' or 'glm'")
       # self$fit.algorithm <- "glm"
-      assert_that(any(c("glm", "speedglm", "h2oglm") %in% fit.package))
+      assert_that(any(c("glm", "speedglm") %in% fit.package))
       self$fit.class <- fit.package
       class(self$model.fit) <- c(class(self$model.fit), self$fit.class)
 

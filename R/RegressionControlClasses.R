@@ -96,10 +96,12 @@ RegressionClass <- R6Class("RegressionClass",
     bin_nms = NULL,                # column names for bin indicators
 
 
-    useglm = logical(),            # TRUE to fit reg with glm.fit(), FALSE to fit with speedglm.wfit
-    GLMpackage = character(),      # 'glm', 'speedglm' or 'h2o'
-    fit.package = character(),
-    fit.algorithm = character(),
+    # useglm = logical(),            # TRUE to fit reg with glm.fit(), FALSE to fit with speedglm.wfit
+    # GLMpackage = character(),      # 'glm', 'speedglm' or 'h2o'
+    # fit.package = character(),
+    fit.package = c("speedglm", "glm", "h2o"),
+    # fit.algorithm = character(),
+    fit.algorithm = c("GLM", "GBM", "RF", "SL"),
 
 
     parfit = logical(),            # TRUE for fitting binary regressions in parallel
@@ -120,14 +122,11 @@ RegressionClass <- R6Class("RegressionClass",
                           intrvls,
                           ReplMisVal0 = TRUE, # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
 
-
-                          useglm = getopt("useglm"),
-                          GLMpackage = getopt("GLMpackage"),
-
+                          # useglm = getopt("useglm"),
+                          # GLMpackage = getopt("GLMpackage"),
 
                           fit.package = getopt("fit.package"),
                           fit.algorithm = getopt("fit.algorithm"),
-
 
                           parfit = getopt("parfit"),
                           nbins = getopt("nbins"),
@@ -141,8 +140,8 @@ RegressionClass <- R6Class("RegressionClass",
       self$ReplMisVal0 <- ReplMisVal0
 
 
-      self$useglm <- useglm
-      self$GLMpackage <- GLMpackage
+      # self$useglm <- useglm
+      # self$GLMpackage <- GLMpackage
       self$fit.package <- fit.package
       self$fit.algorithm <- fit.algorithm
 

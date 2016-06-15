@@ -4,18 +4,12 @@
 \alias{stremr_options}
 \title{Setting Options for \code{stremr}}
 \usage{
-stremr_options(useglm = FALSE, GLMpackage = c("glm", "speedglm", "h2oglm"),
-  fit.package = c("glm", "speedglm", "h2o"), fit.algorithm = c("glm",
-  "h2oGLM", "h2oGBM", "h2oRF", "h2oSL"), bin.method = c("equal.len",
+stremr_options(fit.package = c("speedglm", "glm", "h2o"),
+  fit.algorithm = c("GLM", "GBM", "RF", "SL"), bin.method = c("equal.len",
   "equal.mass", "dhist"), parfit = FALSE, nbins = NA, maxncats = 20,
   poolContinVar = FALSE, maxNperBin = 1000)
 }
 \arguments{
-\item{useglm}{Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
-\code{\link[stats]{glm.fit}}.}
-
-\item{GLMpackage}{Pick which package and function to use for fitting the GLM models ("glm", "speedglm" or "h2o")}
-
 \item{bin.method}{The method for choosing bins when discretizing and fitting the conditional continuous summary
 exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins

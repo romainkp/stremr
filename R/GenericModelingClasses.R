@@ -216,10 +216,10 @@ GenericModel <- R6Class(classname = "GenericModel",
     },
 
     # call itself until reaches a terminal model fit with coefficients + regression returned with show()
-    get.fits = function(format_table = FALSE) {
+    get.fits = function() {
       res_models <- NULL
       for (k_i in seq_along(private$PsAsW.models)) {
-        res <- private$PsAsW.models[[k_i]]$get.fits(format_table)
+        res <- private$PsAsW.models[[k_i]]$get.fits()
         if (is.list(res)) res_models <- c(res_models, res)
       }
       return(res_models)
