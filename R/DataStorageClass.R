@@ -490,7 +490,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # -----------------------------------------------------------------------------
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------
-    fast.load.to.H2O = function(dat.sVar) {
+    fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
       if (missing(dat.sVar)) {
         dat.sVar <- self$dat.sVar
       }
@@ -509,13 +509,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       types <- gsub("character", "string", types)
       types <- gsub("Date", "Time", types)
 
-      # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
+
       H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf,
                                           header = TRUE,
                                           col.types = types,
                                           na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
-                                          destination_frame = "H2O.dat.sVar")
-      self$H2O.dat.sVar <- H2O.dat.sVar
+                                          destination_frame = destination_frame)
+
+      # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
+
+      if (saveH2O) self$H2O.dat.sVar <- H2O.dat.sVar
 
       # H2O.dat.sVar <- h2o::h2o.importFile(tmpf, destination_frame = "H2O.dat.sVar",
       #                                     header = TRUE,
@@ -529,7 +532,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       #                                     col.names = colnames(dat.sVar, do.NULL = FALSE, prefix = "C"),
       #                                     na.strings = rep(c("NA_h2o"), ncol(dat.sVar)))
       file.remove(tmpf)
-      return(invisible(self))
+      # return(invisible(self))
+      return(invisible(H2O.dat.sVar))
     }
 
   ),

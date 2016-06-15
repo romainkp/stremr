@@ -204,7 +204,9 @@ stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
-# OData$H2O.dat.sVar
+OData$fast.load.to.H2O()
+OData$H2O.dat.sVar
+
 OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
 require("magrittr")
 St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%

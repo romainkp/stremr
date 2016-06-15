@@ -113,14 +113,14 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
 
     fit = function(data, outvar, predvars, subset_idx, ...) {
 
+      # a penalty for being able to obtain predictions from predictAeqA() right after fitting is the need to store Yvals:
       self$setdata(data, subset_idx = subset_idx, getoutvar = TRUE, getXmat = FALSE)
       # self$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
 
-
       model.fit <- self$model.fit
       if (is.null(data$H2O.dat.sVar)) {
-        message("...loading the input data from data.table into H2OFRAME for the first time...")
-        data$fast.load.to.H2O()
+        # message("...loading the input data from data.table into H2OFRAME for the first time...")
+        # data$fast.load.to.H2O()
       }
 
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L)) {
@@ -128,7 +128,24 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         message("unable to run " %+% self$fit.class %+% " with h2o for intercept only models or input data with zero observations, running speedglm as a backup...")
       } else {
         rows_subset <- which(subset_idx)
-        subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
+        subset_t <- system.time(
+          subsetH2Oframe_1 <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
+        )
+        print("subset_t: "); print(subset_t)
+
+        load_subset_t <- system.time(
+          subsetH2Oframe_2 <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+                                                    saveH2O = FALSE,
+                                                    destination_frame = "newH2Osubset")
+        )
+        print("load_subset_t: "); print(load_subset_t)
+
+        print("2 frames are equivalent?"); print(all.equal(subsetH2Oframe_1, subsetH2Oframe_2))
+
+        browser()
+        subsetH2Oframe <- subsetH2Oframe_2
+
+
         outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
         # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
         NAfactors <- any(is.na(outfactors))
