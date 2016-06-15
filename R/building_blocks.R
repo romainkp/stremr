@@ -4,7 +4,8 @@
 # ------------------------------------------------------------------
 #' @export
 get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
-                      noCENS.cat = 0L, SHIFTUPoutcome = TRUE, verbose = getOption("stremr.verbose")) {
+                      noCENS.cat = 0L, verbose = getOption("stremr.verbose")) {
+# SHIFTUPoutcome = TRUE,
 
   gvars$verbose <- verbose
   gvars$noCENS.cat <- noCENS.cat
@@ -49,26 +50,24 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
     OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   }
 
-  # ---------------------------------------------------------------------------
-  # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
-  # Might expand this in the future to allow defining arbitrary summaries
-  # ---------------------------------------------------------------------------
-  lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
-  newVarnames <- lagnodes %+% ".tminus1"
-  OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
-
-  # -------------------------------------------------------------------------------------------
-  # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
-  # -------------------------------------------------------------------------------------------
-  Ynode <- nodes$Ynode
-  shifted.OUTCOME <- Ynode%+%".tplus1"
-
-  if (SHIFTUPoutcome) {
-    OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
-  } else {
-    OData$dat.sVar[, (shifted.OUTCOME) := get(Ynode)]
-  }
-  # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
+  # # ---------------------------------------------------------------------------
+  # # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
+  # # Might expand this in the future to allow defining arbitrary summaries
+  # # ---------------------------------------------------------------------------
+  # lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
+  # newVarnames <- lagnodes %+% ".tminus1"
+  # OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
+  # # -------------------------------------------------------------------------------------------
+  # # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
+  # # -------------------------------------------------------------------------------------------
+  # Ynode <- nodes$Ynode
+  # shifted.OUTCOME <- Ynode%+%".tplus1"
+  # if (SHIFTUPoutcome) {
+  #   OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
+  # } else {
+  #   OData$dat.sVar[, (shifted.OUTCOME) := get(Ynode)]
+  # }
+  # # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
 
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
@@ -111,6 +110,7 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   gN.sVars <- process_regforms(regforms = gform.MONITOR, default.reg = gform.MONITOR.default, stratify.EXPRS = stratify.MONITOR,
                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
   g_CAN_regs_list[["gN"]] <- gN.sVars$regs
+
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
   # Perform S3 method dispatch on ALL_g_regs, which will determine the nested tree of SummaryModel objects
@@ -119,6 +119,7 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
   ALL_g_regs$S3class <- "generic"
   modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
+
   # modelfits.g0$fit(data = OData)
   modelfits.g0$fit(data = OData, predict = TRUE)
 
@@ -259,22 +260,23 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since they cancel):
   OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
 
-  # Drop all observations with NA outcome:
-  Ynode <- nodes$Ynode
-  shifted.OUTCOME <- Ynode%+%".tplus1"
+  Ynode <- nodes$Ynode # Get the outcome var:
+  # shifted.OUTCOME <- Ynode%+%".tplus1"
 
   # OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
   # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
 
   # Multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
-  OData$dat.sVar[, "Wt.OUTCOME" := get(shifted.OUTCOME)*cumm.IPAW]
+  OData$dat.sVar[, "Wt.OUTCOME" := get(Ynode)*cumm.IPAW]
+  # OData$dat.sVar[, "Wt.OUTCOME" := get(shifted.OUTCOME)*cumm.IPAW]
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
   # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
   # OData$dat.sVar[101:200, ]
 
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
   # , na.rm = TRUE
-  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
+  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", Ynode, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
+  # wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
   wts.DT[, "rule.name.TRT" := eval(as.character(gstar.A))]
   wts.DT[, "rule.name.MONITOR" := eval(as.character(gstar.N))]
 
@@ -296,10 +298,10 @@ get_survNPMSM <- function(data.wts, OData) {
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
-  shifted.OUTCOME <- as.name(Ynode%+%".tplus1")
+  # shifted.OUTCOME <- as.name(Ynode%+%".tplus1")
 
   # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
-  ht.crude <- data.wts[cumm.IPAW > 0, .(ht.KM = sum(eval(shifted.OUTCOME), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
+  ht.crude <- data.wts[cumm.IPAW > 0, .(ht.KM = sum(eval(Ynode), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t.name)
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
@@ -323,7 +325,7 @@ get_survNPMSM <- function(data.wts, OData) {
 # TO DO: 1. MAKE THIS INTO A CALL TO BinaryOutcomeModel OR ITS CHILD
 # TO DO: 2. SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
 # ----------------------------------------------------------------------
-runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
+runglmMSM <- function(wts.all.rules, all_dummies, Ynode, verbose) {
   # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
   # Does not handle cases with deterministic Anodes in the original data.
   logispredict = function(m.fit, X_mat) {
@@ -338,7 +340,7 @@ runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
     data.table::fwrite(wts.all.rules, temp.csv.path, turbo = TRUE)
     designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "designmat.H2O")
 
-    m.fit_h2o <- try(h2o::h2o.glm(y = shifted.OUTCOME,
+    m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
                                   x = all_dummies,
                                   intercept = FALSE,
                                   weights_column = "cumm.IPAW",
@@ -364,7 +366,7 @@ runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
     Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
     m.fit <- try(speedglm::speedglm.wfit(
                                        X = Xdesign.mat,
-                                       y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
+                                       y = as.numeric(wts.all.rules[[Ynode]]),
                                        intercept = FALSE,
                                        family = binomial(),
                                        weights = wts.all.rules[["cumm.IPAW"]],
@@ -375,7 +377,7 @@ runglmMSM <- function(wts.all.rules, all_dummies, shifted.OUTCOME, verbose) {
       ctrl <- glm.control(trace = FALSE)
       SuppressGivenWarnings({
         m.fit <- stats::glm.fit(x = Xdesign.mat,
-                                y = as.numeric(wts.all.rules[[shifted.OUTCOME]]),
+                                y = as.numeric(wts.all.rules[[Ynode]]),
                                 family = binomial(),
                                 intercept = FALSE, control = ctrl)
       }, GetWarningsToSuppress())
@@ -405,7 +407,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
-  shifted.OUTCOME <- Ynode%+%".tplus1"
+  # shifted.OUTCOME <- Ynode%+%".tplus1"
 
   # 2a. Stack the weighted data sets:
   wts.all.rules <- rbindlist(data.wts.list)
@@ -414,7 +416,7 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
   if (verbose) print("performing estimation for rules: " %+% paste(rules.TRT, collapse=","))
 
   # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
-  wts.all.rules <- wts.all.rules[!is.na(cumm.IPAW) & !is.na(eval(as.name(shifted.OUTCOME))) & (cumm.IPAW > 0), ]
+  wts.all.rules <- wts.all.rules[!is.na(cumm.IPAW) & !is.na(eval(as.name(Ynode))) & (cumm.IPAW > 0), ]
   # 2c. If trunc.weights < Inf, do truncation of the weights
   if (trunc.weights < Inf) {
     wts.all.rules[cumm.IPAW > trunc.weights, cumm.IPAW := trunc.weights]
@@ -459,12 +461,12 @@ get_survMSM <- function(data.wts.list, OData, tjmin, tjmax, use.weights = TRUE, 
                         }))
 
   # 6. fit the hazard MSM
-  resglmMSM <- runglmMSM(wts.all.rules, all_dummies, shifted.OUTCOME, verbose)
+  resglmMSM <- runglmMSM(wts.all.rules, all_dummies, Ynode, verbose)
   wts.all.rules <- resglmMSM$wts.all.rules
   m.fit <- resglmMSM$m.fit
 
   #### For variable estimation, GET IC and SE FOR BETA's
-  beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = shifted.OUTCOME,
+  beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
                             MSMdata = wts.all.rules, MSMdesign = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
                             MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
 
