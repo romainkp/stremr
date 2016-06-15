@@ -406,9 +406,7 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
 # ---------------------------------------------------------------------------------------
 #' @export
 get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
-                        est.name = "IPAW", t.periods.RDs, verbose = getOption("stremr.verbose")) {
-
-  getSEs <- FALSE
+                        est.name = "IPAW", t.periods.RDs, getSEs = TRUE, verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
