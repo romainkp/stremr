@@ -10,7 +10,8 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   gvars$verbose <- verbose
   gvars$noCENS.cat <- noCENS.cat
   if (verbose) {
-    message("Running with the following setting: ");
+    message("Running with the following settings: ")
+    print("--------------")
     str(gvars$opts)
   }
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
