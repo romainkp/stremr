@@ -300,10 +300,10 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
       assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
 
-      probAeqa <- rep.int(1L, self$n) # for missing, the likelihood is always set to P(A = a) = 1.
+      probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
 
-      assert_that(!any(is.na(private$probA1[self$getsubset]))) # check that predictions P(A=1 | dmat) exist for all obs.
       probA1 <- private$probA1[self$getsubset]
+      assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
 
       # Discrete version for the joint density:
       probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)

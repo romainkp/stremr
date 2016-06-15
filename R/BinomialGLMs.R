@@ -85,12 +85,14 @@ predictP1.glmfit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
 predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
   assert_that(!is.null(subset_idx))
   rows_subset <- which(subset_idx)
-  subsetH2Oframe <- DataStorageObject$H2O.dat.sVar[rows_subset,]
+  subsetH2Oframe <- DataStorageObject$H2O.dat.sVar[rows_subset, ]
   ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
     pAout[subset_idx] <- as.vector(h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)[,"p1"])
   }
+  browser()
+
   return(pAout)
 }
 
