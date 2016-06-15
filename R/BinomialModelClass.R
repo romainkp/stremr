@@ -109,7 +109,6 @@ summary.glmfit <- function(model.fit, format_table = TRUE) {
 summary.h2ofit <- function(model.fit, format_table = TRUE) {
   h2o.model <- model.fit$H2O.model.object
   modelID <- h2o.model@model$training_metrics@metrics$model$name
-
   out <- NULL
 
   # -----------------------------------------------------------------
@@ -128,24 +127,9 @@ summary.h2ofit <- function(model.fit, format_table = TRUE) {
 
   # -----------------------------------------------------------------
   # training data metrics:
-  # browser()
   # -----------------------------------------------------------------
-  # unique model name identifier:
-  # h2o_modelname <- list(h2o.model@model$training_metrics@metrics$model$name)
-  # names(h2o_modelname) <- 'Model ID:'
-  # h2o_modelname_out <- pander::pander_return(h2o_modelname)
-  # out <- c(out, h2o_modelname_out)
   H2OBinomialMetrics_training <- h2o.model@model$training_metrics
   train_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_training)
-  # train_model_metrics_out <- pander::pander_return(h2o.model)
-  # train_model_metrics_out_list <- pander::pander_return(as.list(train_model_metrics_out))
-  # same thing, already included in above:
-  # model_perf <- h2o.performance(h2o.model)
-  # confusion matrix, already included:
-  # confMat <- h2o::h2o.confusionMatrix(h2o.model)
-  # header_confMat <- attributes(confMat)$header
-  # pander::set.caption(header_confMat)
-  # confMat_out <- pander::pander_return(confMat) # , justify = c('right', 'left')
   out <- c(out, train_model_metrics_out)
 
   # -----------------------------------------------------------------
@@ -222,16 +206,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     is.fitted = FALSE,
 
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
-
-    # GLMpackage = c("glm", "speedglm", "h2oglm"),
-    # fit.package = c("speedglm", "h2o"),
-
     fit.package = c("speedglm", "glm", "h2o"),
-    # fit.package = c("glm", "speedglm", "h2o"),
-    # fit.algorithm = c("glm", "gbm", "RandomForest", "SuperLearner"),
     fit.algorithm = c("GLM", "GBM", "RF", "SL"),
-    # fit.method = c("H2O", "GLM"),
-    # fit.method = c("SuperLearner", "RandomForest", "GBM", "GLM")
 
     n = NA_integer_,        # number of rows in the input data
     nbins = integer(),
@@ -242,8 +218,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
-      # assert_that(is.character(reg$GLMpackage))
-      # self$GLMpackage <- reg$GLMpackage
       self$fit.package <- reg$fit.package
       self$fit.algorithm <- reg$fit.algorithm
 

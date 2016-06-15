@@ -18,22 +18,6 @@ h2ofit.h2oGLM <- function(fit, DataStorageObject, subsetH2Oframe, outvar, predva
                             ignore_const_cols = FALSE,
                             missing_values_handling = "Skip")
 
-    # print("h2o.glm fit"); print(model.fit)
-    # print(model.fit@parameters)
-    # print(model.fit@allparameters)
-    # str(model.fit@model)
-    # str(model.fit@model$model_summary)
-    # str(model.fit@model$model_summary$training_frame)
-    # model.fit@model$model_summary$training_frame
-    # str(model.fit@model$training_metrics)
-    # str(model.fit@model$training_metrics@metrics)
-    # str(model.fit@model$training_metrics@metrics$model)
-    # str(model.fit@model$training_metrics@metrics$frame)
-    # str(model.fit@model$coefficients_table)
-    # h2o.getModel("GLM_model_R_1465837154341_2081")
-    # h2o.getFrame("RTMP_sid_9c4b_381")
-    # model.fit@model$model_summary
-
   # assign the fitted coefficients in correct order (same as predictor order in predvars)
   out_coef <- vector(mode = "numeric", length = length(predvars)+1)
   out_coef[] <- NA
@@ -52,8 +36,8 @@ h2ofit.h2oGLM <- function(fit, DataStorageObject, subsetH2Oframe, outvar, predva
     print(fit$coef)
   }
 
-  class(fit) <- c(class(fit)[1], c("glmfit"))
-  # class(fit) <- c(class(fit)[1], c("h2ofit"))
+  # class(fit) <- c(class(fit)[1], c("glmfit"))
+  class(fit) <- c(class(fit)[1], c("h2ofit"))
   return(fit)
 }
 
@@ -115,10 +99,8 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
 
     # TO DO: THIS WILL CONTAIN ADDITIONAL USER-SPEC'ED CONTROLS/ARGS PASSED ON TO h2o or h2oEnsemble
     # model.controls = NULL,
-
     fit.class = c("GLM", "RF", "GBM", "SL"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA),
-    # model.fit = list(coef = NA, fitfunname = NA, nobs = NA),
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel

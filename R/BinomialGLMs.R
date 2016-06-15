@@ -141,7 +141,6 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
     # TO DO: THIS WILL CONTAIN ADDITIONAL USER-SPEC'ED CONTROLS/ARGS PASSED ON TO speedglm/glm
     model.controls = NULL,
 
-    # fit.class = c("glm", "speedglm", "h2oglm"),
     fit.class = c("glm", "speedglm"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA),
 
