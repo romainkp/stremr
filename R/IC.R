@@ -3,6 +3,7 @@
 ###################################
 getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW_MSMestimator = TRUE){
   browser()
+
   # head(MSMdata)
   cumm.IPAW <- "cumm.IPAW"
 
@@ -12,7 +13,7 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
 
   IC.data[, "MSMepsilon" := get(Yname) - get(MSMpredict)]
 
-  if(IPW_MSMestimator){
+  if (IPW_MSMestimator) {
     sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[["MSMepsilon"]]
   }else{
     sweep.tmp <- IC.data[["MSMepsilon"]]
@@ -21,7 +22,7 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   #OS: multiply each column of t(MSMdesign) by sweep.tmp:
   D.O.beta <- sweep(t(MSMdesign), 2, sweep.tmp, "*")
 
-  # new faster approach using data.table:
+  # New & faster approach using data.table:
   xDT <- data.table(ID = IC.data[[ID]], t(D.O.beta))
   setkeyv(xDT, cols = "ID")
   D.O.beta.alt <- as.matrix(xDT[, lapply(.SD, sum), by = ID][, ID := NULL])
@@ -32,15 +33,14 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   }
 
   if(IPW_MSMestimator){
-    sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[[MSMpredict]] * (1-IC.data[[MSMpredict]])
+    sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[[MSMpredict]] * (1 - IC.data[[MSMpredict]])
   } else {
-    sweep.tmp <- IC.data[[MSMpredict]] * (1-IC.data[[MSMpredict]])
+    sweep.tmp <- IC.data[[MSMpredict]] * (1 - IC.data[[MSMpredict]])
   }
 
   C <- sweep(t(MSMdesign), 2, sweep.tmp, "*")
   C <- (C %*% MSMdesign) / nID
   Cm1 <- solve(C)
-
   IC.O <- Cm1 %*% D.O.beta.alt
 
   if (gvars$verbose) {

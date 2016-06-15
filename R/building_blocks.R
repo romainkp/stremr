@@ -471,10 +471,11 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
   wts.all.rules <- resglmMSM$wts.all.rules
   m.fit <- resglmMSM$m.fit
 
+
   #### For variable estimation, GET IC and SE FOR BETA's
-  beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
-                            MSMdata = wts.all.rules, MSMdesign = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
-                            MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
+  # beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
+  #                           MSMdata = wts.all.rules, MSMdesign = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
+  #                           MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
 
   # 7. Compute the Survival curves under each d
   S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,maxt-mint+1)), length(rules.TRT))
@@ -514,12 +515,16 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
     # h.d.t.predict - MSM hazard estimates for one regimen
     # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
     # IC.O - observation-sepcific IC estimates for MSM coefs
-    IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
-                                 S.d.t.predict = S2.IPAW[[d.j]],
-                                 h.d.t.predict = hazard.IPAW[[d.j]],
-                                 design.d.t = design.t.d[[d.j]],
-                                 IC.O = beta.IC.O.SEs[["IC.O"]])
+
+    # IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
+    #                              S.d.t.predict = S2.IPAW[[d.j]],
+    #                              h.d.t.predict = hazard.IPAW[[d.j]],
+    #                              design.d.t = design.t.d[[d.j]],
+    #                              IC.O = beta.IC.O.SEs[["IC.O"]])
   }
+
+  browser()
+
 
   output.MSM <- round(m.fit$coef,2)
   output.MSM <- cbind("Terms" = names(m.fit$coef), output.MSM)
