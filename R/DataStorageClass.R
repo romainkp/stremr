@@ -509,8 +509,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       types <- gsub("character", "string", types)
       types <- gsub("Date", "Time", types)
 
-
-      H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf,
+      H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
                                           header = TRUE,
                                           col.types = types,
                                           na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
