@@ -261,7 +261,9 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       invisible(self)
     },
 
-    fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
+    # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
+    # store these predictions in private$probA1 and private$probAeqa
+    fit = function(overwrite = FALSE, data, predict = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       if (gvars$verbose) print("fitting the model: " %+% self$show())
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
@@ -272,39 +274,52 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       private$model.fit$params <- self$show(print_format = FALSE)
 
       self$is.fitted <- TRUE
+      if (predict) {
+        self$predictAeqa(...)
+      }
+
+      # **********************************************************************
+      # to save RAM space when doing many stacked regressions wipe out all internal data:
       self$wipe.alldat
+      # **********************************************************************
       invisible(self)
     },
 
     # Predict the response P(Bin = 1|sW = sw);
     # uses private$model.fit to generate predictions for data:
-    predict = function(newdata) {
+    predict = function(newdata, ...) {
       assert_that(self$is.fitted)
-      self$n <- newdata$nobs
-      if (missing(newdata)) {
-        stop("must provide newdata for BinaryOutcomeModel$predict()")
+      if (missing(newdata) && is.null(private$probA1)) {
+        # stop("must provide newdata for BinaryOutcomeModel$predict()")
+        private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
+      } else {
+        self$n <- newdata$nobs
+        self$define.subset.idx(newdata)
+        private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
       }
-      self$n <- newdata$nobs
-
-      self$define.subset.idx(newdata)
-      private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
       return(invisible(self))
     },
 
     # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
     # Needs to know the values of b for prediction
     # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    predictAeqa = function(newdata, bw.j.sA_diff) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+    predictAeqa = function(newdata, bw.j.sA_diff, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+      if (missing(newdata) && !is.null(private$probAeqa)) {
+        return(private$probAeqa)
+      }
+
       self$predict(newdata)
 
-      indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
+      if (missing(newdata)) {
+        indA <- self$getoutvarval
+      } else {
+        indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
+      }
+
       assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
-
       probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-
       probA1 <- private$probA1[self$getsubset]
       assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
-
       # Discrete version for the joint density:
       probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
       # continuous version for the joint density:
@@ -317,6 +332,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         # cont. version of above:
         probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
       }
+      private$probAeqa <- probAeqa
+
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       self$wipe.alldat
@@ -396,8 +413,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
   active = list(
     wipe.alldat = function() {
-      private$probA1 <- NULL
-      private$probAeqa <- NULL
+      # private$probA1 <- NULL
+      # private$probAeqa <- NULL
       self$subset_idx <- NULL
       self$binomialModelObj$emptydata
       self$binomialModelObj$emptyY

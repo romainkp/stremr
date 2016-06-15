@@ -119,11 +119,15 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
   ALL_g_regs$S3class <- "generic"
   modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
-  modelfits.g0$fit(data = OData)
+  # modelfits.g0$fit(data = OData)
+  modelfits.g0$fit(data = OData, predict = TRUE)
+
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
-  h_gN <- modelfits.g0$predictAeqa(newdata = OData)
+
+  # h_gN <- modelfits.g0$predictAeqa(newdata = OData)
+  h_gN <- modelfits.g0$predictAeqa(n = OData$nobs)
 
   # ------------------------------------------------------------------------------------------
   # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
@@ -159,11 +163,8 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   g_CAN_regs_list <- ALL_g_regs$RegressionForms
 
   OData$modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
-  # OData$modelfit.gC$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
   OData$modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
-  # OData$modelfit.gA$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
   OData$modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
-  # OData$modelfit.gN$getPsAsW.models()[[1]]$getPsAsW.models()[[1]]$getfit
 
   g0.A <- OData$modelfit.gA$getcumprodAeqa()
   g0.C <- OData$modelfit.gC$getcumprodAeqa()

@@ -490,12 +490,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # -----------------------------------------------------------------------------
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------
-    fast.load.to.H2O = function() {
-      tmpf <- tempfile(fileext = ".csv")
-      assert_that(is.data.table(self$dat.sVar))
-      data.table::fwrite(self$dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+    fast.load.to.H2O = function(dat.sVar) {
+      if (missing(dat.sVar)) {
+        dat.sVar <- self$dat.sVar
+      }
 
-      types <- sapply(self$dat.sVar, class)
+      tmpf <- tempfile(fileext = ".csv")
+      assert_that(is.data.table(dat.sVar))
+      data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+
+      types <- sapply(dat.sVar, class)
       types <- gsub("integer64", "numeric", types)
       types <- gsub("integer", "numeric", types)
       types <- gsub("double", "numeric", types)
@@ -509,21 +513,21 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf,
                                           header = TRUE,
                                           col.types = types,
-                                          na.strings = rep(c("NA_h2o"), ncol(self$dat.sVar)),
+                                          na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
                                           destination_frame = "H2O.dat.sVar")
       self$H2O.dat.sVar <- H2O.dat.sVar
 
       # H2O.dat.sVar <- h2o::h2o.importFile(tmpf, destination_frame = "H2O.dat.sVar",
       #                                     header = TRUE,
       #                                     col.types = types,
-      #                                     col.names = colnames(OData$dat.sVar, do.NULL = FALSE, prefix = "C"),
+      #                                     col.names = colnames(dat.sVar, do.NULL = FALSE, prefix = "C"),
       #                                     na.strings = rep(c("NA_h2o"),
-      #                                       ncol(OData$dat.sVar)))
+      #                                       ncol(dat.sVar)))
       # H2O.dat.sVar <- h2o::h2o.uploadFile(tmpf, destination_frame = "H2O.dat.sVar",
       #                                     header = TRUE,
       #                                     col.types = types,
-      #                                     col.names = colnames(OData$dat.sVar, do.NULL = FALSE, prefix = "C"),
-      #                                     na.strings = rep(c("NA_h2o"), ncol(OData$dat.sVar)))
+      #                                     col.names = colnames(dat.sVar, do.NULL = FALSE, prefix = "C"),
+      #                                     na.strings = rep(c("NA_h2o"), ncol(dat.sVar)))
       file.remove(tmpf)
       return(invisible(self))
     }

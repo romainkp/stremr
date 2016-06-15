@@ -66,7 +66,10 @@ predictP1 <- function(m.fit, ...) UseMethod("predictP1")
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
 # ----------------------------------------------------------------
 predictP1.glmfit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
-  ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
+  if (!missing(DataStorageObject)) {
+    ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
+  }
+
   Xmat <- ParentObject$getXmat
   assert_that(!is.null(Xmat)); assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
@@ -84,20 +87,26 @@ predictP1.glmfit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
 # ----------------------------------------------------------------
 predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
   assert_that(!is.null(subset_idx))
-  rows_subset <- which(subset_idx)
-  subsetH2Oframe <- DataStorageObject$H2O.dat.sVar[rows_subset, ]
-  ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
+
+  if (!missing(DataStorageObject)) {
+    rows_subset <- which(subset_idx)
+    subsetH2Oframe <- DataStorageObject$H2O.dat.sVar[rows_subset, ]
+    # ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
+  } else {
+    subsetH2Oframe <- ParentObject$getsubsetH2Oframe
+  }
+
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
     pAout[subset_idx] <- as.vector(h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)[,"p1"])
   }
 
 
-  browser()
-  head(pAout[subset_idx])
-  subsetDT <- DataStorageObject$dat.sVar[rows_subset, ]
-  subsetH2Oframe[which(is.na(pAout[subset_idx])),]
-  subsetDT[which(is.na(pAout[subset_idx])),]
+  # browser()
+  # head(pAout[subset_idx])
+  # subsetDT <- DataStorageObject$dat.sVar[rows_subset, ]
+  # subsetH2Oframe[which(is.na(pAout[subset_idx])),]
+  # subsetDT[which(is.na(pAout[subset_idx])),]
 
   return(pAout)
 }

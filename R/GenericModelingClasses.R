@@ -114,12 +114,13 @@ GenericModel <- R6Class(classname = "GenericModel",
     length = function(){ base::length(private$PsAsW.models) },
     getPsAsW.models = function() { private$PsAsW.models },  # get all summary model objects (one model object per outcome var sA[j])
     getcumprodAeqa = function() { private$cumprodAeqa },  # get joint prob as a vector of the cumulative prod over j for P(sA[j]=a[j]|sW)
-    fit = function(data) {
+
+    fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       # serial loop over all regressions in PsAsW.models:
       if (!self$parfit_allowed) {
         for (k_i in seq_along(private$PsAsW.models)) {
-          private$PsAsW.models[[k_i]]$fit(data = data)
+          private$PsAsW.models[[k_i]]$fit(data = data, ...)
         }
       # parallel loop over all regressions in PsAsW.models:
       } else if (self$parfit_allowed) {
@@ -128,7 +129,7 @@ GenericModel <- R6Class(classname = "GenericModel",
         # NOTE: Each fitRes[[k_i]] will contain a copy of every single R6 object that was passed by reference ->
         # *** the size of fitRes is 100x the size of private$PsAsW.models ***
         fitRes <- foreach::foreach(k_i = seq_along(private$PsAsW.models), .options.multicore = mcoptions) %dopar% {
-          private$PsAsW.models[[k_i]]$fit(data = data)
+          private$PsAsW.models[[k_i]]$fit(data = data, ...)
         }
         # copy the fits one by one from BinaryOutcomeModels above into private field for BinaryOutcomeModels
         for (k_i in seq_along(private$PsAsW.models)) {
@@ -139,8 +140,9 @@ GenericModel <- R6Class(classname = "GenericModel",
     },
     # P(A=1|W=w): uses private$m.fit to generate predictions
     predict = function(newdata) {
-      if (missing(newdata)) stop("must provide newdata")
-      assert_that(is.DataStorageClass(newdata))
+      # if (missing(newdata)) stop("must provide newdata")
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+
       # serial loop over all regressions in PsAsW.models:
       if (!self$parfit_allowed) {
         for (k_i in seq_along(private$PsAsW.models)) {
@@ -166,15 +168,18 @@ GenericModel <- R6Class(classname = "GenericModel",
     # Uses daughter objects (stored from prev call to fit()) to get predictions for P(A=obsdat.A|W=w)
     # Invisibly returns the joint probability P(A=a|W=w), also aves it as a private field "cumprodAeqa"
     # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
-    predictAeqa = function(newdata, ...) {
-      assert_that(!missing(newdata))
-      assert_that(is.DataStorageClass(newdata))
-      n <- newdata$nobs
+    predictAeqa = function(newdata, n, ...) {
+      # assert_that(!missing(newdata))
+      if (!missing(newdata)) {
+        assert_that(is.DataStorageClass(newdata))
+        n <- newdata$nobs
+      }
+
       if (!self$parfit_allowed) {
-        cumprodAeqa <- rep.int(1, n)
+        cumprodAeqa <- rep.int(1L, n)
         # loop over all regressions in PsAsW.models:
         for (k_i in seq_along(private$PsAsW.models)) {
-          cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, ...)
+          cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
         }
       } else if (self$parfit_allowed) {
         val <- checkpkgs(pkgs=c("foreach", "doParallel", "matrixStats"))
@@ -386,7 +391,7 @@ ContinModel <- R6Class(classname = "ContinModel",
     },
     # Transforms data for continous outcome to discretized bins A[j] -> BinA[1], ..., BinA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in A - names have changed though)
-    fit = function(data) {
+    fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       # Binirizes & saves binned matrix inside DataStorageClass
       data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
@@ -395,26 +400,34 @@ ContinModel <- R6Class(classname = "ContinModel",
         print("freq counts by bin for continuous outcome: "); print(table(data$ord.sVar))
         print("binned dataset: "); print(head(cbind(data$ord.sVar, data$dat.bin.sVar), 5))
       }
-      super$fit(data) # call the parent class fit method
+      super$fit(data, ...) # call the parent class fit method
       if (gvars$verbose) message("fit for outcome " %+% self$outvar %+% " succeeded...")
       data$emptydat.bin.sVar # wiping out binirized mat in data DataStorageClass object...
       self$wipe.alldat # wiping out all data traces in ContinModel...
       invisible(self)
     },
     # P(A=1|W=w): uses private$m.fit to generate predictions
-    predict = function(newdata) {
-      if (missing(newdata)) stop("must provide newdata")
-      assert_that(is.DataStorageClass(newdata))
+    predict = function(newdata, ...) {
+      # if (missing(newdata)) stop("must provide newdata")
+      # assert_that(is.DataStorageClass(newdata))
+
       if (gvars$verbose) print("performing prediction for continuous outcome: " %+% self$outvar)
       # mat_bin doesn't need to be saved (even though its invisibly returned); mat_bin is automatically saved in datnet.sW.sA - a potentially dangerous side-effect!!!
-      newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
-      super$predict(newdata)
-      newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DataStorageClass object...
+
+      if (!missing(newdata)) {
+        newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
+      }
+      super$predict(newdata, ...)
+      if (!missing(newdata)) {
+        newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DataStorageClass object...
+      }
       invisible(self)
     },
+
+
     # Convert contin. A vector into matrix of binary cols, then call parent class method: super$predictAeqa()
     # Invisibly return cumm. prob P(A=a|W=w)
-    predictAeqa = function(newdata) { # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a`s)
+    predictAeqa = function(newdata, ...) { # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a`s)
       assert_that(is.DataStorageClass(newdata))
       newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
@@ -515,7 +528,7 @@ CategorModel <- R6Class(classname = "CategorModel",
 
     # Transforms data for categorical outcome to bin indicators A[j] -> BinA[1], ..., BinA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in A - names have changed though)
-    fit = function(data) {
+    fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       # Binirizes & saves binned matrix inside DataStorageClass for categorical sVar
       data$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
@@ -531,7 +544,7 @@ CategorModel <- R6Class(classname = "CategorModel",
       invisible(self)
     },
     # P(A=1|W=w): uses private$m.fit to generate predictions
-    predict = function(newdata) {
+    predict = function(newdata, ...) {
       if (missing(newdata)) stop("must provide newdata")
       assert_that(is.DataStorageClass(newdata))
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
@@ -542,7 +555,7 @@ CategorModel <- R6Class(classname = "CategorModel",
     },
     # Invisibly return cumm. prob P(A=a|W=w)
     # P(A=a|W=w) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
-    predictAeqa = function(newdata) {
+    predictAeqa = function(newdata, ...) {
       assert_that(is.DataStorageClass(newdata))
       if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
       newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
@@ -629,30 +642,32 @@ StratifiedModel <- R6Class(classname = "StratifiedModel",
     },
     # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
-    fit = function(data) {
+    fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       if (gvars$verbose) {
         print("performing fitting for outcome based on stratified model for outcome: " %+% self$outvar)
         # print("following subsets are defined: "); print(table(data$get.sVar(self$outvar)))
       }
-      super$fit(data) # call the parent class fit method
+      super$fit(data, ...) # call the parent class fit method
       if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
       invisible(self)
     },
     # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
-    predict = function(newdata) {
-      if (missing(newdata)) stop("must provide newdata")
-      assert_that(is.DataStorageClass(newdata))
+    predict = function(newdata, ...) {
+      # if (missing(newdata)) stop("must provide newdata")
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+
       if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
-      super$predict(newdata)
+      super$predict(newdata, ...)
       invisible(self)
     },
     # Invisibly return cumm. prob P(sA=sa|sW=sw)
     # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
-    predictAeqa = function(newdata) {
-      assert_that(is.DataStorageClass(newdata))
+    predictAeqa = function(newdata, ...) {
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+
       if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
-      cumprodAeqa <- super$predictAeqa(newdata = newdata)
+      cumprodAeqa <- super$predictAeqa(newdata = newdata, ...)
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     },
