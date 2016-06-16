@@ -6,7 +6,6 @@
 #   assert_that(BinaryOutcomeModel$is.fitted)
 #   BinaryOutcomeModel$getfit
 # }
-
 pander.H2OBinomialModel <- function(H2OBinomialModelObject) {
   cat("\n")
   show(H2OBinomialModelObject)
