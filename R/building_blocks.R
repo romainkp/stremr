@@ -567,11 +567,11 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val.idx, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
 
-  browser()
-  S2.IPAW[[1]][t.period.val.idx]
-  S2.IPAW[[2]][t.period.val.idx]
-  S2.IPAW[[3]][t.period.val.idx]
-  S2.IPAW[[4]][t.period.val.idx]
+  # browser()
+  # S2.IPAW[[1]][t.period.val.idx]
+  # S2.IPAW[[2]][t.period.val.idx]
+  # S2.IPAW[[3]][t.period.val.idx]
+  # S2.IPAW[[4]][t.period.val.idx]
 
   return(list(St = S2.IPAW, MSM.fit = m.fit, output.MSM = output.MSM,
               IPAWdist = IPAWdist, RDs.IPAW.tperiods = RDs.IPAW.tperiods))

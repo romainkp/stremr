@@ -51,9 +51,11 @@ add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", 
   O.dataDT[O.dataDT[,.I[which(is.na(get(TRT)))], by = eval(ID)][["V1"]],(rule_name1) := NA]
   # Add indicator for rule (dhigh) -> start TRT only when I=1 (highA1c)
   rule_name2 <- "dhigh"
-  O.dataDT_dhigh <- stremr::follow.rule.d.DT(O.dataDT, theta = 1, ID = ID,
+  O.dataDT_dhigh <- stremr::defineTRTrules(O.dataDT, theta = 1, ID = ID,
                                               t = t, I = I, CENS = CENS, TRT = TRT,
-                                              MONITOR = MONITOR, rule.names = rule_name2)
+                                              MONITOR = MONITOR,
+                                              # tsinceNis1 = "",
+                                              rule.names = rule_name2)
   O.dataDT_dhigh[, (rule_name2) := as.integer(get(rule_name2))]
   O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
   return(O.dataDT)
@@ -217,7 +219,7 @@ stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 
-OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
+OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
 # OData$H2O.dat.sVar
 
