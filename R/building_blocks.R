@@ -510,9 +510,6 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
 
     S2.IPAW[[d.j]] <- cumprod(S2.IPAW[[d.j]])
 
-    d.idx <- which(names(S2.IPAW) %in% d.j)
-    set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
-    design.t.d[[d.j]][,set_cols] <- design.t
 
     #### GET IC and SE FOR Sd(t)
     # S.d.t.predict - MSM survival estimates for one regimen
@@ -521,6 +518,10 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
     # IC.O - observation-sepcific IC estimates for MSM coefs
 
     if (getSEs) {
+      d.idx <- which(names(S2.IPAW) %in% d.j)
+      set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
+      design.t.d[[d.j]][,set_cols] <- design.t
+
       IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
                                    S.d.t.predict = S2.IPAW[[d.j]],
                                    h.d.t.predict = hazard.IPAW[[d.j]],
