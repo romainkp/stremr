@@ -21,7 +21,8 @@ When imp.I(t)=1 it means that the patient was not observed (no office visit) at 
 This new column MONITOR(t) is the indicator of being monitored (having a doctors visit) at time-point t+1 the indicator of the
 imputation (having observed/measured biomarker) at time-point t+1.}
 
-\item{tsinceNis1}{The name of the variable that counts number of periods since last monitoring event at t-1.}
+\item{tsinceNis1}{The name of the future column (created by this routine) that counts number of periods since last monitoring event at t-1. More precisely,
+it is a function of the past \bar{N}(t−1), where 0 means that N(t−1)=1; 1 means that N(t−2)=1 and N(t−1)=0; etc.}
 
 \item{I}{The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.}
 }

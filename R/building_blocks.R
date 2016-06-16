@@ -357,8 +357,10 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
                                   family = "binomial",
                                   standardize = FALSE,
                                   solver = c("IRLSM"), # solver = c("L_BFGS"),
+                                  lambda = 0L,
                                   max_iterations = 50,
-                                  lambda = 0L),
+                                  ignore_const_cols = FALSE
+                                  ),
                 silent = TRUE)
 
     out_coef <- vector(mode = "numeric", length = length(all_dummies))

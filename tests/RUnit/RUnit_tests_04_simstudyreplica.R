@@ -174,6 +174,20 @@ gstar1.N.Pois1.biyearly <- g.Pois(O.dataDTrules, lambda = 1)
 gstar2.N.p05 <- g.p(O.dataDTrules, p = 0.5)
 O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := gstar1.N.Pois3.yearly][, gstar1.N.Pois1.biyearly := gstar1.N.Pois1.biyearly][, gstar2.N.p05 := gstar2.N.p05]
 
+# ---------------------------------------------------------------------------
+# DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
+# Might expand this in the future to allow defining arbitrary summaries
+# ---------------------------------------------------------------------------
+lagnodes <- c("C", "TI", "N")
+newVarnames <- lagnodes %+% ".tminus1"
+O.dataDTrules_Nstar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
+# -------------------------------------------------------------------------------------------
+# Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
+# -------------------------------------------------------------------------------------------
+OUTCOME <- "Y"
+shifted.OUTCOME <- OUTCOME%+%".tplus1"
+O.dataDTrules_Nstar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
+
 # --------------------------------
 # (IV) Estimate weights under observed (A,C,N)
 # --------------------------------
@@ -204,8 +218,8 @@ stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
-OData$fast.load.to.H2O()
-OData$H2O.dat.sVar
+# OData$fast.load.to.H2O()
+# OData$H2O.dat.sVar
 
 OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
 require("magrittr")
@@ -217,14 +231,20 @@ St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Po
             get_survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
+
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"]
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
-wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+
+wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow")
+wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh")
+
+# wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+# wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 # MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(wts.all.list, OData,
+MSM.IPAW <- get_survMSM(OData, wts.all.list,
                         tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, est.name = "IPAW",
                         t.periods.RDs = c(12, 15))
