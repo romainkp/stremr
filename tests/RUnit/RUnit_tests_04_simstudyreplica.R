@@ -1,85 +1,9 @@
-require("magrittr")
 require("data.table")
-# require("stremr")
-# options(width=140)
-# to install from github:
-# devtools::install_github('osofr/simcausal', build_vignettes = FALSE)
-# devtools::install_github('osofr/stremr', build_vignettes = FALSE)
-# require(stremr)
-# require("simcausal")
 `%+%` <- function(a, b) paste0(a, b)
-
-delta.shift.minus <- seq(-0.9, -0.1, by=0.1)
-delta.shift.plus <- seq(0.1, 0.9, by=0.1)
-delta.shifts <- c(delta.shift.minus, delta.shift.plus)
-# delta.shifts <- c(-0.5,0.5)
-
-# get the likelihood under N(t) Poisson:
-g.Pois <- function(O.dataDT, lambda, ID = "ID", OUTCOME = "Y", lastNat1 = "lastNat1", MONITOR = "N"){
-  g.N <- 1 / (ppois(O.dataDT[[lastNat1]], lambda, lower.tail = FALSE) / dpois(O.dataDT[[lastNat1]], lambda) + 1)
-  g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
-  return(g.N)
-}
-# # get the likelihood under N(t) Poisson:
-# g.Pois <- function(lambda){
-#   function(O.data, Yname){
-#     g.N <- 1 / (ppois(O.data[, "lastN.t"], lambda, lower.tail = FALSE) / dpois(O.data[, "lastN.t"], lambda) + 1)
-#     g.N <- ifelse(O.data[,"N.t"] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
-#     return(g.N)
-#   }
-# }
-# get the likelihood under N(t) Bernoulli with P(N(t)=1)=p:
-g.p <- function(O.dataDT, p, ID = "ID", OUTCOME = "Y", lastNat1 = "lastNat1", MONITOR = "N"){
-  g.N <- rep(p, nrow(O.dataDT))
-  g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
-  return(g.N)
-}
-# get the likelihood under N(t) Bernoulli with P(N(t)=1)=p:
-# g.p <- function(p){
-#   function(O.data, Yname){
-#     g.N <- rep(p, nrow(O.data))
-#     g.N <- ifelse(O.data[, "N.t"] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
-#     return(g.N)
-#   }
-# }
-# DAG equation for defining the distribution of N(t) as Poisson (x is time since last visit)
-N.Pois.3 <- function(x,lambda = 3){
-  g.N <- 1 / (ppois(x, lambda, lower.tail = FALSE) / dpois(x, lambda[1])+1) # will be NA if x=NA
-  return(g.N)
-}
-# DAG equation for defining the distribution of N(t) as Poisson (x is time since last visit)
-N.Pois.1 <- function(x,lambda=1){
-  g.N <- 1 / (ppois(x, lambda, lower.tail = FALSE) / dpois(x, lambda[1]) + 1) # will be NA if x=NA
-  return(g.N)
-}
-
-SimParams <- list(
-  gcont       = list(name = "Continuous",         Nprob.t0 = 1,                                  Nprob.tplus = 1,                                     Nt.form = "N.t ~ 1",                  delta.shift = NULL),
-  g05         = list(name = "Sporadic 0.5",       Nprob.t0 = 0.5,                                Nprob.tplus = 0.5,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  g035        = list(name = "Sporadic 0.35",      Nprob.t0 = 0.35,                               Nprob.tplus = 0.35,                                  Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  g02         = list(name = "Sporadic 0.2",       Nprob.t0 = 0.2,                                Nprob.tplus = 0.2,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  g01         = list(name = "Sporadic 0.1",       Nprob.t0 = 0.1,                                Nprob.tplus = 0.1,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
-  # gSpoYear    = list(name = "Sporadic yearly",  Nprob.t0 = 0,                                  Nprob.tplus = substitute(N.sporadic.4(lastNat1[t])), Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = delta.shifts),
-  # gSpoBiyear  = list(name = "Sporadic bi-yearly",Nprob.t0 = 0.25,                               Nprob.tplus = substitute(N.sporadic.2(lastNat1[t])), Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = 0.1),
-  gPois3      = list(name = "Poisson yearly",     Nprob.t0 = substitute(N.Pois.3(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.3(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = delta.shifts, gradual.t.vec = 4),
-  gPois1      = list(name = "Poisson bi-yearly",  Nprob.t0 = substitute(N.Pois.1(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.1(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = 0.1)
-  # Two interventions below are never used for generating obs. data, only as g^* for estimating \psi_0:
-  # g0delta.shift.p = list(name = "Delta shift p",        gInt.N = g.delta.p,               Nprob.t0 = NULL, Nprob.tplus = NULL, Nt.form = "not used", NOT.USE.AS.g0 = TRUE),
-  # g0gradual.t     = list(name = "Shift gradual t",      gInt.N = g.delta.p.byt,           Nprob.t0 = NULL, Nprob.tplus = NULL, Nt.form = "not used", NOT.USE.AS.g0 = TRUE),
-  # g0forcevis.t.1  = list(name = "gN.0 visit every t.1", gInt.N = g.delta.forcevisit.t(1), Nprob.t0 = NULL, Nprob.tplus = NULL, Nt.form = "not used", NOT.USE.AS.g0 = TRUE),
-  # g0forcevis.t.4  = list(name = "gN.0 visit every t.4", gInt.N = g.delta.forcevisit.t(4), Nprob.t0 = NULL, Nprob.tplus = NULL, Nt.form = "not used", NOT.USE.AS.g0 = TRUE)
-)
-
 
 ###########################################################################################################
 # Run the simulation for one scenario on N(t) and perform estimation for two scenarios:
 ###########################################################################################################
-# wdir <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_legacyRcode"
-# setwd(wdir)
-# source("666_fit_g.C.A.N_calcIPAW_simfcts.R") # estimation functions + DAG for the data generating distribution
-# source("666_g_library.R") # scenarios for N(t)
-# datadir <- "./"
-
 set.DAG.rm.template <- function(){
   require("simcausal")
   options(simcausal.verbose = FALSE)
@@ -111,31 +35,8 @@ set.DAG.rm.template <- function(){
   return(Drm)
 }
 
-# ---------------------------------------------------------------------------------------------------------
-# Get indicators of rule followers for two rules (dlow, dhigh) based on binary I:
-# ---------------------------------------------------------------------------------------------------------
-add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", MONITOR = "N", I = "highA1c", rule_name1 = "dlow", rule_name2 = "dhigh"){
-  ## Count how many patients follow each rule; follow rule dlow - start TI at low A1c threshold, i.e. start at study entry.
-  O.dataDT <- data.table(O.data, key = c(ID, t))
-  # Add indicator for rule (dlow) -> start TI when highA1c>=0 and stay on treatment ALL the time (i.e., start at study entry)
-  # equivalent to counterfactual regiment \barA=1
-  rule_name1 <- "dlow"
-  O.dataDT[,(rule_name1) := as.integer(all(get(TRT) %in% c(1,NA))), by=eval(ID)]
-  # set last row to 0, since its always either Y=1 or C=1
-  O.dataDT[O.dataDT[,.I[.N], by = eval(ID)][["V1"]],(rule_name1) := 0L]
-  # set All NAs for treatment (TRT) to be NA for the rule as well
-  O.dataDT[O.dataDT[,.I[which(is.na(get(TRT)))], by = eval(ID)][["V1"]],(rule_name1) := NA]
-  # Add indicator for rule (dhigh) -> start TRT only when I=1 (highA1c)
-  rule_name2 <- "dhigh"
-  O.dataDT_dhigh <- stremr::follow.rule.d.DT(O.dataDT, theta = 1, ID = ID,
-                                              t = t, I = I, CENS = CENS, TRT = TRT,
-                                              MONITOR = MONITOR, rule.names = rule_name2)
-  O.dataDT_dhigh[, (rule_name2) := as.integer(get(rule_name2))]
-  O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
-  return(O.dataDT)
-}
 # --------------------------------
-# (II) Define event indicator and right-censoring indicator, define total follow-up length
+# Define event indicator and right-censoring indicator, define total follow-up length
 # --------------------------------
 define_indicators <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", MONITOR = "N", I = "highA1c") {
   # Add indicator Delta=I(T<=C) (Y is 1 at some point for the subject):
@@ -156,141 +57,231 @@ define_indicators <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C"
   return(O.dataDT)
 }
 
-# -----------------------------------------------------------
-# SIMULATION PARAMS:
-# -----------------------------------------------------------
-Nsize <- 10000
-# set to TRUE to only run scenarios dealing with bias for g.N w and w/out past N(t), no intervention on N(t)
-run_only_bias_noN <- FALSE
-NoIntNt <- FALSE
-# SimParams <- Sim.and.Est.params
-# override the scenario name to run for just one scenario:
-scen.names <- "g05"
-# scen.names <- c("g01_gcont", "g01_gcont_rndHighA1c", "g01_gcont_rndHighA1cNULL", "g01_gcont_Nstar")
-# scen.names <- "gSpoBiyear"
-# scen.names <- c("gPois3", "gPois1")
-# scen.names <- c("g05", "gPois3")
-# scen.names <- c("gSpoYear", "gPois3")
-
-# ------------------------------------------------------------------------------------------------------
-# (I) Simulate data with binary I (highA1c)
-# ------------------------------------------------------------------------------------------------------
-prob.t0 <- SimParams[[scen.names[1]]]$Nprob.t0
-prob.tplus <- SimParams[[scen.names[1]]]$Nprob.tplus
-print("scen.name: " %+% scen.names[1]); print("prob.t0"); print(prob.t0); print("prob.tplus"); print(prob.tplus)
-DAGrm <- set.DAG.rm.template()
-vecfun.add("N.Pois.1"); vecfun.add("N.Pois.3"); vecfun.add("N.sporadic.2"); vecfun.add("N.sporadic.4")
-
-#### Simulate with P(N(0)=1) = prob.t0 and P(N(t>0)=1) = prob.tplus
-if (!is.null(prob.t0)) {
-  DAGrm <- DAGrm + node("N", t = 0, distr = "rbern", prob = .(prob.t0))
-  DAGrm <- DAGrm + node("N", t = 1:16, distr = "rbern", prob = .(prob.tplus))
+# ---------------------------------------------------------------------------------------------------------
+# Get indicators of rule followers for two rules (dlow, dhigh) based on binary I:
+# ---------------------------------------------------------------------------------------------------------
+add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", MONITOR = "N", I = "highA1c", rule_name1 = "dlow", rule_name2 = "dhigh"){
+  ## Count how many patients follow each rule; follow rule dlow - start TI at low A1c threshold, i.e. start at study entry.
+  O.dataDT <- data.table(O.data, key = c(ID, t))
+  # Add indicator for rule (dlow) -> start TI when highA1c>=0 and stay on treatment ALL the time (i.e., start at study entry)
+  # equivalent to counterfactual regiment \barA=1
+  rule_name1 <- "dlow"
+  O.dataDT[,(rule_name1) := as.integer(all(get(TRT) %in% c(1,NA))), by=eval(ID)]
+  # set last row to 0, since its always either Y=1 or C=1
+  O.dataDT[O.dataDT[,.I[.N], by = eval(ID)][["V1"]],(rule_name1) := 0L]
+  # set All NAs for treatment (TRT) to be NA for the rule as well
+  O.dataDT[O.dataDT[,.I[which(is.na(get(TRT)))], by = eval(ID)][["V1"]],(rule_name1) := NA]
+  # Add indicator for rule (dhigh) -> start TRT only when I=1 (highA1c)
+  rule_name2 <- "dhigh"
+  O.dataDT_dhigh <- stremr::defineTRTrules(O.dataDT, theta = 1, ID = ID,
+                                              t = t, I = I, CENS = CENS, TRT = TRT,
+                                              MONITOR = MONITOR,
+                                              tsinceNis1 = "lastNat1",
+                                              rule.names = rule_name2)
+  O.dataDT_dhigh[, (rule_name2) := as.integer(get(rule_name2))]
+  O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
+  return(O.dataDT)
 }
-DAGrm <- set.DAG(DAGrm)
-O.data.simstudy <- sim(DAG = DAGrm, n = Nsize, wide = FALSE, rndseed = 55466)
-O.data.simstudy[O.data.simstudy[,"t"]%in%16,"lastNat1"] <- NA
-O.data <- O.data.simstudy[,!names(O.data.simstudy)%in%c("highA1c.UN", "timelowA1c.UN")]
 
+
+# ------------------------------------------------------------------------------------------------------
+# SIMULATE, SAVE AND COMPRESS THE DATASET FROM THE EXAMPLE
+# ------------------------------------------------------------------------------------------------------
+notrun.save.example.data <- function() {
+  require("simcausal")
+  # DAG equation for defining the distribution of N(t) as Poisson (x is time since last visit)
+  N.Pois.3 <- function(x,lambda = 3){
+    g.N <- 1 / (ppois(x, lambda, lower.tail = FALSE) / dpois(x, lambda[1])+1) # will be NA if x=NA
+    return(g.N)
+  }
+  # DAG equation for defining the distribution of N(t) as Poisson (x is time since last visit)
+  N.Pois.1 <- function(x,lambda=1){
+    g.N <- 1 / (ppois(x, lambda, lower.tail = FALSE) / dpois(x, lambda[1]) + 1) # will be NA if x=NA
+    return(g.N)
+  }
+  # -----------------------------------------------------------
+  # SIMULATION PARAMS:
+  # -----------------------------------------------------------
+  Nsize <- 10000
+  # set to TRUE to only run scenarios dealing with bias for g.N w and w/out past N(t), no intervention on N(t)
+  # SimParams <- Sim.and.Est.params
+  # override the scenario name to run for just one scenario:
+  scen.names <- "g05"
+  delta.shifts <- c(seq(-0.9, -0.1, by=0.1), seq(0.1, 0.9, by=0.1))
+  # scen.names <- c("gPois3", "gPois1")
+  # scen.names <- c("g05", "gPois3")
+  # scen.names <- c("gSpoYear", "gPois3")
+  SimParams <- list(
+    gcont       = list(name = "Continuous",         Nprob.t0 = 1,                                  Nprob.tplus = 1,                                     Nt.form = "N.t ~ 1",                  delta.shift = NULL),
+    g05         = list(name = "Sporadic 0.5",       Nprob.t0 = 0.5,                                Nprob.tplus = 0.5,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+    g035        = list(name = "Sporadic 0.35",      Nprob.t0 = 0.35,                               Nprob.tplus = 0.35,                                  Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+    g02         = list(name = "Sporadic 0.2",       Nprob.t0 = 0.2,                                Nprob.tplus = 0.2,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+    g01         = list(name = "Sporadic 0.1",       Nprob.t0 = 0.1,                                Nprob.tplus = 0.1,                                   Nt.form = "N.t ~ 1",                  delta.shift = 0.1),
+    gPois3      = list(name = "Poisson yearly",     Nprob.t0 = substitute(N.Pois.3(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.3(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = delta.shifts, gradual.t.vec = 4),
+    gPois1      = list(name = "Poisson bi-yearly",  Nprob.t0 = substitute(N.Pois.1(lastNat1[t])),  Nprob.tplus = substitute(N.Pois.1(lastNat1[t])),     Nt.form = "N.t ~ as.factor(lastN.t)", delta.shift = 0.1)
+  )
+  # ------------------------------------------------------------------------------------------------------
+  # (I) Simulate data with binary I (highA1c)
+  # ------------------------------------------------------------------------------------------------------
+  prob.t0 <- SimParams[[scen.names[1]]]$Nprob.t0
+  prob.tplus <- SimParams[[scen.names[1]]]$Nprob.tplus
+  print("scen.name: " %+% scen.names[1]); print("prob.t0"); print(prob.t0); print("prob.tplus"); print(prob.tplus)
+  DAGrm <- set.DAG.rm.template()
+  vecfun.add("N.Pois.1"); vecfun.add("N.Pois.3"); vecfun.add("N.sporadic.2"); vecfun.add("N.sporadic.4")
+  #### Simulate with P(N(0)=1) = prob.t0 and P(N(t>0)=1) = prob.tplus
+  if (!is.null(prob.t0)) {
+    DAGrm <- DAGrm + node("N", t = 0, distr = "rbern", prob = .(prob.t0))
+    DAGrm <- DAGrm + node("N", t = 1:16, distr = "rbern", prob = .(prob.tplus))
+  }
+  DAGrm <- set.DAG(DAGrm)
+  O.data.simstudy <- sim(DAG = DAGrm, n = Nsize, wide = FALSE, rndseed = 55466)
+  O.data.simstudy[O.data.simstudy[,"t"]%in%16,"lastNat1"] <- NA
+  O.data.simstudy.g05 <- O.data.simstudy[,!names(O.data.simstudy)%in%c("highA1c.UN", "timelowA1c.UN")]
+
+  save(O.data.simstudy.g05, compress = TRUE, file = "O.data.simstudy.g05.rda", compression_level = 9)
+  library("tools")
+  resaveRdaFiles("./O.data.simstudy.g05.rda", compress = "bzip2")
+}
+
+data(O.data.simstudy.g05)
+O.data <- O.data.simstudy.g05
+head(O.data)
 ID <- "ID"; t <- "t"; TRT <- "TI"; outcome <- "Y"; I <- "highA1c";
-
 # --------------------------------
 # (II) Define event indicator and right-censoring indicator, define total follow-up length
 # --------------------------------
 O.dataDT <- define_indicators(O.data)
+
 # --------------------------------
 # (III) Define rules for dlow & dhigh
 # --------------------------------
 O.dataDTrules <- add.gtheta.to.O(O.dataDT)
+
 # --------------------------------
 # (IV) Define monitoring regimen probabilit(ies):
 # --------------------------------
+# get the likelihood under N(t) Bernoulli with P(N(t)=1)=p:
+g.p <- function(O.dataDT, p, ID = "ID", OUTCOME = "Y", lastNat1 = "lastNat1", MONITOR = "N"){
+  g.N <- rep(p, nrow(O.dataDT))
+  g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
+  return(g.N)
+}
+# get the likelihood under N(t) Poisson:
+g.Pois <- function(O.dataDT, lambda, ID = "ID", OUTCOME = "Y", lastNat1 = "lastNat1", MONITOR = "N"){
+  g.N <- 1 / (ppois(O.dataDT[[lastNat1]], lambda, lower.tail = FALSE) / dpois(O.dataDT[[lastNat1]], lambda) + 1)
+  g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
+  return(g.N)
+}
+
 gstar1.N.Pois3.yearly <- g.Pois(O.dataDTrules, lambda = 3)
 gstar1.N.Pois1.biyearly <- g.Pois(O.dataDTrules, lambda = 1)
-length(gstar1.N.Pois1.biyearly)
 gstar2.N.p05 <- g.p(O.dataDTrules, p = 0.5)
-length(gstar2.N.p05)
-
 O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := gstar1.N.Pois3.yearly][, gstar1.N.Pois1.biyearly := gstar1.N.Pois1.biyearly][, gstar2.N.p05 := gstar2.N.p05]
+
+# ---------------------------------------------------------------------------
+# DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
+# Might expand this in the future to allow defining arbitrary summaries
+# ---------------------------------------------------------------------------
+lagnodes <- c("C", "TI", "N")
+newVarnames <- lagnodes %+% ".tminus1"
+O.dataDTrules_Nstar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
+# -------------------------------------------------------------------------------------------
+# Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
+# -------------------------------------------------------------------------------------------
+OUTCOME <- "Y"
+shifted.OUTCOME <- OUTCOME%+%".tplus1"
+O.dataDTrules_Nstar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
 
 # --------------------------------
 # (IV) Estimate weights under observed (A,C,N)
 # --------------------------------
-# O.dataDTrules[1:100,]
-# O.dataDTrules_Nstar[1:100, ]
 gform.TRT <- "TI ~ CVD + highA1c + N.tminus1"
 stratify.TRT <- list(
   TI=c("t == 0L",                                            # MODEL TI AT t=0
        "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
        "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
        "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
-       # "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)"
       ))
 gform.CENS <- c("C ~ highA1c")
 stratify.CENS <- list(C=c("t < 16", "t == 16"))
 gform.MONITOR <- "N ~ 1"
-# stratify.TRT <- list(TI=c("t == 0L", "t > 0L & TI.tminus1 == 0L", "t > 0L & TI.tminus1 == 1L"))
-# gform.CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
-# stratify.CENS <- list(C = NULL, TI = c("t == 0L", "t > 0"), N = c("t == 0L", "t > 0"))
-
 # **** really want to define it like this ****
 # gform.TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
 #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
 
-OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
+# ----------------------------------------------------------------
+# Testing fits with speedglm, h2oglm, RF and GBM
+# ----------------------------------------------------------------
+options(stremr.verbose = TRUE)
+require("h2o")
+h2o::h2o.init(nthreads = 2)
+# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+# stremr_options(fit.package = "glm", fit.algorithm = "GLM")
+# stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
+# stremr_options(fit.package = "h2o", fit.algorithm = "RF")
+stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
+
+OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+# OData$fast.load.to.H2O()
+# OData$H2O.dat.sVar
+
 OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
-
+require("magrittr")
 St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-           get_survNP(OData)  %$%
+           get_survNPMSM(OData)  %$%
            IPW_estimates
-
+St.dlow
 St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-            get_survNP(OData) %$%
+            get_survNPMSM(OData) %$%
             IPW_estimates
+St.dhigh
 
-OData$dat.sVar[]
-# res$OData[1:100, ]
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"]
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
-# [1] 0.1779744 # CLOSE ENOUGH TO WHAT IS REPORTED on page 11, FIGURE 4: psi.N=0.173 (POISSON YEARLY)
 
-wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow")
+wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh")
+# wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+# wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
+tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
+# MSM for hazard with regular weights:
+MSM.IPAW <- get_survMSM(OData, wts.data = wts.all.list,
+                        tjmin = tjmin, tjmax = tjmax,
+                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
 
+wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 
 # MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(wts.all.list, OData,
+MSM.IPAW <- get_survMSM(OData, wts.data = wts.all.list,
                         tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW",
-                        t.periods.RDs = c(12, 15))
+                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
+# RD tables are now evaluated outside get_survMSM():
+RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE)
+# Weight summary is now also evaluated outside get_survMSM():
+# (note, this get_wtsummary() automaticall called by the report file):
+IPWdist <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
 
-# MSM for hazard with truncated weights:
-MSM.trunc <- get_survMSM(wts.all.list, OData,
+# get_survMSM now also accepts one large data table of weights, rather than a list of data.tables:
+wts.all <- rbindlist(wts.all.list)
+MSM.IPAW <- get_survMSM(OData, wts.data = wts.all,
                         tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, trunc.weights = 20, est.name = "IPAWtrunc",
-                        t.periods.RDs = c(12, 15))
-
-# crude MSM for hazard without any weights:
-MSM.crude <- get_survMSM(wts.all.list, OData, tjmin = tjmin, tjmax = tjmax,
-                        use.weights = FALSE, est.name = "crude",
-                        t.periods.RDs = c(12, 15))
+                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
+RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE)
 
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
-# report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/data_analysis/Reports"
-# OData$emptydat.sVar
-# save(list = c("OData", "MSM.IPAW", "MSM.trunc", "MSM.crude"), file = "MSM_results.RData")
+# print everything:
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# omit extra h2o model output stuff (only coefficients):
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# skip modeling stuff alltogether:
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# skip RD tables by simply not including them:
+make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
-# html doc:
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path)
-make_report_rmd(OData, MSM = MSM.trunc, file.path = report.path)
-make_report_rmd(OData, MSM = MSM.crude, file.path = report.path)
 
-# pdf doc:
-# make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path)
-# make_report_rmd(OData, MSM = MSM.trunc, format = "pdf", file.path = report.path)
-# make_report_rmd(OData, MSM = MSM.crude, format = "pdf", file.path = report.path)
-# word doc:
-# make_report_rmd(OData, MSM = MSM.IPAW, format = "word", file.path = report.path)
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
-# make_report(OData, S.t = MSM.crude$St)

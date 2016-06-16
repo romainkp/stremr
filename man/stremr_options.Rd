@@ -4,22 +4,15 @@
 \alias{stremr_options}
 \title{Setting Options for \code{stremr}}
 \usage{
-stremr_options(useglm = FALSE, tortureglm = FALSE, parfit = FALSE,
-  bin.method = c("equal.len", "equal.mass", "dhist"), nbins = NA,
-  maxncats = 20, poolContinVar = FALSE, maxNperBin = 1000)
+stremr_options(fit.package = c("speedglm", "glm", "h2o"),
+  fit.algorithm = c("GLM", "GBM", "RF", "SL"), bin.method = c("equal.len",
+  "equal.mass", "dhist"), parfit = FALSE, nbins = NA, maxncats = 20,
+  poolContinVar = FALSE, maxNperBin = 1000)
 }
 \arguments{
-\item{useglm}{Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
-\code{\link[stats]{glm.fit}}.}
+\item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}
 
-\item{tortureglm}{Set to true to increase the maximum number of glm.fit & speedglm iterations from default to 500.}
-
-\item{parfit}{Default is \code{FALSE}. Set to \code{TRUE} to use \code{foreach} package and its functions
-\code{foreach} and \code{dopar} to perform
-parallel logistic regression fits and predictions for discretized continuous outcomes. This functionality
-requires registering a parallel backend prior to running \code{stremr} function, e.g.,
-using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
-\code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".}
+\item{fit.algorithm}{Specify the default fitting algorithm: c("GLM", "GBM", "RF", "SL")}
 
 \item{bin.method}{The method for choosing bins when discretizing and fitting the conditional continuous summary
 exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
@@ -28,6 +21,13 @@ based on equal mass (equal number of observations), i.e., each bin is defined so
 the same number of observations across all bins. The maximum number of observations in each bin is controlled
 by parameter \code{maxNperBin}. Method \code{"dhist"} uses a mix of the above two approaches,
 see Denby and Mallows "Variations on the Histogram" (2009) for more detail.}
+
+\item{parfit}{Default is \code{FALSE}. Set to \code{TRUE} to use \code{foreach} package and its functions
+\code{foreach} and \code{dopar} to perform
+parallel logistic regression fits and predictions for discretized continuous outcomes. This functionality
+requires registering a parallel backend prior to running \code{stremr} function, e.g.,
+using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
+\code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".}
 
 \item{nbins}{Set the default number of bins when discretizing a continous outcome variable under setting
 \code{bin.method = "equal.len"}.

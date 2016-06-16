@@ -66,7 +66,7 @@ for variables specifed in \code{CENS}.}
 
 \item{optPars}{A named list of additional optional parameters to be passed to \code{stremr}, such as
 \code{alpha}, \code{lbound}, \code{family}, \code{YnodeDET},
-\code{h_g0_SummariesModel} and \code{h_gstar_SummariesModel}. See Details below for the description of each parameter.}
+\code{h_g0_GenericModel} and \code{h_gstar_GenericModel}. See Details below for the description of each parameter.}
 }
 \value{
 A named list with 3 items containing the estimation results for:

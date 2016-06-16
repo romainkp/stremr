@@ -116,6 +116,8 @@ make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.
   return(dummies_mat)
 }
 
+is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
+
 ## ---------------------------------------------------------------------
 #' R6 class for storing, managing, subsetting and manipulating the input data.
 #'
@@ -126,7 +128,7 @@ make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.
 #'  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
 #'  For continous sVar this class provides methods for detecting / setting bin intervals,
 #'  normalization, disretization and construction of bin indicators.
-#'  The pointers to this class get passed on to \code{SummariesModel} functions: \code{$fit()},
+#'  The pointers to this class get passed on to \code{GenericModel} functions: \code{$fit()},
 #'  \code{$predict()} and \code{$predictAeqa()}.
 #'
 #' @docType class
@@ -230,7 +232,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # Could also do evaluation in a special env with a custom subsetting fun '[' that will dynamically find the correct dataset that contains
     # sVar.name (dat.sVar or dat.bin.sVar) and will return sVar vector
     evalsubst = function(subset_vars, subset_expr = NULL) {
-      # browser()
       res <- rep.int(TRUE, self$nobs)
       if (!missing(subset_vars)) {
         assert_that(is.character(subset_vars))
@@ -267,7 +268,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     # ---------------------------------------------------------------------
-    # Functions for subsetting/returning covariate design mat for BinOutModelClass or outcome variable
+    # Functions for subsetting/returning covariate design mat for BinaryOutcomeModel Class or outcome variable
     # ---------------------------------------------------------------------
     get.dat.sVar = function(rowsubset = TRUE, covars) {
       if (!missing(covars)) {
@@ -458,6 +459,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       }
       invisible(self)
     },
+
     # ---------------------------------------------------------------------------
     # Cast long format data into wide format:
     # bslcovars - names of covariates that shouldn't be cast (remain invariant with t)
@@ -472,24 +474,75 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       if (!missing(bslcovars)) cast.vars <- setdiff(cast.vars, bslcovars)
       odata_wide <- dcast(self$dat.sVar, formula = nodes$ID %+% " ~ " %+% nodes$tnode, value.var = cast.vars)
     return(odata_wide)
+    },
+
+    # -----------------------------------------------------------------------------
+    # Create an H2OFrame and save a pointer to it as a private field
+    # -----------------------------------------------------------------------------
+    load.to.H2O = function() {
+      # if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
+      dat.sVar <- self$dat.sVar
+      # assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))
+      H2O.dat.sVar <- h2o::as.h2o(dat.sVar, destination_frame = "H2O.dat.sVar")
+      self$H2O.dat.sVar <- H2O.dat.sVar
+      return(invisible(self))
+    },
+    # -----------------------------------------------------------------------------
+    # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
+    # -----------------------------------------------------------------------------
+    fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
+      if (missing(dat.sVar)) {
+        dat.sVar <- self$dat.sVar
+      }
+
+      tmpf <- tempfile(fileext = ".csv")
+      assert_that(is.data.table(dat.sVar))
+      data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+
+      types <- sapply(dat.sVar, class)
+      types <- gsub("integer64", "numeric", types)
+      types <- gsub("integer", "numeric", types)
+      types <- gsub("double", "numeric", types)
+      types <- gsub("complex", "numeric", types)
+      types <- gsub("logical", "enum", types)
+      types <- gsub("factor", "enum", types)
+      types <- gsub("character", "string", types)
+      types <- gsub("Date", "Time", types)
+
+      H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
+                                          header = TRUE,
+                                          col.types = types,
+                                          na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
+                                          destination_frame = destination_frame)
+
+      # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
+
+      if (saveH2O) self$H2O.dat.sVar <- H2O.dat.sVar
+
+      # H2O.dat.sVar <- h2o::h2o.importFile(tmpf, destination_frame = "H2O.dat.sVar",
+      #                                     header = TRUE,
+      #                                     col.types = types,
+      #                                     col.names = colnames(dat.sVar, do.NULL = FALSE, prefix = "C"),
+      #                                     na.strings = rep(c("NA_h2o"),
+      #                                       ncol(dat.sVar)))
+      # H2O.dat.sVar <- h2o::h2o.uploadFile(tmpf, destination_frame = "H2O.dat.sVar",
+      #                                     header = TRUE,
+      #                                     col.types = types,
+      #                                     col.names = colnames(dat.sVar, do.NULL = FALSE, prefix = "C"),
+      #                                     na.strings = rep(c("NA_h2o"), ncol(dat.sVar)))
+      file.remove(tmpf)
+      # return(invisible(self))
+      return(invisible(H2O.dat.sVar))
     }
 
   ),
+
   active = list(
     nobs = function() { nrow(self$dat.sVar) },
-    nuniqueIDs = function() {
-      # sum(!duplicated(OData$dat.sVar[[nodes$IDnode]]))
-      length(unique(self$dat.sVar[[self$nodes$IDnode]]))
-    },
-
-    nuniquets = function() {
-      # sum(!duplicated(OData$dat.sVar[[nodes$IDnode]]))
-      length(unique(self$dat.sVar[[self$nodes$tnode]]))
-    },
-
+    nuniqueIDs = function() { length(unique(self$dat.sVar[[self$nodes$IDnode]])) },
+    nuniquets = function() { length(unique(self$dat.sVar[[self$nodes$tnode]])) },
     names.sVar = function() { colnames(self$dat.sVar) },
     ncols.sVar = function() { length(self$names.sVar) },
-
     dat.sVar = function(dat.sVar) {
       if (missing(dat.sVar)) {
         return(private$.mat.sVar)
@@ -498,7 +551,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.mat.sVar <- dat.sVar
       }
     },
-
+   H2O.dat.sVar = function(dat.sVar) {
+      if (missing(dat.sVar)) {
+        return(private$.H2O.mat.sVar)
+      } else {
+        assert_that(is.H2OFrame(dat.sVar))
+        private$.H2O.mat.sVar <- dat.sVar
+      }
+    },
     dat.bin.sVar = function(dat.bin.sVar) {
       if (missing(dat.bin.sVar)) {
         return(private$.mat.bin.sVar)
@@ -507,19 +567,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.mat.bin.sVar <- dat.bin.sVar
       }
     },
-
     emptydat.sVar = function() { private$.mat.sVar <- NULL },         # wipe out mat.sVar
     # wipe out binirized .mat.sVar:
     emptydat.bin.sVar = function() {
       private$.mat.bin.sVar <- NULL
       private$.active.bin.sVar <- NULL
     },
-
     noNA.Ynodevals = function(noNA.Yvals) {
       if (missing(noNA.Yvals)) return(private$.protected.YnodeVals)
       else private$.protected.YnodeVals <- noNA.Yvals
     },
-
     nodes = function(nodes) {
       if (missing(nodes)) {
         return(private$.nodes)
@@ -528,15 +585,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.nodes <- nodes
       }
     },
-
     active.bin.sVar = function() { private$.active.bin.sVar },
     ord.sVar = function() { private$.ord.sVar },
     type.sVar = function() { private$.type.sVar }
   ),
+
   private = list(
     .nodes = list(),              # names of the nodes in the data (Anode, Ynode, etc..)
     .protected.YnodeVals = NULL,  # Actual observed values of the binary outcome (Ynode), along with deterministic vals
-    .mat.sVar = NULL,             # Data.table storing all evaluated sVars, with named columns
+    .mat.sVar = NULL,             # pointer to data.table object storing the entire dataset (including all summaries sVars)
+    .H2O.mat.sVar = NULL,         # pointer to H2OFrame object that stores equivalent data to private$.mat.sVar
     .active.bin.sVar = NULL,      # Name of active binarized cont sVar, changes as fit/predict is called (bin indicators are temp. stored in mat.bin.sVar)
     .mat.bin.sVar = NULL,         # Temporary storage mat for bin indicators on currently binarized continous sVar (from private$.active.bin.sVar)
     .ord.sVar = NULL,             # Ordinal (cat) transform for continous sVar

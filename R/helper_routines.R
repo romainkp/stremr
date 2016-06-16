@@ -104,7 +104,6 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
     }
   }
 
-  # browser()
   # (seq_along(dtheta)-1) *
 
   RDtable[is.na(RDtable)] <- ""
@@ -127,7 +126,6 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
   model <- "MSM"
   if(esti=="crude")model <- "model"
   est <- "IPAW"
-  ##     browser()
 
   caption <- paste(estimates,
       " estimates of the (cumulative) risk ",
@@ -159,7 +157,8 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
 #' @param MONITOR.name The name of the MONITORing variable which will be evaluated by this routine.
 #'  This new column MONITOR(t) is the indicator of being monitored (having a doctors visit) at time-point t+1 the indicator of the
 #'  imputation (having observed/measured biomarker) at time-point t+1.
-#' @param tsinceNis1 The name of the variable that counts number of periods since last monitoring event at t-1.
+#' @param tsinceNis1 The name of the future column (created by this routine) that counts number of periods since last monitoring event at t-1. More precisely,
+#' it is a function of the past \bar{N}(t−1), where 0 means that N(t−1)=1; 1 means that N(t−2)=1 and N(t−1)=0; etc.
 #'
 #' @section Details:
 #'
@@ -187,7 +186,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
 #' }
 #' @return A data.table in long format with ordering (I, CENS, TRT, MONITOR)
 #' @export
-convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "tsinceNis1"){
+defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "last.Nt"){
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   if (is.data.table(data)) {
@@ -199,6 +198,11 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   } else {
     stop("input data must be either a data.table or a data.frame")
   }
+
+  CheckVarNameExists(DT, ID)
+  CheckVarNameExists(DT, t)
+  CheckVarNameExists(DT, imp.I)
+
   # "Leading" (shifting up) and inverting indicator of observing I, renaming it to MONITOR value;
   # N(t-1)=1 indicates that I(t) is observed. Note that the very first I(t) is assumed to be always observed.
   DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID.expression), .SDcols = (imp.I)]
@@ -206,11 +210,61 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, ("indx") := cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID.expression)]
   DT[, (tsinceNis1) := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
-  # DT[, (tsinceNis1) := seq(.N)-1, by = .(eval(ID.expression), indx)]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
   DT[, ("indx") := NULL]
-  # DT[, (imp.I) := NULL]
   return(DT)
+}
+
+
+#' @export
+get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)) {
+  quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99)
+  quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999)
+  IPAWdist <- makeSumFreqTable(table(wts.data[["cumm.IPAW"]]),
+                              cutoffs,
+                              "Stabilized IPAW")
+  return(IPAWdist)
+}
+
+
+#' @export
+get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
+  ## RD:
+  getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx) {
+    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
+    colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+    rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+    for (d1.idx in seq_along(names(S2.IPAW))) {
+      for (d2.idx in seq_along(names(S2.IPAW))) {
+        #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
+        if (getSEs) {
+          se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
+                                                                   IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
+                                                                   IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
+
+        }
+      }
+    }
+    return(se.RDscale.Sdt.K)
+  }
+
+  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
+  periods_idx <- seq_along(MSM$periods)
+  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
+  for (t.idx in seq(t.periods.RDs)) {
+
+    t.period.val.idx <- periods_idx[MSM$periods %in% t.periods.RDs[t.idx]]
+
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx)
+
+    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
+                                                RDscale = TRUE,
+                                                t.period = t.period.val.idx,
+                                                nobs = nrow(MSM$wts.data),
+                                                esti = MSM$est.name,
+                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K)
+  }
+  return(RDs.IPAW.tperiods)
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -266,22 +320,30 @@ convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "ts
 #'  each rule indexed by a value form \code{theta}. In addition, the returned data.table contains \code{ID} and \code{t} columns for easy merging
 #'  with the original data.
 #' @export
-follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1 = "tsinceNis1", rule.names = NULL, return.allcolumns = FALSE){
-  # require('data.table')
+defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, rule.names = NULL, return.allcolumns = FALSE){
   ID.expression <- as.name(ID)
-  # indx <- as.name("indx")
   chgTRT <- as.name("chgTRT")
+  # indx <- as.name("indx")
   # lastN.t <- as.name("lastN.t")
 
   if (return.allcolumns) {
     DT <- data.table(data, key=c(ID,t))
   } else if (is.data.table(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR), with = FALSE], key=c(ID,t))
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1), with = FALSE], key=c(ID,t))
   } else if (is.data.frame(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR)], key=c(ID,t))
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1)], key=c(ID,t))
   } else {
     stop("input data must be either a data.table or a data.frame")
   }
+
+  CheckVarNameExists(DT, ID)
+  CheckVarNameExists(DT, t)
+  CheckVarNameExists(DT, I)
+  CheckVarNameExists(DT, CENS)
+  CheckVarNameExists(DT, TRT)
+  CheckVarNameExists(DT, MONITOR)
+  CheckVarNameExists(DT, tsinceNis1)
+
   # Create "indx" vector that goes up by 1 every time MONITOR(t-1) shifts from 1 to 0 or from 0 to 1
   # DT[, "indx" := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID.expression)]
   # Intermediate variable lastN.t to count number of cycles since last visit at t-1. Reset lastN.t(t)=0 when MONITOR(t-1)=1.
@@ -295,22 +357,31 @@ follow.rule.d.DT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNi
   # DT[, notC := (get(CENS)==0L), by = eval(ID.expression)]
 
   # (1) Follow rule at t if uncensored and remaining on treatment (TRT(t-1)=TRT(t)=1):
-  DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
   # rule1: (C[t] == 0L) & (A[t-1] == 1L) & (A[t] == 1)
+  DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L)]
+  # DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
 
   # (2) Follow rule at t if uncensored, haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
-  DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
   # rule2: (C[t] == 0L) & (N[t-1] == 0) & (A[t-1] == A[t])
+  # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
+  DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L)]
+  # DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
 
   # (3) Follow rule at t if uncensored, was monitored (MONITOR(t-1)=0) and either:
   # (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
   for (dtheta in theta) {
-    DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L))), by = eval(ID.expression), with = FALSE]
     # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
+    # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
+    DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L)))]
+    # DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L))), by = eval(ID.expression), with = FALSE]
     # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
-    DT[, "d.follow_allr" := eval(parse(text="d.follow_r1 | d.follow_r2 | d.follow_r3")), by = eval(ID.expression)]
+    DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3]
+    # DT[, "d.follow_allr" := eval(parse(text="d.follow_r1 | d.follow_r2 | d.follow_r3")), by = eval(ID.expression)]
+    # DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3, by = eval(ID.expression)]
     # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:
-    DT[, paste0("d",dtheta) := eval(parse(text="as.logical(cumprod(d.follow_allr))")), by = eval(ID.expression)]
+    # DT[, paste0("d",dtheta) := eval(parse(text="as.logical(cumprod(d.follow_allr))")), by = eval(ID.expression)]
+    DT[, paste0("d",dtheta) := as.logical(cumprod(d.follow_allr)), by = eval(ID.expression)]
+    DT[, c(ID, t, I, CENS, TRT, MONITOR, tsinceNis1), with = FALSE]
   }
 
   DT[, "chgTRT" := NULL]; DT[, "d.follow_r1" := NULL]; DT[, "d.follow_r2" := NULL]; DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]

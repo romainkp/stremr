@@ -3,18 +3,17 @@
 ###################################
 getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW_MSMestimator = TRUE){
   # browser()
+
   # head(MSMdata)
   cumm.IPAW <- "cumm.IPAW"
 
   IC.data <- MSMdata[ ,c(ID, t.var, Yname, cumm.IPAW, MSMpredict), with = FALSE] # contains data for all obs compatible with at least one rule
-  # IC.data <- MSMdata[ ,c(ID,t.var,Yname,cumm.IPAW), with = FALSE] # contains data for all obs compatible with at least one rule
-
   # MSMepsilon <- IC.data[,Yname, with = FALSE]-IC.data[,MSMpredict, with = FALSE]
   # IC.data <- cbind(IC.data,MSMepsilon)
 
   IC.data[, "MSMepsilon" := get(Yname) - get(MSMpredict)]
 
-  if(IPW_MSMestimator){
+  if (IPW_MSMestimator) {
     sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[["MSMepsilon"]]
   }else{
     sweep.tmp <- IC.data[["MSMepsilon"]]
@@ -23,7 +22,7 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   #OS: multiply each column of t(MSMdesign) by sweep.tmp:
   D.O.beta <- sweep(t(MSMdesign), 2, sweep.tmp, "*")
 
-  # new faster approach using data.table:
+  # New & faster approach using data.table:
   xDT <- data.table(ID = IC.data[[ID]], t(D.O.beta))
   setkeyv(xDT, cols = "ID")
   D.O.beta.alt <- as.matrix(xDT[, lapply(.SD, sum), by = ID][, ID := NULL])
@@ -34,17 +33,15 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   }
 
   if(IPW_MSMestimator){
-    sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[[MSMpredict]] * (1-IC.data[[MSMpredict]])
+    sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[[MSMpredict]] * (1 - IC.data[[MSMpredict]])
   } else {
-    sweep.tmp <- IC.data[[MSMpredict]] * (1-IC.data[[MSMpredict]])
+    sweep.tmp <- IC.data[[MSMpredict]] * (1 - IC.data[[MSMpredict]])
   }
 
   C <- sweep(t(MSMdesign), 2, sweep.tmp, "*")
   C <- (C %*% MSMdesign) / nID
   Cm1 <- solve(C)
-
   IC.O <- Cm1 %*% D.O.beta.alt
-  # IC.O <- Cm1 %*% D.O.beta
 
   if (gvars$verbose) {
     print("Should all be very small: "); print(abs(apply(IC.O, 1, mean)))
@@ -60,6 +57,7 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
 ##############################################################
 ### IC.O below is the first output of previous function:
 getSE.S <- function(nID, S.d.t.predict, h.d.t.predict, design.d.t, IC.O){
+  # browser()
   ### SE for S(t) for all t's
   h.by.dl.dt <- matrix(NA, nrow = length(S.d.t.predict), ncol = ncol(design.d.t))
   for(t.val in 1:length(S.d.t.predict)) {
@@ -84,6 +82,7 @@ getSE.S <- function(nID, S.d.t.predict, h.d.t.predict, design.d.t, IC.O){
 ##############################################################
 ### IC.S.d1 and IC.S.d2 are the first output of previous function above applied to two different d's:
 getSE.RD.d1.minus.d2 <- function(nID, IC.S.d1, IC.S.d2){
+  # browser()
   IC.RD <- IC.S.d2 - IC.S.d1 # note that we do IC.d2 minus IC.d1 here even though this if for the RD defined as d1 minus d2 ( we flip the order)
   var.RD <- (IC.RD %*% t(IC.RD)) / (nID^2)
   se.RD <- sqrt(diag(var.RD))

@@ -29,8 +29,11 @@ print_stremr_opts <- function() {
 #' Setting Options for \code{stremr}
 #'
 #' Additional options that control the estimation algorithm in \code{stremr} package
-#' @param useglm Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
-#' \code{\link[stats]{glm.fit}}.
+# @param useglm Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
+# \code{\link[stats]{glm.fit}}.
+# @param GLMpackage Pick which package and function to use for fitting the GLM models ("glm", "speedglm" or "h2o")
+#' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
+#' @param fit.algorithm Specify the default fitting algorithm: c("GLM", "GBM", "RF", "SL")
 #' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
 #'  exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 #'  into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
@@ -44,7 +47,6 @@ print_stremr_opts <- function() {
 #'  requires registering a parallel backend prior to running \code{stremr} function, e.g.,
 #'  using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
 #'  \code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".
-#' @param tortureglm Set to true to increase the maximum number of glm.fit & speedglm iterations from default to 500.
 #' @param nbins Set the default number of bins when discretizing a continous outcome variable under setting
 #'  \code{bin.method = "equal.len"}.
 #'  If left as \code{NA} the total number of equal intervals (bins) is determined by the nearest integer of
@@ -59,10 +61,20 @@ print_stremr_opts <- function() {
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{print_stremr_opts}}
 #' @export
-stremr_options <- function(useglm = FALSE,
-                            tortureglm = FALSE,
-                            parfit = FALSE,
+#'
+stremr_options <- function(
+                            # useglm = FALSE,
+                            # GLMpackage = c("glm", "speedglm", "h2oglm"),
+
+                            # fit.package = c("glm", "speedglm", "h2o"),
+                            fit.package = c("speedglm", "glm", "h2o"),
+
+                            # fit.algorithm = c("glm", "h2oGLM", "h2oGBM", "h2oRF", "h2oSL"),
+                            fit.algorithm = c("GLM", "GBM", "RF", "SL"),
+
+
                             bin.method = c("equal.len", "equal.mass", "dhist"),
+                            parfit = FALSE,
                             nbins = NA,
                             maxncats = 20,
                             poolContinVar = FALSE,
@@ -72,6 +84,18 @@ stremr_options <- function(useglm = FALSE,
   old.opts <- gvars$opts
   bin.method <- bin.method[1L]
 
+
+  # GLMpackage <- GLMpackage[1L]
+  fit.package <- fit.package[1L]
+  fit.algorithm <- fit.algorithm[1L]
+
+  # if (GLMpackage %in% "glm") {
+  # } else if (GLMpackage %in% "speedglm") {
+  # } else if (GLMpackage %in% "h2oglm") {
+  # } else {
+  #   stop("GLMpackage argument must be either 'glm', 'speedglm' or 'h2oglm'")
+  # }
+
   if (bin.method %in% "equal.len") {
   } else if (bin.method %in% "equal.mass") {
   } else if (bin.method %in% "dhist") {
@@ -79,9 +103,13 @@ stremr_options <- function(useglm = FALSE,
     stop("bin.method argument must be either 'equal.len', 'equal.mass' or 'dhist'")
   }
 
+
+
   opts <- list(
-    useglm = useglm,
-    tortureglm =  tortureglm,
+    # useglm = useglm,
+    # GLMpackage = GLMpackage,
+    fit.package = fit.package,
+    fit.algorithm = fit.algorithm,
     bin.method = bin.method,
     parfit = parfit,
     nbins = nbins,

@@ -34,7 +34,7 @@ NULL
 
 #' An example of a dataset in long format with categorical censoring variable.
 #'
-#' Simulated dataset containing 50,000 i.i.d. observations organized in long format as person-time row data.
+#' Simulated dataset containing 50,000 i.i.d. observations organized in long format as person-time rows.
 #' The binary exposure is \code{TI} and binary outcome is \code{Y}. See /tests/RUnit_tests_02_categCENS.R
 #' function \code{notrun.save.example.data} for R code that generated this data.
 #'
@@ -55,6 +55,32 @@ NULL
 #' @keywords datasets
 #' @name OdataCatCENS
 #' @usage data(OdataCatCENS)
+NULL
+
+
+#' An example of a dataset in long format with random monitoring process and no right censoring.
+#'
+#' Simulated dataset containing 10,000 i.i.d. observations organized in long format as person-time rows.
+#' The binary exposure is \code{TI} and binary outcome is \code{Y}. See /tests/RUnit_tests_04_simstudyreplica.R
+#' for R code that generated this data as well as R code that uses stremr to analyze this data.
+#'
+#' @format A data frame with 10,000 observations and variables:
+#' \describe{
+#'   \item{ID}{Unique subject identifier}
+#'   \item{CVD}{Baseline confounder (time invariant)}
+#'   \item{t}{Interger for current time period, range 0-16}
+#'   \item{Y}{Binary outcome}
+#'   \item{lastNat1}{Time since last monitoring event, set to 0 when N[t-1]=0 and then added one for each new period where N[t] is 0.}
+#'   \item{highA1c}{Time-varying confounder}
+#'   \item{TI}{Binary exposure variable}
+#'   \item{C}{Degenerate censoring variable, always set to 0}
+#'   \item{C}{Binary censoring indicator derived from CatC. 0 if CatC is 0 and 1 if CatC is 1 or 2.}
+#'   \item{N}{The random indicator of being monitored (having a visit), simulated as a Bernoulli RV with P(N(t)=1)=0.5}
+#' }
+#' @docType data
+#' @keywords datasets
+#' @name O.data.simstudy.g05
+#' @usage data(O.data.simstudy.g05)
 NULL
 
 

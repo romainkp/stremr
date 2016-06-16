@@ -34,25 +34,45 @@ openFileInOS <- function(f) {
   }
 }
 
-
 #' @export
-make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html", file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
-  sVartypes <- gvars$sVartypes
+make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format = "html", skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
   optArgReport <- list(...)
+
+  if ("author" %in% names(optArgReport)) {
+    author <- optArgReport[['author']]
+    assert_that(is.character(author))
+  } else {
+    author <- "Insert Author"
+  }
+  if ("title" %in% names(optArgReport)) {
+    title <- optArgReport[['title']]
+    assert_that(is.character(author))
+  } else {
+    title <- "stremr Analysis Report"
+  }
+
+  if ("only.coefs" %in% names(optArgReport)) {
+    only.coefs <- optArgReport[['only.coefs']]
+    assert_that(is.logical(only.coefs))
+  } else {
+    only.coefs <- FALSE
+  }
+
   if (!missing(MSM)) {
     # if ()
     # handle separately if MSM is a list of many MSMs -> will need to do the plotting for each MSM in the list
-    Surv.byregimen <- MSM$St
+    SurvByRegimen <- MSM$St
   }
 
-  if (!missing(MSM.list)) {
+  if (!missing(MSMlist)) {
     # need to figure out how to handle it -> define some variables which will control report-scrit-rmd.R
     # ...
   }
 
   # -------------------------------------------------------------------------------------
-  # DISCRIPTIVE STATISTICS:
+  # TO DO: DISCRIPTIVE STATISTICS
   # -------------------------------------------------------------------------------------
+  # sVartypes <- gvars$sVartypes
   # For each covariate in OData$nodes, create either:
     # 1) a density plot for each  OData$type.sVar[varnames] %in% sVartypes$cont
     # 2) a histogram plot for each variable OData$type.sVar[varnames] %in% c(sVartypes$cont, sVartypes$cat, sVartypes$bin)
@@ -65,19 +85,14 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   # -------------------------------------------------------------------------------------
   # MODEL FITS:
   # -------------------------------------------------------------------------------------
-  fitted.coefs.gC <- OData$modelfit.gC$get.fits(format_table = TRUE)
-  fitted.coefs.gA <- OData$modelfit.gA$get.fits(format_table = TRUE)
-  fitted.coefs.gN <- OData$modelfit.gN$get.fits(format_table = TRUE)
+  fitted.coefs.gC <- OData$modelfit.gC$get.fits()
+  fitted.coefs.gA <- OData$modelfit.gA$get.fits()
+  fitted.coefs.gN <- OData$modelfit.gN$get.fits()
 
-  # outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr)
   # -------------------------------------------------------------------------------------
-  # **** ADD RD tables ****
+  # RD tables
+  # RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
   # -------------------------------------------------------------------------------------
-  RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
-  # RD.IPAW_tperiod1 <- MSM$RD.IPAW_tperiod1
-  # RD.IPAW_tperiod2 <- MSM$RD.IPAW_tperiod2
-  # RR.IPAW_tperiod1 <- MSM$RR.IPAW_tperiod1
-  # RR.IPAW_tperiod2 <- MSM$RR.IPAW_tperiod2
 
   ## path issue on Windows
   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
@@ -85,17 +100,15 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   report.file <- system.file('report', "report-script-rmd.R", package = 'stremr')
 
   ## set working directory where to write the report:
-  opts.bak <- options()                      # backup options
+  opts.bak <- options() # backup options
   wd.bak   <- getwd()
   setwd(file.path)
 
   format_pandoc <- format %+% "_document"
   outfile <- file.name %+% "." %+% ifelse(format %in% "word", "docx", format)
 
-  print("writing report to directory: " %+% getwd())
-
+  message("writing report to directory: " %+% getwd())
   figure.dir <- file.path(getwd(), "figure/stremr-")
-  # output_format = "html_document",
   report.html <- tryCatch(rmarkdown::render(report.file,
                           output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE,
                           output_options = list(keep_md = TRUE, toc = TRUE, toc_float = TRUE,
@@ -140,100 +153,99 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
 
 
 
-#' @export
-make_report <- function(OData, Surv.byregimen, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path')) {
-  sVartypes <- gvars$sVartypes
-  ## path issue on Windows
-  file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
+# @export
+# make_report <- function(OData, Surv.byregimen, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path')) {
+#   sVartypes <- gvars$sVartypes
+#   ## path issue on Windows
+#   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
 
-  # find the full path to the report template:
-  report.file <- system.file('report', "graphs.brew", package = 'stremr')
-  # read in the report file:
-  # txt <- readLines(report.file, warn = FALSE, encoding = 'UTF-8') # load template from file path
+#   # find the full path to the report template:
+#   report.file <- system.file('report', "graphs.brew", package = 'stremr')
+#   # read in the report file:
+#   # txt <- readLines(report.file, warn = FALSE, encoding = 'UTF-8') # load template from file path
 
 
-  ## pregenerate file name
-  # if (grepl('%T', file.name)) file.name <- gsub('%T', gsub('\\\\|/|:|\\.', '-', fp), file.name, fixed = TRUE)
-  # file.name <- gsub('--', '-', file.name, fixed = TRUE)
-  # if (grepl('%N', file.name)) {
-  #   if (length(strsplit(sprintf('placeholder%splaceholder', file.name), '%N')[[1]]) > 2) stop('File name contains more then 1 "%N"!')
-  #   similar.files <-  list.files(file.path(file.path, 'plots'), pattern = sprintf('^%s\\.(jpeg|tiff|png|svg|bmp)$', gsub('%t', '[a-z0-9]*', gsub('%N|%n|%i', '[[:digit:]]*', file.name))))
-  #   if (length(similar.files) > 0) {
-  #     similar.files <- sub('\\.(jpeg|tiff|png|svg|bmp)$', '', similar.files)
-  #     rep <- gsub('%t|%n|%i', '[a-z0-9]*', strsplit(basename(file.name), '%N')[[1]])
-  #     `%N` <- max(as.numeric(gsub(paste(rep, collapse = '|'), '', similar.files))) + 1
-  #   } else
-  #     `%N` <- 1
-  #   file.name <- gsub('%N', `%N`, file.name, fixed = TRUE)
-  # }
+#   ## pregenerate file name
+#   # if (grepl('%T', file.name)) file.name <- gsub('%T', gsub('\\\\|/|:|\\.', '-', fp), file.name, fixed = TRUE)
+#   # file.name <- gsub('--', '-', file.name, fixed = TRUE)
+#   # if (grepl('%N', file.name)) {
+#   #   if (length(strsplit(sprintf('placeholder%splaceholder', file.name), '%N')[[1]]) > 2) stop('File name contains more then 1 "%N"!')
+#   #   similar.files <-  list.files(file.path(file.path, 'plots'), pattern = sprintf('^%s\\.(jpeg|tiff|png|svg|bmp)$', gsub('%t', '[a-z0-9]*', gsub('%N|%n|%i', '[[:digit:]]*', file.name))))
+#   #   if (length(similar.files) > 0) {
+#   #     similar.files <- sub('\\.(jpeg|tiff|png|svg|bmp)$', '', similar.files)
+#   #     rep <- gsub('%t|%n|%i', '[a-z0-9]*', strsplit(basename(file.name), '%N')[[1]])
+#   #     `%N` <- max(as.numeric(gsub(paste(rep, collapse = '|'), '', similar.files))) + 1
+#   #   } else
+#   #     `%N` <- 1
+#   #   file.name <- gsub('%N', `%N`, file.name, fixed = TRUE)
+#   # }
 
-  ## set working directory where to write the report:
-  opts.bak <- options()                      # backup options
-  wd.bak   <- getwd()
-  setwd(file.path)
+#   ## set working directory where to write the report:
+#   opts.bak <- options()                      # backup options
+#   wd.bak   <- getwd()
+#   setwd(file.path)
 
-  # browser()
-  # evalsOptions('graph.name', file.name)
-  # assign('.rapport.body', paste(b, collapse = '\n'), envir = e)
-  # assign('.graph.name', file.name, envir = e)
-  # assign('.graph.dir', evalsOptions('graph.dir'), envir = e)
-  # assign('.graph.hi.res', graph.hi.res, envir = e)
-  # if (grepl("w|W", .Platform$OS.type)) # we are on Windows
-  #   assign('.tmpout', 'NUL', envir = e)
-  # else
-  #   assign('.tmpout', '/dev/null', envir = e)
-  # report <- tryCatch(eval(parse(text = 'Pandoc.brew(text = .rapport.body, graph.name = .graph.name, graph.dir = .graph.dir, graph.hi.res = .graph.hi.res, output = .tmpout)'), envir = e), error = function(e) e)
+#   # browser()
+#   # evalsOptions('graph.name', file.name)
+#   # assign('.rapport.body', paste(b, collapse = '\n'), envir = e)
+#   # assign('.graph.name', file.name, envir = e)
+#   # assign('.graph.dir', evalsOptions('graph.dir'), envir = e)
+#   # assign('.graph.hi.res', graph.hi.res, envir = e)
+#   # if (grepl("w|W", .Platform$OS.type)) # we are on Windows
+#   #   assign('.tmpout', 'NUL', envir = e)
+#   # else
+#   #   assign('.tmpout', '/dev/null', envir = e)
+#   # report <- tryCatch(eval(parse(text = 'Pandoc.brew(text = .rapport.body, graph.name = .graph.name, graph.dir = .graph.dir, graph.hi.res = .graph.hi.res, output = .tmpout)'), envir = e), error = function(e) e)
 
-  ## Initialize a new Pandoc object
-  myReport <- Pandoc$new()
+#   ## Initialize a new Pandoc object
+#   myReport <- Pandoc$new()
+#   ## Add author, title and date of document
+#   myReport$author <- 'Gergely Daróczi'
+#   myReport$title  <- 'Demo'
+#   ## Add some free text
+#   myReport$add.paragraph('Hello there, this is a really short tutorial!')
+#   ## Add maybe a header for later stuff
+#   myReport$add.paragraph('# Showing some raw R objects below')
 
-  ## Add author, title and date of document
-  myReport$author <- 'Gergely Daróczi'
-  myReport$title  <- 'Demo'
-  ## Add some free text
-  myReport$add.paragraph('Hello there, this is a really short tutorial!')
-  ## Add maybe a header for later stuff
-  myReport$add.paragraph('# Showing some raw R objects below')
+#   f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny) {
+#     ptsize <- 0.7
+#     counter <- 0
+#     if (missing(y_lab)) y_lab <- ""
+#     if (missing(t_int_sel)) t_int_sel <- seq_along(surv_res_est[[1]])
+#     if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, min)))
 
-  f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny) {
-    ptsize <- 0.7
-    counter <- 0
-    if (missing(y_lab)) y_lab <- ""
-    if (missing(t_int_sel)) t_int_sel <- seq_along(surv_res_est[[1]])
-    if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, min)))
+#     for(d.j in names(surv_res_est)){
+#       counter <- counter+1
+#       plot(t_int_sel,surv_res_est[[d.j]][t_int_sel],col=counter,type='b',cex=ptsize,ylim=c(miny,1),
+#         ylab = y_lab, xlab="Quarter since study entry")
+#       par(new=TRUE)
+#     }
+#     legend(12,0.96,legend=names(surv_res_est),col=c(1:length(names(surv_res_est))), cex=ptsize, pch=1)
+#   }
+#   # graph.dir = 'my_plots',
+#   # evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result
+#   # myReport$add.paragraph(evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result)
+#   evalsOptions('graph.unify', FALSE)
+#   # browser()
+#   # str(myReport)
+#   myReport$add(f_plot_survest(Surv.byregimen))
+#   print(file.path)
+#   print(file.name)
+#   # print(myReport)
+#   myReport$format <- 'md'
+#   myReport$export(file.name, open = FALSE)
 
-    for(d.j in names(surv_res_est)){
-      counter <- counter+1
-      plot(t_int_sel,surv_res_est[[d.j]][t_int_sel],col=counter,type='b',cex=ptsize,ylim=c(miny,1),
-        ylab = y_lab, xlab="Quarter since study entry")
-      par(new=TRUE)
-    }
-    legend(12,0.96,legend=names(surv_res_est),col=c(1:length(names(surv_res_est))), cex=ptsize, pch=1)
-  }
-  # graph.dir = 'my_plots',
-  # evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result
-  # myReport$add.paragraph(evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result)
-  evalsOptions('graph.unify', FALSE)
-  # browser()
-  # str(myReport)
-  myReport$add(f_plot_survest(Surv.byregimen))
-  print(file.path)
-  print(file.name)
-  # print(myReport)
-  myReport$format <- 'md'
-  myReport$export(file.name, open = FALSE)
+#   # report.file <- system.file('report', "graphs.brew", package = 'stremr')
+#   report.file <- system.file('report', "short-code-long-report.brew", package = 'stremr')
 
-  # report.file <- system.file('report', "graphs.brew", package = 'stremr')
-  report.file <- system.file('report', "short-code-long-report.brew", package = 'stremr')
+#   Pandoc.brew(file = report.file, output = file.name %+% "." %+% myReport$format, convert = FALSE,
+#               open = FALSE,
+#               envir = parent.frame(), append = TRUE)
+#               # graph.name, graph.dir, graph.hi.res = FALSE, text = NULL,
 
-  Pandoc.brew(file = report.file, output = file.name %+% "." %+% myReport$format, convert = FALSE,
-              open = FALSE,
-              envir = parent.frame(), append = TRUE)
-              # graph.name, graph.dir, graph.hi.res = FALSE, text = NULL,
-
-  Pandoc.convert(file.name %+% "." %+% myReport$format, format = 'html', open = TRUE)
-  getwd()
-  # resetting directory and other options
-  options(opts.bak)
-  setwd(wd.bak)
-}
+#   Pandoc.convert(file.name %+% "." %+% myReport$format, format = 'html', open = TRUE)
+#   getwd()
+#   # resetting directory and other options
+#   options(opts.bak)
+#   setwd(wd.bak)
+# }

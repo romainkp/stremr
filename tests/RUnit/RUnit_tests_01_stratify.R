@@ -79,6 +79,7 @@ test.helperfuns <- function() {
   setnames(O.data.DT,old = "ID",new = "ID.expression")
   addN.t1 <- convertdata(O.data.DT, ID = "ID.expression", t = "t", imp.I = "N",
                         MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
+
   O.data_dhigh_dlow1 <- follow.rule.d.DT(O.data.DT, theta = c(0,1), ID = "ID.expression", t = "t", I = "highA1c",
                                         CENS = "C", TRT = "TI", MONITOR = "N", rule.names = c("dlow", "dhigh"))
 }
