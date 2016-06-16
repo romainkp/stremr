@@ -10,6 +10,10 @@ stremr_options(fit.package = c("speedglm", "glm", "h2o"),
   poolContinVar = FALSE, maxNperBin = 1000)
 }
 \arguments{
+\item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}
+
+\item{fit.algorithm}{Specify the default fitting algorithm: c("GLM", "GBM", "RF", "SL")}
+
 \item{bin.method}{The method for choosing bins when discretizing and fitting the conditional continuous summary
 exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins

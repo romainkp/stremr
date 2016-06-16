@@ -215,6 +215,58 @@ defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1
   return(DT)
 }
 
+
+#' @export
+get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)) {
+  quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99)
+  quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999)
+  IPAWdist <- makeSumFreqTable(table(wts.data[["cumm.IPAW"]]),
+                              cutoffs,
+                              "Stabilized IPAW")
+  return(IPAWdist)
+}
+
+
+#' @export
+get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
+  ## RD:
+  getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx) {
+    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
+    colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+    rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+    for (d1.idx in seq_along(names(S2.IPAW))) {
+      for (d2.idx in seq_along(names(S2.IPAW))) {
+        #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
+        if (getSEs) {
+          se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
+                                                                   IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
+                                                                   IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
+
+        }
+      }
+    }
+    return(se.RDscale.Sdt.K)
+  }
+
+  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
+  periods_idx <- seq_along(MSM$periods)
+  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
+  for (t.idx in seq(t.periods.RDs)) {
+
+    t.period.val.idx <- periods_idx[MSM$periods %in% t.periods.RDs[t.idx]]
+
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx)
+
+    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
+                                                RDscale = TRUE,
+                                                t.period = t.period.val.idx,
+                                                nobs = nrow(MSM$wts.data),
+                                                esti = MSM$est.name,
+                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K)
+  }
+  return(RDs.IPAW.tperiods)
+}
+
 # ---------------------------------------------------------------------------------------------
 #' Define the indicators of following/not-following specific dynamic treatment rules indexed by theta.
 #'

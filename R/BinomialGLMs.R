@@ -142,7 +142,7 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
 #' \describe{
 #'   \item{\code{new(reg)}}{Uses \code{reg} R6 \code{\link{RegressionClass}} object to instantiate a new storage container for a
 #'   design matrix and binary outcome.}
-#'   \item{\code{setdata()}}{...
+#'   \item{\code{setdata()}}{...}
 #' }
 #' @section Active Bindings:
 #' \describe{

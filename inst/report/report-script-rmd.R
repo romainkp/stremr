@@ -7,7 +7,6 @@
 #+ setup, include=FALSE
 require("knitr")
 require("pander")
-# opts_chunk$set(fig.path = 'figure/stremr-')
 opts_chunk$set(fig.path = figure.dir)
 panderOptions("table.split.table", Inf)
 
@@ -43,22 +42,27 @@ f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, x_lab, miny, x_legend
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
 set.alignment('left', row.names = 'right')
-for (reg.model in fitted.coefs.gC) {
-  print(reg.model)
+if (!skip.modelfits) {
+  for (reg.model in fitted.coefs.gC) {
+    print(reg.model, only.coefs = only.coefs)
+  }
 }
 
 #' ## Model(s) for exposure variable(s):
 
 #+ echo=FALSE, results='asis'
-for (reg.model in fitted.coefs.gA) {
-  print(reg.model)
+if (!skip.modelfits) {
+  for (reg.model in fitted.coefs.gA) {
+    print(reg.model, only.coefs = only.coefs)
+  }
 }
-
 #' ## Model(s) for monitoring variable(s):
 
 #+ echo=FALSE, results='asis'
-for (reg.model in fitted.coefs.gN) {
-  print(reg.model)
+if (!skip.modelfits) {
+  for (reg.model in fitted.coefs.gN) {
+    print(reg.model, only.coefs = only.coefs)
+  }
 }
 
 #+ include=FALSE
@@ -69,16 +73,22 @@ panderOptions('knitr.auto.asis', TRUE)
 #' # Distribution of the weights
 
 #+ echo=FALSE
+IPAWdist <- get_wtsummary(MSM$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
 pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
-pander::pander(MSM$IPAWdist, justify = c('right', rep("left",ncol(MSM$IPAWdist)-1)))
+pander::pander(IPAWdist, justify = c('right', rep("left",ncol(IPAWdist)-1)))
 
 #'\pagebreak
 #'
 #' # MSM fits
 
 #+ echo=FALSE
+MSM.fit <- MSM$MSM.fit
+output.MSM <- round(MSM.fit$coef,2)
+output.MSM <- cbind("Terms" = names(MSM.fit$coef), output.MSM)
+colnames(output.MSM) <- c("Terms",ifelse(MSM$trunc.weights == Inf && MSM$use.weights, "IPAW", ifelse(MSM$trunc.weights < Inf && MSM$use.weights, "truncated IPAW", "no weights")))
+rownames(output.MSM) <- NULL
 pander::set.caption("Coefficients of MSM")
-pander::pander(MSM$output.MSM, justify = c('right', 'left'))
+pander::pander(output.MSM, justify = c('right', 'left'))
 
 #'\pagebreak
 #'
@@ -86,7 +96,7 @@ pander::pander(MSM$output.MSM, justify = c('right', 'left'))
 
 #+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "Survival Estimates.\\label{fig:survPlot}"
 sysArg <- list()
-sysArg$surv_res_est <- Surv.byregimen
+sysArg$surv_res_est <- SurvByRegimen
 userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
 if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
 do.call(f_plot_survest, sysArg)
@@ -97,9 +107,11 @@ do.call(f_plot_survest, sysArg)
 
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
-for (RDs.IPAW.t.table in MSM$RDs.IPAW.tperiods) {
-  pander::set.caption(RDs.IPAW.t.table$caption)
-  pander::pander(RDs.IPAW.t.table$RDtable)
+if (!missing(RDtables)) {
+  for (RDtable in RDtables) {
+    pander::set.caption(RDtable$caption)
+    pander::pander(RDtable$RDtable)
+  }
 }
 
 #+ include=FALSE

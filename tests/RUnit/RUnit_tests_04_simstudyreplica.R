@@ -217,9 +217,9 @@ require("h2o")
 h2o::h2o.init(nthreads = 2)
 # stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "glm", fit.algorithm = "GLM")
-stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
+# stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF")
-# stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
+stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
@@ -241,20 +241,47 @@ St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
 
 wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow")
 wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh")
-
 # wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
 # wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
 
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 # MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(OData, wts.all.list,
+MSM.IPAW <- get_survMSM(OData, wts.data = wts.all.list,
                         tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW",
-                        t.periods.RDs = c(12, 15))
+                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
+
+wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
+tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
+
+# MSM for hazard with regular weights:
+MSM.IPAW <- get_survMSM(OData, wts.data = wts.all.list,
+                        tjmin = tjmin, tjmax = tjmax,
+                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
+# RD tables are now evaluated outside get_survMSM():
+RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE)
+# Weight summary is now also evaluated outside get_survMSM():
+# (note, this get_wtsummary() automaticall called by the report file):
+IPWdist <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
+
+# get_survMSM now also accepts one large data table of weights, rather than a list of data.tables:
+wts.all <- rbindlist(wts.all.list)
+MSM.IPAW <- get_survMSM(OData, wts.data = wts.all,
+                        tjmin = tjmin, tjmax = tjmax,
+                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
+RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE)
 
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-make_report_rmd(OData, MSM = MSM.IPAW, format = "word",file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# print everything:
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# omit extra h2o model output stuff (only coefficients):
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# skip modeling stuff alltogether:
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# skip RD tables by simply not including them:
+make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+
+
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 

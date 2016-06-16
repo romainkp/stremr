@@ -32,8 +32,8 @@ print_stremr_opts <- function() {
 # @param useglm Set to \code{FALSE} to estimate with \code{\link[speedglm]{speedglm.wfit}} and \code{TRUE} for
 # \code{\link[stats]{glm.fit}}.
 # @param GLMpackage Pick which package and function to use for fitting the GLM models ("glm", "speedglm" or "h2o")
-#' @param fit.package
-#' @param fit.algorithm
+#' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
+#' @param fit.algorithm Specify the default fitting algorithm: c("GLM", "GBM", "RF", "SL")
 #' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
 #'  exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 #'  into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
@@ -62,19 +62,9 @@ print_stremr_opts <- function() {
 #' @seealso \code{\link{print_stremr_opts}}
 #' @export
 #'
-# --------------------------------------------------------------------
-# 1) CHANGE TO stremrOptions()
-# 2) Use it to set options(stremr.... ), which then is read internally by gvars at startup
-# --------------------------------------------------------------------
-# strOptions(strict.width = "no", digits.d = 3, vec.len = 4,
-#            formatNum = function(x, ...)
-#                        format(x, trim = TRUE, drop0trailing = TRUE, ...))
 stremr_options <- function(
-
-
                             # useglm = FALSE,
                             # GLMpackage = c("glm", "speedglm", "h2oglm"),
-
 
                             # fit.package = c("glm", "speedglm", "h2o"),
                             fit.package = c("speedglm", "glm", "h2o"),

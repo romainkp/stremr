@@ -91,7 +91,7 @@ makeModelCaption <- function(model.fit) {
   )
 }
 
-summary.glmfit <- function(model.fit, format_table = TRUE) {
+summary.glmfit <- function(model.fit, format_table = TRUE, ...) {
   nobs <- model.fit$nobs
   coef_out <- model.fit$coef
   if (format_table) {
@@ -106,7 +106,7 @@ summary.glmfit <- function(model.fit, format_table = TRUE) {
   out
 }
 
-summary.h2ofit <- function(model.fit, format_table = TRUE) {
+summary.h2ofit <- function(model.fit, only.coefs = FALSE, format_table = TRUE, ...) {
   h2o.model <- model.fit$H2O.model.object
   modelID <- h2o.model@model$training_metrics@metrics$model$name
   out <- NULL
@@ -117,29 +117,30 @@ summary.h2ofit <- function(model.fit, format_table = TRUE) {
   coef_summary_out <- summary.glmfit(model.fit, format_table)
   out <- c(out, coef_summary_out)
 
-  # -----------------------------------------------------------------
-  # model summary:
-  # -----------------------------------------------------------------
-  model_summary <- h2o.model@model$model_summary
-  caption_summary <- attributes(model_summary)$header %+% " (Model ID: " %+% modelID %+%")"
-  model_summary_out <- pander::pander_return(model_summary, caption = caption_summary)
-  out <- c(out, model_summary_out)
+  if (!only.coefs) {
+    # -----------------------------------------------------------------
+    # model summary:
+    # -----------------------------------------------------------------
+    model_summary <- h2o.model@model$model_summary
+    caption_summary <- attributes(model_summary)$header %+% " (Model ID: " %+% modelID %+%")"
+    model_summary_out <- pander::pander_return(model_summary, caption = caption_summary)
+    out <- c(out, model_summary_out)
 
-  # -----------------------------------------------------------------
-  # training data metrics:
-  # -----------------------------------------------------------------
-  H2OBinomialMetrics_training <- h2o.model@model$training_metrics
-  train_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_training)
-  out <- c(out, train_model_metrics_out)
+    # -----------------------------------------------------------------
+    # training data metrics:
+    # -----------------------------------------------------------------
+    H2OBinomialMetrics_training <- h2o.model@model$training_metrics
+    train_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_training)
+    out <- c(out, train_model_metrics_out)
 
-  # -----------------------------------------------------------------
-  # variable importance:
-  # -----------------------------------------------------------------
-  var_imp <- h2o.model@model$variable_importances
-  var_imp_cap <- attributes(var_imp)$header %+% "Model ID: " %+% modelID %+%")"
-  var_imp_out <- pander::pander_return(var_imp, caption = var_imp_cap)
-  out <- c(out, var_imp_out)
-
+    # -----------------------------------------------------------------
+    # variable importance:
+    # -----------------------------------------------------------------
+    var_imp <- h2o.model@model$variable_importances
+    var_imp_cap <- attributes(var_imp)$header %+% "Model ID: " %+% modelID %+%")"
+    var_imp_out <- pander::pander_return(var_imp, caption = var_imp_cap)
+    out <- c(out, var_imp_out)
+  }
   return(out)
 }
 
@@ -148,8 +149,8 @@ print.glmfit <- function(model.fit, ...) {
   cat(paste(model.summary, collapse = '\n'))
 }
 
-print.h2ofit <- function(model.fit, ...) {
-  model.summary <- summary(model.fit, ...)
+print.h2ofit <- function(model.fit, only.coefs = FALSE, ...) {
+  model.summary <- summary(model.fit, only.coefs, ...)
   cat(paste(model.summary, collapse = '\n'))
 }
 

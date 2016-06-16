@@ -254,8 +254,6 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # equivalent: OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by = nodes$tnode)
   setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
 
-  # Disabled: causes a bug (resuts in cumm.IPAW=0 when it shouldn't be)
-  # OData$dat.sVar[cumm.IPAW < (10^-5), cum.stab.P := 0]
   # Disabled: remove all observation-times that got zero weight:
   # OData$dat.sVar[cumm.IPAW > 0, ]
 
@@ -296,22 +294,22 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
 # Each dataset containing weights non-zero weights for single regimen
 # ---------------------------------------------------------------------------------------
 #' @export
-get_survNPMSM <- function(data.wts, OData) {
+get_survNPMSM <- function(wts.data, OData) {
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
   # shifted.OUTCOME <- as.name(Ynode%+%".tplus1")
 
   # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
-  ht.crude <- data.wts[cumm.IPAW > 0, .(ht.KM = sum(eval(Ynode), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
+  ht.crude <- wts.data[cumm.IPAW > 0, .(ht.KM = sum(eval(Ynode), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t.name)
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- data.wts[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Ywt, cols = t.name)
+  sum_Ywt <- wts.data[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Ywt, cols = t.name)
   # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t.name)]; setkeyv(sum_Ywt, cols=t.name)
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
   # (equivalent to summing cummulative weights cumm.IPAW by t)
-  sum_Allwt <- data.wts[, .(sum_all_IPAW = sum(cumm.IPAW, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Allwt, cols = t.name)
+  sum_Allwt <- wts.data[, .(sum_all_IPAW = sum(cumm.IPAW, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Allwt, cols = t.name)
   # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t.name)]; setkeyv(sum_Allwt, cols=t.name)
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
@@ -322,12 +320,7 @@ get_survNPMSM <- function(data.wts, OData) {
 }
 
 
-# ----------------------------------------------------------------------
-# TO DO: 0. START A NEW CLASS THAT INHERITS FROM BinaryOutcomeModel SPECIFICALLY FOR RUNNING H20 MODELS
-# TO DO: 1. MAKE THIS INTO A CALL TO BinaryOutcomeModel OR ITS CHILD
-# TO DO: 2. SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
-# ----------------------------------------------------------------------
-runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
+runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
   # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
   # Does not handle cases with deterministic Anodes in the original data.
   logispredict = function(m.fit, X_mat) {
@@ -339,14 +332,14 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
   if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
     if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
     loadframe_t <- system.time(
-      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts.all.rules,
+      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts.data,
                                                   saveH2O = FALSE,
                                                   destination_frame = "MSM.designmat.H2O")
     )
     if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
-    # OData$fast.load.to.H2O(wts.all.rules, )
-    # temp.csv.path <- file.path(tempdir(), "wts.all.rules.csv~")
-    # data.table::fwrite(wts.all.rules, temp.csv.path, turbo = TRUE)
+    # OData$fast.load.to.H2O(wts.data, )
+    # temp.csv.path <- file.path(tempdir(), "wts.data.csv~")
+    # data.table::fwrite(wts.data, temp.csv.path, turbo = TRUE)
     # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
 
     m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
@@ -367,17 +360,17 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
     out_coef[] <- NA
     names(out_coef) <- c(all_dummies)
     out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
-    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h20")
-    wts.all.rules[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
+    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
+    wts.data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
   } else {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
-    Xdesign.mat <- as.matrix(wts.all.rules[, all_dummies, with = FALSE])
+    Xdesign.mat <- as.matrix(wts.data[, all_dummies, with = FALSE])
     m.fit <- try(speedglm::speedglm.wfit(
                                        X = Xdesign.mat,
-                                       y = as.numeric(wts.all.rules[[Ynode]]),
+                                       y = as.numeric(wts.data[[Ynode]]),
                                        intercept = FALSE,
                                        family = binomial(),
-                                       weights = wts.all.rules[["cumm.IPAW"]],
+                                       weights = wts.data[["cumm.IPAW"]],
                                        trace = FALSE),
                         silent = TRUE)
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
@@ -385,7 +378,7 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
       ctrl <- glm.control(trace = FALSE)
       SuppressGivenWarnings({
         m.fit <- stats::glm.fit(x = Xdesign.mat,
-                                y = as.numeric(wts.all.rules[[Ynode]]),
+                                y = as.numeric(wts.data[[Ynode]]),
                                 family = binomial(),
                                 intercept = FALSE, control = ctrl)
       }, GetWarningsToSuppress())
@@ -394,12 +387,13 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
     if (verbose) {
       print("MSM fits"); print(m.fit$coef)
     }
-    wts.all.rules[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+    wts.data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
   }
-  return(list(wts.all.rules = wts.all.rules, m.fit = m.fit))
+  return(list(wts.data = wts.data, m.fit = m.fit))
 }
 
-
+# ----------------------------------------------------------------------
+# TO DO: SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
 # ---------------------------------------------------------------------------------------
 # - BLOCK 4C: Parametric MSM pooling many regimens, includes weight stabilization and parametric MSM (can include saturated MSM)
 # Alternative for MSM, takes a list of data sets with weights and MSMregform
@@ -407,9 +401,8 @@ runglmMSM <- function(OData, wts.all.rules, all_dummies, Ynode, verbose) {
 # Might choose between two types of MSMs (sat vs. parametric) with S3 dispatch or by missing arg
 # ---------------------------------------------------------------------------------------
 #' @export
-get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
-                        est.name = "IPAW", t.periods.RDs, getSEs = TRUE, verbose = getOption("stremr.verbose")) {
-
+get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
+                        est.name = "IPAW", getSEs = TRUE, verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
@@ -418,25 +411,32 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
   # shifted.OUTCOME <- Ynode%+%".tplus1"
 
   # 2a. Stack the weighted data sets:
-  wts.all.rules <- rbindlist(data.wts.list)
-  rules.TRT <- sort(unique(wts.all.rules[["rule.name.TRT"]]))
+  if (is.data.table(wts.data)) {
+    # ...do nothing...
+  } else if (is.list(wts.data)) {
+    assert_that(all(sapply(wts.data, is.data.table)))
+    wts.data <- rbindlist(wts.data)
+  } else {
+    stop("...wts.data arg must be either a list of rule-specific weight data.tables or one combined weight data.table...")
+  }
 
-  if (verbose) print("performing estimation for rules: " %+% paste(rules.TRT, collapse=","))
+  rules.TRT <- sort(unique(wts.data[["rule.name.TRT"]]))
+  if (verbose) print("performing estimation for found TRT rules in column 'rule.name.TRT': " %+% paste(rules.TRT, collapse=","))
 
   # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
-  wts.all.rules <- wts.all.rules[!is.na(cumm.IPAW) & !is.na(eval(as.name(Ynode))) & (cumm.IPAW > 0), ]
+  wts.data <- wts.data[!is.na(cumm.IPAW) & !is.na(eval(as.name(Ynode))) & (cumm.IPAW > 0), ]
   # 2c. If trunc.weights < Inf, do truncation of the weights
   if (trunc.weights < Inf) {
-    wts.all.rules[cumm.IPAW > trunc.weights, cumm.IPAW := trunc.weights]
+    wts.data[cumm.IPAW > trunc.weights, cumm.IPAW := trunc.weights]
   }
   # 2d. use.weights==FALSE, do a crude estimator by setting all non-zero weights to 1
   if (use.weights == FALSE) {
-    wts.all.rules[cumm.IPAW > 0, cumm.IPAW := 1L]
+    wts.data[cumm.IPAW > 0, cumm.IPAW := 1L]
   }
 
   # 2.e. define all observed sequence of periods (t's)
-  mint <- min(wts.all.rules[[t.name]])
-  maxt <- max(wts.all.rules[[t.name]])
+  mint <- min(wts.data[[t.name]])
+  maxt <- max(wts.data[[t.name]])
   periods <- mint:maxt
   periods_idx <- seq_along(periods)
   if (verbose) {
@@ -446,59 +446,41 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
   # 3. Create the dummies I(d == gstar.TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
   for( dummy.j in rules.TRT ){
-    wts.all.rules[, (dummy.j) := as.integer(rule.name.TRT %in% dummy.j)]
+    wts.data[, (dummy.j) := as.integer(rule.name.TRT %in% dummy.j)]
     all.d.dummies <- c(all.d.dummies, dummy.j)
   }
+
   # 4. Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
   all.t.dummies <- NULL
   for( year.j in 1:length(tjmin)){
     dummy.j <- paste("Periods.",tjmin[year.j],"to",tjmax[year.j],sep="")
-    wts.all.rules[, (dummy.j) := as.integer(eval(as.name(t.name)) >= tjmin[year.j] & eval(as.name(t.name)) <= tjmax[year.j])]
+    wts.data[, (dummy.j) := as.integer(eval(as.name(t.name)) >= tjmin[year.j] & eval(as.name(t.name)) <= tjmax[year.j])]
     all.t.dummies <- c(all.t.dummies, dummy.j)
   }
+
   # 5. Create interaction dummies I(t in interval.j & d == gstar.TRT)
   for (d.dummy in all.d.dummies) {
     for (t.dummy in all.t.dummies) {
       if (verbose) print(t.dummy %+% "_" %+% d.dummy)
-      wts.all.rules[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
+      wts.data[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
     }
   }
-  setkeyv(wts.all.rules, cols = c(nodes$IDnode, nodes$tnode))
+
+  setkeyv(wts.data, cols = c(nodes$IDnode, nodes$tnode))
   all_dummies <-  paste(sapply(all.d.dummies, function(x) {
                         return(paste(paste(paste(all.t.dummies, x, sep="_"), sep="")))
                         }))
 
   # 6. fit the hazard MSM
-  resglmMSM <- runglmMSM(OData, wts.all.rules, all_dummies, Ynode, verbose)
-  wts.all.rules <- resglmMSM$wts.all.rules
+  resglmMSM <- runglmMSM(OData, wts.data, all_dummies, Ynode, verbose)
+  wts.data <- resglmMSM$wts.data
   m.fit <- resglmMSM$m.fit
-
-
-  #### For variable estimation, GET IC and SE FOR BETA's
-  if (getSEs) {
-    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
-                              MSMdata = wts.all.rules, MSMdesign = as.matrix(wts.all.rules[, all_dummies, with = FALSE]),
-                              MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
-  }
 
   # 7. Compute the Survival curves under each d
   S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,maxt-mint+1)), length(rules.TRT))
-  design.t.d <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:maxt))), length(rules.TRT))
-  IC.Var.S.d <- vector(mode = "list", length(rules.TRT))
-  names(S2.IPAW) <- names(hazard.IPAW) <- names(design.t.d) <- names(IC.Var.S.d) <- rules.TRT
+  names(S2.IPAW) <- names(hazard.IPAW) <- rules.TRT
 
-  # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
-  # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
-  # p.coef - number of time-specific coefficients in the MSM
-  p.coef <- length(tjmin)
-  # periods <- mint : maxt
-  design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
-  for (t.indx in seq_along(periods)) {
-    col.idx <- which(tjmin <= periods[t.indx] & tjmax >= periods[t.indx])
-    design.t[t.indx, col.idx] <- 1
-  }
-
-  if (verbose) message("...evaluating survival & SEs based on MSM hazard fit and the estimated IC...")
+  if (verbose) message("...evaluating MSM-based survival curves...")
 
   for(d.j in names(S2.IPAW)) {
     for(period.idx in seq_along(periods)){
@@ -507,73 +489,60 @@ get_survMSM <- function(OData, data.wts.list, tjmin, tjmax, use.weights = TRUE, 
       hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit$coef[rev.term]))
       S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit$coef[rev.term])))
     }
-
     S2.IPAW[[d.j]] <- cumprod(S2.IPAW[[d.j]])
+  }
 
+  if (verbose) message("...evaluating SEs based on MSM hazard fit and the estimated IC...")
+  #### For variance (SEs), GET IC and SE FOR BETA's
+  #### GET IC and SE FOR Sd(t)
+  # S.d.t.predict - MSM survival estimates for one regimen
+  # h.d.t.predict - MSM hazard estimates for one regimen
+  # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
+  # IC.O - observation-specific IC estimates for MSM coefs
+  if (getSEs) {
+    design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:maxt))), length(rules.TRT))
+    IC.Var.S.d <- vector(mode = "list", length(rules.TRT))
+    names(design.d.t) <- names(IC.Var.S.d) <- rules.TRT
+    # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
+    # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
+    # p.coef - number of time-specific coefficients in the MSM
+    p.coef <- length(tjmin)
+    design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
+    for (t.indx in seq_along(periods)) {
+      col.idx <- which(tjmin <= periods[t.indx] & tjmax >= periods[t.indx])
+      design.t[t.indx, col.idx] <- 1
+    }
+    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
+                              MSMdata = wts.data, MSMdesign = as.matrix(wts.data[, all_dummies, with = FALSE]),
+                              MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use.weights)
 
-    #### GET IC and SE FOR Sd(t)
-    # S.d.t.predict - MSM survival estimates for one regimen
-    # h.d.t.predict - MSM hazard estimates for one regimen
-    # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
-    # IC.O - observation-sepcific IC estimates for MSM coefs
-
-    if (getSEs) {
+    for(d.j in names(S2.IPAW)) {
       d.idx <- which(names(S2.IPAW) %in% d.j)
       set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
-      design.t.d[[d.j]][,set_cols] <- design.t
-
+      design.d.t[[d.j]][,set_cols] <- design.t
       IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
                                    S.d.t.predict = S2.IPAW[[d.j]],
                                    h.d.t.predict = hazard.IPAW[[d.j]],
-                                   design.d.t = design.t.d[[d.j]],
+                                   design.d.t = design.d.t[[d.j]],
                                    IC.O = beta.IC.O.SEs[["IC.O"]])
     }
+  } else {
+    IC.Var.S.d <- NULL
   }
 
-  output.MSM <- round(m.fit$coef,2)
-  output.MSM <- cbind("Terms" = names(m.fit$coef), output.MSM)
-  colnames(output.MSM) <- c("Terms",ifelse(trunc.weights == Inf && use.weights, "IPAW", ifelse(trunc.weights < Inf && use.weights, "truncated IPAW", "no weights")))
-  rownames(output.MSM) <- NULL
 
-  (quant99 <- quantile(wts.all.rules[["cumm.IPAW"]],p=0.99))
-  (quant999 <- quantile(wts.all.rules[["cumm.IPAW"]],p=0.999))
-  cutoffs <- c(0,0.5,1,10,20,30,40,50,100,150)
-  IPAWdist <- makeSumFreqTable(table(wts.all.rules[["cumm.IPAW"]]),c(0,0.5,1,10,20,30,40,50,100,150),"Stabilized IPAW")
+  MSM_out <- list(
+              est.name = est.name,
+              St = S2.IPAW,
+              ht = hazard.IPAW,
+              MSM.fit = m.fit,
+              IC.Var.S.d = IC.Var.S.d,
+              nID = nID, periods = periods,
+              wts.data = wts.data,
+              use.weights = use.weights,
+              trunc.weights = trunc.weights
+            )
 
-  ## RD:
-  getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx) {
-    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
-    colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
-    rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
-    for (d1.idx in seq_along(names(S2.IPAW))) {
-      for (d2.idx in seq_along(names(S2.IPAW))) {
-        #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
-        if (getSEs) {
-          se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
-                                                                   IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
-                                                                   IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
-
-        }
-      }
-    }
-    return(se.RDscale.Sdt.K)
-  }
-
-  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
-  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
-  for (t.idx in seq(t.periods.RDs)) {
-    # t.period.val <- t.periods.RDs[t.period.val.idx]
-    t.period.val.idx <- periods_idx[periods %in% t.periods.RDs[t.idx]]
-    se.RDscale.Sdt.K <- getSE_table_d_by_d(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx)
-    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(S2.IPAW, RDscale = TRUE, t.period = t.period.val.idx, nobs = nrow(wts.all.rules), esti = est.name, se.RDscale.Sdt.K = se.RDscale.Sdt.K)
-  }
-
-  # browser()
-  # S2.IPAW[[1]][t.period.val.idx]
-  # S2.IPAW[[2]][t.period.val.idx]
-  # S2.IPAW[[3]][t.period.val.idx]
-  # S2.IPAW[[4]][t.period.val.idx]
-
-  return(list(St = S2.IPAW, MSM.fit = m.fit, output.MSM = output.MSM,
-              IPAWdist = IPAWdist, RDs.IPAW.tperiods = RDs.IPAW.tperiods))
+  return(MSM_out)
 }
+
