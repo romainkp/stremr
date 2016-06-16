@@ -188,7 +188,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
 #' }
 #' @return A data.table in long format with ordering (I, CENS, TRT, MONITOR)
 #' @export
-convertdata <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "tsinceNis1"){
+defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "tsinceNis1"){
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   if (is.data.table(data)) {
