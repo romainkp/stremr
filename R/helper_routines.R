@@ -277,9 +277,9 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
   if (return.allcolumns) {
     DT <- data.table(data, key=c(ID,t))
   } else if (is.data.table(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR), with = FALSE], key=c(ID,t))
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1), with = FALSE], key=c(ID,t))
   } else if (is.data.frame(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR)], key=c(ID,t))
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1)], key=c(ID,t))
   } else {
     stop("input data must be either a data.table or a data.frame")
   }

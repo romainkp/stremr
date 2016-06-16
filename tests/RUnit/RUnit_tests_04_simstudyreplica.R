@@ -35,34 +35,8 @@ set.DAG.rm.template <- function(){
   return(Drm)
 }
 
-# ---------------------------------------------------------------------------------------------------------
-# Get indicators of rule followers for two rules (dlow, dhigh) based on binary I:
-# ---------------------------------------------------------------------------------------------------------
-add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", MONITOR = "N", I = "highA1c", rule_name1 = "dlow", rule_name2 = "dhigh"){
-  ## Count how many patients follow each rule; follow rule dlow - start TI at low A1c threshold, i.e. start at study entry.
-  O.dataDT <- data.table(O.data, key = c(ID, t))
-  # Add indicator for rule (dlow) -> start TI when highA1c>=0 and stay on treatment ALL the time (i.e., start at study entry)
-  # equivalent to counterfactual regiment \barA=1
-  rule_name1 <- "dlow"
-  O.dataDT[,(rule_name1) := as.integer(all(get(TRT) %in% c(1,NA))), by=eval(ID)]
-  # set last row to 0, since its always either Y=1 or C=1
-  O.dataDT[O.dataDT[,.I[.N], by = eval(ID)][["V1"]],(rule_name1) := 0L]
-  # set All NAs for treatment (TRT) to be NA for the rule as well
-  O.dataDT[O.dataDT[,.I[which(is.na(get(TRT)))], by = eval(ID)][["V1"]],(rule_name1) := NA]
-  # Add indicator for rule (dhigh) -> start TRT only when I=1 (highA1c)
-  rule_name2 <- "dhigh"
-  O.dataDT_dhigh <- stremr::defineTRTrules(O.dataDT, theta = 1, ID = ID,
-                                              t = t, I = I, CENS = CENS, TRT = TRT,
-                                              MONITOR = MONITOR,
-                                              # tsinceNis1 = "",
-                                              rule.names = rule_name2)
-  O.dataDT_dhigh[, (rule_name2) := as.integer(get(rule_name2))]
-  O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
-  return(O.dataDT)
-}
-
 # --------------------------------
-# (II) Define event indicator and right-censoring indicator, define total follow-up length
+# Define event indicator and right-censoring indicator, define total follow-up length
 # --------------------------------
 define_indicators <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", MONITOR = "N", I = "highA1c") {
   # Add indicator Delta=I(T<=C) (Y is 1 at some point for the subject):
@@ -82,6 +56,33 @@ define_indicators <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C"
   # O.dataDT[1:100,]
   return(O.dataDT)
 }
+
+# ---------------------------------------------------------------------------------------------------------
+# Get indicators of rule followers for two rules (dlow, dhigh) based on binary I:
+# ---------------------------------------------------------------------------------------------------------
+add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", MONITOR = "N", I = "highA1c", rule_name1 = "dlow", rule_name2 = "dhigh"){
+  ## Count how many patients follow each rule; follow rule dlow - start TI at low A1c threshold, i.e. start at study entry.
+  O.dataDT <- data.table(O.data, key = c(ID, t))
+  # Add indicator for rule (dlow) -> start TI when highA1c>=0 and stay on treatment ALL the time (i.e., start at study entry)
+  # equivalent to counterfactual regiment \barA=1
+  rule_name1 <- "dlow"
+  O.dataDT[,(rule_name1) := as.integer(all(get(TRT) %in% c(1,NA))), by=eval(ID)]
+  # set last row to 0, since its always either Y=1 or C=1
+  O.dataDT[O.dataDT[,.I[.N], by = eval(ID)][["V1"]],(rule_name1) := 0L]
+  # set All NAs for treatment (TRT) to be NA for the rule as well
+  O.dataDT[O.dataDT[,.I[which(is.na(get(TRT)))], by = eval(ID)][["V1"]],(rule_name1) := NA]
+  # Add indicator for rule (dhigh) -> start TRT only when I=1 (highA1c)
+  rule_name2 <- "dhigh"
+  O.dataDT_dhigh <- stremr::defineTRTrules(O.dataDT, theta = 1, ID = ID,
+                                              t = t, I = I, CENS = CENS, TRT = TRT,
+                                              MONITOR = MONITOR,
+                                              tsinceNis1 = "lastNat1",
+                                              rule.names = rule_name2)
+  O.dataDT_dhigh[, (rule_name2) := as.integer(get(rule_name2))]
+  O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
+  return(O.dataDT)
+}
+
 
 # ------------------------------------------------------------------------------------------------------
 # SIMULATE, SAVE AND COMPRESS THE DATASET FROM THE EXAMPLE
@@ -144,6 +145,7 @@ notrun.save.example.data <- function() {
 
 data(O.data.simstudy.g05)
 O.data <- O.data.simstudy.g05
+head(O.data)
 ID <- "ID"; t <- "t"; TRT <- "TI"; outcome <- "Y"; I <- "highA1c";
 # --------------------------------
 # (II) Define event indicator and right-censoring indicator, define total follow-up length
@@ -250,6 +252,7 @@ MSM.IPAW <- get_survMSM(OData, wts.all.list,
                         tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, est.name = "IPAW",
                         t.periods.RDs = c(12, 15))
+
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 make_report_rmd(OData, MSM = MSM.IPAW, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)

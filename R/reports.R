@@ -66,7 +66,7 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   # -------------------------------------------------------------------------------------
   # TO DO: DISCRIPTIVE STATISTICS
   # -------------------------------------------------------------------------------------
-  sVartypes <- gvars$sVartypes
+  # sVartypes <- gvars$sVartypes
   # For each covariate in OData$nodes, create either:
     # 1) a density plot for each  OData$type.sVar[varnames] %in% sVartypes$cont
     # 2) a histogram plot for each variable OData$type.sVar[varnames] %in% c(sVartypes$cont, sVartypes$cat, sVartypes$bin)
