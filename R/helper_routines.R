@@ -104,7 +104,6 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
     }
   }
 
-  # browser()
   # (seq_along(dtheta)-1) *
 
   RDtable[is.na(RDtable)] <- ""
@@ -127,7 +126,6 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
   model <- "MSM"
   if(esti=="crude")model <- "model"
   est <- "IPAW"
-  ##     browser()
 
   caption <- paste(estimates,
       " estimates of the (cumulative) risk ",

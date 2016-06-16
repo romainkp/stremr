@@ -83,8 +83,6 @@ make_report_rmd <- function(OData, MSM, MSM.list, Surv.byregimen, format = "html
   fitted.coefs.gA <- OData$modelfit.gA$get.fits()
   fitted.coefs.gN <- OData$modelfit.gN$get.fits()
 
-  # browser()
-
   # -------------------------------------------------------------------------------------
   # RD tables
   # RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
