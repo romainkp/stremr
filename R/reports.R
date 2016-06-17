@@ -34,8 +34,25 @@ openFileInOS <- function(f) {
   }
 }
 
+# ---------------------------------------------------------------------------------------------
+#' Generate report(s) with modeling stats and survival estimates using pandoc.
+#'
+#' @param OData Input data object returned by the function \code{get_Odata}.
+#' @param MSM The MSM object fits returned by the function \code{get_survMSM}.
+#' @param MSMlist ...NOT IMPLEMENTED...
+#' @param SurvByRegimen ... NOT IMPLEMENTED...
+#' @param RDtables List of tables with risk differences returned by the function \code{get_MSM_RDs}.
+#' @param format Choose the Pandoc output format for the report file (html, pdf or word).
+#' Note that the html report file is always produced in addition to any other selected format.
+#' @param skip.modelfits Do not report any of the modeling stats.
+#' @param file.name File name for the report file without extension. Default file name is assigned based on the current date.
+#' @param file.path Directory path where the report file(s) should be written. Default is to use the system temporary directory.
+#' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
+#' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
+#' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
+#' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format = "html", skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
+make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
   optArgReport <- list(...)
 
   if ("author" %in% names(optArgReport)) {
@@ -67,6 +84,7 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format
   if (!missing(MSMlist)) {
     # need to figure out how to handle it -> define some variables which will control report-scrit-rmd.R
     # ...
+    SurvByRegimen <- MSM$St
   }
 
   # -------------------------------------------------------------------------------------
@@ -104,6 +122,7 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format
   wd.bak   <- getwd()
   setwd(file.path)
 
+  format <- format[1L]
   format_pandoc <- format %+% "_document"
   outfile <- file.name %+% "." %+% ifelse(format %in% "word", "docx", format)
 
@@ -149,6 +168,7 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format
   # resetting directory and other options
   options(opts.bak)
   setwd(wd.bak)
+  return(file.path(file.path, outfile))
 }
 
 
@@ -163,7 +183,6 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format
 #   report.file <- system.file('report', "graphs.brew", package = 'stremr')
 #   # read in the report file:
 #   # txt <- readLines(report.file, warn = FALSE, encoding = 'UTF-8') # load template from file path
-
 
 #   ## pregenerate file name
 #   # if (grepl('%T', file.name)) file.name <- gsub('%T', gsub('\\\\|/|:|\\.', '-', fp), file.name, fixed = TRUE)
@@ -207,21 +226,6 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, RDtables, format
 #   ## Add maybe a header for later stuff
 #   myReport$add.paragraph('# Showing some raw R objects below')
 
-#   f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, miny) {
-#     ptsize <- 0.7
-#     counter <- 0
-#     if (missing(y_lab)) y_lab <- ""
-#     if (missing(t_int_sel)) t_int_sel <- seq_along(surv_res_est[[1]])
-#     if (missing(miny)) miny <- min(unlist(lapply(surv_res_est, min)))
-
-#     for(d.j in names(surv_res_est)){
-#       counter <- counter+1
-#       plot(t_int_sel,surv_res_est[[d.j]][t_int_sel],col=counter,type='b',cex=ptsize,ylim=c(miny,1),
-#         ylab = y_lab, xlab="Quarter since study entry")
-#       par(new=TRUE)
-#     }
-#     legend(12,0.96,legend=names(surv_res_est),col=c(1:length(names(surv_res_est))), cex=ptsize, pch=1)
-#   }
 #   # graph.dir = 'my_plots',
 #   # evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result
 #   # myReport$add.paragraph(evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result)

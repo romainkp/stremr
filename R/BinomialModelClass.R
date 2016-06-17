@@ -6,6 +6,11 @@
 #   assert_that(BinaryOutcomeModel$is.fitted)
 #   BinaryOutcomeModel$getfit
 # }
+
+#' @importFrom pander pander
+NULL
+
+#' @export
 pander.H2OBinomialModel <- function(H2OBinomialModelObject) {
   cat("\n")
   show(H2OBinomialModelObject)
@@ -13,6 +18,7 @@ pander.H2OBinomialModel <- function(H2OBinomialModelObject) {
   return(invisible(H2OBinomialModelObject))
 }
 
+#' @export
 pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject) {
   modelID <- H2OBinomialMetricsObject@metrics$model$name
 

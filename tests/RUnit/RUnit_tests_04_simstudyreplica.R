@@ -217,9 +217,9 @@ require("h2o")
 h2o::h2o.init(nthreads = 2)
 # stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "glm", fit.algorithm = "GLM")
-# stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
-# stremr_options(fit.package = "h2o", fit.algorithm = "RF")
-stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
+# stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h20.GLM"
+# stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h20.RF"
+stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h20.GBM"
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
@@ -231,49 +231,79 @@ St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois
            get_survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
+#     t  sum_Y_IPAW sum_all_IPAW           ht   St.IPTW      ht.KM     St.KM
+# 1   0  13.8596694     1743.707 0.0079483933 0.9920516 0.03088578 0.9691142
+# 2   1  13.3609872     1709.816 0.0078142829 0.9842994 0.01142514 0.9580420
+# 3   2  25.3670772     1662.535 0.0152580732 0.9692809 0.02007299 0.9388112
+# 4   3  22.2239970     1597.091 0.0139152953 0.9557931 0.01303538 0.9265734
+# 5   4  29.8942765     1531.625 0.0195180071 0.9371379 0.01761006 0.9102564
+# 6   5  19.4863277     1437.907 0.0135518704 0.9244379 0.02240717 0.8898601
+# 7   6  15.7906650     1437.029 0.0109884140 0.9142798 0.01964637 0.8723776
+# 8   7   6.8437715     1368.031 0.0050026450 0.9097060 0.01603206 0.8583916
+# 9   8   1.5887529     1378.473 0.0011525457 0.9086575 0.01629328 0.8444056
+# 10  9 123.8270341     1431.601 0.0864954786 0.8300628 0.02484472 0.8234266
+# 11 10  12.5712610     1276.716 0.0098465640 0.8218895 0.02264685 0.8047786
+# 12 11  19.6120258     1285.726 0.0152536550 0.8093527 0.02172339 0.7872960
+# 13 12   0.6711678     1282.266 0.0005234231 0.8089291 0.01850481 0.7727273
+# 14 13   0.5435692     1172.797 0.0004634810 0.8085541 0.02488688 0.7534965
+# 15 14   0.2335619     1362.924 0.0001713682 0.8084156 0.01701469 0.7406760
+# 16 15  10.9309710     1403.403 0.0077889054 0.8021189 0.02202990 0.7243590
+# 17 16   0.0000000        0.000          NaN       NaN         NA        NA
 St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
             get_survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
+#     t sum_Y_IPAW sum_all_IPAW          ht   St.IPTW       ht.KM     St.KM
+# 1   0   71.62864     8657.113 0.008273963 0.9917260 0.006918386 0.9930816
+# 2   1  166.01216     7845.793 0.021159385 0.9707417 0.014900450 0.9782843
+# 3   2  200.90734     6826.330 0.029431238 0.9421716 0.023289455 0.9555005
+# 4   3  231.71454     5717.787 0.040525215 0.9039899 0.026784229 0.9299082
+# 5   4  220.84934     4704.416 0.046945112 0.8615520 0.031530671 0.9005876
+# 6   5  178.18148     3895.212 0.045743723 0.8221414 0.033530572 0.8703904
+# 7   6  125.14007     3148.228 0.039749359 0.7894618 0.031303919 0.8431437
+# 8   7  109.14239     2746.378 0.039740481 0.7580882 0.026079870 0.8211546
+# 9   8  110.64960     2602.294 0.042520020 0.7258543 0.026720883 0.7992127
+# 10  9   42.39418     2402.139 0.017648511 0.7130440 0.023041475 0.7807976
+# 11 10   61.04506     2266.576 0.026932726 0.6938398 0.018837803 0.7660891
+# 12 11   11.01181     1938.639 0.005680173 0.6898987 0.014435696 0.7550301
+# 13 12   20.65649     2042.867 0.010111523 0.6829228 0.014784946 0.7438670
+# 14 13   25.07553     2058.875 0.012179238 0.6746053 0.015726496 0.7321686
+# 15 14    3.23056     1789.372 0.001805415 0.6733873 0.013555787 0.7222435
+# 16 15   22.22318     1506.380 0.014752701 0.6634530 0.020091646 0.7077324
+# 17 16    0.00000        0.000         NaN       NaN          NA        NA
 
-St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"]
+St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"] # [1] 0.1260063
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
 
 wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow")
 wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh")
 # wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
 # wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
-tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
-# MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(OData, wts.data = wts.all.list,
-                        tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
-
-wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
-tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
-
-# MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(OData, wts.data = wts.all.list,
-                        tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
-# RD tables are now evaluated outside get_survMSM():
-RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE)
-# Weight summary is now also evaluated outside get_survMSM():
-# (note, this get_wtsummary() automaticall called by the report file):
-IPWdist <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
-
-# get_survMSM now also accepts one large data table of weights, rather than a list of data.tables:
 wts.all <- rbindlist(wts.all.list)
+
+tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
+# MSM for hazard with regular weights:
 MSM.IPAW <- get_survMSM(OData, wts.data = wts.all,
                         tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
 RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE)
-
+IPWdist <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
+#    Stabilized IPAW Frequency \\%     Cumulative Frequency Cumulative \\%
+# 1  "<0"            "    0"   " 0.00" "    0"              "  0.00"
+# 2  "[0, 0.5["      "13277"   "13.97" "13277"              " 13.97"
+# 3  "[0.5, 1["      "56487"   "59.44" "69764"              " 73.41"
+# 4  "[1, 10["       "25267"   "26.59" "95031"              "100.00"
+# 5  "[10, 20["      "    0"   " 0.00" "95031"              "100.00"
+# 6  "[20, 30["      "    0"   " 0.00" "95031"              "100.00"
+# 7  "[30, 40["      "    0"   " 0.00" "95031"              "100.00"
+# 8  "[40, 50["      "    0"   " 0.00" "95031"              "100.00"
+# 9  "[50, 100["     "    0"   " 0.00" "95031"              "100.00"
+# 10 "[100, 150["    "    0"   " 0.00" "95031"              "100.00"
+# 11 "$\\geq$ 150"   "    0"   " 0.00" "95031"              "100.00"
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 # print everything:
-make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 # omit extra h2o model output stuff (only coefficients):
 make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 # skip modeling stuff alltogether:

@@ -299,10 +299,11 @@ get_survNPMSM <- function(wts.data, OData) {
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
+
   # shifted.OUTCOME <- as.name(Ynode%+%".tplus1")
 
   # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
-  ht.crude <- wts.data[cumm.IPAW > 0, .(ht.KM = sum(eval(Ynode), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
+  ht.crude <- wts.data[cumm.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t.name)
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
