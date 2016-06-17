@@ -4,9 +4,6 @@
 #' date: "`r Sys.Date()`"
 #' ---
 
-# change title and author if these are available:
-# title = NULL, author = NULL,
-
 #+ setup, include=FALSE
 require("knitr")
 require("pander")
