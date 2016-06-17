@@ -77,18 +77,27 @@ makeSumFreqTable <- function(x.freq, cutoffs, varName){
 
 #' @export
 get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE, by.time = FALSE) {
-  quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99, na.rm = TRUE)
-  quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999, na.rm = TRUE)
+  # quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99, na.rm = TRUE)
+  # quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999, na.rm = TRUE)
   # browser()
+  # wts.data <- MSM.IPAW$wts.data
 
   # get the counts for each category (bin) + missing count:
   na.count <- sum(is.na(wts.data[["cumm.IPAW"]]))
   na.yes <- (na.count > 0L)
+
+  # define a list of intervals:
   cutoffs2 <- c(-Inf, cutoffs, Inf)
+  idx <- seq_along(cutoffs2); idx <- idx[-length(idx)]
+  intervals_list <- lapply(idx, function(i) c(cutoffs2[i], cutoffs2[i+1]))
+
   old.keys <- data.table::key(wts.data)
   # setkeyv(wts.data, cols = "rule.name.TRT")
   # summary <- wts.data[, summary(cumm.IPAW)]
-  x.freq.counts <- wts.data[, hist(cumm.IPAW, breaks = cutoffs2, plot = FALSE, include.lowest = TRUE, right = TRUE)$counts]
+
+  x.freq.counts.DT <- wts.data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE))]
+  x.freq.counts <- as.integer(x.freq.counts.DT[1,])
+
   if (na.yes) x.freq.counts <- c(x.freq.counts, na.count)
 
   # create labels:
@@ -100,6 +109,7 @@ get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
   if (na.yes) catNames[length(cutoffs) + 2] <- "Missing"
   names(x.freq.counts) <- catNames
+  colnames(x.freq.counts.DT) <- catNames
 
   # make a table:
   x.freq.counts.tab <- makeFreqTable(x.freq.counts)
@@ -108,29 +118,14 @@ get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 
   # do the same by separately for each rule:
   if (by.rule) {
-    setkeyv(wts.data, cols = "rule.name.TRT")
-    x.freq.counts.byrule <- wts.data[, hist(cumm.IPAW, breaks = cutoffs2, plot = FALSE, include.lowest = TRUE, right = TRUE)$counts, by = rule.name.TRT]
+    # setkeyv(wts.data, cols = "rule.name.TRT")
+    x.freq.counts.byrule.DT <- wts.data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE)), by = rule.name.TRT]
+    colnames(x.freq.counts.byrule.DT)[-1] <- catNames
   } else {
-    x.freq.counts.byrule <- NULL
+    x.freq.counts.byrule.DT <- NULL
   }
-
-  # do the same by separately for each t:
-  # if (by.time) {
-  #   setkeyv(wts.data, cols = "rule.name.TRT")
-  # }
-
-  # hist2 <- wts.data[, hist(cumm.IPAW, plot = FALSE, include.lowest = TRUE, right = TRUE)]
-  # plot(hist2)
-  # breaks <- hist$breaks
-  # x.freq.counts <- hist$counts
-  # x.freq.sum <- rep(NA, length(cutoffs) + 1 + as.integer(na.yes))
-  # for (idx in (1:length(cutoffs))) {
-  #   wts.data[, sum(cumm.IPAW >= cutoffs2[idx] & cumm.IPAW < cutoffs2[idx + 1], na.rm=TRUE) ]
-  # }
-  # IPAWdist <- makeSumFreqTable(table(wts.data[["cumm.IPAW"]]), cutoffs, varname)
-
-  setkeyv(wts.data, cols = old.keys)
-  return(list(summary.table = x.freq.counts.tab, summary.table.byrule = x.freq.counts.byrule))
+  # setkeyv(wts.data, cols = old.keys)
+  return(list(summary.table = x.freq.counts.tab, summary.DT = x.freq.counts.DT, summary.DT.byrule = x.freq.counts.byrule.DT))
 }
 
 
