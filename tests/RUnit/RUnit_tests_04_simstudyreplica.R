@@ -302,6 +302,11 @@ IPWdist <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 4
 # 10 "[100, 150["    "    0"   " 0.00" "95031"              "100.00"
 # 11 "$\\geq$ 150"   "    0"   " 0.00" "95031"              "100.00"
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
+system.time(tab1 <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)))
+#  user  system elapsed
+# 0.123   0.002   0.129
+system.time(tab2 <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE))
+
 # print everything:
 make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 # omit extra h2o model output stuff (only coefficients):

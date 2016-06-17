@@ -14,7 +14,7 @@ OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
 # ----------------------------------------------------------------
 makeFreqTable <- function(rawFreq){
   ntot <- sum(rawFreq)
-  rawFreqPercent <- rawFreq/ntot*100
+  rawFreqPercent <- rawFreq / ntot * 100
   fineFreq <- cbind("Frequency"=rawFreq,"\\%"=round(rawFreqPercent,2),"Cumulative Frequency"=cumsum(rawFreq),"Cumulative \\%"=round(cumsum(rawFreqPercent),2))
   fineFreq <- as.data.frame(fineFreq)
   eval(parse(text=paste('fineFreq <- cbind(',deparse(substitute(rawFreq)),'=factor(c("',paste(names(rawFreq),collapse='","'),'")),fineFreq)',sep="")))
@@ -27,36 +27,40 @@ makeFreqTable <- function(rawFreq){
 # ----------------------------------------------------------------
 #### SUMMARY STATISTICS
 # ----------------------------------------------------------------
-makeSumFreqTable <- function(x.freq,cutoffs,varName){
+makeSumFreqTable <- function(x.freq, cutoffs, varName){
   if(class(cutoffs)=="Date"){
     x.values <- as.Date(names(x.freq))
   }else{
     x.values <- names(x.freq)
   }
-  na.yes <- as.logical(sum(is.na( as.numeric(x.values))))
-  x.freq.sum <- rep(NA,length(cutoffs)+1+as.numeric(na.yes))
-  x.freq.sum[1] <- sum(x.freq[ as.numeric(x.values) < cutoffs[1] ], na.rm=TRUE)
-  for(i in 1:(length(cutoffs)-1))
-    x.freq.sum[1+i] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[i] & as.numeric(x.values)<cutoffs[i+1] ], na.rm=TRUE)
-  x.freq.sum[length(cutoffs)+1] <- sum(x.freq[ as.numeric(x.values)>=cutoffs[length(cutoffs)] ], na.rm=TRUE)
-  if(na.yes){
-      x.freq.sum[length(cutoffs)+2] <- x.freq[ is.na(as.numeric(x.values)) ]
+  # na.yes <- as.logical(sum(is.na(as.numeric(x.values))))
+  na.yes <- any(is.na(as.numeric(x.values)))
+
+  # x.freq.sum <- rep(NA, length(cutoffs) + 1 + as.numeric(na.yes))
+  x.freq.sum <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
+
+  x.freq.sum[1] <- sum(x.freq[ as.numeric(x.values) < cutoffs[1] ], na.rm = TRUE)
+  for(i in 1:(length(cutoffs)-1)) {
+    x.freq.sum[1+i] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[i] & as.numeric(x.values) < cutoffs[i+1] ], na.rm=TRUE)
+  }
+  x.freq.sum[length(cutoffs) + 1] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[length(cutoffs)] ], na.rm=TRUE)
+  if (na.yes) {
+    x.freq.sum[length(cutoffs)+2] <- x.freq[ is.na(as.numeric(x.values)) ]
   }
 
-  catNames <- rep(NA,length(cutoffs)+1+as.numeric(na.yes))
-  catNames[1] <- paste("<",cutoffs[1],sep="")
-  for(i in 1:(length(cutoffs)-1))
+  catNames <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
+  catNames[1] <- paste("<", cutoffs[1], sep="")
+  for(i in 1:(length(cutoffs)-1)){
     catNames[i+1] <- paste("[",cutoffs[i],", ",cutoffs[i+1],"[",sep="")
+  }
   catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
-  if(na.yes)catNames[length(cutoffs)+2] <- "Missing"
+  if(na.yes) catNames[length(cutoffs)+2] <- "Missing"
   names(x.freq.sum) <- catNames
-
   x.freq.sum <- makeFreqTable(x.freq.sum)
   colnames(x.freq.sum)[1] <- varName
   x.freq.sum[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
   return(x.freq.sum)
 }
-
 # library(Hmisc)
 # sink(file.path(res_outf_newdat, "NewIPAWdistNonITTm0.tex"))
 # latex(IPAWdist,file="",where="!htpb",colheads=colnames(IPAWdist),
@@ -70,6 +74,65 @@ makeSumFreqTable <- function(x.freq,cutoffs,varName){
 #             round(quant99,2)," and ",round(quant999,2)," respectively.",sep=""),
 #   label= "NewIPAWdistNonITTm0",booktabs=TRUE,rowname=NULL,landscape=FALSE)
 # sink()
+
+#' @export
+get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE, by.time = FALSE) {
+  quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99, na.rm = TRUE)
+  quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999, na.rm = TRUE)
+  # browser()
+
+  # get the counts for each category (bin) + missing count:
+  na.count <- sum(is.na(wts.data[["cumm.IPAW"]]))
+  na.yes <- (na.count > 0L)
+  cutoffs2 <- c(-Inf, cutoffs, Inf)
+  old.keys <- data.table::key(wts.data)
+  # setkeyv(wts.data, cols = "rule.name.TRT")
+  # summary <- wts.data[, summary(cumm.IPAW)]
+  x.freq.counts <- wts.data[, hist(cumm.IPAW, breaks = cutoffs2, plot = FALSE, include.lowest = TRUE, right = TRUE)$counts]
+  if (na.yes) x.freq.counts <- c(x.freq.counts, na.count)
+
+  # create labels:
+  catNames <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
+  catNames[1] <- paste("<", cutoffs[1], sep="")
+  for(i in 1:(length(cutoffs)-1)){
+    catNames[i+1] <- paste("[",cutoffs[i],", ",cutoffs[i+1],"[",sep="")
+  }
+  catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
+  if (na.yes) catNames[length(cutoffs) + 2] <- "Missing"
+  names(x.freq.counts) <- catNames
+
+  # make a table:
+  x.freq.counts.tab <- makeFreqTable(x.freq.counts)
+  colnames(x.freq.counts.tab)[1] <- varname
+  x.freq.counts.tab[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
+
+  # do the same by separately for each rule:
+  if (by.rule) {
+    setkeyv(wts.data, cols = "rule.name.TRT")
+    x.freq.counts.byrule <- wts.data[, hist(cumm.IPAW, breaks = cutoffs2, plot = FALSE, include.lowest = TRUE, right = TRUE)$counts, by = rule.name.TRT]
+  } else {
+    x.freq.counts.byrule <- NULL
+  }
+
+  # do the same by separately for each t:
+  # if (by.time) {
+  #   setkeyv(wts.data, cols = "rule.name.TRT")
+  # }
+
+  # hist2 <- wts.data[, hist(cumm.IPAW, plot = FALSE, include.lowest = TRUE, right = TRUE)]
+  # plot(hist2)
+  # breaks <- hist$breaks
+  # x.freq.counts <- hist$counts
+  # x.freq.sum <- rep(NA, length(cutoffs) + 1 + as.integer(na.yes))
+  # for (idx in (1:length(cutoffs))) {
+  #   wts.data[, sum(cumm.IPAW >= cutoffs2[idx] & cumm.IPAW < cutoffs2[idx + 1], na.rm=TRUE) ]
+  # }
+  # IPAWdist <- makeSumFreqTable(table(wts.data[["cumm.IPAW"]]), cutoffs, varname)
+
+  setkeyv(wts.data, cols = old.keys)
+  return(list(summary.table = x.freq.counts.tab, summary.table.byrule = x.freq.counts.byrule))
+}
+
 
 
 make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.period, se.RDscale.Sdt.K){
@@ -214,18 +277,6 @@ defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1
   DT[, ("indx") := NULL]
   return(DT)
 }
-
-
-#' @export
-get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)) {
-  quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99)
-  quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999)
-  IPAWdist <- makeSumFreqTable(table(wts.data[["cumm.IPAW"]]),
-                              cutoffs,
-                              "Stabilized IPAW")
-  return(IPAWdist)
-}
-
 
 #' @export
 get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {

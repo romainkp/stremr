@@ -73,9 +73,11 @@ panderOptions('knitr.auto.asis', TRUE)
 #' # Distribution of the weights
 
 #+ echo=FALSE
-IPAWdist <- get_wtsummary(MSM$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
+IPAWdists <- get_wtsummary(MSM$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
+IPAWdistALL <- IPAWdists$summary.table
+IPAWdistByRule <- IPAWdists$summary.table.byrule
 pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
-pander::pander(IPAWdist, justify = c('right', rep("left",ncol(IPAWdist)-1)))
+pander::pander(IPAWdistALL, justify = c('right', rep("left",ncol(IPAWdistALL)-1)))
 
 #'\pagebreak
 #'
