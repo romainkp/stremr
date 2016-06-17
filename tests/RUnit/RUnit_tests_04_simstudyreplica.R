@@ -286,8 +286,8 @@ tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 # MSM for hazard with regular weights:
 MSM.IPAW <- get_survMSM(OData, wts.data = wts.all,
                         tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW", getSEs = FALSE)
-RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE)
+                        use.weights = TRUE, est.name = "IPAW", getSEs = TRUE)
+RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE)
 IPWdist <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
 #    Stabilized IPAW Frequency \\%     Cumulative Frequency Cumulative \\%
 # 1  "<0"            "    0"   " 0.00" "    0"              "  0.00"

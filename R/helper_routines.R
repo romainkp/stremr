@@ -158,7 +158,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
 #'  This new column MONITOR(t) is the indicator of being monitored (having a doctors visit) at time-point t+1 the indicator of the
 #'  imputation (having observed/measured biomarker) at time-point t+1.
 #' @param tsinceNis1 The name of the future column (created by this routine) that counts number of periods since last monitoring event at t-1. More precisely,
-#' it is a function of the past \bar{N}(t−1), where 0 means that N(t−1)=1; 1 means that N(t−2)=1 and N(t−1)=0; etc.
+#' it is a function of the past \code{bar{N}(t−1)}, where 0 means that N(t−1)=1; 1 means that N(t−2)=1 and N(t−1)=0; etc.
 #'
 #' @section Details:
 #'
