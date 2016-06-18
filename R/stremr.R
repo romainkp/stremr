@@ -308,32 +308,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 #'    \deqn{\psi^{IPTW}_n = \sum_{i=1,...,N}{Y_i \frac{P_{g^*_N}(A^*(t)=A_i(t) | L(t)=L_i(t))}{P_{g_N}(A(t)=A_i(t) | L(t)=L_i(t))}}.}
 #' }
 #'
-#' @return A named list with 3 items containing the estimation results for:
-#'  \itemize{
-#'  \item \code{EY_gstar1} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar1} \eqn{(E_{g^*_1}[Y])}.
-#'  \item \code{EY_gstar2} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar2} \eqn{(E_{g^*_2}[Y])},
-#'    \code{NULL} if \code{f_gstar2} not specified.
-#'  \item \code{ATE} - additive treatment effect (\eqn{E_{g^*_1}[Y]} - \eqn{E_{g^*_2}[Y]}) under interventions \code{f_gstar1}
-#'    vs. in \code{f_gstar2}, \code{NULL} if \code{f_gstar2} not specified.
-#' }
-#'
-#' Each list item above is itself a list containing the items:
-#'  \itemize{
-#'  \item \code{estimates} - various estimates of the target parameter (network population counterfactual mean under
-#'    (stochastic) intervention).
-#'  \item \code{vars} - the asymptotic variance estimates for \strong{IPTW}.
-#'  \item \code{CIs} - CI estimates at \code{alpha} level for \strong{IPTW}.
-#'  \item \code{other.vars} - Placeholder for future versions.
-# \item \code{h_g0_GenericModel} - The model fits for P(\code{sA}|\code{sW}) under observed exposure mechanism
-#    \code{g0}. This is an object of \code{GenericModel} \pkg{R6} class.
-#  \item \code{h_gstar_GenericModel} - The model fits for P(\code{sA}|\code{sW}) under intervention \code{f_gstar1}
-#    or \code{f_gstar2}. This is an object of \code{GenericModel} \pkg{R6} class.
-#' }
-#'
-#' Currently implemented estimators are:
-#'  \itemize{
-#'  \item \code{iptw} - IPTW
-#' }
+#' @return ...
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/1_stremr_example.R
 #' @export
@@ -364,47 +339,29 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
 # - Check that CENSor is either binary (integer or convert to integer) or categorical (integer or convert to integer)
 # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
 # ------------------------------------------------------------------------------------------------------------------------------
-# - (DONE) Save the weights at each t and save the cummulative weights for all observations who were following the rule (g.CAN(O_i)>0)
-# - (DONE) Split the main function into building blocks that can be piped together
-# - (DONE) Flip the CENSoring indicator for categorical CENS to make sure the reference category (noCENS.cat) IS ALWAYS CODED AS LAST
-# - (DONE) When CENS[i] is binary and length(CENS)>1:
-  # (1) Specify subset rule for i>1: (CENS[1]==0 & CENS[2]==0 & ... & CENS[i-1]==0)
-  # (2) An alternative: collapse CENS into a categorical (automatically), based on the ordering in CENS. Then the fitting of categoricals will perform all the subsetting correctly.
-  # (3) Alternative: set the indicators of missingness in the right way for CENS[i] if any CENS[1], ..., CENS[i-1] are 1.
-# - (DONE) Stratification - allows K models on the SAME OUTCOME by stratifying rule
-  # (1) User specified rule function creates strata. (stratify.CENS, stratify.TRT, stratify.MONITOR) Note that if the rule is based on data.table syntax it will be VERY FAST!
-  # A nice trick would be to be able to AUTOMATICALLY convert logical subset expressions to data.table statements -> Its possible with some meta-programming and parsing
-  # (2) These subsets (logical vectors) define K regressions, one regression model for each subset expression
-  # Can specify K regressions in gform.CENS/gform.TRT/gform.MONITOR. If only one regression is specified it will be aplied to ALL stratas.
-  # Otherwise stratas should be specified as a named list of K items
 stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
                               covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                               gform.CENS, gform.TRT, gform.MONITOR,
                               stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL,
                               gstar.TRT = NULL, gstar.MONITOR = NULL, noCENS.cat = 0L,
                               verbose = getOption("stremr.verbose"), optPars = list()) {
-
   # ------------------------------------------------------------------
   # - BLOCK 1: Process inputs and define OData R6 object
   # ------------------------------------------------------------------
   OData <- get_Odata(data, ID, t.name, covars, CENS, TRT, MONITOR, OUTCOME, noCENS.cat, SHIFTUPoutcome, verbose)
-
   # ------------------------------------------------------------------
   # - BLOCK 2: define regression models, define a single RegressionClass & fit the propensity score for observed data, summary.g0 g0 (C,A,N)
   # ------------------------------------------------------------------
   OData <- get_fits(OData, gform.CENS, gform.TRT, gform.MONITOR, stratify.CENS, stratify.TRT, stratify.MONITOR)
-
   # ---------------------------------------------------------------------------------------
   # - BLOCK 3: evaluate weights based gstar.TRT, gstar.MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
   # ---------------------------------------------------------------------------------------
   wts.DT <- get_weights(OData, gstar.TRT, gstar.MONITOR)
-
   # ---------------------------------------------------------------------------------------
   # - BLOCK 4A: Non-parametric MSM for survival, with weight stabilization, input either single weights dataset or a list of weights datasets,
   # Each dataset containing weights non-zero weights for single regimen
   # ---------------------------------------------------------------------------------------
   IPW_estimates <- get_survNPMSM(data.wts, OData)
-
   # ---------------------------------------------------------------------------------------
   # - BLOCK 5: Builds a report with weight distributions, survival estimates, etc.
   # ---------------------------------------------------------------------------------------

@@ -217,9 +217,9 @@ require("h2o")
 h2o::h2o.init(nthreads = 2)
 # stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "glm", fit.algorithm = "GLM")
-# stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h20.GLM"
+stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h20.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h20.RF"
-stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h20.GBM"
+# stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h20.GBM"
 
 OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
@@ -284,8 +284,8 @@ wts.all <- rbindlist(wts.all.list)
 
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 # MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(OData, wts.data = wts.all,
-                        tjmin = tjmin, tjmax = tjmax,
+MSM.IPAW <- get_survMSM(OData, wts.data = wts.all, t.breaks = tjmax,
+                        # tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, est.name = "IPAW", getSEs = TRUE)
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 

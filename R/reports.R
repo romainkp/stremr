@@ -42,7 +42,7 @@ openFileInOS <- function(f) {
 #' @param MSMlist ...NOT IMPLEMENTED...
 #' @param SurvByRegimen ... NOT IMPLEMENTED...
 #' @param RDtables List of tables with risk differences returned by the function \code{get_MSM_RDs}.
-#' @param WTtables Table(s) with distribution of the IPTW weights, a result of calling the function \code{get_wtsummary}
+#' @param WTtables Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}
 #' @param format Choose the Pandoc output format for the report file (html, pdf or word).
 #' Note that the html report file is always produced in addition to any other selected format.
 #' @param skip.modelfits Do not report any of the modeling stats.
@@ -91,6 +91,8 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables, RDtabl
   # -------------------------------------------------------------------------------------
   # TO DO: DISCRIPTIVE STATISTICS
   # -------------------------------------------------------------------------------------
+  # *** Hisogram of follow-up times by rule (based on the last value of t for each ID);
+  # *** A table of summary(fuptimes), with quantiles, min, max, ...
   # sVartypes <- gvars$sVartypes
   # For each covariate in OData$nodes, create either:
     # 1) a density plot for each  OData$type.sVar[varnames] %in% sVartypes$cont
@@ -171,86 +173,3 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables, RDtabl
   setwd(wd.bak)
   return(file.path(file.path, outfile))
 }
-
-
-
-# @export
-# make_report <- function(OData, Surv.byregimen, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path')) {
-#   sVartypes <- gvars$sVartypes
-#   ## path issue on Windows
-#   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
-
-#   # find the full path to the report template:
-#   report.file <- system.file('report', "graphs.brew", package = 'stremr')
-#   # read in the report file:
-#   # txt <- readLines(report.file, warn = FALSE, encoding = 'UTF-8') # load template from file path
-
-#   ## pregenerate file name
-#   # if (grepl('%T', file.name)) file.name <- gsub('%T', gsub('\\\\|/|:|\\.', '-', fp), file.name, fixed = TRUE)
-#   # file.name <- gsub('--', '-', file.name, fixed = TRUE)
-#   # if (grepl('%N', file.name)) {
-#   #   if (length(strsplit(sprintf('placeholder%splaceholder', file.name), '%N')[[1]]) > 2) stop('File name contains more then 1 "%N"!')
-#   #   similar.files <-  list.files(file.path(file.path, 'plots'), pattern = sprintf('^%s\\.(jpeg|tiff|png|svg|bmp)$', gsub('%t', '[a-z0-9]*', gsub('%N|%n|%i', '[[:digit:]]*', file.name))))
-#   #   if (length(similar.files) > 0) {
-#   #     similar.files <- sub('\\.(jpeg|tiff|png|svg|bmp)$', '', similar.files)
-#   #     rep <- gsub('%t|%n|%i', '[a-z0-9]*', strsplit(basename(file.name), '%N')[[1]])
-#   #     `%N` <- max(as.numeric(gsub(paste(rep, collapse = '|'), '', similar.files))) + 1
-#   #   } else
-#   #     `%N` <- 1
-#   #   file.name <- gsub('%N', `%N`, file.name, fixed = TRUE)
-#   # }
-
-#   ## set working directory where to write the report:
-#   opts.bak <- options()                      # backup options
-#   wd.bak   <- getwd()
-#   setwd(file.path)
-
-#   # browser()
-#   # evalsOptions('graph.name', file.name)
-#   # assign('.rapport.body', paste(b, collapse = '\n'), envir = e)
-#   # assign('.graph.name', file.name, envir = e)
-#   # assign('.graph.dir', evalsOptions('graph.dir'), envir = e)
-#   # assign('.graph.hi.res', graph.hi.res, envir = e)
-#   # if (grepl("w|W", .Platform$OS.type)) # we are on Windows
-#   #   assign('.tmpout', 'NUL', envir = e)
-#   # else
-#   #   assign('.tmpout', '/dev/null', envir = e)
-#   # report <- tryCatch(eval(parse(text = 'Pandoc.brew(text = .rapport.body, graph.name = .graph.name, graph.dir = .graph.dir, graph.hi.res = .graph.hi.res, output = .tmpout)'), envir = e), error = function(e) e)
-
-#   ## Initialize a new Pandoc object
-#   myReport <- Pandoc$new()
-#   ## Add author, title and date of document
-#   myReport$author <- 'Gergely Daróczi'
-#   myReport$title  <- 'Demo'
-#   ## Add some free text
-#   myReport$add.paragraph('Hello there, this is a really short tutorial!')
-#   ## Add maybe a header for later stuff
-#   myReport$add.paragraph('# Showing some raw R objects below')
-
-#   # graph.dir = 'my_plots',
-#   # evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result
-#   # myReport$add.paragraph(evals('f_plot_survest(Surv.byregimen)', graph.output = 'png')[[1]]$result)
-#   evalsOptions('graph.unify', FALSE)
-#   # browser()
-#   # str(myReport)
-#   myReport$add(f_plot_survest(Surv.byregimen))
-#   print(file.path)
-#   print(file.name)
-#   # print(myReport)
-#   myReport$format <- 'md'
-#   myReport$export(file.name, open = FALSE)
-
-#   # report.file <- system.file('report', "graphs.brew", package = 'stremr')
-#   report.file <- system.file('report', "short-code-long-report.brew", package = 'stremr')
-
-#   Pandoc.brew(file = report.file, output = file.name %+% "." %+% myReport$format, convert = FALSE,
-#               open = FALSE,
-#               envir = parent.frame(), append = TRUE)
-#               # graph.name, graph.dir, graph.hi.res = FALSE, text = NULL,
-
-#   Pandoc.convert(file.name %+% "." %+% myReport$format, format = 'html', open = TRUE)
-#   getwd()
-#   # resetting directory and other options
-#   options(opts.bak)
-#   setwd(wd.bak)
-# }

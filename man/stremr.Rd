@@ -69,28 +69,7 @@ for variables specifed in \code{CENS}.}
 \code{h_g0_GenericModel} and \code{h_gstar_GenericModel}. See Details below for the description of each parameter.}
 }
 \value{
-A named list with 3 items containing the estimation results for:
- \itemize{
- \item \code{EY_gstar1} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar1} \eqn{(E_{g^*_1}[Y])}.
- \item \code{EY_gstar2} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar2} \eqn{(E_{g^*_2}[Y])},
-   \code{NULL} if \code{f_gstar2} not specified.
- \item \code{ATE} - additive treatment effect (\eqn{E_{g^*_1}[Y]} - \eqn{E_{g^*_2}[Y]}) under interventions \code{f_gstar1}
-   vs. in \code{f_gstar2}, \code{NULL} if \code{f_gstar2} not specified.
-}
-
-Each list item above is itself a list containing the items:
- \itemize{
- \item \code{estimates} - various estimates of the target parameter (network population counterfactual mean under
-   (stochastic) intervention).
- \item \code{vars} - the asymptotic variance estimates for \strong{IPTW}.
- \item \code{CIs} - CI estimates at \code{alpha} level for \strong{IPTW}.
- \item \code{other.vars} - Placeholder for future versions.
-}
-
-Currently implemented estimators are:
- \itemize{
- \item \code{iptw} - IPTW
-}
+...
 }
 \description{
 Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring process.

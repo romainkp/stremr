@@ -5,8 +5,6 @@
 #' @export
 get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                       noCENS.cat = 0L, verbose = getOption("stremr.verbose")) {
-# SHIFTUPoutcome = TRUE,
-
   gvars$verbose <- verbose
   gvars$noCENS.cat <- noCENS.cat
   if (verbose) {
@@ -21,7 +19,6 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   # The ordering of variables in this list is the assumed temporal order!
   nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t.name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENS.cat = noCENS.cat)
-
   # --------------------------------------------------------------------------------------------------------
   # Create dummies for factors
   # --------------------------------------------------------------------------------------------------------
@@ -51,32 +48,11 @@ get_Odata <- function(data, ID = "Subj_ID", t.name = "time_period", covars, CENS
   for (logical.varnm in logical.Ls) {
     OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   }
-
-  # # ---------------------------------------------------------------------------
-  # # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
-  # # Might expand this in the future to allow defining arbitrary summaries
-  # # ---------------------------------------------------------------------------
-  # lagnodes <- c(nodes$Cnodes, nodes$Anodes, nodes$Nnodes)
-  # newVarnames <- lagnodes %+% ".tminus1"
-  # OData$dat.sVar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=get(nodes$ID), .SDcols=(lagnodes)]
-  # # -------------------------------------------------------------------------------------------
-  # # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
-  # # -------------------------------------------------------------------------------------------
-  # Ynode <- nodes$Ynode
-  # shifted.OUTCOME <- Ynode%+%".tplus1"
-  # if (SHIFTUPoutcome) {
-  #   OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
-  # } else {
-  #   OData$dat.sVar[, (shifted.OUTCOME) := get(Ynode)]
-  # }
-  # # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
-
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
   for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
-
   return(OData)
 }
 
@@ -121,40 +97,11 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
   ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
   ALL_g_regs$S3class <- "generic"
   modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
-
-  # modelfits.g0$fit(data = OData)
   modelfits.g0$fit(data = OData, predict = TRUE)
-
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
-
-  # h_gN <- modelfits.g0$predictAeqa(newdata = OData)
   h_gN <- modelfits.g0$predictAeqa(n = OData$nobs)
-
-  # ------------------------------------------------------------------------------------------
-  # Evaluate indicator EVENT_IND that the person had experienced the outcome = 1 at any time of the follow-up:
-  # ..... NOT REALLY NEEDED ......
-  # ------------------------------------------------------------------------------------------
-  # EVENT_IND <- "Delta"
-  # if (EVENT_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(EVENT_IND):=NULL]
-  # OData$dat.sVar[,(EVENT_IND):=as.integer(any(get(OUTCOME) %in% 1)), by = eval(ID)]
-  # ------------------------------------------------------------------------------------------
-  # Evaluate the indicator that this person was right-censored at some point in time:
-  # ..... NOT REALLY NEEDED ......
-  # ------------------------------------------------------------------------------------------
-  # CENS_IND <- "AnyCensored"
-  # if (CENS_IND %in% names(OData$dat.sVar)) OData$dat.sVar[,(CENS_IND):=NULL]
-  # # noCENS.cat <- 0L; CENS <- c("C")
-  # OData$dat.sVar[, (CENS_IND) := FALSE, by = eval(ID)]
-  # for (Cvar in CENS) {
-  #   OData$dat.sVar[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
-  # }
-  # OData$dat.sVar[, (CENS_IND) := as.integer(get(CENS_IND))]
-  # ------------------------------------------------------------------------------------------
-  # Evaluate the total duration of the follow-up for each observation
-  # ..... NOT REALLY NEEDED ......
-  # ------------------------------------------------------------------------------------------
 
   # ------------------------------------------------------------------------------------------
   # Observed likelihood of (A,C,N) at each t, based on fitted object models in object modelfits.g0
@@ -188,7 +135,6 @@ get_fits <- function(OData, gform.CENS, gform.TRT, gform.MONITOR,
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
 #' @export
-#modelfits.g0,
 get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   nodes <- OData$nodes
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
@@ -202,7 +148,7 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # ------------------------------------------------------------------------------------------------------------------------------
   # indicator that the person is uncensored at each t (continuation of follow-up)
   # gstar.C <- "gstar.C"
-  OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD) == eval(OData$noCENS.cat)), .SDcols = nodes$Cnodes]
+  OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENS.cat)), .SDcols = nodes$Cnodes]
   # probability of following the rule at t, under intervention gstar.A on A(t)
   # **** NOTE ****
   # if gstar.TRT is a function then call it, if its a list of functions, then call one at a time.
@@ -223,14 +169,12 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   } else {
     gstar.N <- as.name("g0.N") # use the actual observed monitoring probability (no intervention on MONITOR)
   }
-  # OData$dat.sVar[, "gstar.N" := get(gstar.N)]
 
   # Joint probability for all 3:
   OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
 
   # Weights by time and cummulative weights by time:
   OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
-  # OData$dat.sVar[1:100,]
 
   # -------------------------------------------------------------------------------------------
   # Weight stabilization - get emp P(followed rule at time t | followed rule up to now)
@@ -240,18 +184,13 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   # THE DENOMINATOR: divide above by the total number of subjects who were still at risk of NOT FOLLOWING the rule at t
   # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
   # (The total sum of all subjects who WERE AT RISK at t)
-  # In memory version (all at once inside data.table, by reference):
-  # OData$dat.sVar[, N.follow.rule := sum(eval(gstar.A), na.rm = TRUE), by = eval(t.name)]
-  # OData$dat.sVar[, cum.stab.P2 := cumprod(N.follow.rule / shift(N.follow.rule, fill = nIDs, type = "lag")), by = eval(ID)]
-
-  # (MUCH FASTER) Version outside data.table, then merge back results:
+  # (FASTER) Version outside data.table, then merge back results:
   n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
-  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
-
+  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 0)][, cum.stab.P := cumprod(stab.P)]
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
-  setkeyv(n.follow.rule.t, cols=nodes$tnode)
+  setkeyv(n.follow.rule.t, cols = nodes$tnode)
+
   OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]
-  # equivalent: OData$dat.sVar <- merge(OData$dat.sVar, n.follow.rule.t, by = nodes$tnode)
   setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
 
   # Disabled: remove all observation-times that got zero weight:
@@ -261,23 +200,15 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
 
   Ynode <- nodes$Ynode # Get the outcome var:
-  # shifted.OUTCOME <- Ynode%+%".tplus1"
-
-  # OData$dat.sVar[, (shifted.OUTCOME) := shift(get(Ynode), n = 1L, type = "lead"), by = eval(nodes$IDnode)]
-  # OData$dat.sVar <- OData$dat.sVar[!is.na(get(shifted.OUTCOME)), ] # drop and over-write previous data.table, removing last rows.
 
   # Multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
   OData$dat.sVar[, "Wt.OUTCOME" := get(Ynode)*cumm.IPAW]
   # OData$dat.sVar[, "Wt.OUTCOME" := get(shifted.OUTCOME) * cumm.IPAW]
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
-  # row_idx_outcome <- OData$dat.sVar[, .I[get(shifted.OUTCOME) %in% 1L], by = eval(ID)][["V1"]]
-  # OData$dat.sVar[101:200, ]
-  # OData$dat.sVar[1:100, ]
+  # row_idx_outcome <- OData$dat.sVar[, .I[get(Ynode) %in% 1L], by = eval(ID)][["V1"]]
 
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
-  # , na.rm = TRUE
   wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", Ynode, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
-  # wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", shifted.OUTCOME, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
   wts.DT[, "rule.name.TRT" := eval(as.character(gstar.A))]
   wts.DT[, "rule.name.MONITOR" := eval(as.character(gstar.N))]
 
@@ -321,98 +252,64 @@ get_survNPMSM <- function(wts.data, OData) {
   return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
 
-
-runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
-  # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
-  # Does not handle cases with deterministic Anodes in the original data.
-  logispredict = function(m.fit, X_mat) {
-    eta <- X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-    pAout <- match.fun(FUN = m.fit$linkfun)(eta)
-    return(pAout)
-  }
-
-  if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
-    if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
-    loadframe_t <- system.time(
-      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts.data,
-                                                  saveH2O = FALSE,
-                                                  destination_frame = "MSM.designmat.H2O")
-    )
-    if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
-    # OData$fast.load.to.H2O(wts.data, )
-    # temp.csv.path <- file.path(tempdir(), "wts.data.csv~")
-    # data.table::fwrite(wts.data, temp.csv.path, turbo = TRUE)
-    # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
-
-    m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
-                                  x = all_dummies,
-                                  intercept = FALSE,
-                                  weights_column = "cumm.IPAW",
-                                  training_frame = MSM.designmat.H2O,
-                                  family = "binomial",
-                                  standardize = FALSE,
-                                  solver = c("IRLSM"), # solver = c("L_BFGS"),
-                                  lambda = 0L,
-                                  max_iterations = 50,
-                                  ignore_const_cols = FALSE
-                                  ),
-                silent = TRUE)
-
-    out_coef <- vector(mode = "numeric", length = length(all_dummies))
-    out_coef[] <- NA
-    names(out_coef) <- c(all_dummies)
-    out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
-    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
-    wts.data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
-  } else {
-    if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
-    Xdesign.mat <- as.matrix(wts.data[, all_dummies, with = FALSE])
-    m.fit <- try(speedglm::speedglm.wfit(
-                                       X = Xdesign.mat,
-                                       y = as.numeric(wts.data[[Ynode]]),
-                                       intercept = FALSE,
-                                       family = binomial(),
-                                       weights = wts.data[["cumm.IPAW"]],
-                                       trace = FALSE),
-                        silent = TRUE)
-    if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
-      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
-      ctrl <- glm.control(trace = FALSE)
-      SuppressGivenWarnings({
-        m.fit <- stats::glm.fit(x = Xdesign.mat,
-                                y = as.numeric(wts.data[[Ynode]]),
-                                family = binomial(),
-                                intercept = FALSE, control = ctrl)
-      }, GetWarningsToSuppress())
-    }
-    m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
-    if (verbose) {
-      print("MSM fits"); print(m.fit$coef)
-    }
-    wts.data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
-  }
-  return(list(wts.data = wts.data, m.fit = m.fit))
-}
-
-# ----------------------------------------------------------------------
-# TO DO: SPLIT get_survMSM INTO ESTIMATION AND INFERENCE PARTS
 # ---------------------------------------------------------------------------------------
-# - BLOCK 4C: Parametric MSM pooling many regimens, includes weight stabilization and parametric MSM (can include saturated MSM)
-# Alternative for MSM, takes a list of data sets with weights and MSMregform
-# This block runs glm.fit got obtain MSM estimates (weighted regression) that uses the outcomes from many regimens, with dummy indicators for each input regime
-# Might choose between two types of MSMs (sat vs. parametric) with S3 dispatch or by missing arg
-# ---------------------------------------------------------------------------------------
+#' Estimate Survival with a particular MSM for the survival-hazard function using previously fitted weights.
+#'
+#' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring processes based on
+#' the user-specified Marginal Structural Model (MSM) for the counterfactual survival function.
+#'
+#' This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from many regimens, with dummy indicators for each treatment/monitoring
+#' regimen available in \code{wts.data} and each follow-up time interval specified in \code{t.breaks}.
+#' When \code{use.weights = TRUE}, the logistic regression for the survival hazard is weighted by the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
+#' in \code{wts.data}. These IPW weights are based on the previously fitted propensity scores (function \code{get_fits}), allowing
+#' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly informative right-censoring.
+#' @param OData The object returned by function \code{get_fits}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
+#' right-censoring.
+#' @param wts.data A list of \code{data.table}s, each data set is a result of calling the function \code{get_weights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
+#' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts.data)}.
+#' @param t.breaks The vector of integer (or numeric) breaks that defines the dummy indicators of the follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for the survival hazard. See Details.
+#' @param use.weights Logical value. Set to \code{FALSE} to ignore the weights in \code{wts.data} and fit a "crude" MSM that does not adjust for the possible confounding due to non-random
+#' assignment of the exposure/censoring and monitoring indicators.
+#' @param trunc.weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc.weights} will be truncated.
+#' @param est.name A string naming the current MSM estimator. Ignored by the current routine but is used when generating reports with \code{make_report_rmd}.
+#' @param getSEs A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the estimated survival by using the MSM influence curve.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#'
+#' @section Details:
+#' **********************************************************************
+#' \code{t.breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the survival hazard function.
+#' The first value in \code{t.breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsquent value in \code{t.breaks} defining a single right-closed time-interval.
+#' For example, \code{t.breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ), I(0 < t <= 1) and I(1 < t <= max(t)).
+#' On the other hand \code{t.breaks = c(1)} will define the following (more parametric) MSM dummy indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
+#' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable for every unique period in the observed data.
+
+#' @section MSM for the hazard:
+#' **********************************************************************
+#'
+#' @return A named list with items containing the MSM estimation results:
+#'  \itemize{
+#'  \item \code{est.name} - .
+#'  \item \code{St} - .
+#'  \item \code{ht} - .
+#'  \item \code{MSM.fit} - .
+#'  \item \code{MSM.intervals} - .
+#'  \item \code{IC.Var.S.d} - .
+#'  \item \code{nID} - .
+#'  \item \code{wts.data} - .
+#'  \item \code{use.weights} - .
+#'  \item \code{trunc.weights} - .
+#' }
+#' @seealso \code{\link{stremr-package}} for the general overview of the package,
+#' @example tests/examples/4_get_survMSM_example.R
 #' @export
-get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc.weights = Inf,
-                        est.name = "IPAW", getSEs = TRUE, verbose = getOption("stremr.verbose")) {
+get_survMSM <- function(OData, wts.data, t.breaks, use.weights = TRUE, trunc.weights = 10^6, est.name = "IPAW", getSEs = TRUE, verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
-  # shifted.OUTCOME <- Ynode%+%".tplus1"
 
-  # 2a. Stack the weighted data sets:
+  # 2a. Stack the weighted data sets, if those came in a list:
   if (is.data.table(wts.data)) {
     # ...do nothing...
   } else if (is.list(wts.data)) {
@@ -427,6 +324,8 @@ get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc
 
   # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
   wts.data <- wts.data[!is.na(cumm.IPAW) & !is.na(eval(as.name(Ynode))) & (cumm.IPAW > 0), ]
+  setkeyv(wts.data, cols = c(nodes$IDnode, nodes$tnode))
+
   # 2c. If trunc.weights < Inf, do truncation of the weights
   if (trunc.weights < Inf) {
     wts.data[cumm.IPAW > trunc.weights, cumm.IPAW := trunc.weights]
@@ -437,13 +336,30 @@ get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc
   }
 
   # 2.e. define all observed sequence of periods (t's)
-  mint <- min(wts.data[[t.name]])
-  maxt <- max(wts.data[[t.name]])
-  periods <- mint:maxt
+  mint <- min(wts.data[[t.name]], na.rm = TRUE); maxt <- max(wts.data[[t.name]], na.rm = TRUE)
+  periods <- (mint:maxt)
   periods_idx <- seq_along(periods)
   if (verbose) {
     print("periods"); print(periods)
   }
+
+  # 2.f. default t.breaks, error checks for t.breaks, plus padding w/ mint & maxt:
+  if (missing(t.breaks)) {
+    # default t.breaks is to use a saturated (non-parametric) MSM
+    t.breaks <- sort(periods)
+    if (verbose)
+      message("running with default 't.breaks': (" %+%
+        paste0(t.breaks, collapse = ",") %+%
+        "); \nNote: such 't.breaks' define a separate coefficient for every unique follow-up time period resulting in a saturated (non-parametric) MSM.")
+  }
+  if (length(unique(t.breaks)) < length(t.breaks)) {
+    stop("all t.breaks must be unique")
+  }
+  if (!all(t.breaks %in% periods)) {
+    stop("all t.breaks must be contained between minimum and maximum follow-up periods:" %+% t.breaks[!(t.breaks %in% periods)])
+  }
+
+  if (max(t.breaks) < maxt) t.breaks <- sort(c(t.breaks, maxt)) # pad on the right (if needed with maxt):
 
   # 3. Create the dummies I(d == gstar.TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
@@ -454,21 +370,36 @@ get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc
 
   # 4. Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
   all.t.dummies <- NULL
-  for( year.j in 1:length(tjmin)){
-    dummy.j <- paste("Periods.",tjmin[year.j],"to",tjmax[year.j],sep="")
-    wts.data[, (dummy.j) := as.integer(eval(as.name(t.name)) >= tjmin[year.j] & eval(as.name(t.name)) <= tjmax[year.j])]
+  t.breaks.mint <- c(mint, t.breaks) # pad t.breaks on the left (with mint)
+  MSM.intervals <- matrix(NA, ncol = 2, nrow = length(t.breaks)) # save the actual intervals
+  colnames(MSM.intervals) <- c("min.t", "max.t")
+  t.per.inteval <- vector(mode = "list", length = nrow(MSM.intervals)) # save the vector of period vals that belong to each interval
+  for (t.idx in 2:length(t.breaks.mint)) {
+    low.t <- t.breaks.mint[t.idx - 1]
+    high.t <- t.breaks.mint[t.idx]
+    # First interval needs to be closed on both sides (includes the smallest obesrved follow-up, mint)
+    if (t.idx == 2L) {
+      dummy.j <- paste("Periods.", low.t, "to", high.t, sep="")
+      MSM.intervals[t.idx - 1, ] <- c(low.t, high.t); t.per.inteval[[t.idx - 1]] <- unique(low.t:high.t)
+      wts.data[, (dummy.j) := as.integer(eval(as.name(t.name)) >= low.t & eval(as.name(t.name)) <= high.t)]
+    } else {
+      dummy.j <- paste("Periods.", (low.t + 1), "to", high.t, sep="")
+      MSM.intervals[t.idx - 1, ] <- c(low.t + 1, high.t); t.per.inteval[[t.idx - 1]] <- unique((low.t+1):high.t)
+      wts.data[, (dummy.j) := as.integer(eval(as.name(t.name)) >= (low.t + 1) & eval(as.name(t.name)) <= high.t)]
+    }
+    print("defined t.dummy: " %+% dummy.j)
     all.t.dummies <- c(all.t.dummies, dummy.j)
   }
 
   # 5. Create interaction dummies I(t in interval.j & d == gstar.TRT)
   for (d.dummy in all.d.dummies) {
     for (t.dummy in all.t.dummies) {
-      if (verbose) print(t.dummy %+% "_" %+% d.dummy)
+      if (verbose)
+        print(t.dummy %+% "_" %+% d.dummy)
       wts.data[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
     }
   }
 
-  setkeyv(wts.data, cols = c(nodes$IDnode, nodes$tnode))
   all_dummies <-  paste(sapply(all.d.dummies, function(x) {
                         return(paste(paste(paste(all.t.dummies, x, sep="_"), sep="")))
                         }))
@@ -483,13 +414,18 @@ get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc
   names(S2.IPAW) <- names(hazard.IPAW) <- rules.TRT
 
   if (verbose) message("...evaluating MSM-based survival curves...")
-
   for(d.j in names(S2.IPAW)) {
-    for(period.idx in seq_along(periods)){
-      period.j <- periods[period.idx]
-      rev.term <- paste0("Periods.",tjmin[max(which(tjmin <= period.j))], "to", tjmax[min(which(tjmax >= period.j))],"_",d.j)
-      hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit$coef[rev.term]))
-      S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit$coef[rev.term])))
+    for(period.idx in seq_along(periods)) {
+      period.j <- periods[period.idx] # the period of the follow-up for which we want to evaluate the MSM-based survival:
+      # the dummy coefficient of the MSM that includes this time-point (period)
+      # that is, find the appropriate right-closed interval from MSM.intervals matrix for a given period.j:
+      int_idx <- which(period.j <= MSM.intervals[,2] & period.j >= MSM.intervals[,1])
+      if (!(period.j %in% t.per.inteval[[int_idx]])) stop("error while finding the appropriate MSM coefficient")
+      d.j.idx <- which(all.d.dummies %in% d.j)
+      MSM.term <- all_dummies[length(all.t.dummies)*(d.j.idx - 1) + int_idx]
+      print("fetching MSM coefficient for period " %+% period.j %+% " and rule " %+% d.j %+% ": " %+% MSM.term)
+      hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit$coef[MSM.term]))
+      S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit$coef[MSM.term])))
     }
     S2.IPAW[[d.j]] <- cumprod(S2.IPAW[[d.j]])
   }
@@ -510,9 +446,10 @@ get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc
     # p.coef - number of time-specific coefficients in the MSM
     p.coef <- length(tjmin)
     design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
-    for (t.indx in seq_along(periods)) {
-      col.idx <- which(tjmin <= periods[t.indx] & tjmax >= periods[t.indx])
-      design.t[t.indx, col.idx] <- 1
+    for (period.idx in seq_along(periods)) {
+      period.j <- periods[period.idx]
+      col.idx <- which(period.j <= MSM.intervals[,2] & period.j >= MSM.intervals[,1])
+      design.t[period.idx, col.idx] <- 1
     }
     beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
                               MSMdata = wts.data, MSMdesign = as.matrix(wts.data[, all_dummies, with = FALSE]),
@@ -531,13 +468,12 @@ get_survMSM <- function(OData, wts.data, tjmin, tjmax, use.weights = TRUE, trunc
   } else {
     IC.Var.S.d <- NULL
   }
-
-
   MSM_out <- list(
               est.name = est.name,
               St = S2.IPAW,
               ht = hazard.IPAW,
               MSM.fit = m.fit,
+              MSM.intervals = MSM.intervals,
               IC.Var.S.d = IC.Var.S.d,
               nID = nID, periods = periods,
               wts.data = wts.data,

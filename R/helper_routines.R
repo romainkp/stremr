@@ -1,3 +1,76 @@
+runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
+  # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
+  # Does not handle cases with deterministic Anodes in the original data.
+  logispredict = function(m.fit, X_mat) {
+    eta <- X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
+    pAout <- match.fun(FUN = m.fit$linkfun)(eta)
+    return(pAout)
+  }
+  if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
+    if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
+    loadframe_t <- system.time(
+      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts.data,
+                                                  saveH2O = FALSE,
+                                                  destination_frame = "MSM.designmat.H2O")
+    )
+    if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
+    # OData$fast.load.to.H2O(wts.data, )
+    # temp.csv.path <- file.path(tempdir(), "wts.data.csv~")
+    # data.table::fwrite(wts.data, temp.csv.path, turbo = TRUE)
+    # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
+    # na.wts.idx <- which(as.logical(is.na(MSM.designmat.H2O[, "cumm.IPAW"])))
+    # MSM.designmat.H2O[na.wts.idx, ]
+    # wts.data[na.wts.idx, ]
+    m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
+                                  x = all_dummies,
+                                  intercept = FALSE,
+                                  weights_column = "cumm.IPAW",
+                                  training_frame = MSM.designmat.H2O,
+                                  family = "binomial",
+                                  standardize = FALSE,
+                                  solver = c("IRLSM"), # solver = c("L_BFGS"),
+                                  lambda = 0L,
+                                  max_iterations = 50,
+                                  ignore_const_cols = FALSE
+                                  ),
+                silent = TRUE)
+
+    out_coef <- vector(mode = "numeric", length = length(all_dummies))
+    out_coef[] <- NA
+    names(out_coef) <- c(all_dummies)
+    out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
+    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
+    wts.data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
+  } else {
+    if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+    Xdesign.mat <- as.matrix(wts.data[, all_dummies, with = FALSE])
+    m.fit <- try(speedglm::speedglm.wfit(
+                                       X = Xdesign.mat,
+                                       y = as.numeric(wts.data[[Ynode]]),
+                                       intercept = FALSE,
+                                       family = binomial(),
+                                       weights = wts.data[["cumm.IPAW"]],
+                                       trace = FALSE),
+                        silent = TRUE)
+    if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
+      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
+      ctrl <- glm.control(trace = FALSE)
+      SuppressGivenWarnings({
+        m.fit <- stats::glm.fit(x = Xdesign.mat,
+                                y = as.numeric(wts.data[[Ynode]]),
+                                family = binomial(),
+                                intercept = FALSE, control = ctrl)
+      }, GetWarningsToSuppress())
+    }
+    m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+    if (verbose) {
+      print("MSM fits"); print(m.fit$coef)
+    }
+    wts.data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+  }
+  return(list(wts.data = wts.data, m.fit = m.fit))
+}
+
 # ---------------------------------------------------------------------------------------------
 # (OLD) Helper routine to obtain the follow-up time -> Needs to be re-written
 # ---------------------------------------------------------------------------------------------
@@ -22,64 +95,48 @@ makeFreqTable <- function(rawFreq){
   fineFreq <- as.matrix(fineFreq)
   return(fineFreq)
 }
-
-
 # ----------------------------------------------------------------
 #### SUMMARY STATISTICS
 # ----------------------------------------------------------------
-makeSumFreqTable <- function(x.freq, cutoffs, varName){
-  if(class(cutoffs)=="Date"){
-    x.values <- as.Date(names(x.freq))
-  }else{
-    x.values <- names(x.freq)
-  }
-  # na.yes <- as.logical(sum(is.na(as.numeric(x.values))))
-  na.yes <- any(is.na(as.numeric(x.values)))
+# makeSumFreqTable <- function(x.freq, cutoffs, varName){
+#   if(class(cutoffs)=="Date"){
+#     x.values <- as.Date(names(x.freq))
+#   }else{
+#     x.values <- names(x.freq)
+#   }
+#   # na.yes <- as.logical(sum(is.na(as.numeric(x.values))))
+#   na.yes <- any(is.na(as.numeric(x.values)))
 
-  # x.freq.sum <- rep(NA, length(cutoffs) + 1 + as.numeric(na.yes))
-  x.freq.sum <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
+#   # x.freq.sum <- rep(NA, length(cutoffs) + 1 + as.numeric(na.yes))
+#   x.freq.sum <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
 
-  x.freq.sum[1] <- sum(x.freq[ as.numeric(x.values) < cutoffs[1] ], na.rm = TRUE)
-  for(i in 1:(length(cutoffs)-1)) {
-    x.freq.sum[1+i] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[i] & as.numeric(x.values) < cutoffs[i+1] ], na.rm=TRUE)
-  }
-  x.freq.sum[length(cutoffs) + 1] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[length(cutoffs)] ], na.rm=TRUE)
-  if (na.yes) {
-    x.freq.sum[length(cutoffs)+2] <- x.freq[ is.na(as.numeric(x.values)) ]
-  }
+#   x.freq.sum[1] <- sum(x.freq[ as.numeric(x.values) < cutoffs[1] ], na.rm = TRUE)
+#   for(i in 1:(length(cutoffs)-1)) {
+#     x.freq.sum[1+i] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[i] & as.numeric(x.values) < cutoffs[i+1] ], na.rm=TRUE)
+#   }
+#   x.freq.sum[length(cutoffs) + 1] <- sum(x.freq[ as.numeric(x.values) >= cutoffs[length(cutoffs)] ], na.rm=TRUE)
+#   if (na.yes) {
+#     x.freq.sum[length(cutoffs)+2] <- x.freq[ is.na(as.numeric(x.values)) ]
+#   }
 
-  catNames <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
-  catNames[1] <- paste("<", cutoffs[1], sep="")
-  for(i in 1:(length(cutoffs)-1)){
-    catNames[i+1] <- paste("[",cutoffs[i],", ",cutoffs[i+1],"[",sep="")
-  }
-  catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
-  if(na.yes) catNames[length(cutoffs)+2] <- "Missing"
-  names(x.freq.sum) <- catNames
-  x.freq.sum <- makeFreqTable(x.freq.sum)
-  colnames(x.freq.sum)[1] <- varName
-  x.freq.sum[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
-  return(x.freq.sum)
-}
-# library(Hmisc)
-# sink(file.path(res_outf_newdat, "NewIPAWdistNonITTm0.tex"))
-# latex(IPAWdist,file="",where="!htpb",colheads=colnames(IPAWdist),
-#   caption = paste("Distribution of the stabilized IPA weights for all rule-person-time observations (",
-#             length(wts.all.rules[,est.name]),
-#             ") consistent with following any of the 4 non-ITT rules with no grace period.",
-#             "Note that if a patient follows more than one rule at a given time point,",
-#             "her corresponding person-time observation is replicated as many times as the",
-#             "number of rules followed and each replicate is assigned a separate stabilized IPA weight.",
-#             "The 99\\% and 99.9\\% quantiles of the distribution of these weights are ",
-#             round(quant99,2)," and ",round(quant999,2)," respectively.",sep=""),
-#   label= "NewIPAWdistNonITTm0",booktabs=TRUE,rowname=NULL,landscape=FALSE)
-# sink()
+#   catNames <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
+#   catNames[1] <- paste("<", cutoffs[1], sep="")
+#   for(i in 1:(length(cutoffs)-1)){
+#     catNames[i+1] <- paste("[",cutoffs[i],", ",cutoffs[i+1],"[",sep="")
+#   }
+#   catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
+#   if(na.yes) catNames[length(cutoffs)+2] <- "Missing"
+#   names(x.freq.sum) <- catNames
+#   x.freq.sum <- makeFreqTable(x.freq.sum)
+#   colnames(x.freq.sum)[1] <- varName
+#   x.freq.sum[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
+#   return(x.freq.sum)
+# }
 
 #' @export
 get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE) {
   # quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99, na.rm = TRUE)
   # quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999, na.rm = TRUE)
-  # browser()
 
   # get the counts for each category (bin) + missing count:
   na.count <- sum(is.na(wts.data[["cumm.IPAW"]]))
@@ -89,9 +146,6 @@ get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   cutoffs2 <- c(-Inf, cutoffs, Inf)
   idx <- seq_along(cutoffs2); idx <- idx[-length(idx)]
   intervals_list <- lapply(idx, function(i) c(cutoffs2[i], cutoffs2[i+1]))
-
-  # old.keys <- data.table::key(wts.data)
-  # setkeyv(wts.data, cols = "rule.name.TRT")
 
   # summary <- wts.data[, summary(cumm.IPAW)]
   x.freq.counts.DT <- wts.data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE))]
@@ -164,20 +218,8 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
       RDtable[ rownames(RDtable)%in%rule1,rule2] <- c(ptCI,pval)
     }
   }
-
-  # (seq_along(dtheta)-1) *
-
   RDtable[is.na(RDtable)] <- ""
   RDtable <- cbind("d1 (row) | d2 (col)"=rep(rev(dtheta)[-length(dtheta)],each=2) , RDtable)
-
-  # RDtable[,1] <- paste(gsub("d","$d_{",RDtable[,1]),sep="")
-  # RDtable[,1] <- paste(gsub("g","}g_{",RDtable[,1]),"}$",sep="")
-
-  # RDtable[ c(0,1,2) * 2 + rep(2, each = 3), 1] <- ""
-  # colnames(RDtable)[-1] <- paste(gsub("d","$d_{",colnames(RDtable)[-1]),sep="")
-  # colnames(RDtable)[-1] <- paste(gsub("g","}g_{",colnames(RDtable)[-1]),"}$",sep="")
-  # colnames(RDtable)[1] <- c("$d_1$ (row) - $d_2$ (col)")
-
   fileText <- paste(esti,ifelse(RDscale,"RD","RR"),sep="")
   captionText2 <- ifelse(RDscale,"differences","ratios")
   captionText3 <- ifelse(RDscale,"$-$","$/$")
@@ -194,14 +236,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
       captionText3,"$d_2$, over ", t.period," periods. The risk contrasts are derived from a logistic ", model,
       " for the discrete-time hazards fitted based on ", nobs,
       " observations. Variance estimates are derived based on the influence curve of the estimator.",sep="")
-
-  # sink(file.path(res_outf_newdat, paste0(fileText,est,K,"Cm",0,"hICbased.tex")))
-  # latex(RDtable,file="",where="!htpb",colheads=colnames(RDtable),
-  #   caption = caption,
-  #   label= paste(fileText,est,K,"Cm",0,"hbased",sep=""),booktabs=TRUE,rowname=NULL,landscape=TRUE,n.rgroup=rep(2,3))
-  # sink()
   rownames(RDtable) <- NULL
-
   return(list(RDtable = RDtable, caption = caption))
 }
 
