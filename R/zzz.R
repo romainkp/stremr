@@ -65,14 +65,10 @@ print_stremr_opts <- function() {
 stremr_options <- function(
                             # useglm = FALSE,
                             # GLMpackage = c("glm", "speedglm", "h2oglm"),
-
                             # fit.package = c("glm", "speedglm", "h2o"),
-                            fit.package = c("speedglm", "glm", "h2o"),
-
                             # fit.algorithm = c("glm", "h2oGLM", "h2oGBM", "h2oRF", "h2oSL"),
+                            fit.package = c("speedglm", "glm", "h2o"),
                             fit.algorithm = c("GLM", "GBM", "RF", "SL"),
-
-
                             bin.method = c("equal.len", "equal.mass", "dhist"),
                             parfit = FALSE,
                             nbins = NA,

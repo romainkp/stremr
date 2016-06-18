@@ -287,28 +287,18 @@ tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 MSM.IPAW <- get_survMSM(OData, wts.data = wts.all,
                         tjmin = tjmin, tjmax = tjmax,
                         use.weights = TRUE, est.name = "IPAW", getSEs = TRUE)
-RDtables <- get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE)
-IPWdist <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
-#    Stabilized IPAW Frequency \\%     Cumulative Frequency Cumulative \\%
-# 1  "<0"            "    0"   " 0.00" "    0"              "  0.00"
-# 2  "[0, 0.5["      "13277"   "13.97" "13277"              " 13.97"
-# 3  "[0.5, 1["      "56487"   "59.44" "69764"              " 73.41"
-# 4  "[1, 10["       "25267"   "26.59" "95031"              "100.00"
-# 5  "[10, 20["      "    0"   " 0.00" "95031"              "100.00"
-# 6  "[20, 30["      "    0"   " 0.00" "95031"              "100.00"
-# 7  "[30, 40["      "    0"   " 0.00" "95031"              "100.00"
-# 8  "[40, 50["      "    0"   " 0.00" "95031"              "100.00"
-# 9  "[50, 100["     "    0"   " 0.00" "95031"              "100.00"
-# 10 "[100, 150["    "    0"   " 0.00" "95031"              "100.00"
-# 11 "$\\geq$ 150"   "    0"   " 0.00" "95031"              "100.00"
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
-system.time(tab1 <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)))
-#  user  system elapsed
-# 0.123   0.002   0.129
-system.time(tab2 <- get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE))
 
 # print everything:
-make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+make_report_rmd(OData, MSM = MSM.IPAW,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                WTtables = get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)),
+                file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+make_report_rmd(OData, MSM = MSM.IPAW,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                WTtables = get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+
 # omit extra h2o model output stuff (only coefficients):
 make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 # skip modeling stuff alltogether:

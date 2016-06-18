@@ -4,7 +4,7 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats and survival estimates using pandoc.}
 \usage{
-make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, RDtables,
+make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, WTtables, RDtables,
   format = c("html", "pdf", "word"), skip.modelfits = FALSE,
   file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), ...)
@@ -17,6 +17,8 @@ make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, RDtables,
 \item{MSMlist}{...NOT IMPLEMENTED...}
 
 \item{SurvByRegimen}{... NOT IMPLEMENTED...}
+
+\item{WTtables}{Table(s) with distribution of the IPTW weights, a result of calling the function \code{get_wtsummary}}
 
 \item{RDtables}{List of tables with risk differences returned by the function \code{get_MSM_RDs}.}
 
