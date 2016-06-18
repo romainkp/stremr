@@ -18,7 +18,7 @@ make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, WTtables, RDtables,
 
 \item{SurvByRegimen}{... NOT IMPLEMENTED...}
 
-\item{WTtables}{Table(s) with distribution of the IPTW weights, a result of calling the function \code{get_wtsummary}}
+\item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}}
 
 \item{RDtables}{List of tables with risk differences returned by the function \code{get_MSM_RDs}.}
 

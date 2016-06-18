@@ -57,6 +57,7 @@ adjustment for confounding by possibly non-random assignment to exposure and mon
 \section{Details}{
 
 **********************************************************************
+
 \code{t.breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the survival hazard function.
 The first value in \code{t.breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsquent value in \code{t.breaks} defining a single right-closed time-interval.
 For example, \code{t.breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ), I(0 < t <= 1) and I(1 < t <= max(t)).
