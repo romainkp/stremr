@@ -172,7 +172,6 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
 
   # Joint probability for all 3:
   OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
-
   # Weights by time and cummulative weights by time:
   OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
@@ -189,21 +188,16 @@ get_weights <- function(OData, gstar.TRT = NULL, gstar.MONITOR = NULL) {
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 0)][, cum.stab.P := cumprod(stab.P)]
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols = nodes$tnode)
-
   OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]
   setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
-
   # Disabled: remove all observation-times that got zero weight:
-  # OData$dat.sVar[cumm.IPAW > 0, ]
+  # OData$dat.sVar <- OData$dat.sVar[cumm.IPAW > 0, ]
 
   # multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since they cancel):
   OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
-
   Ynode <- nodes$Ynode # Get the outcome var:
-
   # Multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
   OData$dat.sVar[, "Wt.OUTCOME" := get(Ynode)*cumm.IPAW]
-  # OData$dat.sVar[, "Wt.OUTCOME" := get(shifted.OUTCOME) * cumm.IPAW]
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
   # row_idx_outcome <- OData$dat.sVar[, .I[get(Ynode) %in% 1L], by = eval(ID)][["V1"]]
 
@@ -230,13 +224,9 @@ get_survNPMSM <- function(wts.data, OData) {
   nodes <- OData$nodes
   t.name <- nodes$tnode
   Ynode <- nodes$Ynode
-
-  # shifted.OUTCOME <- as.name(Ynode%+%".tplus1")
-
   # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
   ht.crude <- wts.data[cumm.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t.name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t.name)
-
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
   sum_Ywt <- wts.data[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t.name)]; setkeyv(sum_Ywt, cols = t.name)
   # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t.name)]; setkeyv(sum_Ywt, cols=t.name)
@@ -247,7 +237,6 @@ get_survNPMSM <- function(wts.data, OData) {
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
   # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
-
   St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all=TRUE)
   return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
