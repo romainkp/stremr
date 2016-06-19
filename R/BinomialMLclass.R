@@ -79,12 +79,12 @@ h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mod
                    ntrees = 100,
                    balance_classes = TRUE,
                    ignore_const_cols = FALSE)
+
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.randomForest)
   if (gvars$verbose) {
-    print("running h2o.glm with args: "); print(mainArgs)
+    print("running h2o.randomForest with args: "); print(mainArgs)
   }
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
-
   # model.fit <- h2o::h2o.randomForest(x = predvars,
   #                                    y = outvar,
   #                                    training_frame = subsetH2Oframe,
@@ -112,7 +112,7 @@ h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
   if (gvars$verbose) {
-    print("running h2o.glm with args: "); print(mainArgs)
+    print("running h2o.gbm with args: "); print(mainArgs)
   }
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
   # model.fit <- h2o::h2o.gbm(x = predvars,
