@@ -208,8 +208,8 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL) {
 
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
   wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", Ynode, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
-  wts.DT[, "rule.name_TRT" := eval(as.character(gstar.A))]
-  wts.DT[, "rule.name_MONITOR" := eval(as.character(gstar.N))]
+  wts.DT[, "rule.name.TRT" := eval(as.character(gstar.A))]
+  wts.DT[, "rule.name.MONITOR" := eval(as.character(gstar.N))]
 
   # -------------------------------------------------------------------------------------------
   # NEED TO CLEAN UP OData$dat.sVar TO MAKE SURE ITS IN EXACTLY THE SAME STATE WHEN THIS FUNCTION WAS CALLED
@@ -314,8 +314,8 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
     stop("...wts_data arg must be either a list of rule-specific weight data.tables or one combined weight data.table...")
   }
 
-  rules_TRT <- sort(unique(wts_data[["rule.name_TRT"]]))
-  if (verbose) print("performing estimation for found TRT rules in column 'rule.name_TRT': " %+% paste(rules_TRT, collapse=","))
+  rules_TRT <- sort(unique(wts_data[["rule.name.TRT"]]))
+  if (verbose) print("performing estimation for found TRT rules in column 'rule.name.TRT': " %+% paste(rules_TRT, collapse=","))
 
   # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
   wts_data <- wts_data[!is.na(cumm.IPAW) & !is.na(eval(as.name(Ynode))) & (cumm.IPAW > 0), ]
@@ -359,7 +359,7 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
   # 3. Create the dummies I(d == gstar_TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
   for( dummy.j in rules_TRT ){
-    wts_data[, (dummy.j) := as.integer(rule.name_TRT %in% dummy.j)]
+    wts_data[, (dummy.j) := as.integer(rule.name.TRT %in% dummy.j)]
     all.d.dummies <- c(all.d.dummies, dummy.j)
   }
 

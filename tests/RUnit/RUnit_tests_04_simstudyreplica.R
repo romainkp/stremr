@@ -235,11 +235,10 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_
                               params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
 
 require("magrittr")
-St.dlow <- getIPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+St.dlow <- getIPWeights(OData, gstar_TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
            survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
-
 #     t  sum_Y_IPAW sum_all_IPAW           ht   St.IPTW      ht.KM     St.KM
 # 1   0  13.8596694     1743.707 0.0079483933 0.9920516 0.03088578 0.9691142
 # 2   1  13.3609872     1709.816 0.0078142829 0.9842994 0.01142514 0.9580420
@@ -258,7 +257,7 @@ St.dlow
 # 15 14   0.2335619     1362.924 0.0001713682 0.8084156 0.01701469 0.7406760
 # 16 15  10.9309710     1403.403 0.0077889054 0.8021189 0.02202990 0.7243590
 # 17 16   0.0000000        0.000          NaN       NaN         NA        NA
-St.dhigh <- getIPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
             survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
@@ -284,10 +283,10 @@ St.dhigh
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"] # [1] 0.1260063
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
 
-wts.St.dlow <- getIPWeights(OData, gstar.TRT = "dlow")
-wts.St.dhigh <- getIPWeights(OData, gstar.TRT = "dhigh")
-# wts.St.dlow <- getIPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly")
-# wts.St.dhigh <- getIPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly")
+wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow")
+wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh")
+# wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly")
+# wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly")
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 wts.all <- rbindlist(wts.all.list)
 
@@ -303,6 +302,7 @@ make_report_rmd(OData, MSM = MSM.IPAW,
                 RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                 WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)),
                 file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+
 make_report_rmd(OData, MSM = MSM.IPAW,
                 RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                 WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
