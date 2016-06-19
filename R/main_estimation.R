@@ -439,7 +439,7 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
     # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
     # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
     # p.coef - number of time-specific coefficients in the MSM
-    p.coef <- length(tjmin)
+    p.coef <- nrow(MSM.intervals) # p.coef <- length(tjmin)
     design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
     for (period.idx in seq_along(periods)) {
       period.j <- periods[period.idx]
