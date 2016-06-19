@@ -62,11 +62,15 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
 fitPropensity <- function(OData,
                           gform_CENS, gform_TRT, gform_MONITOR,
                           stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
+                          params_CENS = list(), params_TRT = list(), params_MONITOR = list(),
                           verbose = getOption("stremr.verbose")) {
-
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
+
+  assert_that(is.list(params_TRT))
+  assert_that(is.list(params_CENS))
+  assert_that(is.list(params_MONITOR))
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
   # Define regression classes for g.C, g.A, g.N and put them in a single list of regressions.
@@ -78,16 +82,16 @@ fitPropensity <- function(OData,
   names(g_CAN_regs_list) <- c("gC", "gA", "gN")
   class(g_CAN_regs_list) <- c(class(g_CAN_regs_list), "ListOfRegressionForms")
 
-  gC.sVars <- process_regforms(regforms = gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS,
-                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+  gC.sVars <- process_regforms(regforms = gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS, model_contrl = params_CENS,
+                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
   g_CAN_regs_list[["gC"]] <- gC.sVars$regs
 
-  gA.sVars <- process_regforms(regforms = gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT,
-                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
+  gA.sVars <- process_regforms(regforms = gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT, model_contrl = params_TRT,
+                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
   g_CAN_regs_list[["gA"]] <- gA.sVars$regs
 
-  gN.sVars <- process_regforms(regforms = gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR,
-                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
+  gN.sVars <- process_regforms(regforms = gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR, model_contrl = params_MONITOR,
+                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
   g_CAN_regs_list[["gN"]] <- gN.sVars$regs
 
   # ------------------------------------------------------------------------------------------

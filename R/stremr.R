@@ -163,7 +163,7 @@ create_subset_expr <- function(outvars, stratify.EXPRS) {
 
 # When several reg forms are specified (multivariate Anodes), process outvars into one vector and process predvars in a named list of vectors
 # stratify.EXPRS - Must be a named list. One item (characeter vectors) per one outcome in regforms.
-process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData, sVar.map = NULL, factor.map = NULL, censoring = FALSE) {
+process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model_contrl = NULL, OData, sVar.map = NULL, factor.map = NULL, censoring = FALSE) {
   using.default <- FALSE
   if (missing(regforms)) {
     using.default <- TRUE
@@ -184,7 +184,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, OData
       # browser()
       subset_expr <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
       regobj <- SingleRegressionFormClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = OData$type.sVar[res$outvars],
-                                              subset_vars = NULL, subset_exprs = subset_expr, censoring = censoring)
+                                              subset_vars = NULL, subset_exprs = subset_expr, model_contrl = model_contrl, censoring = censoring)
       regs[[idx]] <- regobj
   }
   class(regs) <- c(class(regs), "ListOfRegressionForms")

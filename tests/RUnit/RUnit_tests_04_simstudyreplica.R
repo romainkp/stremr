@@ -195,8 +195,8 @@ O.dataDTrules_Nstar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "l
 # --------------------------------
 # (IV) Estimate weights under observed (A,C,N)
 # --------------------------------
-gform.TRT <- "TI ~ CVD + highA1c + N.tminus1"
-stratify.TRT <- list(
+gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
+stratify_TRT <- list(
   TI=c("t == 0L",                                            # MODEL TI AT t=0
        "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
        "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
@@ -206,7 +206,7 @@ gform_CENS <- c("C ~ highA1c")
 stratify_CENS <- list(C=c("t < 16", "t == 16"))
 gform_MONITOR <- "N ~ 1"
 # **** really want to define it like this ****
-# gform.TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
+# gform_TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
 #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
 
 # ----------------------------------------------------------------
@@ -225,12 +225,21 @@ OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c
 # OData$fast.load.to.H2O()
 # OData$H2O.dat.sVar
 
-OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform_MONITOR = gform_MONITOR)
+params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
+params_TRT = list(fit.package = "h2o", fit.algorithm = "GBM", ntrees = 50)
+params_MONITOR = list(fit.package = "glm", fit.algorithm = "GLM")
+# params_TRT = NULL,
+# params_MONITOR = NULL,
+OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
+                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
+
 require("magrittr")
 St.dlow <- getIPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
            survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
+
 #     t  sum_Y_IPAW sum_all_IPAW           ht   St.IPTW      ht.KM     St.KM
 # 1   0  13.8596694     1743.707 0.0079483933 0.9920516 0.03088578 0.9691142
 # 2   1  13.3609872     1709.816 0.0078142829 0.9842994 0.01142514 0.9580420

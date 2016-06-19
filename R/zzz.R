@@ -75,11 +75,13 @@ stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
   old.opts <- gvars$opts
   bin.method <- bin.method[1L]
 
+  fit.package <- fit.package[1L]
+  assert_that(fit.package %in% c("speedglm", "glm", "h2o"))
+
+  fit.algorithm <- fit.algorithm[1L]
+  assert_that(fit.algorithm %in% c("GLM", "GBM", "RF", "SL"))
 
   # GLMpackage <- GLMpackage[1L]
-  fit.package <- fit.package[1L]
-  fit.algorithm <- fit.algorithm[1L]
-
   # if (GLMpackage %in% "glm") {
   # } else if (GLMpackage %in% "speedglm") {
   # } else if (GLMpackage %in% "h2oglm") {
@@ -93,7 +95,6 @@ stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
   } else {
     stop("bin.method argument must be either 'equal.len', 'equal.mass' or 'dhist'")
   }
-
 
 
   opts <- list(

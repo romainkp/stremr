@@ -220,6 +220,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
     fit.package = c("speedglm", "glm", "h2o"),
     fit.algorithm = c("GLM", "GBM", "RF", "SL"),
+    model_contrl = list(),
 
     n = NA_integer_,        # number of rows in the input data
     nbins = integer(),
@@ -230,8 +231,23 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
-      self$fit.package <- reg$fit.package
-      self$fit.algorithm <- reg$fit.algorithm
+      model_contrl <- reg$model_contrl
+      self$model_contrl <- reg$model_contrl
+      if ("fit.package" %in% names(model_contrl)) {
+        self$fit.package <- model_contrl[['fit.package']]
+        assert_that(is.character(self$fit.package))
+        assert_that(self$fit.package %in% c("speedglm", "glm", "h2o"))
+      } else {
+        self$fit.package <- reg$fit.package[1]
+      }
+
+      if ("fit.algorithm" %in% names(model_contrl)) {
+        self$fit.algorithm <- model_contrl[['fit.algorithm']]
+        assert_that(is.character(self$fit.algorithm))
+        assert_that(self$fit.algorithm %in% c("GLM", "GBM", "RF", "SL"))
+      } else {
+        self$fit.algorithm <- reg$fit.algorithm[1]
+      }
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar

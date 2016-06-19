@@ -99,10 +99,9 @@ RegressionClass <- R6Class("RegressionClass",
     # useglm = logical(),            # TRUE to fit reg with glm.fit(), FALSE to fit with speedglm.wfit
     # GLMpackage = character(),      # 'glm', 'speedglm' or 'h2o'
     # fit.package = character(),
-    fit.package = c("speedglm", "glm", "h2o"),
     # fit.algorithm = character(),
+    fit.package = c("speedglm", "glm", "h2o"),
     fit.algorithm = c("GLM", "GBM", "RF", "SL"),
-
 
     parfit = logical(),            # TRUE for fitting binary regressions in parallel
     bin_bymass = logical(),        # for cont outvar, create bin cutoffs based on equal mass distribution?
@@ -117,17 +116,11 @@ RegressionClass <- R6Class("RegressionClass",
     intrvls = numeric(),           # Vector of numeric cutoffs defining the bins or a named list of numeric intervals (for length(self$outvar) > 1)
     levels = NULL,
     # family = NULL,               # (NOT IMPLEMENTED) to run w/ other than "binomial" family
-    initialize = function(
-                          RegressionForms,
+    initialize = function(RegressionForms,
                           intrvls,
                           ReplMisVal0 = TRUE, # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
-
-                          # useglm = getopt("useglm"),
-                          # GLMpackage = getopt("GLMpackage"),
-
                           fit.package = getopt("fit.package"),
                           fit.algorithm = getopt("fit.algorithm"),
-
                           parfit = getopt("parfit"),
                           nbins = getopt("nbins"),
                           bin_bymass = getopt("bin.method")%in%"equal.mass",
@@ -138,13 +131,8 @@ RegressionClass <- R6Class("RegressionClass",
 
       if (!missing(RegressionForms)) self$RegressionForms <- RegressionForms
       self$ReplMisVal0 <- ReplMisVal0
-
-
-      # self$useglm <- useglm
-      # self$GLMpackage <- GLMpackage
       self$fit.package <- fit.package
       self$fit.algorithm <- fit.algorithm
-
 
       self$parfit <- parfit
       self$nbins <- nbins
@@ -247,6 +235,14 @@ RegressionClass <- R6Class("RegressionClass",
         return(invisible(self))
       }
     },
+    model_contrl = function(model_contrl) {
+      if (missing(model_contrl)) {
+        return(self$RegressionForms$model_contrl)
+      } else {
+        self$RegressionForms$model_contrl <- model_contrl
+        return(invisible(self))
+      }
+    },
     formula = function(formula) {
       if (missing(formula)) {
         return(self$RegressionForms$formula)
@@ -273,6 +269,8 @@ select_reg.SingleRegressionFormClass <- function(RegressionForms, reg, k_i, self
   self$RegressionForms <- RegressionForms$clone()
   self$outvar.class <- RegressionForms$outvar.class[[k_i]]
   self$outvar <- RegressionForms$outvar[[k_i]] # An outcome variable that is being modeled
+  self$model_contrl <- RegressionForms$model_contrl
+
   if (self$reg_hazard) {
     # Modeling hazards of bin indicators, no need to condition on previous outcomes as they will all be degenerate. P(A,B,C|D) -> P(A|D),P(B|D),P(C|D)
     self$predvars <- RegressionForms$predvars # Predictors
@@ -374,10 +372,11 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
     subset_exprs = list(),         # Named LIST of subset expressions (as strings), one list item per outcome in outvar.
                                    # Each item is a vector of different subsetting expressions (form stratified models)
                                    # These expressions are evaluated in the envir of the data, must evaluate to a logical vector
+    model_contrl = list(),
     censoring = FALSE,             #
     formula = NULL,                # (NOT IMPLEMENTED) reg formula, if provided run using the usual glm / speedglm functions
     # family = NULL,               # (NOT IMPLEMENTED) to run w/ other than "binomial" family
-    initialize = function(outvar, predvars, outvar.class, subset_vars = NULL, subset_exprs = NULL, censoring = FALSE, formula = NULL) {
+    initialize = function(outvar, predvars, outvar.class, subset_vars = NULL, subset_exprs = NULL, model_contrl = NULL, censoring = FALSE, formula = NULL) {
       assert_that(is.character(outvar))
       assert_that(is.character(predvars) || is.null(predvars))
       self$outvar <- outvar
@@ -397,6 +396,9 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
         self$subset_exprs <- lapply(self$outvar, function(var) {NULL})
         names(self$subset_exprs) <- self$outvar
       }
+
+      assert_that(is.list(model_contrl))
+      self$model_contrl <- model_contrl
 
       assert_that(is.flag(censoring))
       self$censoring <- censoring
@@ -423,6 +425,7 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
            outvar.class = self$outvar.class,
            subset_vars = self$subset_vars,
            subset_exprs = self$subset_exprs,
+           model_contrl = self$model_contrl,
            censoring = self$censoring
            )
     }
