@@ -37,8 +37,8 @@ openFileInOS <- function(f) {
 # ---------------------------------------------------------------------------------------------
 #' Generate report(s) with modeling stats and survival estimates using pandoc.
 #'
-#' @param OData Input data object returned by the function \code{get_Odata}.
-#' @param MSM The MSM object fits returned by the function \code{get_survMSM}.
+#' @param OData Input data object returned by the function \code{importData}.
+#' @param MSM The MSM object fits returned by the function \code{survMSM}.
 #' @param MSMlist ...NOT IMPLEMENTED...
 #' @param SurvByRegimen ... NOT IMPLEMENTED...
 #' @param RDtables List of tables with risk differences returned by the function \code{get_MSM_RDs}.

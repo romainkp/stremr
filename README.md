@@ -75,8 +75,8 @@ OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) %in% 0), by = ID]
 Regressions for modeling the exposure (TRT). Fit a separate model for TRT (stratify) for each of the following subsets:
 
 ```R
-gform.TRT <- "TI ~ CVD + highA1c + N.tminus1"
-stratify.TRT <- list(
+gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
+stratify_TRT <- list(
   TI=c(
        # MODEL TI AT t=0
        "t == 0L",
@@ -92,15 +92,15 @@ stratify.TRT <- list(
 Regressions for modeling the categorical censoring (CENS). Stratify the model fits by time-points (separate model for all t<16 and t=16):
 
 ```R
-gform.CENS <- c("CatC ~ highA1c")
-stratify.CENS <- list(CatC=c("t < 16", "t == 16"))
+gform_CENS <- c("CatC ~ highA1c")
+stratify_CENS <- list(CatC=c("t < 16", "t == 16"))
 ```
 
 Regressions for modeling the monitoring regimen (MONITOR) and no stratification (pooling all observations over time):
 
 ```R
 # Intercept only model, pooling across all time points t
-gform.MONITOR <- "N ~ 1"
+gform_MONITOR <- "N ~ 1"
 ```
 
 Define the probability of following a specific counterfactual monitoring regimen (the counterfactual probability of coming in for a visit is 0.1 at each time point):
@@ -122,11 +122,11 @@ res <- follow.rule.d.DT(OdataDT,
 # Merge rule definitions into main dataset:
   merge(OdataDT, ., by=c("ID", "t")) %>%
 # Estimate hazard and survival for a rule "dhigh":
-  stremr(gstar.TRT = "dhigh", gstar.MONITOR = "gstar.N",
+  stremr(gstar_TRT = "dhigh", gstar_MONITOR = "gstar.N",
         ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
-        CENS = "CatC", gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
-        TRT = "TI", gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
-        MONITOR = "N", gform.MONITOR = gform.MONITOR, OUTCOME = "Y")
+        CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+        TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+        MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y")
 
 res$IPW_estimates
 res$dataDT

@@ -1,4 +1,4 @@
-runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
+runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
   # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
   # Does not handle cases with deterministic Anodes in the original data.
   logispredict = function(m.fit, X_mat) {
@@ -9,18 +9,18 @@ runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
   if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
     if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
     loadframe_t <- system.time(
-      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts.data,
+      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts_data,
                                                   saveH2O = FALSE,
                                                   destination_frame = "MSM.designmat.H2O")
     )
     if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
-    # OData$fast.load.to.H2O(wts.data, )
-    # temp.csv.path <- file.path(tempdir(), "wts.data.csv~")
-    # data.table::fwrite(wts.data, temp.csv.path, turbo = TRUE)
+    # OData$fast.load.to.H2O(wts_data, )
+    # temp.csv.path <- file.path(tempdir(), "wts_data.csv~")
+    # data.table::fwrite(wts_data, temp.csv.path, turbo = TRUE)
     # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
     # na.wts.idx <- which(as.logical(is.na(MSM.designmat.H2O[, "cumm.IPAW"])))
     # MSM.designmat.H2O[na.wts.idx, ]
-    # wts.data[na.wts.idx, ]
+    # wts_data[na.wts.idx, ]
     m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
                                   x = all_dummies,
                                   intercept = FALSE,
@@ -40,16 +40,16 @@ runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
     names(out_coef) <- c(all_dummies)
     out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
     m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
-    wts.data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
+    wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
   } else {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
-    Xdesign.mat <- as.matrix(wts.data[, all_dummies, with = FALSE])
+    Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
     m.fit <- try(speedglm::speedglm.wfit(
                                        X = Xdesign.mat,
-                                       y = as.numeric(wts.data[[Ynode]]),
+                                       y = as.numeric(wts_data[[Ynode]]),
                                        intercept = FALSE,
                                        family = binomial(),
-                                       weights = wts.data[["cumm.IPAW"]],
+                                       weights = wts_data[["cumm.IPAW"]],
                                        trace = FALSE),
                         silent = TRUE)
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
@@ -57,7 +57,7 @@ runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
       ctrl <- glm.control(trace = FALSE)
       SuppressGivenWarnings({
         m.fit <- stats::glm.fit(x = Xdesign.mat,
-                                y = as.numeric(wts.data[[Ynode]]),
+                                y = as.numeric(wts_data[[Ynode]]),
                                 family = binomial(),
                                 intercept = FALSE, control = ctrl)
       }, GetWarningsToSuppress())
@@ -66,9 +66,9 @@ runglmMSM <- function(OData, wts.data, all_dummies, Ynode, verbose) {
     if (verbose) {
       print("MSM fits"); print(m.fit$coef)
     }
-    wts.data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+    wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
   }
-  return(list(wts.data = wts.data, m.fit = m.fit))
+  return(list(wts_data = wts_data, m.fit = m.fit))
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -134,12 +134,12 @@ makeFreqTable <- function(rawFreq){
 # }
 
 #' @export
-get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE) {
-  # quant99 <- quantile(wts.data[["cumm.IPAW"]], p = 0.99, na.rm = TRUE)
-  # quant999 <- quantile(wts.data[["cumm.IPAW"]], p = 0.999, na.rm = TRUE)
+get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE) {
+  # quant99 <- quantile(wts_data[["cumm.IPAW"]], p = 0.99, na.rm = TRUE)
+  # quant999 <- quantile(wts_data[["cumm.IPAW"]], p = 0.999, na.rm = TRUE)
 
   # get the counts for each category (bin) + missing count:
-  na.count <- sum(is.na(wts.data[["cumm.IPAW"]]))
+  na.count <- sum(is.na(wts_data[["cumm.IPAW"]]))
   na.yes <- (na.count > 0L)
 
   # define a list of intervals:
@@ -147,12 +147,12 @@ get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   idx <- seq_along(cutoffs2); idx <- idx[-length(idx)]
   intervals_list <- lapply(idx, function(i) c(cutoffs2[i], cutoffs2[i+1]))
 
-  # summary <- wts.data[, summary(cumm.IPAW)]
-  x.freq.counts.DT <- wts.data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE))]
+  # summary <- wts_data[, summary(cumm.IPAW)]
+  x.freq.counts.DT <- wts_data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE))]
   x.freq.counts <- as.integer(x.freq.counts.DT[1,])
   if (na.yes) {
     x.freq.counts <- c(x.freq.counts, na.count)
-    x.freq.counts.DT <- cbind(x.freq.counts.DT, wts.data[, sum(is.na(cumm.IPAW), na.rm = TRUE)])
+    x.freq.counts.DT <- cbind(x.freq.counts.DT, wts_data[, sum(is.na(cumm.IPAW), na.rm = TRUE)])
   }
 
   # create labels:
@@ -173,16 +173,16 @@ get_wtsummary <- function(wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 
   # do the same by separately for each rule:
   if (by.rule) {
-    # setkeyv(wts.data, cols = "rule.name.TRT")
-    x.freq.counts.byrule.DT <- wts.data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE)), by = rule.name.TRT]
+    # setkeyv(wts_data, cols = "rule.name.TRT")
+    x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE)), by = rule.name.TRT]
     if (na.yes) {
-      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts.data[, sum(is.na(cumm.IPAW), na.rm = TRUE), by = rule.name.TRT], on = "rule.name.TRT"]
+      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cumm.IPAW), na.rm = TRUE), by = rule.name.TRT], on = "rule.name.TRT"]
     }
     colnames(x.freq.counts.byrule.DT)[-1] <- catNames
   } else {
     x.freq.counts.byrule.DT <- NULL
   }
-  # setkeyv(wts.data, cols = old.keys)
+  # setkeyv(wts_data, cols = old.keys)
   return(list(summary.table = x.freq.counts.tab, summary.DT = x.freq.counts.DT, summary.DT.byrule = x.freq.counts.byrule.DT))
 }
 
@@ -344,8 +344,8 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
                                                 RDscale = TRUE,
                                                 t.period = t.period.val.idx,
-                                                nobs = nrow(MSM$wts.data),
-                                                esti = MSM$est.name,
+                                                nobs = nrow(MSM$wts_data),
+                                                esti = MSM$est_name,
                                                 se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }
   return(RDs.IPAW.tperiods)

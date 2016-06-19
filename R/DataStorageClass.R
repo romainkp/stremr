@@ -97,7 +97,7 @@ make.bins_mtx_1 <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins) {
 }
 
 # put the first level (category) as a reference (last category) for categorical censoring
-make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.level = gvars$noCENS.cat) {
+make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.level = gvars$noCENScat) {
   n <- length(x.ordinal)
   new.ref.level <- levels[length(levels)]+1
   levels <- c(levels[-which(levels %in% ref.level)], new.ref.level)
@@ -187,12 +187,12 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     modelfit.gA = NULL,
     modelfit.gN = NULL,
     new.factor.names = NULL,
-    noCENS.cat = 0L,        # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables
+    noCENScat = 0L,        # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables
     YnodeVals = NULL,       # Values of the binary outcome (Ynode) in observed data where det.Y = TRUE obs are set to NA
     det.Y = NULL,           # Logical vector, where YnodeVals[det.Y==TRUE] are deterministic (0 or 1)
     curr_data_A_g0 = TRUE,  # is the current data in OdataDT generated under observed (g0)? If FALSE, current data is under g.star (intervention)
 
-    initialize = function(Odata, nodes, YnodeVals, det.Y, noCENS.cat,...) {
+    initialize = function(Odata, nodes, YnodeVals, det.Y, noCENScat,...) {
       assert_that(is.data.frame(Odata) | is.data.table(Odata))
       self$curr_data_A_g0 <- TRUE
       self$dat.sVar <- data.table(Odata) # makes a copy of the input data (shallow)
@@ -202,10 +202,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       # set the keys for quick search!
       setkeyv(self$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
 
-      if (!missing(noCENS.cat)) {
-        self$noCENS.cat <- noCENS.cat
+      if (!missing(noCENScat)) {
+        self$noCENScat <- noCENScat
       } else {
-        self$noCENS.cat <- gvars$noCENS.cat
+        self$noCENScat <- gvars$noCENScat
       }
 
       if (!missing(nodes)) self$nodes <- nodes
@@ -630,14 +630,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       self$dat.bin.sVar <- make.bins_mtx_1(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels)
       invisible(self$dat.bin.sVar)
     },
-    # Create a matrix of bin indicators for categorical CENSORING sVar (the reference category is gvars$noCENS.cat):
+    # Create a matrix of bin indicators for categorical CENSORING sVar (the reference category is gvars$noCENScat):
     binirize.cat.CENS.sVar = function(name.sVar, levels) {
       if (gvars$verbose) {
-        message("making matrix for dummies for cat. censoring, reference category is " %+% self$noCENS.cat)
+        message("making matrix for dummies for cat. censoring, reference category is " %+% self$noCENScat)
       }
       nbins <- length(levels)
       bin.nms <- self$bin.nms.sVar(name.sVar, nbins)
-      self$dat.bin.sVar <- make.bins_mtx_cens(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels, ref.level = self$noCENS.cat)
+      self$dat.bin.sVar <- make.bins_mtx_cens(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels, ref.level = self$noCENScat)
       invisible(self$dat.bin.sVar)
     }
   )

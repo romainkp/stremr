@@ -11,9 +11,9 @@ OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) %in% 0), by = ID]
 #-------------------------------------------------------------------
 # Regressions for modeling the exposure (TRT)
 #-------------------------------------------------------------------
-gform.TRT <- "TI ~ CVD + highA1c + N.tminus1"
+gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
 # Fit a separate model for TRT (stratify) for each of the following subsets:
-stratify.TRT <- list(
+stratify_TRT <- list(
   TI=c(
        # MODEL TI AT t=0
        "t == 0L",
@@ -28,15 +28,15 @@ stratify.TRT <- list(
 #-------------------------------------------------------------------
 # Regressions for modeling the categorical censoring (CENS)
 #-------------------------------------------------------------------
-gform.CENS <- c("CatC ~ highA1c")
+gform_CENS <- c("CatC ~ highA1c")
 # stratify by time-points (separate model for all t<16 and t=16)
-stratify.CENS <- list(CatC=c("t < 16", "t == 16"))
+stratify_CENS <- list(CatC=c("t < 16", "t == 16"))
 
 #-------------------------------------------------------------------
 # Regressions for modeling the monitoring regimen (MONITOR)
 #-------------------------------------------------------------------
 # Intercept only model, pooling across all time points t
-gform.MONITOR <- "N ~ 1"
+gform_MONITOR <- "N ~ 1"
 
 #-------------------------------------------------------------------
 # Define the counterfactual monitoring regimen of interest

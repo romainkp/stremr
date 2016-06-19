@@ -74,7 +74,7 @@ panderOptions('knitr.auto.asis', TRUE)
 
 #+ echo=FALSE
 if (!missing(WTtables)) {
-  # IPAWdists <- get_wtsummary(MSM$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
+  # IPAWdists <- get_wtsummary(MSM$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
   # IPAWdistByRule <- IPAWdists$summary.table.byrule
   pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
   pander::pander(WTtables$summary.table, justify = c('right', rep("left",ncol(WTtables$summary.table)-1)))
@@ -94,7 +94,7 @@ if (!missing(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
 MSM.fit <- MSM$MSM.fit
 output.MSM <- round(MSM.fit$coef,2)
 output.MSM <- cbind("Terms" = names(MSM.fit$coef), output.MSM)
-colnames(output.MSM) <- c("Terms",ifelse(MSM$trunc.weights == Inf && MSM$use.weights, "IPAW", ifelse(MSM$trunc.weights < Inf && MSM$use.weights, "truncated IPAW", "no weights")))
+colnames(output.MSM) <- c("Terms",ifelse(MSM$trunc_weights == Inf && MSM$use_weights, "IPAW", ifelse(MSM$trunc_weights < Inf && MSM$use_weights, "truncated IPAW", "no weights")))
 rownames(output.MSM) <- NULL
 pander::set.caption("Coefficients of MSM")
 pander::pander(output.MSM, justify = c('right', 'left'))

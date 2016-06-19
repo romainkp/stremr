@@ -48,6 +48,7 @@ h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, ...
                                      y = outvar,
                                      training_frame = subsetH2Oframe,
                                      ntree = 100,
+                                     balance_classes = TRUE,
                                      ignore_const_cols = FALSE)
 
   fit$coef <- NULL;
@@ -68,6 +69,8 @@ h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, ..
                             y = outvar,
                             training_frame = subsetH2Oframe,
                             distribution = "bernoulli",
+                            ntrees = 100,
+                            balance_classes = TRUE,
                             ignore_const_cols = FALSE)
 
   fit$coef <- NULL;

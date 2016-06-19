@@ -10,9 +10,9 @@ make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, WTtables, RDtables,
   file.path = getOption("stremr.file.path"), ...)
 }
 \arguments{
-\item{OData}{Input data object returned by the function \code{get_Odata}.}
+\item{OData}{Input data object returned by the function \code{importData}.}
 
-\item{MSM}{The MSM object fits returned by the function \code{get_survMSM}.}
+\item{MSM}{The MSM object fits returned by the function \code{survMSM}.}
 
 \item{MSMlist}{...NOT IMPLEMENTED...}
 

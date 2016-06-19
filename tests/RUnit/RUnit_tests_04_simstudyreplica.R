@@ -44,10 +44,10 @@ define_indicators <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C"
   EVENT_IND <- "Delta";
   O.dataDT[,(EVENT_IND) := as.integer(any(get(outcome) %in% 1)), by=eval(ID)]
   # Add indicator Delta=I(T>C) (subject was right-censored at some point):
-  CENS_IND <- "AnyCensored"; noCENS.cat <- 0L; CENS <- c("C")
+  CENS_IND <- "AnyCensored"; noCENScat <- 0L; CENS <- c("C")
   O.dataDT[, (CENS_IND) := FALSE, by=eval(ID)]
   for (Cvar in CENS) {
-    O.dataDT[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENS.cat),NA)), by = eval(ID)]
+    O.dataDT[, (CENS_IND) := get(CENS_IND) | any(!get(Cvar) %in% c(eval(noCENScat),NA)), by = eval(ID)]
   }
   O.dataDT[, (CENS_IND) := as.integer(get(CENS_IND))]
   ## Add variable that indicates if TI initiation occured previously, relevant for model of TI continuation
@@ -202,9 +202,9 @@ stratify.TRT <- list(
        "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
        "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
       ))
-gform.CENS <- c("C ~ highA1c")
-stratify.CENS <- list(C=c("t < 16", "t == 16"))
-gform.MONITOR <- "N ~ 1"
+gform_CENS <- c("C ~ highA1c")
+stratify_CENS <- list(C=c("t < 16", "t == 16"))
+gform_MONITOR <- "N ~ 1"
 # **** really want to define it like this ****
 # gform.TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
 #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
@@ -221,14 +221,14 @@ stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h20.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h20.RF"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h20.GBM"
 
-OData <- get_Odata(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
 # OData$H2O.dat.sVar
 
-OData <- get_fits(OData, gform.CENS = gform.CENS, stratify.CENS = stratify.CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform.MONITOR = gform.MONITOR)
+OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform_MONITOR = gform_MONITOR)
 require("magrittr")
-St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-           get_survNPMSM(OData)  %$%
+St.dlow <- get_IPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+           survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
 #     t  sum_Y_IPAW sum_all_IPAW           ht   St.IPTW      ht.KM     St.KM
@@ -249,8 +249,8 @@ St.dlow
 # 15 14   0.2335619     1362.924 0.0001713682 0.8084156 0.01701469 0.7406760
 # 16 15  10.9309710     1403.403 0.0077889054 0.8021189 0.02202990 0.7243590
 # 17 16   0.0000000        0.000          NaN       NaN         NA        NA
-St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly") %>%
-            get_survNPMSM(OData) %$%
+St.dhigh <- get_IPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+            survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
 #     t sum_Y_IPAW sum_all_IPAW          ht   St.IPTW       ht.KM     St.KM
@@ -275,28 +275,28 @@ St.dhigh
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"] # [1] 0.1260063
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
 
-wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow")
-wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh")
-# wts.St.dlow <- get_weights(OData, gstar.TRT = "dlow", gstar.MONITOR = "gstar1.N.Pois3.yearly")
-# wts.St.dhigh <- get_weights(OData, gstar.TRT = "dhigh", gstar.MONITOR = "gstar1.N.Pois3.yearly")
+wts.St.dlow <- get_IPWeights(OData, gstar.TRT = "dlow")
+wts.St.dhigh <- get_IPWeights(OData, gstar.TRT = "dhigh")
+# wts.St.dlow <- get_IPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly")
+# wts.St.dhigh <- get_IPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly")
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 wts.all <- rbindlist(wts.all.list)
 
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 # MSM for hazard with regular weights:
-MSM.IPAW <- get_survMSM(OData, wts.data = wts.all, t.breaks = tjmax,
+MSM.IPAW <- survMSM(OData, wts_data = wts.all, t_breaks = tjmax,
                         # tjmin = tjmin, tjmax = tjmax,
-                        use.weights = TRUE, est.name = "IPAW", getSEs = TRUE)
+                        use_weights = TRUE, est_name = "IPAW", getSEs = TRUE)
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 
 # print everything:
 make_report_rmd(OData, MSM = MSM.IPAW,
                 RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
-                WTtables = get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150)),
                 file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 make_report_rmd(OData, MSM = MSM.IPAW,
                 RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
-                WTtables = get_wtsummary(MSM.IPAW$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                 file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
 # omit extra h2o model output stuff (only coefficients):
