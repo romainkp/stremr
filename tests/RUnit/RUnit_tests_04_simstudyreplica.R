@@ -227,7 +227,7 @@ OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c
 
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform.TRT = gform.TRT, stratify.TRT = stratify.TRT, gform_MONITOR = gform_MONITOR)
 require("magrittr")
-St.dlow <- get_IPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+St.dlow <- getIPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
            survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
@@ -249,7 +249,7 @@ St.dlow
 # 15 14   0.2335619     1362.924 0.0001713682 0.8084156 0.01701469 0.7406760
 # 16 15  10.9309710     1403.403 0.0077889054 0.8021189 0.02202990 0.7243590
 # 17 16   0.0000000        0.000          NaN       NaN         NA        NA
-St.dhigh <- get_IPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+St.dhigh <- getIPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
             survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
@@ -275,10 +275,10 @@ St.dhigh
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"] # [1] 0.1260063
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
 
-wts.St.dlow <- get_IPWeights(OData, gstar.TRT = "dlow")
-wts.St.dhigh <- get_IPWeights(OData, gstar.TRT = "dhigh")
-# wts.St.dlow <- get_IPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly")
-# wts.St.dhigh <- get_IPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly")
+wts.St.dlow <- getIPWeights(OData, gstar.TRT = "dlow")
+wts.St.dhigh <- getIPWeights(OData, gstar.TRT = "dhigh")
+# wts.St.dlow <- getIPWeights(OData, gstar.TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly")
+# wts.St.dhigh <- getIPWeights(OData, gstar.TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly")
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 wts.all <- rbindlist(wts.all.list)
 

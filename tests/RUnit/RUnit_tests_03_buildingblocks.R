@@ -24,7 +24,7 @@ test.buildingblocks <- function() {
   # OData$dat.sVar[]
   modelfits.g0 <- fitPropensity(OData = OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
   # , gstar_TRT = ..., gstar_MONITOR = ...
-  wts.DT <- get_IPWeights(modelfits.g0 = modelfits.g0, OData = OData)
+  wts.DT <- getIPWeights(modelfits.g0 = modelfits.g0, OData = OData)
   survNP_ests <- get_survNP(wts.DT, OData)
   survNP_ests$IPW_estimates
   # survMSM(data.wts.list, t, MSMregform)
@@ -50,7 +50,7 @@ test.buildingblocks <- function() {
 
   OData <- importData(O.data, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
   modelfits.g0 <- fitPropensity(OData = OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
-  wts.DT <- get_IPWeights(modelfits.g0 = modelfits.g0, OData = OData)
+  wts.DT <- getIPWeights(modelfits.g0 = modelfits.g0, OData = OData)
     # , gstar_TRT = ..., gstar_MONITOR = ...)
   survNP_ests <- get_survNP(wts.DT, OData)
   # survMSM(data.wts.list, t, MSMregform)
@@ -85,7 +85,7 @@ test.buildingblocks <- function() {
 
   OData <- importData(O.data, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y")
   modelfits.g0 <- fitPropensity(OData = OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
-  wts.DT <- get_IPWeights(modelfits.g0 = modelfits.g0, OData = OData)
+  wts.DT <- getIPWeights(modelfits.g0 = modelfits.g0, OData = OData)
     # , gstar_TRT = ..., gstar_MONITOR = ...)
   survNP_ests <- get_survNP(wts.DT, OData)
   # survMSM(data.wts.list, t, MSMregform)

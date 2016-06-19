@@ -136,7 +136,7 @@ fitPropensity <- function(OData,
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
 #' @export
-get_IPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL) {
+getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL) {
   nodes <- OData$nodes
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
@@ -255,7 +255,7 @@ survNPMSM <- function(wts_data, OData) {
 #' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly informative right-censoring.
 #' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
 #' right-censoring.
-#' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function \code{get_IPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
+#' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
 #' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.
 #' @param t_breaks The vector of integer (or numeric) breaks that defines the dummy indicators of the follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for the survival hazard. See Details.
 #' @param use_weights Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and fit a "crude" MSM that does not adjust for the possible confounding due to non-random

@@ -356,7 +356,7 @@ stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
   # ---------------------------------------------------------------------------------------
   # - BLOCK 3: evaluate weights based gstar_TRT, gstar_MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
   # ---------------------------------------------------------------------------------------
-  wts.DT <- get_IPWeights(OData, gstar_TRT, gstar_MONITOR)
+  wts.DT <- getIPWeights(OData, gstar_TRT, gstar_MONITOR)
   # ---------------------------------------------------------------------------------------
   # - BLOCK 4A: Non-parametric MSM for survival, with weight stabilization, input either single weights dataset or a list of weights datasets,
   # Each dataset containing weights non-zero weights for single regimen

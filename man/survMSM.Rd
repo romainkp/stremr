@@ -11,7 +11,7 @@ survMSM(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights = 10^6,
 \item{OData}{The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
 right-censoring.}
 
-\item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function \code{get_IPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
+\item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
 This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.}
 
 \item{t_breaks}{The vector of integer (or numeric) breaks that defines the dummy indicators of the follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for the survival hazard. See Details.}
