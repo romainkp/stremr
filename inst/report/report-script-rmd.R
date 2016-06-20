@@ -93,8 +93,11 @@ if (!missing(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
 #+ echo=FALSE
 if (AddFUPtables) {
   t.name.col <- OData$nodes$tnode
-  follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
-  setkeyv(follow_up_rule_ID, cols = "ID")
+  ID.name.col <- OData$nodes$IDnode
+  # follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
+  follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name.TRT"), get("rule.name.MONITOR"))]
+  data.table::setnames(follow_up_rule_ID, c(OData$nodes$IDnode, "rule.name.TRT", "rule.name.MONITOR", "max.t"))
+  data.table::setkeyv(follow_up_rule_ID, cols = OData$nodes$IDnode)
   MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
   TRT.rules <- unique(wts.all[["rule.name.TRT"]])
   for (M.rule in MONITOR.rules) {

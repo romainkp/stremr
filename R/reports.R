@@ -115,7 +115,6 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables, AddFUP
   # RD tables
   # RDs.IPAW.tperiods <- MSM$RDs.IPAW.tperiods
   # -------------------------------------------------------------------------------------
-
   ## path issue on Windows
   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
   # find the full path to the report template:

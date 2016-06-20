@@ -290,30 +290,29 @@ wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh")
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 wts.all <- rbindlist(wts.all.list)
 
-follow_up_rule_ID <- wts.all[cumm.IPAW > 0, list(max.t = max(t, na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
-setkeyv(follow_up_rule_ID, cols = "ID")
-MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
-TRT.rules <- unique(wts.all[["rule.name.TRT"]])
-for (M.rule in MONITOR.rules) {
-  for (T.rule in TRT.rules) {
-    one_ruleID <- follow_up_rule_ID[(rule.name.TRT %in% eval(T.rule)) & (rule.name.MONITOR %in% eval(M.rule)), max.t]
-    print(T.rule); print(M.rule)
-    freq_tab <- table(one_ruleID)
-    hist(one_ruleID, main = "Maximum follow-up period for TRT rule: " %+% T.rule %+% " \nand MONITOR rule: " %+% M.rule)
-    print(makeFreqTable(freq_tab))
-    summary(one_ruleID)
-  }
-}
-
-follow_up_rule_ID
-follow_up_rule_ID[, hist(max.t, plot = FALSE), by = list(rule.name.TRT, rule.name.MONITOR)]
+# follow_up_rule_ID <- wts.all[cumm.IPAW > 0, list(max.t = max(t, na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
+# setkeyv(follow_up_rule_ID, cols = "ID")
+# MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
+# TRT.rules <- unique(wts.all[["rule.name.TRT"]])
+# for (M.rule in MONITOR.rules) {
+#   for (T.rule in TRT.rules) {
+#     one_ruleID <- follow_up_rule_ID[(rule.name.TRT %in% eval(T.rule)) & (rule.name.MONITOR %in% eval(M.rule)), max.t]
+#     print(T.rule); print(M.rule)
+#     freq_tab <- table(one_ruleID)
+#     hist(one_ruleID, main = "Maximum follow-up period for TRT rule: " %+% T.rule %+% " \nand MONITOR rule: " %+% M.rule)
+#     print(makeFreqTable(freq_tab))
+#     summary(one_ruleID)
+#   }
+# }
+# follow_up_rule_ID
+# follow_up_rule_ID[, hist(max.t, plot = FALSE), by = list(rule.name.TRT, rule.name.MONITOR)]
 
 
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 # MSM for hazard with regular weights:
 MSM.IPAW <- survMSM(OData, wts_data = wts.all, t_breaks = tjmax,
-                        # tjmin = tjmin, tjmax = tjmax,
-                        use_weights = TRUE, est_name = "IPAW", getSEs = TRUE)
+                    # tjmin = tjmin, tjmax = tjmax,
+                    use_weights = TRUE, est_name = "IPAW", getSEs = TRUE)
 report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
 
 # print everything:
