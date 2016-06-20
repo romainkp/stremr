@@ -29,13 +29,14 @@ f_plot_survest <- function(surv_res_est, t_int_sel, y_lab, x_lab, miny, x_legend
   legend(x_legend, y_legend, legend = names(surv_res_est), col = c(1:length(names(surv_res_est))), cex = ptsize, pch = 1)
 }
 
-#' # Model fits for propensity scores
 #'
-#' Number of unique IDs in the input data:
+#' Number of unique independent units in the input data:
 {{prettyNum(OData$nuniqueIDs, big.mark = ",", scientific = FALSE)}}
 #'
 #' Number of person-time observations in the input data:
 {{prettyNum(OData$nobs, big.mark = ",", scientific = FALSE)}}
+#'
+#' # Model fits for propensity scores
 #'
 #' ## Model(s) for censoring variable(s):
 
