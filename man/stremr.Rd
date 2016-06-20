@@ -5,11 +5,10 @@
 \title{Estimate Survival with Interventions on Exposure and MONITORing Process in Right Censored Longitudinal Data.}
 \usage{
 stremr(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C",
-  TRT = "A", MONITOR = "N", OUTCOME = "Y", gform.CENS, gform.TRT,
-  gform.MONITOR, stratify.CENS = NULL, stratify.TRT = NULL,
-  stratify.MONITOR = NULL, gstar.TRT = NULL, gstar.MONITOR = NULL,
-  noCENS.cat = 0L, verbose = getOption("stremr.verbose"),
-  optPars = list())
+  TRT = "A", MONITOR = "N", OUTCOME = "Y", gform_CENS, gform_TRT,
+  gform_MONITOR, stratify_CENS = NULL, stratify_TRT = NULL,
+  stratify_MONITOR = NULL, gstar_TRT = NULL, gstar_MONITOR = NULL,
+  noCENScat = 0L, verbose = getOption("stremr.verbose"), optPars = list())
 }
 \arguments{
 \item{data}{Input data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
@@ -28,8 +27,8 @@ Each separate variable specified in \code{CENS} can be either binary (0/1 valued
 For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).
 For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of follow-up and other
 values indicate different reasons for CENSoring.
-Use the argument \code{noCENS.cat} to change the reference (continuation of follow-up) category from default 0 to any other value.
-(NOTE: Changing \code{noCENS.cat} has zero effect on coding of the binary CENSoring variables, those have to always use 1 to code the CENSoring event).
+Use the argument \code{noCENScat} to change the reference (continuation of follow-up) category from default 0 to any other value.
+(NOTE: Changing \code{noCENScat} has zero effect on coding of the binary CENSoring variables, those have to always use 1 to code the CENSoring event).
 Note that factors are not allowed in \code{CENS}.}
 
 \item{TRT}{A column name in \code{data} for the exposure/treatment variable(s).}
@@ -38,27 +37,27 @@ Note that factors are not allowed in \code{CENS}.}
 
 \item{OUTCOME}{A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.}
 
-\item{gform.CENS}{Regression formula(s) for estimating the propensity score for the censoring mechanism: P(C(t) | W). See Details.}
+\item{gform_CENS}{Regression formula(s) for estimating the propensity score for the censoring mechanism: P(C(t) | W). See Details.}
 
-\item{gform.TRT}{Regression formula(s) for propensity score for the exposure/treatment(s): P(A(t) | W). See Details.}
+\item{gform_TRT}{Regression formula(s) for propensity score for the exposure/treatment(s): P(A(t) | W). See Details.}
 
-\item{gform.MONITOR}{Regression formula(s) for estimating the propensity score for the MONITORing process: P(N(t) | W). See Details.
+\item{gform_MONITOR}{Regression formula(s) for estimating the propensity score for the MONITORing process: P(N(t) | W). See Details.
 (the observed exposure mechanism), When omitted the regression is defined by \code{sA~sW}, where \code{sA}}
 
-\item{stratify.CENS}{A named list with one item per variable in \code{CENS}.
+\item{stratify_CENS}{A named list with one item per variable in \code{CENS}.
 Each list item is a character vector of stratification subsets for the corresponding variable in \code{CENS}.}
 
-\item{stratify.TRT}{A named list with one item per variable in \code{TRT}.
+\item{stratify_TRT}{A named list with one item per variable in \code{TRT}.
 Each list item is a character vector of stratification subsets for the corresponding variable in \code{TRT}.}
 
-\item{stratify.MONITOR}{A named list with one item per variable in \code{MONITOR}.
+\item{stratify_MONITOR}{A named list with one item per variable in \code{MONITOR}.
 Each list item is a character vector of stratification subsets for the corresponding variable in \code{MONITOR}.}
 
-\item{gstar.TRT}{Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.}
+\item{gstar_TRT}{Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.}
 
-\item{gstar.MONITOR}{Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.}
+\item{gstar_MONITOR}{Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.}
 
-\item{noCENS.cat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
+\item{noCENScat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 for variables specifed in \code{CENS}.}
 
@@ -69,28 +68,7 @@ for variables specifed in \code{CENS}.}
 \code{h_g0_GenericModel} and \code{h_gstar_GenericModel}. See Details below for the description of each parameter.}
 }
 \value{
-A named list with 3 items containing the estimation results for:
- \itemize{
- \item \code{EY_gstar1} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar1} \eqn{(E_{g^*_1}[Y])}.
- \item \code{EY_gstar2} - estimates of the mean counterfactual OUTCOME under (stochastic) intervention function \code{f_gstar2} \eqn{(E_{g^*_2}[Y])},
-   \code{NULL} if \code{f_gstar2} not specified.
- \item \code{ATE} - additive treatment effect (\eqn{E_{g^*_1}[Y]} - \eqn{E_{g^*_2}[Y]}) under interventions \code{f_gstar1}
-   vs. in \code{f_gstar2}, \code{NULL} if \code{f_gstar2} not specified.
-}
-
-Each list item above is itself a list containing the items:
- \itemize{
- \item \code{estimates} - various estimates of the target parameter (network population counterfactual mean under
-   (stochastic) intervention).
- \item \code{vars} - the asymptotic variance estimates for \strong{IPTW}.
- \item \code{CIs} - CI estimates at \code{alpha} level for \strong{IPTW}.
- \item \code{other.vars} - Placeholder for future versions.
-}
-
-Currently implemented estimators are:
- \itemize{
- \item \code{iptw} - IPTW
-}
+...
 }
 \description{
 Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring process.
@@ -161,9 +139,9 @@ OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) \%in\% 0), by = ID]
 #-------------------------------------------------------------------
 # Regressions for modeling the exposure (TRT)
 #-------------------------------------------------------------------
-gform.TRT <- "TI ~ CVD + highA1c + N.tminus1"
+gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
 # Fit a separate model for TRT (stratify) for each of the following subsets:
-stratify.TRT <- list(
+stratify_TRT <- list(
   TI=c(
        # MODEL TI AT t=0
        "t == 0L",
@@ -178,15 +156,15 @@ stratify.TRT <- list(
 #-------------------------------------------------------------------
 # Regressions for modeling the categorical censoring (CENS)
 #-------------------------------------------------------------------
-gform.CENS <- c("CatC ~ highA1c")
+gform_CENS <- c("CatC ~ highA1c")
 # stratify by time-points (separate model for all t<16 and t=16)
-stratify.CENS <- list(CatC=c("t < 16", "t == 16"))
+stratify_CENS <- list(CatC=c("t < 16", "t == 16"))
 
 #-------------------------------------------------------------------
 # Regressions for modeling the monitoring regimen (MONITOR)
 #-------------------------------------------------------------------
 # Intercept only model, pooling across all time points t
-gform.MONITOR <- "N ~ 1"
+gform_MONITOR <- "N ~ 1"
 
 #-------------------------------------------------------------------
 # Define the counterfactual monitoring regimen of interest
@@ -202,11 +180,11 @@ res <- follow.rule.d.DT(OdataDT,
 # Merge rule definitions into main dataset:
   merge(OdataDT, ., by=c("ID", "t")) \%>\%
 # Estimate hazard and survival for a rule "dhigh":
-  stremr(gstar.TRT = "dhigh", gstar.MONITOR = "gstar.N",
+  stremr(gstar_TRT = "dhigh", gstar_MONITOR = "gstar.N",
         ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
-        CENS = "CatC", gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
-        TRT = "TI", gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
-        MONITOR = "N", gform.MONITOR = gform.MONITOR, OUTCOME = "Y")
+        CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+        TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+        MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y")
 
 res$IPW_estimates
 res$dataDT

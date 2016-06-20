@@ -1,18 +1,16 @@
 #----------------------------------------------------------------------------------
 # Classes for modelling regression models with binary outcome Bin ~ Xmat
 #----------------------------------------------------------------------------------
-# S3 methods for getting model fit for BinaryOutcomeModel class object
-# fit.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
-#   assert_that(BinaryOutcomeModel$is.fitted)
-#   BinaryOutcomeModel$getfit
-# }
-pander.H2OBinomialModel <- function(H2OBinomialModelObject) {
-  cat("\n")
-  show(H2OBinomialModelObject)
-  cat("\n")
-  return(invisible(H2OBinomialModelObject))
-}
+#' @importFrom pander pander
+NULL
 
+#' Pander method for H2OBinomialMetrics class
+#'
+#' Prints a H2OBinomialMetrics object in Pandoc's markdown.
+#' @param H2OBinomialMetricsObject H2OBinomialMetrics object
+#' @return By default this function outputs (see: \code{?cat}) the result.
+#' If you would want to catch the result instead, then call \code{pander_return} instead.
+#' @export
 pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject) {
   modelID <- H2OBinomialMetricsObject@metrics$model$name
 
@@ -49,16 +47,12 @@ pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject) {
     cm <- h2o::h2o.confusionMatrix(H2OBinomialMetricsObject)
     if( !is.null(cm) ) {
       pander::pander(cm, caption = "Confusion Matrix for F1-optimal threshold" %+% " (Model ID: " %+% modelID %+%")" )
-      # cat("\n")
     }
-
     max_matrics <- H2OBinomialMetricsObject@metrics$max_criteria_and_metric_scores
     caption <- attributes(max_matrics)$header %+% ": " %+% attributes(max_matrics)$description
     pander::pander(max_matrics, caption = caption %+% " (Model ID: " %+% modelID %+%")")
     # attributes(max_matrics)$formats
-
     # cat("\nGains/Lift Table: Extract with `h2o.gainsLift(<model>, <data>)` or `h2o.gainsLift(<model>, valid=<T/F>, xval=<T/F>)`")
-
     if (!is.null(H2OBinomialMetricsObject@metrics$gains_lift_table)) {
      # print(H2OBinomialMetricsObject@metrics$gains_lift_table)
      gain_tab <- H2OBinomialMetricsObject@metrics$gains_lift_table
@@ -68,29 +62,35 @@ pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject) {
   return(invisible(H2OBinomialMetricsObject))
 }
 
-# S3 methods for getting model fit summary for BinaryOutcomeModel class object
-summary.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
-  assert_that(BinaryOutcomeModel$is.fitted)
-  fit <- BinaryOutcomeModel$getfit
-  append(list(reg = BinaryOutcomeModel$show()), fit)
+#' S3 methods for printing model fit summary for glmfit class object
+#'
+#' Prints the modeling summary for the GLM fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
+#' @param model.fit The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm
+#' @param ... Additional options passed on to \code{summary.glmfit}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.glmfit}.
+#' @export
+print.glmfit <- function(model.fit, ...) {
+  model.summary <- summary(model.fit, ...)
+  cat(paste(model.summary, collapse = '\n'))
 }
 
-summary.BinaryOutcomeModel <- function(BinaryOutcomeModel) {
-  assert_that(BinaryOutcomeModel$is.fitted)
-  fit <- BinaryOutcomeModel$getfit
-  append(list(reg = BinaryOutcomeModel$show()), fit)
-}
-
-makeModelCaption <- function(model.fit) {
-  return(
-    "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
-     Stratify: " %+% model.fit$params$stratify %+% "; \\
-     N: " %+% prettyNum(model.fit$nobs, big.mark = ",", scientific = FALSE) %+% "; \\
-     Fit function: " %+% model.fit$fitfunname
-  )
-}
-
+#' S3 methods for getting model fit summary for glmfit class object
+#'
+#' Prints the modeling summary for the GLM fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
+#' @param model.fit The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm
+#' @param format_table Format the coefficients into a data.frame table?
+#' @param ... Additional options (not used)
+#' @return The markdown-formated model summary returned by \code{pander::pander_return}.
+#' @export
 summary.glmfit <- function(model.fit, format_table = TRUE, ...) {
+  makeModelCaption <- function(model.fit) {
+    return(
+      "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
+       Stratify: " %+% model.fit$params$stratify %+% "; \\
+       N: " %+% prettyNum(model.fit$nobs, big.mark = ",", scientific = FALSE) %+% "; \\
+       Fit function: " %+% model.fit$fitfunname
+    )
+  }
   nobs <- model.fit$nobs
   coef_out <- model.fit$coef
   if (format_table) {
@@ -105,6 +105,15 @@ summary.glmfit <- function(model.fit, format_table = TRUE, ...) {
   out
 }
 
+#' S3 methods for getting model fit summary for h2ofit class object
+#'
+#' Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
+#' @param model.fit The model fit object produced by any stremr S3 function starting with \code{stremr:::h2ofit.}
+#' @param only.coefs Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "GLM"}).
+#' @param format_table Format the coefficients into a data.frame table (when running \code{fit.algorithm = "GLM"})?
+#' @param ... Additional options (not used)
+#' @return The markdown-formated model summary returned by \code{pander::pander_return}.
+#' @export
 summary.h2ofit <- function(model.fit, only.coefs = FALSE, format_table = TRUE, ...) {
   h2o.model <- model.fit$H2O.model.object
   modelID <- h2o.model@model$training_metrics@metrics$model$name
@@ -143,11 +152,14 @@ summary.h2ofit <- function(model.fit, only.coefs = FALSE, format_table = TRUE, .
   return(out)
 }
 
-print.glmfit <- function(model.fit, ...) {
-  model.summary <- summary(model.fit, ...)
-  cat(paste(model.summary, collapse = '\n'))
-}
-
+#' S3 methods for printing model fit summary for h2ofit class object
+#'
+#' Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
+#' @param model.fit The model fit object produced by any stremr S3 function starting with \code{stremr:::h2ofit.}
+#' @param only.coefs Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "GLM"}).
+#' @param ... Additional options passed on to \code{summary.h2ofit}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.h2ofit}.
+#' @export
 print.h2ofit <- function(model.fit, only.coefs = FALSE, ...) {
   model.summary <- summary(model.fit, only.coefs, ...)
   cat(paste(model.summary, collapse = '\n'))
@@ -208,6 +220,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
     fit.package = c("speedglm", "glm", "h2o"),
     fit.algorithm = c("GLM", "GBM", "RF", "SL"),
+    model_contrl = list(),
 
     n = NA_integer_,        # number of rows in the input data
     nbins = integer(),
@@ -218,8 +231,23 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
-      self$fit.package <- reg$fit.package
-      self$fit.algorithm <- reg$fit.algorithm
+      model_contrl <- reg$model_contrl
+      self$model_contrl <- reg$model_contrl
+      if ("fit.package" %in% names(model_contrl)) {
+        self$fit.package <- model_contrl[['fit.package']]
+        assert_that(is.character(self$fit.package))
+        assert_that(self$fit.package %in% c("speedglm", "glm", "h2o"))
+      } else {
+        self$fit.package <- reg$fit.package[1]
+      }
+
+      if ("fit.algorithm" %in% names(model_contrl)) {
+        self$fit.algorithm <- model_contrl[['fit.algorithm']]
+        assert_that(is.character(self$fit.algorithm))
+        assert_that(self$fit.algorithm %in% c("GLM", "GBM", "RF", "SL"))
+      } else {
+        self$fit.algorithm <- reg$fit.algorithm[1]
+      }
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar

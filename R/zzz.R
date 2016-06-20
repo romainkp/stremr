@@ -9,7 +9,7 @@ gvars$misval <- NA_integer_ # the default missing value for observations (# gvar
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
 gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$tolerr => a = b
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
-gvars$noCENS.cat <- 0L      # the reference category that designates continuation of follow-up
+gvars$noCENScat <- 0L      # the reference category that designates continuation of follow-up
 
 getopt <- function(optname) {
   opt <- gvars$opts
@@ -62,17 +62,8 @@ print_stremr_opts <- function() {
 #' @seealso \code{\link{print_stremr_opts}}
 #' @export
 #'
-stremr_options <- function(
-                            # useglm = FALSE,
-                            # GLMpackage = c("glm", "speedglm", "h2oglm"),
-
-                            # fit.package = c("glm", "speedglm", "h2o"),
-                            fit.package = c("speedglm", "glm", "h2o"),
-
-                            # fit.algorithm = c("glm", "h2oGLM", "h2oGBM", "h2oRF", "h2oSL"),
+stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
                             fit.algorithm = c("GLM", "GBM", "RF", "SL"),
-
-
                             bin.method = c("equal.len", "equal.mass", "dhist"),
                             parfit = FALSE,
                             nbins = NA,
@@ -84,11 +75,13 @@ stremr_options <- function(
   old.opts <- gvars$opts
   bin.method <- bin.method[1L]
 
+  fit.package <- fit.package[1L]
+  assert_that(fit.package %in% c("speedglm", "glm", "h2o"))
+
+  fit.algorithm <- fit.algorithm[1L]
+  assert_that(fit.algorithm %in% c("GLM", "GBM", "RF", "SL"))
 
   # GLMpackage <- GLMpackage[1L]
-  fit.package <- fit.package[1L]
-  fit.algorithm <- fit.algorithm[1L]
-
   # if (GLMpackage %in% "glm") {
   # } else if (GLMpackage %in% "speedglm") {
   # } else if (GLMpackage %in% "h2oglm") {
@@ -102,7 +95,6 @@ stremr_options <- function(
   } else {
     stop("bin.method argument must be either 'equal.len', 'equal.mass' or 'dhist'")
   }
-
 
 
   opts <- list(

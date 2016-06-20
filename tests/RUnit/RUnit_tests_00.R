@@ -100,25 +100,25 @@ test.regressionCases <- function() {
   # 1A) No stratification, TRT=c("A1","A2"), CENS=c("C1","C2","C3"), MONITOR="N":
   # ------------------------------------------------------------------------------------------------------------------
   # Two equivalent ways to specify regression models:
-  gform.TRT1 <- c("A1 + A2 ~ L1 + L2")
-  gform.TRT2 <- c("A1 ~ L1 + L2", "A2 ~ L1 + L2 + A1")
+  gform_TRT1 <- c("A1 + A2 ~ L1 + L2")
+  gform_TRT2 <- c("A1 ~ L1 + L2", "A2 ~ L1 + L2 + A1")
   # Two equivalent way to specify regressions models:
-  gform.CENS1 <- c("C1 + C2 + C3 ~ L1 + L2")
-  gform.CENS2 <- c("C1 ~ L1 + L2", "C2 ~ L1 + L2 + C1", "C3 ~ L1 + L2 + C1 + C2")
+  gform_CENS1 <- c("C1 + C2 + C3 ~ L1 + L2")
+  gform_CENS2 <- c("C1 ~ L1 + L2", "C2 ~ L1 + L2 + C1", "C3 ~ L1 + L2 + C1 + C2")
 
-  gform.MONITOR <- c("N ~ L1 + L2 + A1 + A2")
-
-  # ........
-  # stremr <- function(data = Odata, ID = "ID", t = "t",
-  #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
-  #                             gform.CENS = gform.CENS1, gform.TRT = gform.TRT1, gform.MONITOR = gform.MONITOR,
-  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
+  gform_MONITOR <- c("N ~ L1 + L2 + A1 + A2")
 
   # ........
   # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
-  #                             gform.CENS = gform.CENS2, gform.TRT = gform.TRT2, gform.MONITOR = gform.MONITOR,
-  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
+  #                             gform.CENS = gform_CENS1, gform.TRT = gform_TRT1, gform_MONITOR = gform_MONITOR,
+  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify_MONITOR = NULL)
+
+  # ........
+  # stremr <- function(data = Odata, ID = "ID", t = "t",
+  #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
+  #                             gform.CENS = gform_CENS2, gform.TRT = gform_TRT2, gform_MONITOR = gform_MONITOR,
+  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify_MONITOR = NULL)
 
   # ------------------------------------------------------------------------------------------------------------------
   # 1B) Categorical TRT="A" that codes the same (A1,A2,A3), categorical CENS="C" that codes (C1,C2,C3)
@@ -129,37 +129,37 @@ test.regressionCases <- function() {
   # ........
   # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C"), TRT = c("A"), MONITOR = "N", OUTCOME = "Y",
-  #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform.MONITOR = gform.MONITOR,
-  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify.MONITOR = NULL)
+  #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform_MONITOR = gform_MONITOR,
+  #                             stratify.CENS = NULL, stratify.TRT = NULL, stratify_MONITOR = NULL)
 
   # ------------------------------------------------------------------------------------------------------------------
   # 2A) Stratification (subsetting) by logical expressions on TRT=c("A1","A2") & CENS=c("C1","C2","C3"):
-  # ******* WHEN ONLY ONE REGRESSION IS SPECIFIED (gform.TRT1 and gform.CENS1) ********
+  # ******* WHEN ONLY ONE REGRESSION IS SPECIFIED (gform_TRT1 and gform_CENS1) ********
   # ------------------------------------------------------------------------------------------------------------------
-  gform.TRT1 <- c("A1 + A2 ~ L1 + L2"); stratify.TRT1 = c("t == 0L", "t > 0L")
-  gform.CENS1 <- c("C1 + C2 + C3 ~ L1 + L2"); stratify.CENS1 = c("t == 0L", "t > 0L")
+  gform_TRT1 <- c("A1 + A2 ~ L1 + L2"); stratify_TRT1 = c("t == 0L", "t > 0L")
+  gform_CENS1 <- c("C1 + C2 + C3 ~ L1 + L2"); stratify_CENS1 = c("t == 0L", "t > 0L")
   # ........
   # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
-  #                             gform.CENS = gform.CENS1, gform.TRT = gform.TRT1, gform.MONITOR = gform.MONITOR,
-  #                             stratify.CENS = stratify.CENS1, stratify.TRT = stratify.TRT1, stratify.MONITOR = NULL)
+  #                             gform.CENS = gform_CENS1, gform.TRT = gform_TRT1, gform_MONITOR = gform_MONITOR,
+  #                             stratify.CENS = stratify_CENS1, stratify.TRT = stratify_TRT1, stratify_MONITOR = NULL)
 
   # ------------------------------------------------------------------------------------------------------------------
   # 2B) Stratification
-  # ******* WHEN > ONE REGRESSION IS SPECIFIED, i.e., gform.TRT2 and gform.CENS2) ********
+  # ******* WHEN > ONE REGRESSION IS SPECIFIED, i.e., gform_TRT2 and gform_CENS2) ********
   # ONE SOLUTION IS TO FORCE stratify.CENS & stratify.TRT TO BE A NAMED LIST.
   # EACH ITEM IN A LIST CORRESPONDS TO VECTOR OF STRATIFICATION RULES
   # ------------------------------------------------------------------------------------------------------------------
-  gform.TRT2 <- c("A1 ~ L1 + L2", "A2 ~ L1 + L2 + A1")
+  gform_TRT2 <- c("A1 ~ L1 + L2", "A2 ~ L1 + L2 + A1")
   stratify.TRT2 = list(A1=c("t == 0L", "t > 0L"), A2=c("t == 0L", "t > 0L"))
 
-  gform.CENS2 <- c("C1 ~ L1 + L2", "C2 ~ L1 + L2 + C1", "C3 ~ L1 + L2 + C1 + C2")
-  stratify.CENS2 = list(C1=c("t == 0L", "t > 0L"), C2=c("t == 0L", "t > 0L"))
+  gform_CENS2 <- c("C1 ~ L1 + L2", "C2 ~ L1 + L2 + C1", "C3 ~ L1 + L2 + C1 + C2")
+  stratify_CENS2 = list(C1=c("t == 0L", "t > 0L"), C2=c("t == 0L", "t > 0L"))
   # ........
   # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = c("C1", "C2", "C3"), TRT = c("A1", "A2"), MONITOR = "N", OUTCOME = "Y",
-  #                             gform.CENS = gform.CENS2, gform.TRT = gform.TRT2, gform.MONITOR = gform.MONITOR,
-  #                             stratify.CENS = stratify.CENS2, stratify.TRT = stratify.TRT2, stratify.MONITOR = NULL)
+  #                             gform.CENS = gform_CENS2, gform.TRT = gform_TRT2, gform_MONITOR = gform_MONITOR,
+  #                             stratify.CENS = stratify_CENS2, stratify.TRT = stratify.TRT2, stratify_MONITOR = NULL)
 
   # ------------------------------------------------------------------------------------------------------------------
   # 2C) Stratification (subsetting) by logical expressions on cat TRT=c("A") and cat CENS="C":
@@ -172,8 +172,8 @@ test.regressionCases <- function() {
   # ........
   # stremr <- function(data = Odata, ID = "ID", t = "t",
   #                             covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
-  #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform.MONITOR = gform.MONITOR,
-  #                             stratify.CENS = stratify.CENS3, stratify.TRT = stratify.TRT3, stratify.MONITOR = NULL)
+  #                             gform.CENS = gform.CENS3, gform.TRT = gform.TRT3, gform_MONITOR = gform_MONITOR,
+  #                             stratify.CENS = stratify.CENS3, stratify.TRT = stratify.TRT3, stratify_MONITOR = NULL)
 
 }
 

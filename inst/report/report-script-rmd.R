@@ -4,9 +4,6 @@
 #' date: "`r Sys.Date()`"
 #' ---
 
-# change title and author if these are available:
-# title = NULL, author = NULL,
-
 #+ setup, include=FALSE
 require("knitr")
 require("pander")
@@ -76,9 +73,63 @@ panderOptions('knitr.auto.asis', TRUE)
 #' # Distribution of the weights
 
 #+ echo=FALSE
-IPAWdist <- get_wtsummary(MSM$wts.data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
-pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
-pander::pander(IPAWdist, justify = c('right', rep("left",ncol(IPAWdist)-1)))
+if (!missing(WTtables)) {
+  # IPAWdists <- get_wtsummary(MSM$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
+  # IPAWdistByRule <- IPAWdists$summary.table.byrule
+  pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
+  pander::pander(WTtables$summary.table, justify = c('right', rep("left",ncol(WTtables$summary.table)-1)))
+}
+
+#+ echo=FALSE
+if (!missing(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
+  pander::set.caption("Counts of the stabilized IPA weights by each rule")
+  pander::pander(WTtables$summary.DT.byrule, justify = c('right', rep("left",ncol(WTtables$summary.DT.byrule)-1)))
+}
+
+#'\pagebreak
+#'
+#' # Distribution of the follow-up times
+
+#+ echo=FALSE
+if (AddFUPtables) {
+  t.name.col <- OData$nodes$tnode
+  ID.name.col <- OData$nodes$IDnode
+  # follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
+  follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name.TRT"), get("rule.name.MONITOR"))]
+  data.table::setnames(follow_up_rule_ID, c(OData$nodes$IDnode, "rule.name.TRT", "rule.name.MONITOR", "max.t"))
+  data.table::setkeyv(follow_up_rule_ID, cols = OData$nodes$IDnode)
+  MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
+  TRT.rules <- unique(wts.all[["rule.name.TRT"]])
+  for (M.rule in MONITOR.rules) {
+    for (T.rule in TRT.rules) {
+      one_ruleID <- follow_up_rule_ID[(rule.name.TRT %in% eval(T.rule)) & (rule.name.MONITOR %in% eval(M.rule)), max.t]
+      hist(one_ruleID, main = "Maximum follow-up period for TRT rule: " %+% T.rule %+% " \nand MONITOR rule: " %+% M.rule)
+    }
+  }
+}
+
+#+ echo=FALSE, results='asis'
+if (AddFUPtables) {
+  # t.name.col <- OData$nodes$tnode
+  # follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
+  # setkeyv(follow_up_rule_ID, cols = "ID")
+  # MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
+  # TRT.rules <- unique(wts.all[["rule.name.TRT"]])
+  for (M.rule in MONITOR.rules) {
+    for (T.rule in TRT.rules) {
+      one_ruleID <- follow_up_rule_ID[(rule.name.TRT %in% eval(T.rule)) & (rule.name.MONITOR %in% eval(M.rule)), max.t]
+      # hist(one_ruleID, main = "Maximum follow-up period for TRT rule: " %+% T.rule %+% " \nand MONITOR rule: " %+% M.rule)
+      panderOptions('knitr.auto.asis', FALSE)
+      followupTimes <- table(one_ruleID)
+      followupTimes <- makeFreqTable(followupTimes)
+      pander::pander(followupTimes, caption = "Distribution of the total follow-up time for TRT rule: " %+% T.rule %+% " and MONITOR rule: " %+% M.rule)
+      pander::pander(summary(one_ruleID), caption = "Min/Max/Quantiles for the total follow-up time for TRT rule: " %+% T.rule %+% " and MONITOR rule: " %+% M.rule)
+      panderOptions('knitr.auto.asis', TRUE)
+    }
+  }
+}
+
+
 
 #'\pagebreak
 #'
@@ -88,7 +139,7 @@ pander::pander(IPAWdist, justify = c('right', rep("left",ncol(IPAWdist)-1)))
 MSM.fit <- MSM$MSM.fit
 output.MSM <- round(MSM.fit$coef,2)
 output.MSM <- cbind("Terms" = names(MSM.fit$coef), output.MSM)
-colnames(output.MSM) <- c("Terms",ifelse(MSM$trunc.weights == Inf && MSM$use.weights, "IPAW", ifelse(MSM$trunc.weights < Inf && MSM$use.weights, "truncated IPAW", "no weights")))
+colnames(output.MSM) <- c("Terms",ifelse(MSM$trunc_weights == Inf && MSM$use_weights, "IPAW", ifelse(MSM$trunc_weights < Inf && MSM$use_weights, "truncated IPAW", "no weights")))
 rownames(output.MSM) <- NULL
 pander::set.caption("Coefficients of MSM")
 pander::pander(output.MSM, justify = c('right', 'left'))

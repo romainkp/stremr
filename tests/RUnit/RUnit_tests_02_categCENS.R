@@ -87,16 +87,16 @@ test.model.fits.categorCENSOR <- function() {
   # --------------------------------
   # EXAMPLE 1:
   # --------------------------------
-  gform.CENS <- "C + TI + N ~ highA1c + lastNat1"
-  gform.TRT = "TI ~ CVD + highA1c + N.tminus1"
-  gform.MONITOR <- "N ~ 1"
+  gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
+  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+  gform_MONITOR <- "N ~ 1"
   system.time(
   res <-
     stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-          gform.CENS = gform.CENS, gform.TRT = gform.TRT, gform.MONITOR = gform.MONITOR)
-          # noCENS.cat = 0L)
+          gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
+          # noCENScat = 0L)
     )
 
   res$IPW_estimates
@@ -105,22 +105,22 @@ test.model.fits.categorCENSOR <- function() {
   # --------------------------------
   # EXAMPLE 2:
   # --------------------------------
-  gform.CENS <- "C + TI + N ~ highA1c + lastNat1"
+  gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
   strat.str <- c("t == 0L", "t > 0")
-  stratify.CENS <- rep(list(strat.str), 3)
-  names(stratify.CENS) <- c("C", "TI", "N")
-  gform.TRT = "TI ~ CVD + highA1c + N.tminus1"
-  gform.MONITOR <- "N ~ 1"
+  stratify_CENS <- rep(list(strat.str), 3)
+  names(stratify_CENS) <- c("C", "TI", "N")
+  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+  gform_MONITOR <- "N ~ 1"
 
   system.time(
   res <-
     stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-          gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
-          gform.TRT = gform.TRT,
-          gform.MONITOR = gform.MONITOR)
-          # noCENS.cat = 0L)
+          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+          gform_TRT = gform_TRT,
+          gform_MONITOR = gform_MONITOR)
+          # noCENScat = 0L)
     )
 
   res$IPW_estimates
@@ -129,18 +129,18 @@ test.model.fits.categorCENSOR <- function() {
   # --------------------------------
   # EXAMPLE 3:
   # --------------------------------
-  gform.CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
-  gform.TRT = "TI ~ CVD + highA1c + N.tminus1"
-  gform.MONITOR <- "N ~ 1"
+  gform_CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
+  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+  gform_MONITOR <- "N ~ 1"
   system.time(
   res <-
     stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-          gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
-          gform.TRT = gform.TRT,
-          gform.MONITOR = gform.MONITOR,
-          noCENS.cat = 1L)
+          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+          gform_TRT = gform_TRT,
+          gform_MONITOR = gform_MONITOR,
+          noCENScat = 1L)
     )
   res$IPW_estimates
   # res$dataDT
@@ -148,24 +148,24 @@ test.model.fits.categorCENSOR <- function() {
   # --------------------------------
   # EXAMPLE 4:
   # --------------------------------
-  gform.CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
-  stratify.CENS <- list(C = NULL, TI = c("t == 0L", "t > 0"), N = c("t == 0L", "t > 0"))
-  gform.TRT = "TI ~ CVD + highA1c + N.tminus1"
-  stratify.TRT <- list(TI=c("t == 0L", "t > 0L & TI.tminus1 == 0L", "t > 0L & TI.tminus1 == 1L"))
+  gform_CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
+  stratify_CENS <- list(C = NULL, TI = c("t == 0L", "t > 0"), N = c("t == 0L", "t > 0"))
+  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+  stratify_TRT <- list(TI=c("t == 0L", "t > 0L & TI.tminus1 == 0L", "t > 0L & TI.tminus1 == 1L"))
   # **** really want to define it like this ****
-  # gform.TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
+  # gform_TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
   #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
-  gform.MONITOR <- "N ~ 1"
+  gform_MONITOR <- "N ~ 1"
 
   system.time(
   res <-
     stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-          gform.CENS = gform.CENS, stratify.CENS = stratify.CENS,
-          gform.TRT = gform.TRT, stratify.TRT = stratify.TRT,
-          gform.MONITOR = gform.MONITOR,
-          noCENS.cat = 0L)
+          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+          gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+          gform_MONITOR = gform_MONITOR,
+          noCENScat = 0L)
     )
   res$IPW_estimates
   # res$dataDT
