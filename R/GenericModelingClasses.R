@@ -83,7 +83,7 @@ GenericModel <- R6Class(classname = "GenericModel",
       all.outvar.bin <-  all(reg$outvar.class %in% gvars$sVartypes$bin)
 
       if (reg$parfit & all.outvar.bin & (self$n_regs > 1)) self$parfit_allowed <- TRUE
-      #**** NOTE: for ltmle this should be changed to: if (reg$sep_predvars_sets) self$parfit_allowed <- TRUE
+
       if (gvars$verbose) {
         print("#----------------------------------------------------------------------------------")
         print("New instance of GenericModel:")

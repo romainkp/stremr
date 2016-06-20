@@ -1,3 +1,32 @@
+SGCompRegClass <- R6Class("SGCompRegClass",
+  inherit = RegressionClass,
+  class = TRUE,
+  portable = TRUE,
+  public = list(
+    outvar = character(),          # the outcome variable name (Ynode)
+    outvar.class = character(),
+    Qforms = character(),
+    n_regs = integer(),
+    # n_timepts = integer(),       # number of time points
+    nodes = list(),
+    predvars = list(),             # list of predictors for each regression from Qforms
+    # not used for now:
+    Anodes = list(),               # list of treatment var names, by timepoint
+    Cnodes = list(),               # list of censoring var names, by timepoint
+    Lnodes = list(),               # list of time-varying confounder names, by timepoint
+    Wnodes = character(),          # character vector of baseline covariate names
+    subset = NULL,                 # subset expression (later evaluated to logical vector in the envir of the data)
+
+    ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
+    pool_cont = FALSE,             # NOT USED IN G-COMP
+    outvars_to_pool = NULL,        # NOT USED IN G-COMP
+
+    useglm = logical(),            # TRUE to fit reg with glm.fit(), FALSE to fit with speedglm.wfit
+    parfit = logical(),            # TRUE for fitting binary regressions in parallel
+    pool = logical()
+  )
+)
+
 ## ---------------------------------------------------------------------
 #' R6 class that defines regression models evaluating P(sA|sW), for summary measures (sW,sA)
 #'

@@ -538,6 +538,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
   ),
 
   active = list(
+    min.t = function() { min(self$dat.sVar[[self$nodes[['tnode']]]], na.rm = TRUE) },
+    max.t = function() { max(self$dat.sVar[[self$nodes[['tnode']]]], na.rm = TRUE) },
     nobs = function() { nrow(self$dat.sVar) },
     nuniqueIDs = function() { length(unique(self$dat.sVar[[self$nodes$IDnode]])) },
     nuniquets = function() { length(unique(self$dat.sVar[[self$nodes$tnode]])) },

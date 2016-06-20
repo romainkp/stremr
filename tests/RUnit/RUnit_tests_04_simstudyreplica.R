@@ -318,3 +318,23 @@ make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits =
 make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
+
+
+
+# ---------------------------------------------------------------------------------------------------------
+# Testing gcomp for long data
+# ---------------------------------------------------------------------------------------------------------
+options(stremr.verbose = TRUE)
+require("h2o")
+h2o::h2o.init(nthreads = 2)
+# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+# stremr_options(fit.package = "glm", fit.algorithm = "GLM")
+stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h20.GLM"
+# stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h20.RF"
+# stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h20.GBM"
+OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+gcomp_fit <- fitSeqGcomp(OData, t = 5)
+
+
+
+
