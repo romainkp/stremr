@@ -41,8 +41,9 @@ openFileInOS <- function(f) {
 #' @param MSM The MSM object fits returned by the function \code{survMSM}.
 #' @param MSMlist ...NOT IMPLEMENTED...
 #' @param SurvByRegimen ... NOT IMPLEMENTED...
-#' @param RDtables List of tables with risk differences returned by the function \code{get_MSM_RDs}.
 #' @param WTtables Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}
+#' @param AddFUPtables Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times by rule (monitoring and treatment).
+#' @param RDtables List of tables with risk differences returned by the function \code{get_MSM_RDs}.
 #' @param format Choose the Pandoc output format for the report file (html, pdf or word).
 #' Note that the html report file is always produced in addition to any other selected format.
 #' @param skip.modelfits Do not report any of the modeling stats.
@@ -53,7 +54,7 @@ openFileInOS <- function(f) {
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
+make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
   optArgReport <- list(...)
 
   if ("author" %in% names(optArgReport)) {

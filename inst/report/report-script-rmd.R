@@ -88,6 +88,48 @@ if (!missing(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
 
 #'\pagebreak
 #'
+#' # Distribution of the follow-up times
+
+#+ echo=FALSE
+if (AddFUPtables) {
+  t.name.col <- OData$nodes$tnode
+  follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
+  setkeyv(follow_up_rule_ID, cols = "ID")
+  MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
+  TRT.rules <- unique(wts.all[["rule.name.TRT"]])
+  for (M.rule in MONITOR.rules) {
+    for (T.rule in TRT.rules) {
+      one_ruleID <- follow_up_rule_ID[(rule.name.TRT %in% eval(T.rule)) & (rule.name.MONITOR %in% eval(M.rule)), max.t]
+      hist(one_ruleID, main = "Maximum follow-up period for TRT rule: " %+% T.rule %+% " \nand MONITOR rule: " %+% M.rule)
+    }
+  }
+}
+
+#+ echo=FALSE, results='asis'
+if (AddFUPtables) {
+  # t.name.col <- OData$nodes$tnode
+  # follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
+  # setkeyv(follow_up_rule_ID, cols = "ID")
+  # MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
+  # TRT.rules <- unique(wts.all[["rule.name.TRT"]])
+  for (M.rule in MONITOR.rules) {
+    for (T.rule in TRT.rules) {
+      one_ruleID <- follow_up_rule_ID[(rule.name.TRT %in% eval(T.rule)) & (rule.name.MONITOR %in% eval(M.rule)), max.t]
+      # hist(one_ruleID, main = "Maximum follow-up period for TRT rule: " %+% T.rule %+% " \nand MONITOR rule: " %+% M.rule)
+      panderOptions('knitr.auto.asis', FALSE)
+      followupTimes <- table(one_ruleID)
+      followupTimes <- makeFreqTable(followupTimes)
+      pander::pander(followupTimes, caption = "Distribution of the total follow-up time for TRT rule: " %+% T.rule %+% " and MONITOR rule: " %+% M.rule)
+      pander::pander(summary(one_ruleID), caption = "Min/Max/Quantiles for the total follow-up time for TRT rule: " %+% T.rule %+% " and MONITOR rule: " %+% M.rule)
+      panderOptions('knitr.auto.asis', TRUE)
+    }
+  }
+}
+
+
+
+#'\pagebreak
+#'
 #' # MSM fits
 
 #+ echo=FALSE
