@@ -126,6 +126,7 @@ process_regform <- function(regform, sVar.map = NULL, factor.map = NULL) {
   predvars <- unlist(lapply(predvars, get_vars_fromlist, factor.map))
   return(list(outvars = outvars, predvars = predvars))
 }
+
 # Loop through a list of SingleRegressionFormClass objects and their outvars as if it was one long list of outvars and create the subsetting expressions
 # This uses S3 method dispatch on object ListOfRegressionForms
 stratify_by_uncensored <- function(regs) {
@@ -140,8 +141,10 @@ stratify_by_uncensored <- function(regs) {
   }
   return(regs)
 }
+
 # Create subsetting expressions for a node (Anode, Cnode or Nnode)
-# Named list with character expressions for subsetting. Each list item corresponds to one outcome in SingleRegressionFormClass
+# Named list with character expressions for subsetting.
+# Each list item corresponds to one outcome in SingleRegressionFormClass
 create_subset_expr <- function(outvars, stratify.EXPRS) {
   if (is.null(stratify.EXPRS)) {
     return(NULL)
@@ -191,12 +194,14 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
 
       subset_expr <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
       regobj <- SingleRegressionFormClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
-                                              subset_vars = NULL, subset_exprs = subset_expr, model_contrl = model_contrl, censoring = censoring)
+                                              subset_vars = NULL, subset_exprs = subset_expr, model_contrl = model_contrl,
+                                              censoring = censoring)
       regs[[idx]] <- regobj
   }
   class(regs) <- c(class(regs), "ListOfRegressionForms")
   if (censoring) regs <- stratify_by_uncensored(regs)
-  return(list(outvars = outvars, predvars = predvars, regs = regs))
+  return(regs)
+  # return(list(outvars = outvars, predvars = predvars, regs = regs))
 }
 
 #---------------------------------------------------------------------------------

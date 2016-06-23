@@ -16,14 +16,13 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 
 # S3 method for fitting h2o GLM with binomial() family (logistic regression):
 h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  if (gvars$verbose) print("calling h2o.glm...")
   mainArgs <- list(x = predvars,
                   y = outvar,
                   intercept = TRUE,
                   training_frame = subsetH2Oframe,
                   family = "binomial",
                   standardize = TRUE,
-                  solver = c("L_BFGS"),
+                  solver = "L_BFGS",
                   lambda = 0L,
                   # solver = c("IRLSM"),
                   # remove_collinear_columns = TRUE,
@@ -34,19 +33,23 @@ h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.glm)
   if (gvars$verbose) {
     print("running h2o.glm with args: "); print(mainArgs)
+  } else {
+    h2o.no_progress()
   }
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
+
+  # ---------------------------------------------------------------------------
+  # for running logistic regression with continuous outcome range [0-1]
+  # ---------------------------------------------------------------------------
   # model.fit <- h2o::h2o.glm(x = predvars,
   #                           y = outvar,
   #                           intercept = TRUE,
   #                           training_frame = subsetH2Oframe,
   #                           family = "binomial",
   #                           standardize = TRUE,
-  #                           solver = c("L_BFGS"),
   #                           lambda = 0L,
-  #                           # solver = c("IRLSM"),
-  #                           # remove_collinear_columns = TRUE,
-  #                           max_iterations = 50,
+  #                           solver = "IRLSM",
+  #                           max_iterations = 100,
   #                           ignore_const_cols = FALSE,
   #                           missing_values_handling = "Skip")
 
@@ -73,7 +76,6 @@ h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
 
 # S3 method for h2o RFs fit (Random Forest):
 h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  if (gvars$verbose) print("calling h2o.randomForest...")
   mainArgs <- list(x = predvars, y = outvar,
                    training_frame = subsetH2Oframe,
                    ntrees = 100,
@@ -83,14 +85,11 @@ h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mod
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.randomForest)
   if (gvars$verbose) {
     print("running h2o.randomForest with args: "); print(mainArgs)
+  } else {
+    h2o.no_progress()
   }
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
-  # model.fit <- h2o::h2o.randomForest(x = predvars,
-  #                                    y = outvar,
-  #                                    training_frame = subsetH2Oframe,
-  #                                    ntrees = 100,
-  #                                    balance_classes = TRUE,
-  #                                    ignore_const_cols = FALSE)
+
   fit$coef <- NULL;
   fit$fitfunname <- "h2o.randomForest";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
@@ -102,7 +101,6 @@ h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mod
 
 # S3 method for h2o GBM fit, takes BinDat data object:
 h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  if (gvars$verbose) print("calling h2o.gbm...")
   mainArgs <- list(x = predvars, y = outvar,
                    training_frame = subsetH2Oframe,
                    distribution = "bernoulli",
@@ -113,15 +111,11 @@ h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
   if (gvars$verbose) {
     print("running h2o.gbm with args: "); print(mainArgs)
+  } else {
+    h2o.no_progress()
   }
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
-  # model.fit <- h2o::h2o.gbm(x = predvars,
-  #                           y = outvar,
-  #                           training_frame = subsetH2Oframe,
-  #                           distribution = "bernoulli",
-  #                           ntrees = 100,
-  #                           balance_classes = TRUE,
-  #                           ignore_const_cols = FALSE)
+
   fit$coef <- NULL;
   fit$fitfunname <- "h2o.gbm";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
@@ -176,7 +170,14 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
                                                     saveH2O = FALSE,
                                                     destination_frame = "newH2Osubset")
         )
-        print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
+        # change the column names of H2O.FRAME
+        # h2o::colnames(subsetH2Oframe) <- c("T", "C", "h", "N")
+        # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
+        # names(subsetH2Oframe)[1] <- "T2"%+%"_1"
+        if (gvars$verbose) {
+          print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
+        }
+
         # print("length(rows_subset): "); print(length(rows_subset))
         # print("2 frames are equivalent?"); print(all.equal(subsetH2Oframe_1, subsetH2Oframe_2))
         # subsetH2Oframe <- subsetH2Oframe_2
@@ -205,7 +206,10 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       }
 
       if (!inherits(model.fit, "try-error")) {
+
         subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
+        # subsetH2Oframe[, outvar] <- (subsetH2Oframe[, outvar])/2
+
         private$subsetH2Oframe <- subsetH2Oframe
         model.fit <- try(
                       h2ofit(self$model.fit,

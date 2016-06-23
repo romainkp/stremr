@@ -214,19 +214,21 @@ gform_MONITOR <- "N ~ 1"
 # ----------------------------------------------------------------
 options(stremr.verbose = TRUE)
 require("h2o")
-h2o::h2o.init(nthreads = 2)
+# h2o::h2o.init(nthreads = 2)
+h2o::h2o.init()
 # stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "glm", fit.algorithm = "GLM")
-stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h20.GLM"
-# stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h20.RF"
-# stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h20.GBM"
+stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
+# stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
+# stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
+# h2o::h2o.shutdown(prompt = FALSE)
 
 OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
 # OData$H2O.dat.sVar
 
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
-params_TRT = list(fit.package = "h2o", fit.algorithm = "GBM", ntrees = 50)
+params_TRT = list(fit.package = "h2o", fit.algorithm = "GLM", ntrees = 50)
 params_MONITOR = list(fit.package = "glm", fit.algorithm = "GLM")
 # params_TRT = NULL,
 # params_MONITOR = NULL,
@@ -345,14 +347,13 @@ make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file
 options(stremr.verbose = TRUE)
 require("h2o")
 h2o::h2o.init(nthreads = 2)
-# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "glm", fit.algorithm = "GLM")
-stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h20.GLM"
-# stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h20.RF"
-# stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h20.GBM"
+# stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
+# stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
+# stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
 OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 gcomp_fit <- fitSeqGcomp(OData, t = 5)
-
 
 
 

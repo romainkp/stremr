@@ -98,7 +98,6 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
     subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
                                             saveH2O = FALSE,
                                             destination_frame = "subsetH2Oframe")
-
     # ParentObject$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
   } else {
     subsetH2Oframe <- ParentObject$getsubsetH2Oframe

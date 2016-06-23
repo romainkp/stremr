@@ -7,17 +7,40 @@
 # ---------------------------------------------------------------------------------
 # S3 constructors for the summary model classes:
 # ---------------------------------------------------------------------------------
-newsummarymodel <- function(reg, DataStorageClass.g0, ...) { UseMethod("newsummarymodel") }
-# Summary model constructor for binary outcome sA[j]:
-newsummarymodel.binary <- function(reg, ...) BinaryOutcomeModel$new(reg = reg, ...)
+newsummarymodel <- function(regClass, reg, DataStorageClass.g0, ...) { UseMethod("newsummarymodel") }
 # Summary model constructor for generic regression with multivariate outcome, but one set of predictors
-newsummarymodel.generic <- function(reg, DataStorageClass.g0, ...) GenericModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+newsummarymodel.generic <- function(regClass, reg, DataStorageClass.g0, ...) GenericModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for continuous outcome sA[j]:
-newsummarymodel.contin <- function(reg, DataStorageClass.g0, ...) ContinModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+newsummarymodel.contin <- function(regClass, reg, DataStorageClass.g0, ...) ContinModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for categorical outcome sA[j]:
-newsummarymodel.categor <- function(reg, DataStorageClass.g0, ...) CategorModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+newsummarymodel.categor <- function(regClass, reg, DataStorageClass.g0, ...) CategorModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for stratification (by reg$subset_exprs):
-newsummarymodel.stratify <- function(reg, DataStorageClass.g0, ...) StratifiedModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+newsummarymodel.stratify <- function(regClass, reg, DataStorageClass.g0, ...) StratifiedModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+# Summary model constructor for binary outcome sA[j]:
+newsummarymodel.binary <- function(regClass, reg, ...) BinaryOutcomeModel$new(reg = reg, ...)
+# Summary model constructor for Q-learning (sequential regression):
+newsummarymodel.Qlearn <- function(regClass, reg, ...) QlearnModel$new(reg = reg, ...)
+
+prettyprint_GenericModel <- function(self, reg, all.outvar.bin) {
+  print("#----------------------------------------------------------------------------------")
+  print("New instance of GenericModel:")
+  print("#----------------------------------------------------------------------------------")
+  # if ("ListOfRegressionForms" %in% class(reg$RegressionForms)) {
+  if ("ListOfRegressionForms" %in% class(reg)) {
+    # print("...ListOfRegressionForms..."); if (!is.null(names(reg$RegressionForms))) {print(names(reg$RegressionForms))}
+    print("...ListOfRegressionForms..."); if (!is.null(names(reg))) {print(names(reg))}
+    print("Outcomes: "); print(paste0(get_outvars(reg), collapse = ","))
+  } else {
+    print("Outcomes: " %+% paste(reg$outvar, collapse = ", "))
+    print("Predictors: " %+% paste(reg$predvars, collapse = ", "))
+    # print("Outcomes: " %+% paste(reg$RegressionForms$outvar, collapse = ", "))
+    # print("Predictors: " %+% paste(reg$RegressionForms$predvars, collapse = ", "))
+  }
+  print("No. of regressions: " %+% self$n_regs)
+  print("All outcomes binary? " %+% all.outvar.bin)
+  if (self$parfit_allowed) print("Performing parallel fits: " %+% self$parfit_allowed)
+  print("#----------------------------------------------------------------------------------")
+}
 
 ## ---------------------------------------------------------------------
 #' Generic R6 class for modeling (fitting and predicting) P(A=a|W=w) where A can be a multivariate (A[1], ..., A[k]) and each A[i] can be binary, categorical or continous
@@ -77,35 +100,25 @@ GenericModel <- R6Class(classname = "GenericModel",
       self$reg <- reg
       if (!no_set_outvar) self$outvar <- reg$outvar
       self$predvars <- reg$predvars
-      # Number of sep. regressions to run, based on the number of outcomes in SingleRegressionFormClass length(reg$outvar)
-      # or the number of objects in ListOfRegressionForms
+      # Number of sep. regressions to run, based on the number of outcomes in SingleRegressionFormClass length(reg$outvar) or the number of objects in ListOfRegressionForms
       self$n_regs <- get_n_regs(reg)
-      all.outvar.bin <-  all(reg$outvar.class %in% gvars$sVartypes$bin)
-
-      if (reg$parfit & all.outvar.bin & (self$n_regs > 1)) self$parfit_allowed <- TRUE
-
-      if (gvars$verbose) {
-        print("#----------------------------------------------------------------------------------")
-        print("New instance of GenericModel:")
-        print("#----------------------------------------------------------------------------------")
-        if ("ListOfRegressionForms" %in% class(reg$RegressionForms)) {
-          print("...ListOfRegressionForms..."); if (!is.null(names(reg$RegressionForms))) {print(names(reg$RegressionForms))}
-        } else {
-          print("Outcomes: " %+% paste(reg$RegressionForms$outvar, collapse = ", "))
-          print("Predictors: " %+% paste(reg$RegressionForms$predvars, collapse = ", "))
-        }
-        print("No. of regressions: " %+% self$n_regs)
-        print("All outcomes binary? " %+% all.outvar.bin)
-        if (self$parfit_allowed) print("Performing parallel fits: " %+% self$parfit_allowed)
-        print("#----------------------------------------------------------------------------------")
+      all.outvar.bin <- FALSE
+      if (!("ListOfRegressionForms" %in% class(reg))) {
+        if (reg$parfit & all.outvar.bin & (self$n_regs > 1)) self$parfit_allowed <- TRUE
+        all.outvar.bin <-  all(reg$outvar.class %in% gvars$sVartypes$bin)
       }
-
+      if (gvars$verbose) prettyprint_GenericModel(self, reg, all.outvar.bin)
       # Factorize the joint into univariate regressions, by dimensionality of the outcome variable (sA_nms):
       for (k_i in 1:self$n_regs) {
-        reg_i <- reg$clone()
-        reg_i$ChangeManyToOneRegresssion(k_i, reg)
+        if ("ListOfRegressionForms" %in% class(reg)) {
+          reg_i <- reg[[k_i]]
+        } else {
+          reg_i <- reg$clone()
+          reg_i$ChangeManyToOneRegresssion(k_i, reg)
+        }
         # Calling the constructor for the summary model P(sA[j]|\bar{sA}[j-1], sW}), dispatching on reg_i class
-        PsAsW.model <- newsummarymodel(reg = reg_i, ...)
+        regS3class <- reg_i$S3class
+        PsAsW.model <- newsummarymodel(regS3class, reg_i, ...)
         private$PsAsW.models <- append(private$PsAsW.models, list(PsAsW.model))
         names(private$PsAsW.models)[k_i] <- "P(sA|sW)."%+%k_i
       }
@@ -423,7 +436,6 @@ ContinModel <- R6Class(classname = "ContinModel",
       }
       invisible(self)
     },
-
 
     # Convert contin. A vector into matrix of binary cols, then call parent class method: super$predictAeqa()
     # Invisibly return cumm. prob P(A=a|W=w)
