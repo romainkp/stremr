@@ -229,6 +229,16 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
       }
       private$Xmat <- Xmat
       return(invisible(self))
+    },
+
+    # Replace a column or columns in private$Xmat with new values
+    replaceCols = function(data, subset_idx, colnames) {
+      predvars <- self$ParentModel$predvars
+      if (!is.null(Xmat)) stop("private$Xmat is NULL")
+      for (colname in colnames) {
+        private$Xmat[, colname]  <- data$get.dat.sVar(subset_idx, colname)
+      }
+      return(invisible(self))
     }
   ),
 

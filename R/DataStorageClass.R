@@ -150,7 +150,7 @@ is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 #'   \item{\code{replaceOneAnode(AnodeName, newAnodeVal)}}{...}
 #'   \item{\code{replaceManyAnodes(Anodes, newAnodesMat)}}{...}
 #'   \item{\code{addYnode(YnodeVals, det.Y)}}{...}
-#'   \item{\code{evalsubst(subset_expr, subset_vars)}}{...}
+#'   \item{\code{evalsubst(subset_exprs, subset_vars)}}{...}
 #'   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
 #'   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
 #'   \item{\code{bin.nms.sVar(name.sVar, nbins)}}{...}
@@ -182,6 +182,9 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
   portable = TRUE,
   class = TRUE,
   public = list(
+    Qlearn.fit = NULL,
+    interventionNodes.g0 = NULL,
+    interventionNodes.gstar = NULL,
     modelfits.g0 = NULL,
     modelfit.gC = NULL,
     modelfit.gA = NULL,
@@ -231,7 +234,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     # Could also do evaluation in a special env with a custom subsetting fun '[' that will dynamically find the correct dataset that contains
     # sVar.name (dat.sVar or dat.bin.sVar) and will return sVar vector
-    evalsubst = function(subset_vars, subset_expr = NULL) {
+    evalsubst = function(subset_vars, subset_exprs = NULL) {
       res <- rep.int(TRUE, self$nobs)
       if (!missing(subset_vars)) {
         assert_that(is.character(subset_vars))
@@ -243,15 +246,15 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }
-      if (!is.null(subset_expr)) {
-        if (is.logical(subset_expr)) {
-          res <- res & subset_expr
-        } else if (is.character(subset_expr)){
+      if (!is.null(subset_exprs)) {
+        if (is.logical(subset_exprs)) {
+          res <- res & subset_exprs
+        } else if (is.character(subset_exprs)){
           # ******************************************************
           # data.table evaluation of the logical subset expression
-          # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_expr))
+          # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_exprs))
           # ******************************************************
-          res.tmp <- self$dat.sVar[, eval(parse(text = subset_expr)), by = get(self$nodes$ID)][["V1"]]
+          res.tmp <- self$dat.sVar[, eval(parse(text = subset_exprs)), by = get(self$nodes$ID)][["V1"]]
           assert_that(is.logical(res.tmp))
           res <- res & res.tmp
           # ******************************************************
@@ -259,7 +262,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           # REPLACING WITH env that is made of data.frames instead of matrices
           # ******************************************************
           # eval.env <- c(data.frame(self$dat.sVar), data.frame(self$dat.bin.sVar), as.list(gvars))
-          # res <- try(eval(subset_expr, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
+          # res <- try(eval(subset_exprs, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
           # self$dat.sVar[eval(),]
           # stop("disabled for memory/speed efficiency")
         }
@@ -459,7 +462,17 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       }
       invisible(self)
     },
+    # swap node names in the data.table: current -> target and target -> current
+    swapNodes = function(current, target) {
+      # if current and target have the same node names, will result in error, so exclude
+      common_names <- intersect(current, target)
+      current <- current[!current %in% common_names]
+      target <- target[!target %in% common_names]
 
+      data.table::setnames(self$dat.sVar, old = current, new = current %+% ".temp.current")
+      data.table::setnames(self$dat.sVar, old = target, new = current)
+      data.table::setnames(self$dat.sVar, old = current %+% ".temp.current", new = target)
+    },
     # ---------------------------------------------------------------------------
     # Cast long format data into wide format:
     # bslcovars - names of covariates that shouldn't be cast (remain invariant with t)
@@ -587,6 +600,22 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.nodes <- nodes
       }
     },
+    uncensored_idx = function(uncensored_idx) {
+      if (missing(uncensored_idx)) {
+        return(private$.uncensored_idx)
+      } else {
+        assert_that(is.logical(uncensored_idx))
+        private$.uncensored_idx <- uncensored_idx
+      }
+    },
+    rule_followers_idx = function(rule_followers_idx) {
+      if (missing(rule_followers_idx)) {
+        return(private$.rule_followers_idx)
+      } else {
+        assert_that(is.logical(rule_followers_idx))
+        private$.rule_followers_idx <- rule_followers_idx
+      }
+    },
     active.bin.sVar = function() { private$.active.bin.sVar },
     ord.sVar = function() { private$.ord.sVar },
     type.sVar = function() { private$.type.sVar }
@@ -602,6 +631,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     .ord.sVar = NULL,             # Ordinal (cat) transform for continous sVar
     # sVar.object = NULL,         # DefineSummariesClass object that contains / evaluates sVar expressions
     .type.sVar = NULL,            # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
+    .uncensored_idx = NULL,       # logical vector for all observation indices that are not censored at current t
+    .rule_followers_idx = NULL,   # logical vector for all observation indices that are following the current rule of interest at current t
     # Replace all missing (NA) values with a default integer (0) for matrix
     fixmiss_sVar_mat = function() {
       self$dat.sVar[gvars$misfun(self$dat.sVar)] <- gvars$misXreplace

@@ -182,7 +182,6 @@ GenericModel <- R6Class(classname = "GenericModel",
     # Invisibly returns the joint probability P(A=a|W=w), also aves it as a private field "cumprodAeqa"
     # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
     predictAeqa = function(newdata, n, ...) {
-      # assert_that(!missing(newdata))
       if (!missing(newdata)) {
         assert_that(is.DataStorageClass(newdata))
         n <- newdata$nobs
@@ -198,13 +197,19 @@ GenericModel <- R6Class(classname = "GenericModel",
         val <- checkpkgs(pkgs=c("foreach", "doParallel", "matrixStats"))
         mcoptions <- list(preschedule = TRUE)
         probAeqa_list <- foreach::foreach(k_i = seq_along(private$PsAsW.models), .options.multicore = mcoptions) %dopar% {
-          private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, ...)
+          private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
         }
         probAeqa_mat <- do.call('cbind', probAeqa_list)
         cumprodAeqa <- matrixStats::rowProds(probAeqa_mat)
       }
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
+    },
+
+    # get pre-saved predictions P(Q=1) from the K indexed model fit for unique n obs.
+    predictRegK = function(K, n) {
+      if (length(private$PsAsW.models) < K) stop("invalid arg K; this object contains only " %+% length(private$PsAsW.models) %+% " different model fits.")
+      return(private$PsAsW.models[[K]]$predictAeqa(n = n))
     },
 
     sampleA = function(newdata, ...) {

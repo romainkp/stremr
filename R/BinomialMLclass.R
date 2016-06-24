@@ -167,9 +167,10 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         # print("subset_t: "); print(subset_t)
         load_subset_t <- system.time(
           subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-                                                    saveH2O = FALSE,
-                                                    destination_frame = "newH2Osubset")
+                                                  saveH2O = FALSE,
+                                                  destination_frame = "newH2Osubset")
         )
+
         # change the column names of H2O.FRAME
         # h2o::colnames(subsetH2Oframe) <- c("T", "C", "h", "N")
         # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
@@ -206,10 +207,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       }
 
       if (!inherits(model.fit, "try-error")) {
-
         subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
-        # subsetH2Oframe[, outvar] <- (subsetH2Oframe[, outvar])/2
-
         private$subsetH2Oframe <- subsetH2Oframe
         model.fit <- try(
                       h2ofit(self$model.fit,

@@ -225,7 +225,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     n = NA_integer_,        # number of rows in the input data
     nbins = integer(),
     subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
-    subset_expr = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
+    subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
     subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
 
     ReplMisVal0 = logical(),
@@ -256,8 +256,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       self$predvars <- reg$predvars
 
       self$subset_vars <- reg$subset_vars
-      self$subset_expr <- reg$subset_exprs
-      assert_that(length(self$subset_expr) <= 1)
+      self$subset_exprs <- reg$subset_exprs
+      assert_that(length(self$subset_exprs) <= 1)
 
       self$ReplMisVal0 <- reg$ReplMisVal0
       self$nbins <- reg$nbins
@@ -395,7 +395,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       } else if (is.call(self$subset_vars)) {
         stop("calls aren't allowed in binomialModelObj$subset_vars")
       } else if (is.character(self$subset_vars)) {
-        subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_expr = self$subset_expr)
+        subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
       }
       assert_that(is.logical(subset_idx))
       if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
@@ -432,9 +432,9 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE) {
       if (print_format) {
-        return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% ";\\ Stratify: " %+% self$subset_expr)
+        return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% ";\\ Stratify: " %+% self$subset_exprs)
       } else {
-        return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_expr))
+        return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs))
       }
     }
   ),
@@ -458,133 +458,5 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     model.fit = list(),   # the model fit (either coefficients or the model fit object)
     probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
     probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
-  )
-)
-
-#' @export
-QlearnModel  <- R6Class(classname = "QlearnModel",
-  inherit = BinaryOutcomeModel,
-  cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
-  portable = TRUE,
-  class = TRUE,
-  public = list(
-    subset_CENS_expr = NULL, # THE LOGICAL EXPRESSION, WHEN EVALUTED IDENTIFIES ALL CENSORED OBS (at current t)
-    Qreg_counter = NULL,     # Counter for the current sequential Q-regression (min is at 1)
-    initialize = function(reg, ...) {
-      super$initialize(reg, ...)
-
-      # browser()
-      # print(reg$show())
-
-      self$subset_CENS_expr <- reg$subset_CENS_expr
-      self$Qreg_counter <- reg$Qreg_counter
-
-      invisible(self)
-    },
-
-    # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
-    # store these predictions in private$probA1 and save those to input data
-    fit = function(overwrite = FALSE, data, predict = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
-      self$n <- data$nobs
-      if (gvars$verbose) print("fitting G-COMP the model: " %+% self$show())
-      if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
-      self$define.subset.idx(data)
-      private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
-      private$model.fit$params <- self$show(print_format = FALSE)
-      self$is.fitted <- TRUE
-
-      print("Q-learning for: " %+% self$subset_expr); print(self$get.fits())
-      # browser()
-
-      if (predict) {
-
-        # **********************************************************************
-        # NEED TO IMPLEMENT:
-        browser()
-        # **********************************************************************
-        # *** 1) add observations that were censored at current t to the prediction set
-        # *** 2) set the exposures to counterfactual vals (by renaming the columns)
-        # *** 3) figure out what to do for the very first time-point (not able to go up any further) -> pass Qreg index to each reg
-        self$predict(...)
-
-        # 1. put predicted values Q[t] in their corresponding t rows (will be saved there for targeting/etc):
-        rowidx_t <- which(self$subset_idx)
-        data$dat.sVar[rowidx_t, "Q.kplus1" := private$probA1[self$subset_idx]]
-
-        # 2. put the predicted values Q[t] in rows (t-1) to serve as the outcome for the next fit, unless we are done (min(t)):
-        # **** RUN IT FIRST ALL THE WAY TO t==0 AND WHAT HAPPENS? WILL IT BE AN ERROR? WRONG OPERATION?
-        rowidx_t.minus1 <- rowidx_t - 1
-        data$dat.sVar[rowidx_t.minus1, "Q.kplus1" := private$probA1[self$subset_idx]]
-      }
-
-      # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
-      # **********************************************************************
-      invisible(self)
-    },
-
-    # Predict the response P(Bin = 1|sW = sw);
-    # uses private$model.fit to generate predictions for data:
-    predict = function(newdata, ...) {
-      assert_that(self$is.fitted)
-      if (missing(newdata) && is.null(private$probA1)) {
-        # stop("must provide newdata for BinaryOutcomeModel$predict()")
-        private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
-      } else {
-        self$n <- newdata$nobs
-        self$define.subset.idx(newdata)
-        private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-      }
-      return(invisible(self))
-    },
-
-    # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
-    # Needs to know the values of b for prediction
-    # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    predictAeqa = function(newdata, bw.j.sA_diff, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
-      stop("can't call predictAeqa() with QlearnModel")
-      # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
-      # **********************************************************************
-      return(probAeqa)
-    },
-
-    define.subset.idx = function(data) {
-      if (is.logical(self$subset_vars)) {
-        subset_idx <- self$subset_vars
-      } else if (is.call(self$subset_vars)) {
-        stop("calls aren't allowed in binomialModelObj$subset_vars")
-      } else if (is.character(self$subset_vars)) {
-        subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_expr = self$subset_expr)
-      }
-      assert_that(is.logical(subset_idx))
-      if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
-        if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
-        subset_idx <- rep.int(subset_idx, data$p)
-        if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
-      }
-      assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
-      self$subset_idx <- subset_idx
-      return(invisible(self))
-    },
-
-    # Returns the object that contains the actual model fits (itself)
-    get.fits = function() {
-      model.fit <- self$getfit
-      return(list(model.fit))
-    }
-  ),
-
-  active = list(
-    wipe.alldat = function() {
-      # private$probA1 <- NULL
-      # private$probAeqa <- NULL
-      self$subset_idx <- NULL
-      self$binomialModelObj$emptydata
-      self$binomialModelObj$emptyY
-      return(self)
-    }
   )
 )

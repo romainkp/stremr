@@ -395,7 +395,7 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
 #'
 #' \dontrun{
 #' theta <- seq(7,8.5,by=0.5)
-#' FOLLOW.D.DT <- follow.rule.d.DT(data = data, theta = theta,
+#' FOLLOW.D.DT <- defineTRTrules(data = data, theta = theta,
 #'                  ID = "StudyID", t = "X_intnum", I = "X_a1c",
 #'                  TRT = "X_exposure", CENS = "X_censor", MONITOR = "N.t",
 #'                  rule.names = paste0("new.d",theta))

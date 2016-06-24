@@ -191,6 +191,8 @@ O.dataDTrules_Nstar[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by
 OUTCOME <- "Y"
 shifted.OUTCOME <- OUTCOME%+%".tplus1"
 O.dataDTrules_Nstar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
+O.dataDTrules_Nstar <- O.dataDTrules_Nstar[!get(OUTCOME)%in%1,]
+O.dataDTrules_Nstar[1:50]
 
 # --------------------------------
 # (IV) Estimate weights under observed (A,C,N)
@@ -352,8 +354,11 @@ stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
+O.dataDTrules_Nstar[, A.gstar0 := 0L]
 OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
-gcomp_fit <- fitSeqGcomp(OData, t = 5)
+
+gcomp_fit <- fitSeqGcomp(OData, t = 5, gstar_TRT = "A.gstar0",
+                        stratifyQ_by_rule = FALSE, rule_followers_colname = "dhigh")
 
 
 

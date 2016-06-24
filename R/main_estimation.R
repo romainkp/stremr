@@ -138,7 +138,7 @@ fitPropensity <- function(OData,
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
 #' @export
-getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL) {
+getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, stabilize = TRUE) {
   nodes <- OData$nodes
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
@@ -197,8 +197,8 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL) {
   # Disabled: remove all observation-times that got zero weight:
   # OData$dat.sVar <- OData$dat.sVar[cumm.IPAW > 0, ]
 
-  # multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since they cancel):
-  OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
+  # multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since it cancels):
+  if (stabilize) OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
   Ynode <- nodes$Ynode # Get the outcome var:
   # Multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
   OData$dat.sVar[, "Wt.OUTCOME" := get(Ynode)*cumm.IPAW]

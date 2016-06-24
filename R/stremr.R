@@ -134,9 +134,9 @@ stratify_by_uncensored <- function(regs) {
     strat.C <- paste0(as.vector(get_outvars(regs)[1:Var_indx]) %+% " == " %+% gvars$noCENScat, collapse=" & ")
     curr_exprs <- get_subset_exprs(regs)[[Var_indx+1]]
     if (!is.null(curr_exprs)) {
-      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_expr = stringr::str_c(curr_exprs, " & ", strat.C))
+      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = stringr::str_c(curr_exprs, " & ", strat.C))
     } else {
-      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_expr = strat.C)
+      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = strat.C)
     }
   }
   return(regs)
@@ -192,9 +192,9 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
         outvar.class <- OData$type.sVar[res$outvars]
       }
 
-      subset_expr <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
+      subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
       regobj <- SingleRegressionFormClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
-                                              subset_vars = NULL, subset_exprs = subset_expr, model_contrl = model_contrl,
+                                              subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
                                               censoring = censoring)
       regs[[idx]] <- regobj
   }

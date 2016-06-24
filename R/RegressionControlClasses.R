@@ -90,7 +90,6 @@
 #   )
 # )
 
-
 # RegressionClass <- R6Class("RegressionClass",
 #   class = TRUE,
 #   portable = TRUE,
@@ -298,7 +297,6 @@ select_reg.ListOfRegressionForms <- function(RegressionForms, reg, k_i, self) {
 
 select_reg.RegressionClass <- function(RegressionClassObj, k_i, self) {
   n_regs <- get_n_regs(RegressionClassObj)
-  # self$RegressionForms <- RegressionForms$clone()
   self$outvar.class <- RegressionClassObj$outvar.class[[k_i]]
   self$outvar <- RegressionClassObj$outvar[[k_i]] # An outcome variable that is being modeled
   self$model_contrl <- RegressionClassObj$model_contrl
@@ -359,15 +357,15 @@ get_subset_exprs.ListOfRegressionForms <- function(regobjlist) {
     subset_exprs <- c(subset_exprs, regobjlist[[idx]]$subset_exprs)
   return(subset_exprs)
 }
-set_subset_exprs <- function(regobjlist, idx, subset_expr) { UseMethod("set_subset_exprs") }
-set_subset_exprs.ListOfRegressionForms <- function(regobjlist, idx, subset_expr) {
+set_subset_exprs <- function(regobjlist, idx, subset_exprs) { UseMethod("set_subset_exprs") }
+set_subset_exprs.ListOfRegressionForms <- function(regobjlist, idx, subset_exprs) {
   subset_exprs <- NULL
   idx_count <- 0
   for (idx_reg in seq_along(regobjlist)) {
     for (idx_outvar in seq_along(regobjlist[[idx_reg]]$outvar)) {
       idx_count <- idx_count + 1
       if (idx == idx_count) {
-        regobjlist[[idx_reg]]$subset_exprs[[idx_outvar]] <- subset_expr
+        regobjlist[[idx_reg]]$subset_exprs[[idx_outvar]] <- subset_exprs
         return(invisible(regobjlist[[idx_reg]]))
       }
     }
