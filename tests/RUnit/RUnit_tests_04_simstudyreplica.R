@@ -392,9 +392,16 @@ t.surv <- 5
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (t.surv+1))
 gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms,
                         stratifyQ_by_rule = TRUE)
+
+gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms,
+                        stratifyQ_by_rule = FALSE)
 # , rule_followers_colname = "follow.allt"
+
 gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms,
                         stratifyQ_by_rule = TRUE)
+
+gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms,
+                        stratifyQ_by_rule = FALSE)
 # , rule_followers_colname = "follow.allt"
 
 

@@ -1,11 +1,10 @@
 # ------------------------------------------------------------------------------------------
 # TO DO:
 # ------------------------------------------------------------------------------------------
-# *) gstar_TRT needs to be redfined into vector of coutnerfactual probs, needs to be allowed multivariate (same w/ getIPWeights())
-# *) gstar_MONITOR is defined correctly, but needs to be allowed be multivariate (more than one node) (same w/ getIPWeights())
+# *) gstar_TRT needs to be redfined into vector of coutnerfactual probs, can be also multivariate (same w/ getIPWeights())
+# *) gstar_MONITOR is defined correctly, but can be also multivariate (more than one node) (same w/ getIPWeights())
 # *) allow each gstar to be also a vector (like abar=(0,0,0,0)) or a matrix of counterfactual treatments, like in ltmle
 # *) for column 0<gstar_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=gstar_TRT[t]
-# *) rule_followers_colname: RULE FOLLOWERS COLUMN NEEDS TO BE EVALUTED AUTOMATICALLY!!!!
 # *) The definition of Qperiods below needs to be based on actual periods observed in the data
 # *) consider bringing in tmlenet syntax for defining the interventions in a node-like style
 # *) deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
@@ -18,7 +17,11 @@
 # ------------------------------------------------------------------------------------------
 # Outstanding issues:
 # ------------------------------------------------------------------------------------------
-# *** Need to define A^* at the begining, as a column (one for each regimen) -> should be returned by defineTRTrules()
+#  *** rule_followers:
+#     Can now be evaluated automatically by comparing (gstar_TRT and TRT and CENS) and (gstar_MONITOR and MONITOR and CENS)
+#     Rule followers are: (gstar_TRT = 1) & (TRT == 1) or (gstar_TRT = 0) & (TRT == 0) or (gstar_TRT > 0 & gstar_TRT < 0) & (Not Censored)
+#     Exactly the same logic needs to be applied to gstar_MONITOR & MONITOR
+#     If either TRT or MONITOR is multivariate (>1 col), this logic needs to be applied FOR EACH COLUMN
 # ------------------------------------------------------------------------------------------
 # *** Stratification/pooling ***
 #     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen
