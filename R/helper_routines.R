@@ -483,7 +483,7 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
 
 
 #' @export
-defineCounterfactTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, new.TRT.names = NULL, return.allcolumns = FALSE){
+defineIntervedTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, new.TRT.names = NULL, return.allcolumns = FALSE){
   ID.expression <- as.name(ID)
   chgTRT <- as.name("chgTRT")
 

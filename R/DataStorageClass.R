@@ -473,6 +473,19 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       data.table::setnames(self$dat.sVar, old = target, new = current)
       data.table::setnames(self$dat.sVar, old = current %+% ".temp.current", new = target)
     },
+
+    eval_rule_followers = function(NodeName, gstar.NodeName) {
+      self$dat.sVar[, "rule.follower.dx" := as.integer(get(NodeName) == get(gstar.NodeName))]
+      self$dat.sVar[, "rule.follower.dx" := as.integer(cumprod(rule.follower.dx)), by = eval(self$nodes$IDnode)]
+      rule_followers_idx <- self$dat.sVar[["rule.follower.dx"]]
+      self$dat.sVar[, "rule.follower.dx" := NULL]
+      return(as.logical(rule_followers_idx))
+    },
+
+    eval_uncensored = function() {
+      return(self$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat))), .SDcols = self$nodes$Cnodes][["uncensored_idx"]])
+    }
+
     # ---------------------------------------------------------------------------
     # Cast long format data into wide format:
     # bslcovars - names of covariates that shouldn't be cast (remain invariant with t)

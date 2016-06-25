@@ -18,6 +18,7 @@
 # Outstanding issues:
 # ------------------------------------------------------------------------------------------
 #  *** rule_followers:
+#     The key question is what to do with those who went off TRT then went back to TRT (against the rule)? Probably once you go off the treatment first time, this is it, censored.
 #     Can now be evaluated automatically by comparing (gstar_TRT and TRT and CENS) and (gstar_MONITOR and MONITOR and CENS)
 #     Rule followers are: (gstar_TRT = 1) & (TRT == 1) or (gstar_TRT = 0) & (TRT == 0) or (gstar_TRT > 0 & gstar_TRT < 0) & (Not Censored)
 #     Exactly the same logic needs to be applied to gstar_MONITOR & MONITOR
@@ -62,7 +63,6 @@ fitSeqGcomp <- function(OData,
                         gstar_TRT = NULL,
                         gstar_MONITOR = NULL,
                         stratifyQ_by_rule = FALSE,
-                        rule_followers_colname = NULL,
                         params = list(),
                         verbose = getOption("stremr.verbose")) {
 
@@ -72,33 +72,41 @@ fitSeqGcomp <- function(OData,
   assert_that(is.list(params))
 
   # ------------------------------------------------------------------------------------------------
+  # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
+  # **** NOTE: THIS NEEDS TO BE TAKEN OUT OF HERE AND PUT AS A SEPARATE FUNCTION TO BE CALLED FROM getIPWeights and/or fitSeqGcomp
+  # ------------------------------------------------------------------------------------------------
+  OData$uncensored_idx <- OData$eval_uncensored()
+  # OData$uncensored_idx <- OData$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENScat))), .SDcols = nodes$Cnodes][["uncensored_idx"]]
+  OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
+
+  # ------------------------------------------------------------------------------------------------
   # **** Define the intervention nodes
   # ------------------------------------------------------------------------------------------------
   if (!is.null(gstar_TRT)) {
     gstar.A <- gstar_TRT
+    # UPDATE RULE FOLLOWERS FOR TRT IF DOING stratified G-COMP:
+    if (stratifyQ_by_rule) {
+      rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Anodes, gstar.NodeName = gstar.A)
+      OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
+    }
   } else {
     gstar.A <- nodes$Anodes # use the actual observed exposure (no intervention on TRT)
   }
   if (!is.null(gstar_MONITOR)) {
     gstar.N <- gstar_MONITOR
+    # UPDATE RULE FOLLOWERS FOR MONITOR IF DOING stratified G-COMP:
+    if (stratifyQ_by_rule) {
+      rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Nnodes, gstar.NodeName = gstar.N)
+      OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
+    }
   } else {
     gstar.N <- nodes$Nnodes # use the actual observed monitoring probability (no intervention on MONITOR)
   }
+
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
   OData$interventionNodes.g0 <- interventionNodes.g0
   OData$interventionNodes.gstar <- interventionNodes.gstar
-
-  # ------------------------------------------------------------------------------------------------
-  # **** Set the uncensored and rule nodes
-  # ------------------------------------------------------------------------------------------------
-  OData$uncensored_idx <- OData$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENScat))), .SDcols = nodes$Cnodes][["uncensored_idx"]]
-
-  # !!!! NOTE THIS LINE IS TECHNICALLY INCORRECT: RULE FOLLOWERS COLUMN NEEDS TO BE EVALUTED AUTOMATICALLY!!!!
-  if (stratifyQ_by_rule) {
-    assert_that(!is.null(rule_followers_colname))
-    OData$rule_followers_idx <- OData$dat.sVar[, list(rule_followers_idx = .SD > 0), .SDcols = rule_followers_colname][["rule_followers_idx"]]
-  }
 
   # ------------------------------------------------------------------------------------------------
   # **** TO DO: The stratification by follow-up has to be based only on 't' values that were observed in the data****
