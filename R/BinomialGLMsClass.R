@@ -33,11 +33,18 @@ glmfit.glm <- function(fit, Xmat, Yvals, ...) {
 # S3 method for speedglm binomial family fit, takes BinDat data object:
 glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
   if (gvars$verbose) print("calling speedglm.wfit...")
+  # method = c('eigen','Cholesky','qr')
+  # row.chunk=NULL
+  # t_reg <- system.time(
   model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
                                            y = Yvals,
+                                           method = 'Cholesky',
                                            family = binomial(),
                                            trace = FALSE),
                       silent = TRUE)
+  # print(t_reg)
+  # model.fit
+
   if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
     message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
     return(glmfit.glm(fit, Xmat, Yvals, ...))
@@ -91,8 +98,8 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
   if (!missing(DataStorageObject)) {
     rows_subset <- which(subset_idx)
     data <- DataStorageObject
-
     # subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, ] # old, slower approach
+
     outvar <- m.fit$params$outvar
     predvars <- m.fit$params$predvars
     subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
@@ -105,15 +112,20 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
 
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
-    pAout[subset_idx] <- as.vector(h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)[,"p1"])
+    predictFrame <- h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
+    if ("p1" %in% colnames(predictFrame)) {
+      pAout[subset_idx] <- as.vector(predictFrame[,"p1"])
+    } else {
+      pAout[subset_idx] <- as.vector(predictFrame[,"predict"])
+    }
+    # browser()
+    # summary(pAout[subset_idx])
   }
-
   # browser()
   # head(pAout[subset_idx])
   # subsetDT <- DataStorageObject$dat.sVar[rows_subset, ]
   # subsetH2Oframe[which(is.na(pAout[subset_idx])),]
   # subsetDT[which(is.na(pAout[subset_idx])),]
-
   return(pAout)
 }
 
@@ -161,6 +173,7 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
   public = list(
     ParentModel = NULL,
     model_contrl = list(),
+    params = list(),
     fit.class = c("glm", "speedglm"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA),
 
@@ -190,6 +203,7 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
                                  subset_idx = subset_idx,
                                  model_contrl = self$model_contrl, ...)
       }
+      self$model.fit$params <- self$params
       return(self$model.fit)
     },
 

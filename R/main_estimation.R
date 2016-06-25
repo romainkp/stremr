@@ -41,9 +41,9 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   # --------------------------------------------------------------------------------------------------------
   # Convert all logical vars to binary integers
   # --------------------------------------------------------------------------------------------------------
-  if (verbose) message("...converting logical columns to binary integers (0 = FALSE)...")
   logical.Ls <- unlist(lapply(OData$dat.sVar, is.logical))
   logical.Ls <- names(logical.Ls)[logical.Ls]
+  if (length(logical.Ls)>0 && verbose) message("...converting logical columns to binary integers (0 = FALSE)...")
   for (logical.varnm in logical.Ls) {
     OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   }

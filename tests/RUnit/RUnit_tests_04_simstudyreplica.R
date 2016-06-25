@@ -15,6 +15,7 @@ set.DAG.rm.template <- function(){
     node("highA1c", t = 0, distr = "rbern", prob = highA1c.UN[0]) +  # I*(0) = I(0)*T(-1) with T(-1) = 1 by convention - all patient come with an A1c value known - T(-1) is what I call N(-1)
     node("CVD", t = 0, distr = "rbern", prob = ifelse(highA1c[0] == 1, 0.5, 0.1)) +  #Z(0)
     node("timelowA1c.UN", t = 0, distr = "rbern", prob = 1-highA1c.UN[0]) +  # Z(0) - counts the number of time the (possibly unobserved) A1c was low
+    # node("TI", t = 0, distr = "rbern", prob = 1) +
     node("TI", t = 0, distr = "rbern", prob = ifelse(highA1c[0] == 0, ifelse(CVD[0] == 1, 0.5, 0.1), ifelse(CVD[0] == 1, 0.9, 0.5))) +
     node("C", t = 0, distr = "rbern", prob = 0, EFU = TRUE) +  # no censoring in first bin
     node("N", t = 0, distr = "rbern", prob = 1) +
@@ -23,6 +24,7 @@ set.DAG.rm.template <- function(){
     node("highA1c.UN", t = 1:16, distr = "rbern", prob = ifelse(TI[t-1] == 1, 0.1, ifelse(highA1c.UN[t-1] == 1, 0.9, min(1, 0.1 + t/16)))) +  # I(t)
     node("highA1c", t = 1:16, distr = "rbern", prob = ifelse(N[t-1] == 1, highA1c.UN[t], highA1c[t-1])) + # I*(m)=I(m)*T(m-1)  (I actually replace I*(m)=0 with when T(m-1)=0 with last value carried forward,  i.e. I*(m-1)
     node("timelowA1c.UN", t=1:16, distr="rnorm", mean=sum(1-highA1c.UN[0:t]),  sd=0) +  # Z(m)
+    # node("TI", t = 1:16, distr = "rbern", prob = 1) +
     node("TI", t = 1:16, distr = "rbern",
       prob =
         ifelse(TI[t-1] == 1, 1,
@@ -71,6 +73,10 @@ add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", 
   O.dataDT[O.dataDT[,.I[.N], by = eval(ID)][["V1"]],(rule_name1) := 0L]
   # set All NAs for treatment (TRT) to be NA for the rule as well
   O.dataDT[O.dataDT[,.I[which(is.na(get(TRT)))], by = eval(ID)][["V1"]],(rule_name1) := NA]
+
+  # counterfactual TRT for rule dlow (equivalent to always treated):
+  O.dataDT[,"TI.gstar." %+% rule_name1 := 1L]
+
   # Add indicator for rule (dhigh) -> start TRT only when I=1 (highA1c)
   rule_name2 <- "dhigh"
   O.dataDT_dhigh <- stremr::defineTRTrules(O.dataDT, theta = 1, ID = ID,
@@ -80,6 +86,15 @@ add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", 
                                               rule.names = rule_name2)
   O.dataDT_dhigh[, (rule_name2) := as.integer(get(rule_name2))]
   O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
+
+  O.dataDT_TIdhigh <- stremr::defineCounterfactTRT(O.dataDT, theta = 1, ID = ID,
+                                            t = t, I = I, CENS = CENS, TRT = TRT,
+                                            MONITOR = MONITOR,
+                                            tsinceNis1 = "lastNat1",
+                                            new.TRT.names = "TI.gstar." %+% rule_name2)
+  O.dataDT <- merge(O.dataDT, O.dataDT_TIdhigh, by=c(ID, t))
+  O.dataDT[1:100, ]
+
   return(O.dataDT)
 }
 
@@ -102,7 +117,9 @@ notrun.save.example.data <- function() {
   # -----------------------------------------------------------
   # SIMULATION PARAMS:
   # -----------------------------------------------------------
-  Nsize <- 10000
+  Nsize <- 200000
+  # Nsize <- 100000
+  # Nsize <- 10000
   # set to TRUE to only run scenarios dealing with bias for g.N w and w/out past N(t), no intervention on N(t)
   # SimParams <- Sim.and.Est.params
   # override the scenario name to run for just one scenario:
@@ -134,9 +151,15 @@ notrun.save.example.data <- function() {
     DAGrm <- DAGrm + node("N", t = 1:16, distr = "rbern", prob = .(prob.tplus))
   }
   DAGrm <- set.DAG(DAGrm)
+
   O.data.simstudy <- sim(DAG = DAGrm, n = Nsize, wide = FALSE, rndseed = 55466)
+  # O.data.simstudy <- sim(DAG = DAGrm, n = Nsize, wide = TRUE, LTCF = "Y", rndseed = 55466)
+  # head(O.data.simstudy)
+  # colMeans(O.data.simstudy[,"Y_"%+%c(1:16)])
+
   O.data.simstudy[O.data.simstudy[,"t"]%in%16,"lastNat1"] <- NA
-  O.data.simstudy.g05 <- O.data.simstudy[,!names(O.data.simstudy)%in%c("highA1c.UN", "timelowA1c.UN")]
+  O.data.simstudy.g05 <- O.data.simstudy
+  # O.data.simstudy.g05 <- O.data.simstudy[,!names(O.data.simstudy)%in%c("highA1c.UN", "timelowA1c.UN")]
 
   save(O.data.simstudy.g05, compress = TRUE, file = "O.data.simstudy.g05.rda", compression_level = 9)
   library("tools")
@@ -176,8 +199,8 @@ g.Pois <- function(O.dataDT, lambda, ID = "ID", OUTCOME = "Y", lastNat1 = "lastN
 gstar1.N.Pois3.yearly <- g.Pois(O.dataDTrules, lambda = 3)
 gstar1.N.Pois1.biyearly <- g.Pois(O.dataDTrules, lambda = 1)
 gstar2.N.p05 <- g.p(O.dataDTrules, p = 0.5)
-O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := gstar1.N.Pois3.yearly][, gstar1.N.Pois1.biyearly := gstar1.N.Pois1.biyearly][, gstar2.N.p05 := gstar2.N.p05]
-
+# O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := gstar1.N.Pois3.yearly][, gstar1.N.Pois1.biyearly := gstar1.N.Pois1.biyearly][, gstar2.N.p05 := gstar2.N.p05]
+O.dataDTrules_Nstar <- O.dataDTrules
 # ---------------------------------------------------------------------------
 # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
 # Might expand this in the future to allow defining arbitrary summaries
@@ -346,19 +369,35 @@ make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file
 # ---------------------------------------------------------------------------------------------------------
 # Testing gcomp for long data
 # ---------------------------------------------------------------------------------------------------------
+# intervention of interest:
+O.dataDTrules_Nstar[, A.gstar0 := 0L]
+# correctly define the rule followers as those who always adhere to A.gstar0:
+O.dataDTrules_Nstar[, follow.t := as.integer(TI == A.gstar0), ]
+O.dataDTrules_Nstar[, follow.allt := cumprod(follow.t), by = ID]
+O.dataDTrules_Nstar[1:100, ]
+
 options(stremr.verbose = TRUE)
-require("h2o")
-h2o::h2o.init(nthreads = 2)
+# require("h2o")
+# h2o::h2o.init(nthreads = 2)
+# h2o::h2o.init()
+# h2o::h2o.shutdown(prompt = FALSE)
+
+OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+
 stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
-# stremr_options(fit.package = "glm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
-O.dataDTrules_Nstar[, A.gstar0 := 0L]
-OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+t.surv <- 5
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (t.surv+1))
+gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms,
+                        stratifyQ_by_rule = TRUE)
+# , rule_followers_colname = "follow.allt"
+gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms,
+                        stratifyQ_by_rule = TRUE)
+# , rule_followers_colname = "follow.allt"
 
-gcomp_fit <- fitSeqGcomp(OData, t = 5, gstar_TRT = "A.gstar0",
-                        stratifyQ_by_rule = FALSE, rule_followers_colname = "dhigh")
+
 
 
 

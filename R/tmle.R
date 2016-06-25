@@ -1,252 +1,57 @@
-# SGCompRegClass <- R6Class("SGCompRegClass",
-#   inherit = RegressionClass,
-#   class = TRUE,
-#   portable = TRUE,
-#   public = list(
-#     # outvar = character(),          # the outcome variable name (Ynode)
-#     # outvar.class = character(),
-#     Qforms = character(),
-#     # n_regs = integer(),
-#     # n_timepts = integer(),       # number of time points
-#     # nodes = list(),
-#     # predvars = list(),             # list of predictors for each regression from Qforms
-#     # not used for now:
-#     Anodes = list(),               # list of treatment var names, by timepoint
-#     Cnodes = list(),               # list of censoring var names, by timepoint
-#     Lnodes = list(),               # list of time-varying confounder names, by timepoint
-#     Wnodes = character(),          # character vector of baseline covariate names
-#     subset = NULL,                 # subset expression (later evaluated to logical vector in the envir of the data)
-#     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
-#     pool = logical()
-#   )
-# )
+# ------------------------------------------------------------------------------------------
+# TO DO:
+# ------------------------------------------------------------------------------------------
+# *) gstar_TRT needs to be redfined into vector of coutnerfactual probs, needs to be allowed multivariate (same w/ getIPWeights())
+# *) gstar_MONITOR is defined correctly, but needs to be allowed be multivariate (more than one node) (same w/ getIPWeights())
+# *) allow each gstar to be also a vector (like abar=(0,0,0,0)) or a matrix of counterfactual treatments, like in ltmle
+# *) for column 0<gstar_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=gstar_TRT[t]
+# *) rule_followers_colname: RULE FOLLOWERS COLUMN NEEDS TO BE EVALUTED AUTOMATICALLY!!!!
+# *) The definition of Qperiods below needs to be based on actual periods observed in the data
+# *) consider bringing in tmlenet syntax for defining the interventions in a node-like style
+# *) deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
+# *) need to be able to differentiate binomial (binary) outcome classification and continuous outcome regression for h2o:
+#    1. Setting / not setting the outcome as factor
+#    2. Setting the GBM distribution to "bernoulli"/"gaussian"
+#    3. Validating the h2o.glm with bernoulli and continous outcome, setting the solver to IRLSM
+# ------------------------------------------------------------------------------------------
 
-RegressionClassQlearn <- R6Class("RegressionClassQlearn",
-  inherit = RegressionClass,
-  class = TRUE,
-  portable = TRUE,
-  public = list(
-    Qreg_counter = integer(),
-    t_period = integer(),
-    # subset_censored = logical(),
-    stratifyQ_by_rule = FALSE,
-    pool_regimes = FALSE,
-    initialize = function(Qreg_counter, t_period, stratifyQ_by_rule, pool_regimes, ...) {
-      self$Qreg_counter <- Qreg_counter
-      self$t_period <- t_period
-      # subset_censored
-      # if (!missing(subset_censored)) self$subset_censored <- subset_censored
-      if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
-      if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
-      super$initialize(...)
-    }
-  ),
-  active = list(
-    get.reg = function() {
-      list(Qreg_counter = self$Qreg_counter,
-           t_period = self$t_period,
-           outvar = self$outvar,
-           predvars = self$predvars,
-           outvar.class = self$outvar.class,
-           subset_vars = self$subset_vars,
-           subset_exprs = self$subset_exprs,
-           subset_censored = self$subset_censored,
-           stratifyQ_by_rule = self$stratifyQ_by_rule,
-           pool_regimes = self$pool_regimes,
-           model_contrl = self$model_contrl,
-           censoring = self$censoring
-           )
-    }
-  )
-)
+# ------------------------------------------------------------------------------------------
+# Outstanding issues:
+# ------------------------------------------------------------------------------------------
+# *** Need to define A^* at the begining, as a column (one for each regimen) -> should be returned by defineTRTrules()
+# ------------------------------------------------------------------------------------------
+# *** Stratification/pooling ***
+#     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen
+#     => can either pool all Q.regimens at once (fit one model for repated observations, one for each rule, smoothing over rules)
+#     => can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
+# ------------------------------------------------------------------------------------------
+# *** Accessing correct QlearnModel ***
+#     Need to come up with a good way of accessing correct terminal QlearnModel to get final Q-predictions in private$probAeqa
+#     These predictions are for the final n observations that were used for evaluating E[Y^a]
+#     However, if we do stratify=TRUE and use a stack version of g-comp with different strata all in one stacked database it will be difficult
+#     to pull the right QlearnModel.
+#     Alaternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos)
+# ------------------------------------------------------------------------------------------
+# *** Stochastic interventions ***
+#     Need to do either MC integration (sample from g.star then predict Q)
+#     or direct weighted sum of predicted Q's with weights given by g.star (on A and N)
+# ------------------------------------------------------------------------------------------
 
-#' @export
-QlearnModel  <- R6Class(classname = "QlearnModel",
-  inherit = BinaryOutcomeModel,
-  cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
-  portable = TRUE,
-  class = TRUE,
-  public = list(
-    nIDs = integer(),
-    stratifyQ_by_rule = FALSE,
-    # interventionNodes.g0 = character(),
-    # interventionNodes.gstar = character(),
-    # subset_t_expr = NULL,
-    # subset_rule_expr = NULL,
-    # subset_CENS_expr = NULL,  # THE LOGICAL EXPRESSION, WHEN EVALUTED IDENTIFIES ALL CENSORED OBS (at current t)
-    # subset_t_idx = NULL,
-    # subset_rule_idx = NULL,
-    # subset_CENS_idx = NULL,
-
-    Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
-    t_period = integer(),
-
-    initialize = function(reg, ...) {
-      super$initialize(reg, ...)
-      self$stratifyQ_by_rule <- reg$stratifyQ_by_rule
-      self$Qreg_counter <- reg$Qreg_counter
-      self$t_period <- reg$t_period
-      invisible(self)
-    },
-
-    # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
-    # store these predictions in private$probA1 and save those to input data
-    fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
-    # , predict = FALSE,
-      self$n <- data$nobs
-      self$nIDs <- data$nuniqueIDs
-
-      if (gvars$verbose) print("fitting G-COMP the model: " %+% self$show())
-      if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
-
-      # **********************************************************************
-      # FITTING STEP OF Q-LEARNING
-      # **********************************************************************
-      # select all observations for current t==self$t_period and possibly (!self$gstar > 0)
-
-      # select all obs at current t, with no missing outcome (!is.na(self$subset_vars))
-      self$subset_idx <- self$define.subset.idx(data, subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
-      # excluded all censored observations:
-      self$subset_idx <- self$subset_idx & data$uncensored_idx
-      # if stratifying by rule, exclude all obs who are not following the rule:
-      if (self$stratifyQ_by_rule) self$subset_idx <- self$subset_idx & data$rule_followers_idx
-
-      private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
-      private$model.fit$params <- self$show(print_format = FALSE)
-      self$is.fitted <- TRUE
-
-      print("Q-learning for: " %+% self$subset_exprs); print(self$get.fits())
-
-      # browser()
-
-      # **********************************************************************
-      # PREDICTION STEP OF Q-LEARNING
-      # **********************************************************************
-      # 1.
-      # Set A's to counterfactuals in data, then reset the whole design matrix with a new subset that includes everyone who just censored at t.
-      interventionNodes.g0 <- data$interventionNodes.g0
-      interventionNodes.gstar <- data$interventionNodes.gstar
-      data$swapNodes(current = interventionNodes.g0, target = interventionNodes.gstar)
-      data$dat.sVar
-      self$subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
-      probAeqa <- self$predictAeqa(data, subset_idx = self$subset_idx)
-
-      # Alternative 1b:
-      # *** NEED TO: 1. reset current exposures at t to their counterfactual values (e.g., by renaming the columns)
-      # note: this step is unnecessary when doing fitting only among rule-followers
-      # self$binomialModelObj$replaceCols(data, self$subset_idx, data$nodes$, , ...)
-      # 2. predict for all obs who were used for fitting t (re-using the same design mat used for fitting)
-      # probAeqa <- self$predictAeqa(...)
-      # self$predict(...)
-      # *** NEED TO: 3. add observations that were censored at current t to the subset and do predictions for them
-
-
-
-
-      # *** NEED TO: 2a. possibly intergrate out over the support of the stochastic intervention (weighted sum of P(A(t)=a(t)))
-      # *** NEED TO: 2b. do MC sampling to perform the same integration
-      # 2. save all predicted vals as Q.kplus1[t] in row t (saved for later targeting/etc):
-      rowidx_t <- which(self$subset_idx)
-      data$dat.sVar[rowidx_t, "Q.kplus1" := private$probA1[self$subset_idx]]
-      # data$dat.sVar[1:40,]
-
-      # 3. set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
-      #    only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
-      if (self$Qreg_counter > 1) {
-        rowidx_t.minus1 <- rowidx_t - 1
-        data$dat.sVar[rowidx_t.minus1, "Q.kplus1" := private$probA1[self$subset_idx]]
-        private$probA1 <- NULL
-        private$probAeqa <- NULL
-      }
-
-      # *** NEED TO: 4. reset back the observed exposure to A[t] (renaming columns)
-      # ...
-
-      # sum(self$subset_idx)
-      # self$t_period
-      # self$Qreg_counter
-      # data$dat.sVar[1:50, ]
-      # browser()
-
-      # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
-      # **********************************************************************
-      invisible(self)
-    },
-
-    # Predict the response P(Bin = 1|sW = sw);
-    # uses private$model.fit to generate predictions for data:
-    predict = function(newdata, subset_idx, ...) {
-      assert_that(self$is.fitted)
-      if (missing(newdata) && !is.null(private$probA1)) {
-        return(private$probA1)
-      } else if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
-        return(private$probA1)
-      } else {
-        self$n <- newdata$nobs
-        if (missing(subset_idx)) {
-          self$subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
-        } else {
-          self$subset_idx <- subset_idx
-        }
-        private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-        return(private$probA1)
-      }
-    },
-
-    # Predict P(Q=1)
-    # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    predictAeqa = function(newdata, subset_idx, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
-      if (missing(newdata) && !is.null(private$probAeqa)) {
-        return(private$probAeqa)
-      }
-      if (is.null(self$getsubset)) stop("cannot make predictions after self$subset_idx is erased (set to NULL)")
-      self$predict(newdata = newdata, subset_idx = subset_idx)
-      # probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-      probA1 <- private$probA1[self$getsubset]
-      assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
-      # probAeqa[self$getsubset] <- probA1
-      private$probAeqa <- probA1
-      # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
-      # self$wipe.alldat
-      # **********************************************************************
-      return(probA1)
-    },
-
-    define.subset.idx = function(data, subset_vars, subset_exprs) {
-      subset_idx <- data$evalsubst(subset_vars, subset_exprs)
-      assert_that(is.logical(subset_idx))
-      if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
-        if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
-        subset_idx <- rep.int(subset_idx, data$p)
-        if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
-      }
-      assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
-      return(subset_idx)
-    },
-
-    # Returns the object that contains the actual model fits (itself)
-    get.fits = function() {
-      model.fit <- self$getfit
-      return(list(model.fit))
-    }
-  ),
-
-  active = list(
-    wipe.alldat = function() {
-      # private$probA1 <- NULL
-      # private$probAeqa <- NULL
-      self$subset_idx <- NULL
-      self$binomialModelObj$emptydata
-      self$binomialModelObj$emptyY
-      return(self)
-    }
-  )
-)
-
+# ------------------------------------------------------------------------------------------
+# Sequential (Recursive) G-COMP Algorithm:
+# ------------------------------------------------------------------------------------------
+# 1. At each t iteration:
+#     Fitting:
+#        Outcome is always Q.kplus1 (either by regimen or not). Fitting subset excludes all obs censored at t.
+#     Prediction:
+#        Swap the entire column(s) A[t] with A^*[t] by renaming them in OData$dat.sVar (might do this for more than one regimen in the future, if pooling Q's)
+#        Subset all observation by t (including all censored and non-followers).
+#        PredictP1() for everybody in the subset, then save the prediction in rows Q.kplus1[t] and rows Q.kplus1[t-1] for all obs that were used in prediction.
+#        Results in correct algorithm even when stratifyQ_by_rule=TRUE: next iteration (t-1) will do fit only based on obs that followed the rule at t-1.
+# 2. At next iteration t-1:
+#     Fitting:
+#        Use the predictions in Q.kplus1[t-1] as new outcomes and repeat until reached minimum t.
+# ------------------------------------------------------------------------------------------
 #' @export
 fitSeqGcomp <- function(OData,
                         t = OData$max.t,
@@ -263,19 +68,6 @@ fitSeqGcomp <- function(OData,
   new.factor.names <- OData$new.factor.names
   assert_that(is.list(params))
 
-
-  # ------------------------------------------------------------------------------------------------
-  # TO DO:
-  # ------------------------------------------------------------------------------------------------
-  # *) Get exactly the same est stratifyQ_by_rule TRUE or FALSE -> MUST BE AN ERROR
-  # *) Need to redefine gstar_TRT into a vector of counterfactual probabilities for TRT nodes
-  # *) gstar_MONITOR is already defined correctly, need to allow it to be multivariate (more than one node)
-  # *) allow each gstar to be vector (like abar=(0,0,0,0)) or a matrix of counterfactual treatments
-  # *) finally, when <1 and >0, assume its the counterfactual probability P(TRT^*=1)=gstar_TRT
-  # *) rule_followers_colname: RULE FOLLOWERS COLUMN NEEDS TO BE EVALUTED AUTOMATICALLY!!!!
-  # *) The stratification by follow-up has to be based only on 't' values that were observed in the data****
-  # ------------------------------------------------------------------------------------------------
-
   # ------------------------------------------------------------------------------------------------
   # **** Define the intervention nodes
   # ------------------------------------------------------------------------------------------------
@@ -289,7 +81,6 @@ fitSeqGcomp <- function(OData,
   } else {
     gstar.N <- nodes$Nnodes # use the actual observed monitoring probability (no intervention on MONITOR)
   }
-
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
   OData$interventionNodes.g0 <- interventionNodes.g0
@@ -299,6 +90,7 @@ fitSeqGcomp <- function(OData,
   # **** Set the uncensored and rule nodes
   # ------------------------------------------------------------------------------------------------
   OData$uncensored_idx <- OData$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENScat))), .SDcols = nodes$Cnodes][["uncensored_idx"]]
+
   # !!!! NOTE THIS LINE IS TECHNICALLY INCORRECT: RULE FOLLOWERS COLUMN NEEDS TO BE EVALUTED AUTOMATICALLY!!!!
   if (stratifyQ_by_rule) {
     assert_that(!is.null(rule_followers_colname))
@@ -314,83 +106,41 @@ fitSeqGcomp <- function(OData,
   names(stratify_Q) <- rep.int("Q.kplus1", length(stratify_Q))
 
   # ------------------------------------------------------------------------------------------------
-  # Process the input formulas and stratification settings;
-  # Define regression classes for Q.Y and put them in a single list of regressions.
+  # **** Process the input formulas and stratification settings;
   # ------------------------------------------------------------------------------------------------
   Qforms.default <- rep.int("Q.kplus1 ~ Lnodes + Anodes + Cnodes + Nnodes", length(Qperiods))
-
-  # ------------------------------------------------------------------------------------------------
-  # TMLE:
-  # Initiate the Q.kplus1 - need to do this for each regimen
-  # That column keeps the tabs on the running Q-fit (SEQ G-COMP)
-  OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))]
-  OData$def.types.sVar()
-  # ------------------------------------------------------------------------------------------------
   if (missing(Qforms)) Qforms <- Qforms.default
 
+  # ------------------------------------------------------------------------------------------------
+  # **** G-comp: Initiate Q.kplus1 - (could be multiple if more than one regimen)
+  # That column keeps the tabs on the running Q-fit (SEQ G-COMP)
+  # ------------------------------------------------------------------------------------------------
+  OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))]
+  OData$def.types.sVar()
+
+  # ------------------------------------------------------------------------------------------------
+  # **** Define regression classes for Q.Y and put them in a single list of regressions.
+  # ------------------------------------------------------------------------------------------------
   Q_regs_list <- vector(mode = "list", length = length(stratify_Q))
   names(Q_regs_list) <- unlist(stratify_Q)
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
 
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms[[i]]), sVar.map = nodes, factor.map = new.factor.names)
-    reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i],
+    reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i], stratifyQ_by_rule = stratifyQ_by_rule,
                                      outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
                                      subset_vars = list("Q.kplus1"), subset_exprs = stratify_Q[i], model_contrl = params,
                                      censoring = FALSE)
     Q_regs_list[[i]] <- reg
   }
 
-  # browser()
-
   Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-
-  # ------------------------------------------------------------------------------------------
-  # Outstanding issues:
-  # ------------------------------------------------------------------------------------------
-  # *** Need to define A^* at the begining, as a column (one for each regimen) -> should be returned by defineTRTrules()
-  # *** Censoring at t: Should be flexible and allowed to be defined as either those who are censored at t or those who are no longer following the rule at t.
-  # *** Need to add to current subsets expression for conditioning on uncensored observation (or censored) at each t or rule non-followers
-  #     Q_regs_list <- stratify_by_uncensored(Q_regs_list)
-  #     OData$dat.sVar[t == 0L, ]
-  # ------------------------------------------------------------------------------------------
-  # *** Stratification/pooling ***
-  #     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen
-  #     => can either pool all Q.regimens at once (fit one model for repated observations, one for each rule, smoothing over rules)
-  #     => can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
-  # ------------------------------------------------------------------------------------------
-  # *** Accessing correct QlearnModel ***
-  #     Need to come up with a good way of accessing correct terminal QlearnModel to get final Q-predictions in private$probAeqa
-  #     These predictions are for the final n observations that were used for evaluating E[Y^a]
-  #     However, if we do stratify=TRUE and use a stack version of g-comp with different strata all in one stacked database it will be difficult
-  #     to pull the right QlearnModel.
-  #     Alaternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos)
-  # ------------------------------------------------------------------------------------------
-  # *** Stochastic interventions ***
-  #     Need to do either MC integration (sample from g.star then predict Q)
-  #     or direct weighted sum of predicted Q's with weights given by g.star (on A and N)
-  # ------------------------------------------------------------------------------------------
-  # 1. At each t iteration:
-  #     Fitting:
-  #        Outcome is always Q.kplus1 (either by regimen or not).
-  #        Need to remove all censored at t when fitting (add new expr to subset defn or pass second subset expr?).
-  #        One way is to assign Q.kplus1[t] <- NA to all observations currently censored (at t)
-  #        Then use evalsubst() with outvar for fit() and without outvar for predict().
-  #     Prediction:
-  #        Add observation which were censored at t (C[t]==1) to the prediction set, using the second subset (or outvar)
-  #        For each Q.m (Q fit), rename columns to replace current A[t] with A^*[t], (possibly for each regimen), put A[t] back afterwards.
-  #        Save ProbA1 from PredictP1() for all obs used in prediction in rows of column Q.kplus1 (either at row Q.kplus1[t] or at Q.kplus1[t-1])
-  # 2. At next iteration t-1:
-  #     Fitting:
-  #        If previous prediction was saved at Q.kplus1[t-1], then all outcomes are already set to their needed values
-  #        If not, the outcomes at Q.kplus1[t-1] need to be updated with values from Q.kplus1[t] for all IDs who were used in prediction at t.
-  # ------------------------------------------------------------------------------------------
 
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
   Qlearn.fit$fit(data = OData)
 
   browser()
-  OData$dat.sVar[1:50,]
+  OData$dat.sVar[1:60,c("ID",  "t", "CVD", "Y", "lastNat1", "highA1c", "TI", "C", "N", "AnyCensored", "barTIm1eq0", "dlow", "dhigh", "Y.tplus1", "A.gstar0", "Q.kplus1"), with = FALSE]
   Qlearn.fit
 
   # 1a. Grab the mean prediction from the very last regression (over all n observations);
@@ -399,8 +149,25 @@ fitSeqGcomp <- function(OData,
     reslastQP1 <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
     print(length(reslastQP1))
     print(mean(reslastQP1))
-    # [1] 0.143 under g.0
-    # [1] 0.176548 for abar = 000000
+    # [1] 0.2111346 N=100K; for abar = 000000 / stratifyQ_by_rule = TRUE / t = 5
+    # [1] 0.2207547 N=200K; for abar = 000000 / stratifyQ_by_rule = TRUE / t = 5
+
+    # [1] wrong: 0.1803166 N=100K;for abar = 000000 / stratifyQ_by_rule = FALSE / t = 5
+    # [1] 0.2229045 N=200K;for abar = 000000 / stratifyQ_by_rule = FALSE / t = 5
+
+# TRUE SURVIVAL (outcome[t+1]) UNDER abar = c(0,0,0,...) and N=500K
+#      Y_1      Y_2      Y_3      Y_4      Y_5      Y_6      Y_7      Y_8      Y_9     Y_10     Y_11     Y_12     Y_13     Y_14     Y_15
+# 0.008362 0.028496 0.061580 0.105884 0.159512 0.218272 0.278166 0.337492 0.393754 0.446770 0.495858 0.541162 0.582344 0.620662 0.655058
+#     Y_16
+# 0.686512
+
+# TRUE SURVIVAL (outcome[t+1]) UNDER abar = c(1,1,1,...) and N=500K
+#      Y_1      Y_2      Y_3      Y_4      Y_5      Y_6      Y_7      Y_8      Y_9     Y_10     Y_11     Y_12     Y_13     Y_14     Y_15
+# 0.008362 0.019062 0.030102 0.041762 0.053684 0.065804 0.078082 0.091002 0.104102 0.117490 0.131350 0.145544 0.159788 0.174474 0.189384
+#     Y_16
+# 0.204536
+    # [1] 0.06315338 N=100K;for abar = 11111 / stratifyQ_by_rule = TRUE
+    # [1] 0.1193346  N=100K;for abar = 11111 / stratifyQ_by_rule = FALSE
 
   # 1b. Grab the right model (QlearnModel) and pull it directly:
     lastQ.fit <- Qlearn.fit$getPsAsW.models()[[lastQ_inx]]$getPsAsW.models()[[1]]

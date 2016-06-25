@@ -32,7 +32,8 @@ Imports:
     pander,
     speedglm,
     stats,
-    stringr
+    stringr,
+    zoo
 LinkingTo: Rcpp
 Suggests:
     h2o,

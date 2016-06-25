@@ -465,7 +465,6 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
     # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:
     # DT[, paste0("d",dtheta) := eval(parse(text="as.logical(cumprod(d.follow_allr))")), by = eval(ID.expression)]
     DT[, paste0("d",dtheta) := as.logical(cumprod(d.follow_allr)), by = eval(ID.expression)]
-    DT[, c(ID, t, I, CENS, TRT, MONITOR, tsinceNis1), with = FALSE]
   }
 
   DT[, "chgTRT" := NULL]; DT[, "d.follow_r1" := NULL]; DT[, "d.follow_r2" := NULL]; DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]
@@ -479,5 +478,57 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
   if (!return.allcolumns) {
     DT <- DT[, c(ID, t, rule.names), with=FALSE]
   }
+  return(DT)
+}
+
+
+#' @export
+defineCounterfactTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, new.TRT.names = NULL, return.allcolumns = FALSE){
+  ID.expression <- as.name(ID)
+  chgTRT <- as.name("chgTRT")
+
+  if (return.allcolumns) {
+    DT <- data.table(data, key=c(ID,t))
+  } else if (is.data.table(data)) {
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1), with = FALSE], key=c(ID,t))
+  } else if (is.data.frame(data)) {
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1)], key=c(ID,t))
+  } else {
+    stop("input data must be either a data.table or a data.frame")
+  }
+
+  CheckVarNameExists(DT, ID)
+  CheckVarNameExists(DT, t)
+  CheckVarNameExists(DT, I)
+  CheckVarNameExists(DT, TRT)
+  CheckVarNameExists(DT, MONITOR)
+  CheckVarNameExists(DT, tsinceNis1)
+
+  if (!is.null(new.TRT.names)) {
+    stopifnot(length(new.TRT.names)==length(theta))
+  } else {
+    new.TRT.names <- paste0(TRT,".gstar.","d",theta)
+  }
+
+  for (dtheta.i in seq_along(theta)) {
+    dtheta <- theta[dtheta.i]
+    # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
+    # 1. by default, nobody is treated
+    DT[, "new.TRT.gstar" :=  NA_integer_]
+    # 2. the person can switch to treatment the earliest time 'I' goes over the threshold (while being monitored)
+    # NOTE: ****** (tsinceNis1 > 0) is equivalent to (N(t-1)==0) ******
+    DT[(get(tsinceNis1) == 0L) & (get(I) >= eval(dtheta)), "new.TRT.gstar" :=  1L]
+    # 3. once the person goes on treatment he/she has to stay on it until the end of the follow-up (using carry-forward)
+    DT[, new.TRT.gstar := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
+    # 4. all remaining NA's must be the ones that occurred prior to treatment switch -> all must be 0 (not-treated)
+    DT[is.na(new.TRT.gstar), new.TRT.gstar := 0]
+
+    setnames(DT, old = "new.TRT.gstar", new = new.TRT.names[dtheta.i])
+  }
+
+  if (!return.allcolumns) {
+    DT <- DT[, c(ID, t, new.TRT.names), with = FALSE]
+  }
+
   return(DT)
 }

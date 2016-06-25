@@ -22,9 +22,9 @@ h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
                   training_frame = subsetH2Oframe,
                   family = "binomial",
                   standardize = TRUE,
-                  solver = "L_BFGS",
+                  # solver = "L_BFGS",
                   lambda = 0L,
-                  # solver = c("IRLSM"),
+                  solver = c("IRLSM"),
                   # remove_collinear_columns = TRUE,
                   max_iterations = 50,
                   ignore_const_cols = FALSE,
@@ -101,9 +101,11 @@ h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mod
 
 # S3 method for h2o GBM fit, takes BinDat data object:
 h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
+  # browser()
   mainArgs <- list(x = predvars, y = outvar,
                    training_frame = subsetH2Oframe,
                    distribution = "bernoulli",
+                   # distribution = "gaussian",
                    ntrees = 100,
                    balance_classes = TRUE,
                    ignore_const_cols = FALSE)
@@ -186,7 +188,6 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
         # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
         NAfactors <- any(is.na(outfactors))
-
         # fixing bug in h2o frame
         if (NAfactors) {
           message("FOUND NA OUTCOMES IN H2OFRAME WHEN THERE WERE NOT SUPPOSED TO BE ANY")
@@ -202,12 +203,14 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
           message("unable to run " %+% self$fit.class %+% " with h2o for input data with constant outcome, running speedglm as a backup...")
           class(model.fit) <- "try-error"
         } else if (length(outfactors) > 2L) {
-          stop("cannot run binary regression/classification for outcome with more than 2 categories")
+          # stop("cannot run binary regression/classification for outcome with more than 2 categories")
         }
       }
 
       if (!inherits(model.fit, "try-error")) {
-        subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
+
+        # subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
+
         private$subsetH2Oframe <- subsetH2Oframe
         model.fit <- try(
                       h2ofit(self$model.fit,
@@ -228,6 +231,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         model.fit <- super$fit(data, outvar, predvars, subset_idx, ...)
       }
       self$model.fit <- model.fit
+      self$model.fit$params <- self$params
       return(self$model.fit)
     }
   ),
