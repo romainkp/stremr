@@ -84,13 +84,10 @@ fitPropensity <- function(OData,
 
   g_CAN_regs_list[["gC"]] <- process_regforms(regforms = gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS, model_contrl = params_CENS,
                                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
-  # g_CAN_regs_list[["gC"]] <- gC.sVars$regs
   g_CAN_regs_list[["gA"]] <- process_regforms(regforms = gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT, model_contrl = params_TRT,
                                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  # g_CAN_regs_list[["gA"]] <- gA.sVars$regs
   g_CAN_regs_list[["gN"]] <- process_regforms(regforms = gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR, model_contrl = params_MONITOR,
                                               OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  # g_CAN_regs_list[["gN"]] <- gN.sVars$regs
 
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
@@ -218,8 +215,6 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   OData$dat.sVar[, "gstar.A" := gstar.TRT]
   OData$dat.sVar[, "gstar.N" := gstar.MONITOR]
   OData$dat.sVar[, "gstar.CAN" := gstar.CAN.evaluated]
-  # OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
-  # OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
 
   # Weights by time and cummulative weights by time:
   OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
@@ -234,7 +229,7 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # (The total sum of all subjects who WERE AT RISK at t)
   # (FASTER) Version outside data.table, then merge back results:
   OData$dat.sVar[, "rule.follower.gAC" := as.integer(cumprod(gstar.A*gstar.C) > 0), by = eval(nodes$IDnode)]
-  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(rule.follower.gA, na.rm = TRUE)), by = eval(nodes$tnode)]
+  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(rule.follower.gAC, na.rm = TRUE)), by = eval(nodes$tnode)]
 
   # n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
