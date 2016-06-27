@@ -173,10 +173,10 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 
   # do the same by separately for each rule:
   if (by.rule) {
-    # setkeyv(wts_data, cols = "rule.name.TRT")
-    x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE)), by = list(rule.name.TRT, rule.name.MONITOR)]
+    # setkeyv(wts_data, cols = "rule.name")
+    x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE)), by = list(rule.name, rule.name.MONITOR)]
     if (na.yes) {
-      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cumm.IPAW), na.rm = TRUE), by = list(rule.name.TRT, rule.name.MONITOR)], on = c("rule.name.TRT", "rule.name.MONITOR")]
+      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cumm.IPAW), na.rm = TRUE), by = list(rule.name, rule.name.MONITOR)], on = c("rule.name", "rule.name.MONITOR")]
     }
     colnames(x.freq.counts.byrule.DT)[-(1:2)] <- catNames
   } else {
