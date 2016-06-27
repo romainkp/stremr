@@ -307,6 +307,7 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
   class = TRUE,
   public = list(
     gstar.Name = character(),
+    is.fitted = TRUE,
     initialize = function(reg, ...) {
       self$model_contrl <- reg$model_contrl
       self$gstar.Name <- reg$model_contrl[["gstar.Name"]]
@@ -323,6 +324,8 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       private$probA1 <- data$get.outvar(TRUE, self$gstar.Name)
       self$subset_idx <- rep.int(TRUE, self$n)
       private$.outvar <- data$get.outvar(TRUE, self$getoutvarnm) # Always a vector of 0/1
+      self$is.fitted <- TRUE
+
       if (predict) {
         self$predictAeqa(...)
       }

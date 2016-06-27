@@ -1,7 +1,6 @@
 # ------------------------------------------------------------------------------------------
 # TO DO:
 # ------------------------------------------------------------------------------------------
-# *) Need to make sure all functions in main_estimation.R work with the modified class structure.
 # *) Need to finish/clean-up the suit of tests for all componensts.
 # *) Redo getIPWeights() to work with counterfactual A's and N's rather than rule followers.
 # *) The definition of Qperiods below needs to be based on actual periods observed in the data.
@@ -10,6 +9,8 @@
 #    1. Setting / not setting the outcome as factor
 #    2. Setting the GBM distribution to "bernoulli"/"gaussian"
 #    3. Validating the h2o.glm with bernoulli and continous outcome, setting the solver to IRLSM
+
+# (DONE) Need to make sure all functions in main_estimation.R work with the modified class structure.
 # ------------------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------------------
