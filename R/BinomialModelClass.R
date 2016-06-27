@@ -300,102 +300,29 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
   )
 )
 
-
 DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutcomeModel",
   inherit = BinaryOutcomeModel,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
   public = list(
-    outvar = character(),   # outcome name(s)
     gstar.Name = character(),
-
-    predvars = character(), # names of predictor vars
-    cont.sVar.flag = logical(),
-    bw.j = numeric(),
-    is.fitted = TRUE,
-    # binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
-    # fit.package = c("speedglm", "glm", "h2o"),
-    # fit.algorithm = c("GLM", "GBM", "RF", "SL"),
-    # model_contrl = list(),
-
-    n = NA_integer_,        # number of rows in the input data
-    nbins = integer(),
-    subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
-    subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
-    subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
-    ReplMisVal0 = logical(),
-
     initialize = function(reg, ...) {
-      # model_contrl <- reg$model_contrl
       self$model_contrl <- reg$model_contrl
       self$gstar.Name <- reg$model_contrl[["gstar.Name"]]
       assert_that(!is.null(self$gstar.Name))
-
-      # if ("fit.package" %in% names(model_contrl)) {
-      #   self$fit.package <- model_contrl[['fit.package']]
-      #   assert_that(is.character(self$fit.package))
-      #   assert_that(self$fit.package %in% c("speedglm", "glm", "h2o"))
-      # } else {
-      #   self$fit.package <- reg$fit.package[1]
-      # }
-      # if ("fit.algorithm" %in% names(model_contrl)) {
-      #   self$fit.algorithm <- model_contrl[['fit.algorithm']]
-      #   assert_that(is.character(self$fit.algorithm))
-      #   assert_that(self$fit.algorithm %in% c("GLM", "GBM", "RF", "SL"))
-      # } else {
-      #   self$fit.algorithm <- reg$fit.algorithm[1]
-      # }
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
-      # assert_that(is.character(reg$predvars))
       self$predvars <- reg$predvars
-      # private$probA1 <- probVar.eq.1.gstar
-
-      # self$subset_vars <- reg$subset_vars
-      # self$subset_exprs <- reg$subset_exprs
-      # assert_that(length(self$subset_exprs) <= 1)
-      # self$ReplMisVal0 <- reg$ReplMisVal0
-      # self$nbins <- reg$nbins
-      # if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
-      # assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
-      # ***************************************************************************
-      # Add any additional options passed on to modeling functions as extra args
-      # ***************************************************************************
-      # if (self$fit.package %in% "h2o") {
-      #   self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
-      # } else {
-      #   self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
-      # }
-      # self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
-      # if (gvars$verbose) {
-      #   print("New instance of " %+% class(self)[1] %+% " :"); print(self$show())
-      # }
-      # Get the bin width (interval length) for the current bin name self$getoutvarnm (for discretized continuous sA only):
-      # self$cont.sVar.flag <- self$getoutvarnm %in% names(reg$intrvls.width)
-      # if (self$cont.sVar.flag) {
-      #   intrvl.idx <- which(names(reg$intrvls.width) %in% self$getoutvarnm)
-      #   if (length(intrvl.idx) > 1) stop("non-unique names for intrvls.width in RegressionClass")
-      #   self$bw.j <- reg$intrvls.width[intrvl.idx]
-      # } else {
-      #   self$bw.j <- 1L
-      # }
       invisible(self)
     },
-
     # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
     # store these predictions in private$probA1 and private$probAeqa
     fit = function(overwrite = FALSE, data, predict = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
-      # private$probA1 <- data[[self$gstar.Name]]
       private$probA1 <- data$get.outvar(TRUE, self$gstar.Name)
       self$subset_idx <- rep.int(TRUE, self$n)
       private$.outvar <- data$get.outvar(TRUE, self$getoutvarnm) # Always a vector of 0/1
-      # if (gvars$verbose) print("fitting the model: " %+% self$show())
-      # if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
-      # self$define.subset.idx(data)
-      # private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
-      # self$is.fitted <- TRUE
       if (predict) {
         self$predictAeqa(...)
       }
@@ -405,60 +332,48 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       # **********************************************************************
       invisible(self)
     },
-
     # get the fixed (known) the gstar P(A^*(t) = 1|W, bar{L(t)});
-    # should be already saved earlier in private$probA1, so there is nothing to do
+    # should be already saved earlier in private$probA1, so there is nothing to do here
     predict = function(newdata, ...) {
       assert_that(self$is.fitted)
-      if (missing(newdata) && is.null(private$probA1)) {
-        # stop("must provide newdata for BinaryOutcomeModel$predict()")
-        # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
-      } else {
-        # self$n <- newdata$nobs
-        # self$define.subset.idx(newdata)
-        # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-      }
       return(invisible(self))
     },
-
     # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
     # Needs to know the values of b for prediction
     # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    predictAeqa = function(newdata, bw.j.sA_diff, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
-      if (missing(newdata) && !is.null(private$probAeqa)) {
-        return(private$probAeqa)
-      }
-      self$predict(newdata)
-      if (missing(newdata)) {
-        indA <- self$getoutvarval
-      } else {
-        indA <- newdata$get.outvar(TRUE, self$getoutvarnm) # Always a vector of 0/1
-      }
-
-      assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
-      probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-      probA1 <- private$probA1[self$getsubset]
-      assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
-      # Discrete version for the joint density:
-      probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
-      # continuous version for the joint density:
-      # probAeqa[self$getsubset] <- (probA1^indA) * exp(-probA1)^(1 - indA)
-      # Alternative intergrating the last hazard chunk up to x:
-      # difference of sA value and its left most bin cutoff: x - b_{j-1}
-      if (!missing(bw.j.sA_diff)) {
-        # + integrating the constant hazard all the way up to value of each sa:
-        # probAeqa[self$getsubset] <- probAeqa[self$getsubset] * (1 - bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
-        # cont. version of above:
-        probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
-      }
-      private$probAeqa <- probAeqa
-      # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
-      # **********************************************************************
-      return(probAeqa)
-    },
-
+    # predictAeqa = function(newdata, bw.j.sA_diff, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+    #   if (missing(newdata) && !is.null(private$probAeqa)) {
+    #     return(private$probAeqa)
+    #   }
+    #   self$predict(newdata)
+    #   if (missing(newdata)) {
+    #     indA <- self$getoutvarval
+    #   } else {
+    #     indA <- newdata$get.outvar(TRUE, self$getoutvarnm) # Always a vector of 0/1
+    #   }
+    #   assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
+    #   probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+    #   probA1 <- private$probA1[self$getsubset]
+    #   assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
+    #   # Discrete version for the joint density:
+    #   probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
+    #   # continuous version for the joint density:
+    #   # probAeqa[self$getsubset] <- (probA1^indA) * exp(-probA1)^(1 - indA)
+    #   # Alternative intergrating the last hazard chunk up to x:
+    #   # difference of sA value and its left most bin cutoff: x - b_{j-1}
+    #   if (!missing(bw.j.sA_diff)) {
+    #     # + integrating the constant hazard all the way up to value of each sa:
+    #     # probAeqa[self$getsubset] <- probAeqa[self$getsubset] * (1 - bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
+    #     # cont. version of above:
+    #     probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
+    #   }
+    #   private$probAeqa <- probAeqa
+    #   # **********************************************************************
+    #   # to save RAM space when doing many stacked regressions wipe out all internal data:
+    #   self$wipe.alldat
+    #   # **********************************************************************
+    #   return(probAeqa)
+    # },
     # define.subset.idx = function(data) {
     #   if (is.logical(self$subset_vars)) {
     #     subset_idx <- self$subset_vars
@@ -477,7 +392,6 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
     #   self$subset_idx <- subset_idx
     #   return(invisible(self))
     # },
-
     # take fitted BinaryOutcomeModel class object as an input and save the fits to itself
     # copy.fit = function(bin.out.model) {
     #   assert_that("BinaryOutcomeModel" %in% class(bin.out.model))
@@ -485,14 +399,12 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
     #   self$is.fitted <- TRUE
     #   invisible(self)
     # },
-
     # # take BinaryOutcomeModel class object that contains the predictions for P(A=1|sW) and save these predictions to self$
     # copy.predict = function(bin.out.model) {
     #   assert_that("BinaryOutcomeModel" %in% class(bin.out.model))
     #   assert_that(self$is.fitted)
     #   private$probA1 <- bin.out.model$getprobA1
     # },
-
     # # Returns the object that contains the actual model fits (itself)
     # get.fits = function() {
     #   model.fit <- self$getfit

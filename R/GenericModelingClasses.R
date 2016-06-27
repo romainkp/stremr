@@ -20,7 +20,7 @@ newsummarymodel.stratify <- function(regClass, reg, DataStorageClass.g0, ...) St
 newsummarymodel.binary <- function(regClass, reg, ...) BinaryOutcomeModel$new(reg = reg, ...)
 # Summary model constructor for Q-learning (sequential regression):
 newsummarymodel.Qlearn <- function(regClass, reg, ...) QlearnModel$new(reg = reg, ...)
-
+# For evaluating propensity scores under g.star (counterfactual probabilities)
 newsummarymodel.deterministic <- function(regClass, reg, ...) DeterministicBinaryOutcomeModel$new(reg = reg, ...)
 
 prettyprint_GenericModel <- function(self, reg, all.outvar.bin) {
