@@ -42,6 +42,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
   class = TRUE,
   public = list(
     classify = FALSE,
+    TMLE = TRUE,
     nIDs = integer(),
     stratifyQ_by_rule = FALSE,
     Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
@@ -62,7 +63,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
 
-      if (gvars$verbose) print("fitting G-COMP the model: " %+% self$show())
+      if (gvars$verbose) print("fitting G-COMP model: " %+% self$show())
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
       # **********************************************************************

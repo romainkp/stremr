@@ -2,28 +2,27 @@
 # TO DO:
 # ------------------------------------------------------------------------------------------
 # *) Need to finish/clean-up the suit of tests for all componensts.
-# *) Redo getIPWeights() to work with counterfactual A's and N's rather than rule followers.
 # *) The definition of Qperiods below needs to be based on actual periods observed in the data.
 # *) Consider bringing in tmlenet syntax for defining the interventions in a node-like style.
 # *) Need to be able to differentiate binomial (binary) outcome classification and continuous outcome regression for h2o:
 #    1. Setting / not setting the outcome as factor
 #    2. Setting the GBM distribution to "bernoulli"/"gaussian"
 #    3. Validating the h2o.glm with bernoulli and continous outcome, setting the solver to IRLSM
-
+# ------------------------------------------------------------------------------------------
 # (DONE) Need to make sure all functions in main_estimation.R work with the modified class structure.
+# (DONE) Redo getIPWeights() to work with counterfactual A's and N's rather than rule followers.
 # ------------------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------------------
 # Outstanding issues:
 # ------------------------------------------------------------------------------------------
 # *** Stochastic interventions ***
+#     Deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
 #     Need to do either MC integration (sample from g.star then predict Q)
 #     or direct weighted sum of predicted Q's with weights given by g.star (on A and N).
 # *) gstar_TRT/gstar_MONITOR are vectors of coutnerfactual probs -> allow each to be multivariate (>1 cols)
 # *) For column 0<gstar_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=gstar_TRT[t].
 # *) gstar can be a vector, i.e., abar=(0,0,0,0) or a matrix of counterfactual treatments, like in ltmle.
-# *) Deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
-
 # ------------------------------------------------------------------------------------------
 #  *** rule_followers:
 #     Once you go off the treatment first time, this is it, the person is censored for the rest of the follow-up.

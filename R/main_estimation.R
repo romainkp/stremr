@@ -233,7 +233,7 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
   # (The total sum of all subjects who WERE AT RISK at t)
   # (FASTER) Version outside data.table, then merge back results:
-  OData$dat.sVar[, "rule.follower.gA" := as.integer(cumprod(gstar.A) > 0), by = eval(nodes$IDnode)]
+  OData$dat.sVar[, "rule.follower.gAC" := as.integer(cumprod(gstar.A*gstar.C) > 0), by = eval(nodes$IDnode)]
   n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(rule.follower.gA, na.rm = TRUE)), by = eval(nodes$tnode)]
 
   # n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
@@ -264,7 +264,7 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # NEED TO CLEAN UP OData$dat.sVar TO MAKE SURE ITS IN EXACTLY THE SAME STATE WHEN THIS FUNCTION WAS CALLED
   # -------------------------------------------------------------------------------------------
   # "g0.A", "g0.C", "g0.N", "g0.CAN",
-  OData$dat.sVar[, c("gstar.C", "gstar.CAN", "Wt.OUTCOME", "cumm.IPAW", "wt.by.t", "cum.stab.P", "N.follow.rule") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
+  OData$dat.sVar[, c("gstar.C", "gstar.A", "gstar.N", "gstar.CAN", "Wt.OUTCOME", "cumm.IPAW", "wt.by.t", "cum.stab.P", "N.follow.rule") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
   return(wts.DT)
 }
 
