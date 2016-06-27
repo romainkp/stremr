@@ -359,7 +359,7 @@ get_subset_exprs.ListOfRegressionForms <- function(regobjlist) {
 }
 set_subset_exprs <- function(regobjlist, idx, subset_exprs) { UseMethod("set_subset_exprs") }
 set_subset_exprs.ListOfRegressionForms <- function(regobjlist, idx, subset_exprs) {
-  subset_exprs <- NULL
+  # subset_exprs <- NULL
   idx_count <- 0
   for (idx_reg in seq_along(regobjlist)) {
     for (idx_outvar in seq_along(regobjlist[[idx_reg]]$outvar)) {
