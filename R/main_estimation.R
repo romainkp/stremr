@@ -363,8 +363,8 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
     stop("...wts_data arg must be either a list of rule-specific weight data.tables or one combined weight data.table...")
   }
 
-  rules_TRT <- sort(unique(wts_data[["rule.name.TRT"]]))
-  if (verbose) print("performing estimation for found TRT rules in column 'rule.name.TRT': " %+% paste(rules_TRT, collapse=","))
+  rules_TRT <- sort(unique(wts_data[["rule.name"]]))
+  if (verbose) print("performing estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
 
   # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
   wts_data <- wts_data[!is.na(cumm.IPAW) & !is.na(eval(as.name(Ynode))) & (cumm.IPAW > 0), ]
@@ -408,7 +408,7 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
   # 3. Create the dummies I(d == gstar_TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
   for( dummy.j in rules_TRT ){
-    wts_data[, (dummy.j) := as.integer(rule.name.TRT %in% dummy.j)]
+    wts_data[, (dummy.j) := as.integer(rule.name %in% dummy.j)]
     all.d.dummies <- c(all.d.dummies, dummy.j)
   }
 

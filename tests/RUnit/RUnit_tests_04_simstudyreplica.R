@@ -250,21 +250,6 @@ stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
 # h2o::h2o.shutdown(prompt = FALSE)
 
-# ------------------------------------------------------------------------
-# TEST FOR ERROR WITH > 1 REGRESSION AND > 1 STATA
-# ------------------------------------------------------------------------
-gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
-stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
-O.dataDTrules_Nstar_test <- O.dataDTrules_Nstar
-O.dataDTrules_Nstar_test[, "C1" := C]
-O.dataDTrules_Nstar_test[, "C2" := C]
-OData <- importData(O.dataDTrules_Nstar_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
-OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
-                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
-
-
-
 OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
 # OData$H2O.dat.sVar
@@ -330,30 +315,15 @@ St.dhigh
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"] # [1] 0.1260063
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
 
-wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow")
-wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh")
+
+wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
+# wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow")
+wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh")
+# wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh")
 # wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly")
 # wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly")
 wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
 wts.all <- rbindlist(wts.all.list)
-
-# follow_up_rule_ID <- wts.all[cumm.IPAW > 0, list(max.t = max(t, na.rm = TRUE)), by = list(ID, rule.name.TRT, rule.name.MONITOR)]
-# setkeyv(follow_up_rule_ID, cols = "ID")
-# MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
-# TRT.rules <- unique(wts.all[["rule.name.TRT"]])
-# for (M.rule in MONITOR.rules) {
-#   for (T.rule in TRT.rules) {
-#     one_ruleID <- follow_up_rule_ID[(rule.name.TRT %in% eval(T.rule)) & (rule.name.MONITOR %in% eval(M.rule)), max.t]
-#     print(T.rule); print(M.rule)
-#     freq_tab <- table(one_ruleID)
-#     hist(one_ruleID, main = "Maximum follow-up period for TRT rule: " %+% T.rule %+% " \nand MONITOR rule: " %+% M.rule)
-#     print(makeFreqTable(freq_tab))
-#     summary(one_ruleID)
-#   }
-# }
-# follow_up_rule_ID
-# follow_up_rule_ID[, hist(max.t, plot = FALSE), by = list(rule.name.TRT, rule.name.MONITOR)]
-
 
 tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
 # MSM for hazard with regular weights:
@@ -425,3 +395,15 @@ gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms
 
 
 
+# ------------------------------------------------------------------------
+# TEST FOR ERROR WITH > 1 REGRESSION AND > 1 STATA
+# ------------------------------------------------------------------------
+gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
+stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
+O.dataDTrules_Nstar_test <- O.dataDTrules_Nstar
+O.dataDTrules_Nstar_test[, "C1" := C]
+O.dataDTrules_Nstar_test[, "C2" := C]
+OData <- importData(O.dataDTrules_Nstar_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
+                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
