@@ -228,12 +228,14 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
   # (The total sum of all subjects who WERE AT RISK at t)
   # (FASTER) Version outside data.table, then merge back results:
-  OData$dat.sVar[, "rule.follower.gAC" := as.integer(cumprod(gstar.A*gstar.C) > 0), by = eval(nodes$IDnode)]
-  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(rule.follower.gAC, na.rm = TRUE)), by = eval(nodes$tnode)]
+  OData$dat.sVar[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
+  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
+  OData$dat.sVar[, "rule.follower.gCAN" := NULL]
 
   # n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
   # n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 0)][, cum.stab.P := cumprod(stab.P)]
+
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols = nodes$tnode)
   OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]
