@@ -475,8 +475,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     eval_rule_followers = function(NodeName, gstar.NodeName) {
+      # this part will be automatically determined by gstarA/gstarN (the likelihood)
       self$dat.sVar[, "rule.follower.dx" := as.integer(get(NodeName) == get(gstar.NodeName))]
-      self$dat.sVar[, "rule.follower.dx" := as.integer(cumprod(rule.follower.dx)), by = eval(self$nodes$IDnode)]
+      # self$dat.sVar[, "rule.follower.dx" := as.integer(get(NodeName) == get(gstar.NodeName))]
+
+      # rule follower whenever the probability of observing the current history \bar{(O(t))} is > 0
+      self$dat.sVar[, "rule.follower.dx" := as.integer(cumprod(rule.follower.dx) > 0), by = eval(self$nodes$IDnode)]
+      # self$dat.sVar[, "rule.follower.dx" := as.integer(cumprod(rule.follower.dx)), by = eval(self$nodes$IDnode)]
+
       rule_followers_idx <- self$dat.sVar[["rule.follower.dx"]]
       self$dat.sVar[, "rule.follower.dx" := NULL]
       return(as.logical(rule_followers_idx))
@@ -484,7 +490,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
     eval_uncensored = function() {
       return(self$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat))), .SDcols = self$nodes$Cnodes][["uncensored_idx"]])
-    }
+    },
 
     # ---------------------------------------------------------------------------
     # Cast long format data into wide format:

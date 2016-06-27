@@ -1,26 +1,3 @@
-# SGCompRegClass <- R6Class("SGCompRegClass",
-#   inherit = RegressionClass,
-#   class = TRUE,
-#   portable = TRUE,
-#   public = list(
-#     # outvar = character(),          # the outcome variable name (Ynode)
-#     # outvar.class = character(),
-#     Qforms = character(),
-#     # n_regs = integer(),
-#     # n_timepts = integer(),       # number of time points
-#     # nodes = list(),
-#     # predvars = list(),             # list of predictors for each regression from Qforms
-#     # not used for now:
-#     Anodes = list(),               # list of treatment var names, by timepoint
-#     Cnodes = list(),               # list of censoring var names, by timepoint
-#     Lnodes = list(),               # list of time-varying confounder names, by timepoint
-#     Wnodes = character(),          # character vector of baseline covariate names
-#     subset = NULL,                 # subset expression (later evaluated to logical vector in the envir of the data)
-#     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
-#     pool = logical()
-#   )
-# )
-
 RegressionClassQlearn <- R6Class("RegressionClassQlearn",
   inherit = RegressionClass,
   class = TRUE,
@@ -28,14 +5,11 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
   public = list(
     Qreg_counter = integer(),
     t_period = integer(),
-    # subset_censored = logical(),
     stratifyQ_by_rule = FALSE,
     pool_regimes = FALSE,
     initialize = function(Qreg_counter, t_period, stratifyQ_by_rule, pool_regimes, ...) {
       self$Qreg_counter <- Qreg_counter
       self$t_period <- t_period
-      # subset_censored
-      # if (!missing(subset_censored)) self$subset_censored <- subset_censored
       if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
       super$initialize(...)
@@ -67,17 +41,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
   portable = TRUE,
   class = TRUE,
   public = list(
+    classify = FALSE,
     nIDs = integer(),
     stratifyQ_by_rule = FALSE,
-    # interventionNodes.g0 = character(),
-    # interventionNodes.gstar = character(),
-    # subset_t_expr = NULL,
-    # subset_rule_expr = NULL,
-    # subset_CENS_expr = NULL,  # THE LOGICAL EXPRESSION, WHEN EVALUTED IDENTIFIES ALL CENSORED OBS (at current t)
-    # subset_t_idx = NULL,
-    # subset_rule_idx = NULL,
-    # subset_CENS_idx = NULL,
-
     Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
     t_period = integer(),
 
@@ -106,18 +72,17 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # select all obs at current t, with no missing outcome (!is.na(self$subset_vars))
       self$subset_idx <- self$define.subset.idx(data, subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
+
       # excluded all censored observations:
       self$subset_idx <- self$subset_idx & data$uncensored_idx
+
       # if stratifying by rule, exclude all obs who are not following the rule:
       if (self$stratifyQ_by_rule) self$subset_idx <- self$subset_idx & data$rule_followers_idx
 
       private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
-      # private$model.fit$params <- self$show(print_format = FALSE)
-      # self$binomialModelObj$model.fit <- private$model.fit
 
       self$is.fitted <- TRUE
       print("Q-learning for: " %+% self$subset_exprs); print(self$get.fits())
-      # browser()
 
       # **********************************************************************
       # PREDICTION STEP OF Q-LEARNING
@@ -141,13 +106,11 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # self$predict(...)
       # *** NEED TO: 3. add observations that were censored at current t to the subset and do predictions for them
 
-
       # ------------------------------------------------------------------------------------------------------------------------
       # *** NEED TO ADD: possibly intergrate out over the support of the stochastic intervention (weighted sum of P(A(t)=a(t)))
       # ------------------------------------------------------------------------------------------------------------------------
       # *** NEED TO ADD: do MC sampling to perform the same integration
       # ------------------------------------------------------------------------------------------------------------------------
-
 
       # 2. save all predicted vals as Q.kplus1[t] in row t (saved for later targeting/etc):
       rowidx_t <- which(self$subset_idx)
@@ -165,12 +128,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # 4. reset back the observed exposure to A[t] (swap back by renaming columns)
       data$swapNodes(current = interventionNodes.gstar, target = interventionNodes.g0)
-
-      # sum(self$subset_idx)
-      # self$t_period
-      # self$Qreg_counter
-      # data$dat.sVar[1:50, ]
-      # browser()
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:

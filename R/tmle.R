@@ -1,14 +1,12 @@
 # ------------------------------------------------------------------------------------------
 # TO DO:
 # ------------------------------------------------------------------------------------------
-# *) gstar_TRT needs to be redfined into vector of coutnerfactual probs, can be also multivariate (same w/ getIPWeights())
-# *) gstar_MONITOR is defined correctly, but can be also multivariate (more than one node) (same w/ getIPWeights())
-# *) allow each gstar to be also a vector (like abar=(0,0,0,0)) or a matrix of counterfactual treatments, like in ltmle
-# *) for column 0<gstar_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=gstar_TRT[t]
-# *) The definition of Qperiods below needs to be based on actual periods observed in the data
-# *) consider bringing in tmlenet syntax for defining the interventions in a node-like style
-# *) deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
-# *) need to be able to differentiate binomial (binary) outcome classification and continuous outcome regression for h2o:
+# *) Need to make sure all functions in main_estimation.R work with the modified class structure.
+# *) Need to finish/clean-up the suit of tests for all componensts.
+# *) Redo getIPWeights() to work with counterfactual A's and N's rather than rule followers.
+# *) The definition of Qperiods below needs to be based on actual periods observed in the data.
+# *) Consider bringing in tmlenet syntax for defining the interventions in a node-like style.
+# *) Need to be able to differentiate binomial (binary) outcome classification and continuous outcome regression for h2o:
 #    1. Setting / not setting the outcome as factor
 #    2. Setting the GBM distribution to "bernoulli"/"gaussian"
 #    3. Validating the h2o.glm with bernoulli and continous outcome, setting the solver to IRLSM
@@ -17,28 +15,33 @@
 # ------------------------------------------------------------------------------------------
 # Outstanding issues:
 # ------------------------------------------------------------------------------------------
-#  *** rule_followers:
-#     The key question is what to do with those who went off TRT then went back to TRT (against the rule)? Probably once you go off the treatment first time, this is it, censored.
-#     Can now be evaluated automatically by comparing (gstar_TRT and TRT and CENS) and (gstar_MONITOR and MONITOR and CENS)
-#     Rule followers are: (gstar_TRT = 1) & (TRT == 1) or (gstar_TRT = 0) & (TRT == 0) or (gstar_TRT > 0 & gstar_TRT < 0) & (Not Censored)
-#     Exactly the same logic needs to be applied to gstar_MONITOR & MONITOR
-#     If either TRT or MONITOR is multivariate (>1 col), this logic needs to be applied FOR EACH COLUMN
-# ------------------------------------------------------------------------------------------
-# *** Stratification/pooling ***
-#     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen
-#     => can either pool all Q.regimens at once (fit one model for repated observations, one for each rule, smoothing over rules)
-#     => can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
-# ------------------------------------------------------------------------------------------
-# *** Accessing correct QlearnModel ***
-#     Need to come up with a good way of accessing correct terminal QlearnModel to get final Q-predictions in private$probAeqa
-#     These predictions are for the final n observations that were used for evaluating E[Y^a]
-#     However, if we do stratify=TRUE and use a stack version of g-comp with different strata all in one stacked database it will be difficult
-#     to pull the right QlearnModel.
-#     Alaternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos)
-# ------------------------------------------------------------------------------------------
 # *** Stochastic interventions ***
 #     Need to do either MC integration (sample from g.star then predict Q)
-#     or direct weighted sum of predicted Q's with weights given by g.star (on A and N)
+#     or direct weighted sum of predicted Q's with weights given by g.star (on A and N).
+# *) gstar_TRT/gstar_MONITOR are vectors of coutnerfactual probs -> allow each to be multivariate (>1 cols)
+# *) For column 0<gstar_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=gstar_TRT[t].
+# *) gstar can be a vector, i.e., abar=(0,0,0,0) or a matrix of counterfactual treatments, like in ltmle.
+# *) Deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
+
+# ------------------------------------------------------------------------------------------
+#  *** rule_followers:
+#     Once you go off the treatment first time, this is it, the person is censored for the rest of the follow-up.
+#     Rule followers are now evaluated automatically by comparing (gstar_TRT and TRT and CENS) and (gstar_MONITOR and MONITOR and CENS).
+#     Rule followers are: (gstar_TRT = 1) & (TRT == 1) or (gstar_TRT = 0) & (TRT == 0) or (gstar_TRT > 0 & gstar_TRT < 0) & (Not Censored).
+#     Exactly the same logic is also applied to (gstar_MONITOR & MONITOR) when these are specified.
+#     If either TRT or MONITOR is multivariate (>1 col), this logic needs to be applied FOR EACH COLUMN of TRT/MONITOR.
+# ------------------------------------------------------------------------------------------
+# *** Accessing correct QlearnModel ***
+#     Need to come up with a good way of accessing correct terminal QlearnModel to get final Q-predictions in private$probAeqa.
+#     These predictions are for the final n observations that were used for evaluating E[Y^a].
+#     However, if we do stratify=TRUE and use a stack version of g-comp with different strata all in one stacked database it will be difficult
+#     to pull the right QlearnModel.
+#     Alaternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos).
+# ------------------------------------------------------------------------------------------
+# *** Pooling across regimens ***
+#     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen:
+#     => Can either pool all Q.regimens at once (fit one model for repated observations, one for each rule, smoothing over rules).
+#     => Can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
 # ------------------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------------------
@@ -76,7 +79,6 @@ fitSeqGcomp <- function(OData,
   # **** NOTE: THIS NEEDS TO BE TAKEN OUT OF HERE AND PUT AS A SEPARATE FUNCTION TO BE CALLED FROM getIPWeights and/or fitSeqGcomp
   # ------------------------------------------------------------------------------------------------
   OData$uncensored_idx <- OData$eval_uncensored()
-  # OData$uncensored_idx <- OData$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENScat))), .SDcols = nodes$Cnodes][["uncensored_idx"]]
   OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
   # ------------------------------------------------------------------------------------------------
@@ -84,6 +86,7 @@ fitSeqGcomp <- function(OData,
   # ------------------------------------------------------------------------------------------------
   if (!is.null(gstar_TRT)) {
     gstar.A <- gstar_TRT
+    for (gstar_TRT_col in gstar_TRT) CheckVarNameExists(OData$dat.sVar, gstar_TRT_col)
     # UPDATE RULE FOLLOWERS FOR TRT IF DOING stratified G-COMP:
     if (stratifyQ_by_rule) {
       rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Anodes, gstar.NodeName = gstar.A)
@@ -92,8 +95,10 @@ fitSeqGcomp <- function(OData,
   } else {
     gstar.A <- nodes$Anodes # use the actual observed exposure (no intervention on TRT)
   }
+
   if (!is.null(gstar_MONITOR)) {
     gstar.N <- gstar_MONITOR
+    for (gstar_MONITOR_col in gstar_MONITOR) CheckVarNameExists(OData$dat.sVar, gstar_MONITOR_col)
     # UPDATE RULE FOLLOWERS FOR MONITOR IF DOING stratified G-COMP:
     if (stratifyQ_by_rule) {
       rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Nnodes, gstar.NodeName = gstar.N)
@@ -128,6 +133,17 @@ fitSeqGcomp <- function(OData,
   # ------------------------------------------------------------------------------------------------
   OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))]
   OData$def.types.sVar()
+
+  # ------------------------------------------------------------------------------------------------
+  # **** Define regression paramers specific to Q-learning (continuous outcome)
+  # ------------------------------------------------------------------------------------------------
+  # parameter for running h2o.glm with continous outcome (this is the only sovler that works)
+  # to try experimental solvers in h2o.glm (see line #901 of GLM.java)
+  # params$solver <- "COORDINATE_DESCENT"
+  # params$solver <- "COORDINATE_DESCENT_NAIVE"
+  params$solver <- "IRLSM"
+  # parameter for running GBM with continuous outcome (default is classification with "bernoulli" and 0/1 outcome):
+  params$distribution <- "gaussian"
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.

@@ -97,9 +97,16 @@ fitPropensity <- function(OData,
   # Perform S3 method dispatch on ALL_g_regs, which will determine the nested tree of SummaryModel objects
   # Perform fit and prediction
   # ------------------------------------------------------------------------------------------
-  ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
-  ALL_g_regs$S3class <- "generic"
-  modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
+  # browser()
+  # class(g_CAN_regs_list[[1]][[1]])
+  # class(g_CAN_regs_list[[1]])
+  # class(g_CAN_regs_list)
+
+  # ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
+  # ALL_g_regs$S3class <- "generic"
+  modelfits.g0 <- GenericModel$new(reg = g_CAN_regs_list, DataStorageClass.g0 = OData)
+  # modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
+
   modelfits.g0$fit(data = OData, predict = TRUE)
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
@@ -113,11 +120,12 @@ fitPropensity <- function(OData,
   OData$modelfits.g0 <- modelfits.g0
 
   ALL_g_regs <- modelfits.g0$reg
-  g_CAN_regs_list <- ALL_g_regs$RegressionForms
+  # ALL_g_regs
+  # g_CAN_regs_list <- ALL_g_regs$RegressionForms
 
-  OData$modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gC")]]
-  OData$modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gA")]]
-  OData$modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(g_CAN_regs_list) %in% "gN")]]
+  OData$modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gC")]]
+  OData$modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gA")]]
+  OData$modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gN")]]
 
   g0.A <- OData$modelfit.gA$getcumprodAeqa()
   g0.C <- OData$modelfit.gC$getcumprodAeqa()
@@ -125,7 +133,6 @@ fitPropensity <- function(OData,
 
   OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
   # newdat <- OData$dat.sVar[, list("g0.A" = g0.A, "g0.C" = g0.C, "g0.N" = g0.N, "g0.CAN" = g0.A*g0.C*g0.N)]
-
   return(OData)
 }
 
@@ -138,7 +145,7 @@ fitPropensity <- function(OData,
 # Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 # ---------------------------------------------------------------------------------------
 #' @export
-getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, stabilize = TRUE) {
+getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_name = paste0(c(gstar_TRT,gstar_MONITOR), collapse = ""), stabilize = TRUE) {
   nodes <- OData$nodes
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
@@ -151,30 +158,69 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, stabiliz
   # ------------------------------------------------------------------------------------------------------------------------------
   # indicator that the person is uncensored at each t (continuation of follow-up)
   # gstar.C <- "gstar.C"
-  OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENScat)), .SDcols = nodes$Cnodes]
-  # probability of following the rule at t, under intervention gstar.A on A(t)
-  # **** NOTE ****
+  gstar.CENS = as.integer(OData$eval_uncensored())
+  # OData$dat.sVar[, "gstar.C" := as.integer(OData$eval_uncensored())]
+  # OData$uncensored_idx <- OData$eval_uncensored()
+  # OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENScat)), .SDcols = nodes$Cnodes]
+  # OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a rule follower by default)
+
+  # probability of P(A^*(t)=1) under counterfactual intervention A^*(t) on A(t).
   # if gstar_TRT is a function then call it, if its a list of functions, then call one at a time.
   # if gstar_TRT returns more than one rule-column, estimate for each.
   if (!is.null(gstar_TRT)) {
-    gstar.A <- as.name(gstar_TRT)
+    # gstar.A <- as.name(gstar_TRT)
+    for (gstar_TRT_col in gstar_TRT) CheckVarNameExists(OData$dat.sVar, gstar_TRT_col)
+    assert_that(length(gstar_TRT) == length(nodes$Anodes))
+
+    # From gstar_TRT we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t)
+    Q_regs_list <- vector(mode = "list", length = length(nodes$Anodes))
+    names(Q_regs_list) <- c(nodes$Anodes); class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
+    for (i in seq_along(nodes$Anodes)) {
+      reg <- RegressionClass$new(outvar = nodes$Anodes[i], predvars = NULL, outvar.class = list("deterministic"),
+                                 subset_vars = list(nodes$Anodes[i]), model_contrl = list(gstar.Name = gstar_TRT[i]))
+      Q_regs_list[[i]] <- reg
+    }
+    modelfits.gstar_TRT <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+    gstar.TRT <- modelfits.gstar_TRT$fit(data = OData, predict = TRUE)$predictAeqa(n = OData$nobs)
+    # self$dat.sVar[, gstar.TRT = as.integer(cumprod(gstar.TRT) > 0), by = eval(self$nodes$IDnode)]
   } else {
-    gstar.A <- as.name("g0.A") # use the actual observed exposure probability (no intervention on TRT)
+    gstar.TRT <- OData$dat.sVar[["g0.A"]]
+    # gstar.A <- as.name("g0.A") # use the actual observed exposure probability (no intervention on TRT)
   }
   # OData$dat.sVar[, "gstar.A" := get(gstar.A)]
 
-  # probability of monitoring N(t)=1 under intervention gstar.N on N(t)
-  # **** NOTE ****
+  # probability of monitoring P(N^*(t)=1) under counterfactual intervention N^*(t) on N(t).
   # if gstar_MONITOR is a function then call it, if its a list of functions, then call one at a time.
   # if gstar_MONITOR returns more than one rule-column, use each.
   if (!is.null(gstar_MONITOR)) {
     gstar.N <- as.name(gstar_MONITOR)
+    for (gstar_MONITOR_col in gstar_MONITOR) CheckVarNameExists(OData$dat.sVar, gstar_MONITOR_col)
+    assert_that(length(gstar_MONITOR) == length(nodes$Nnodes))
+
+    # From gstar_MONITOR we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t)
+    Q_regs_list <- vector(mode = "list", length = length(nodes$Nnodes))
+    names(Q_regs_list) <- c(nodes$Nnodes); class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
+    for (i in seq_along(nodes$Nnodes)) {
+      reg <- RegressionClass$new(outvar = nodes$Nnodes[i], predvars = NULL, outvar.class = list("deterministic"),
+                                 subset_vars = list(nodes$Nnodes[i]), model_contrl = list(gstar.Name = gstar_MONITOR[i]))
+      Q_regs_list[[i]] <- reg
+    }
+    modelfits.gstar.MONITOR <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+    gstar.MONITOR <- modelfits.gstar.MONITOR$fit(data = OData, predict = TRUE)$predictAeqa(n = OData$nobs)
   } else {
-    gstar.N <- as.name("g0.N") # use the actual observed monitoring probability (no intervention on MONITOR)
+    gstar.MONITOR <- OData$dat.sVar[["g0.N"]]
+    # gstar.N <- as.name("g0.N") # use the actual observed monitoring probability (no intervention on MONITOR)
   }
 
-  # Joint probability for all 3:
-  OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
+  # Joint probability for all 3 node types:
+  gstar.CAN.evaluated = gstar.CENS * gstar.TRT * gstar.MONITOR
+  OData$dat.sVar[, "gstar.C" := gstar.CENS]
+  OData$dat.sVar[, "gstar.A" := gstar.TRT]
+  OData$dat.sVar[, "gstar.N" := gstar.MONITOR]
+  OData$dat.sVar[, "gstar.CAN" := gstar.CAN.evaluated]
+  # OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
+  # OData$dat.sVar[, "gstar.CAN" := gstar.C * eval(gstar.A) * eval(gstar.N)]
+
   # Weights by time and cummulative weights by time:
   OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
@@ -187,7 +233,10 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, stabiliz
   # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
   # (The total sum of all subjects who WERE AT RISK at t)
   # (FASTER) Version outside data.table, then merge back results:
-  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
+  OData$dat.sVar[, "rule.follower.gA" := as.integer(cumprod(gstar.A) > 0), by = eval(nodes$IDnode)]
+  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(rule.follower.gA, na.rm = TRUE)), by = eval(nodes$tnode)]
+
+  # n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
   # n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 0)][, cum.stab.P := cumprod(stab.P)]
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
@@ -207,8 +256,9 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, stabiliz
 
   # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
   wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", Ynode, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
-  wts.DT[, "rule.name.TRT" := eval(as.character(gstar.A))]
-  wts.DT[, "rule.name.MONITOR" := eval(as.character(gstar.N))]
+  wts.DT[, "rule.name" := eval(as.character(rule_name))]
+  # wts.DT[, "rule.name.TRT" := eval(as.character(gstar.A))]
+  # wts.DT[, "rule.name.MONITOR" := eval(as.character(gstar.N))]
 
   # -------------------------------------------------------------------------------------------
   # NEED TO CLEAN UP OData$dat.sVar TO MAKE SURE ITS IN EXACTLY THE SAME STATE WHEN THIS FUNCTION WAS CALLED

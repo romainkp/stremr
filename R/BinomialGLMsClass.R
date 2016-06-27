@@ -99,7 +99,6 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
     rows_subset <- which(subset_idx)
     data <- DataStorageObject
     # subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, ] # old, slower approach
-
     outvar <- m.fit$params$outvar
     predvars <- m.fit$params$predvars
     subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
@@ -118,14 +117,7 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
     } else {
       pAout[subset_idx] <- as.vector(predictFrame[,"predict"])
     }
-    # browser()
-    # summary(pAout[subset_idx])
   }
-  # browser()
-  # head(pAout[subset_idx])
-  # subsetDT <- DataStorageObject$dat.sVar[rows_subset, ]
-  # subsetH2Oframe[which(is.na(pAout[subset_idx])),]
-  # subsetDT[which(is.na(pAout[subset_idx])),]
   return(pAout)
 }
 
@@ -165,7 +157,6 @@ predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
 #' }
 #' @importFrom assertthat assert_that is.count is.string is.flag
 #' @export
-# BinDat <- R6Class(classname = "BinDat",
 BinomialGLM <- R6Class(classname = "BinomialGLM",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
@@ -174,14 +165,15 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
     ParentModel = NULL,
     model_contrl = list(),
     params = list(),
+    classify = NULL,
     fit.class = c("glm", "speedglm"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA),
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel
+      self$classify <- ParentModel$classify
       self$model_contrl <- ParentModel$model_contrl
       if (!("GLM" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'GLM', since fit.package was set to 'speedglm' or 'glm'")
-      # self$fit.algorithm <- "glm"
       assert_that(any(c("glm", "speedglm") %in% fit.package))
       self$fit.class <- fit.package
       class(self$model.fit) <- c(class(self$model.fit), self$fit.class)
@@ -243,17 +235,17 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
       }
       private$Xmat <- Xmat
       return(invisible(self))
-    },
-
-    # Replace a column or columns in private$Xmat with new values
-    replaceCols = function(data, subset_idx, colnames) {
-      predvars <- self$ParentModel$predvars
-      if (!is.null(Xmat)) stop("private$Xmat is NULL")
-      for (colname in colnames) {
-        private$Xmat[, colname]  <- data$get.dat.sVar(subset_idx, colname)
-      }
-      return(invisible(self))
     }
+    # not used:
+    # # Replace a column or columns in private$Xmat with new values
+    # replaceCols = function(data, subset_idx, colnames) {
+    #   predvars <- self$ParentModel$predvars
+    #   if (!is.null(Xmat)) stop("private$Xmat is NULL")
+    #   for (colname in colnames) {
+    #     private$Xmat[, colname]  <- data$get.dat.sVar(subset_idx, colname)
+    #   }
+    #   return(invisible(self))
+    # }
   ),
 
   active = list( # 2 types of active bindings (w and wout args)

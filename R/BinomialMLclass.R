@@ -14,7 +14,23 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
   return(mainArgs)
 }
 
+# ---------------------------------------------------------------------------
+# for running logistic regression with continuous outcome range [0-1]
+# ---------------------------------------------------------------------------
+# model.fit <- h2o::h2o.glm(x = predvars,
+#                           y = outvar,
+#                           intercept = TRUE,
+#                           training_frame = subsetH2Oframe,
+#                           family = "binomial",
+#                           standardize = TRUE,
+#                           lambda = 0L,
+#                           solver = "IRLSM",
+#                           max_iterations = 100,
+#                           ignore_const_cols = FALSE,
+#                           missing_values_handling = "Skip")
+
 # S3 method for fitting h2o GLM with binomial() family (logistic regression):
+# use solver="L_BFGS" when doing classification and use "IRLSM" when not
 h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
   mainArgs <- list(x = predvars,
                   y = outvar,
@@ -22,36 +38,21 @@ h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
                   training_frame = subsetH2Oframe,
                   family = "binomial",
                   standardize = TRUE,
-                  # solver = "L_BFGS",
+                  solver = "L_BFGS",
+                  # solver = c("IRLSM"),
                   lambda = 0L,
-                  solver = c("IRLSM"),
-                  # remove_collinear_columns = TRUE,
-                  max_iterations = 50,
+                  max_iterations = 100,
                   ignore_const_cols = FALSE,
                   missing_values_handling = "Skip")
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.glm)
+
   if (gvars$verbose) {
     print("running h2o.glm with args: "); print(mainArgs)
   } else {
     h2o.no_progress()
   }
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
-
-  # ---------------------------------------------------------------------------
-  # for running logistic regression with continuous outcome range [0-1]
-  # ---------------------------------------------------------------------------
-  # model.fit <- h2o::h2o.glm(x = predvars,
-  #                           y = outvar,
-  #                           intercept = TRUE,
-  #                           training_frame = subsetH2Oframe,
-  #                           family = "binomial",
-  #                           standardize = TRUE,
-  #                           lambda = 0L,
-  #                           solver = "IRLSM",
-  #                           max_iterations = 100,
-  #                           ignore_const_cols = FALSE,
-  #                           missing_values_handling = "Skip")
 
   # assign the fitted coefficients in correct order (same as predictor order in predvars)
   out_coef <- vector(mode = "numeric", length = length(predvars)+1)
@@ -100,6 +101,7 @@ h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mod
 }
 
 # S3 method for h2o GBM fit, takes BinDat data object:
+# use "bernoulli" when doing classification and use "gaussian" when not
 h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
   # browser()
   mainArgs <- list(x = predvars, y = outvar,
@@ -146,6 +148,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel
+      self$classify <- ParentModel$classify
       self$model_contrl <- ParentModel$model_contrl
       assert_that("h2o" %in% fit.package)
       self$fit.class <- fit.algorithm
@@ -154,85 +157,86 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     },
 
     fit = function(data, outvar, predvars, subset_idx, ...) {
-      # a penalty for being able to obtain predictions from predictAeqA() right after fitting is the need to store Yvals:
-      self$setdata(data, subset_idx = subset_idx, getoutvar = TRUE, getXmat = FALSE)
-      model.fit <- self$model.fit
-
+      assert_that(is.DataStorageClass(data))
+      # a penalty for being able to obtain predictions from predictAeqA() right after fitting: need to store Yvals
+      private$Yvals <- data$get.outvar(subset_idx, self$ParentModel$outvar) # Always a vector
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L)) {
-        class(model.fit) <- "try-error"
+        class(self$model.fit) <- "try-error"
         message("unable to run " %+% self$fit.class %+% " with h2o for intercept only models or input data with zero observations, running speedglm as a backup...")
       } else {
-        rows_subset <- which(subset_idx)
-        # subset_t <- system.time(
-        #   subsetH2Oframe_1 <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
-        # )
-        # print("subset_t: "); print(subset_t)
-        load_subset_t <- system.time(
-          subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-                                                  saveH2O = FALSE,
-                                                  destination_frame = "newH2Osubset")
-        )
-
-        # change the column names of H2O.FRAME
-        # h2o::colnames(subsetH2Oframe) <- c("T", "C", "h", "N")
-        # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
-        # names(subsetH2Oframe)[1] <- "T2"%+%"_1"
-        if (gvars$verbose) {
-          print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
-        }
-
-        # print("length(rows_subset): "); print(length(rows_subset))
-        # print("2 frames are equivalent?"); print(all.equal(subsetH2Oframe_1, subsetH2Oframe_2))
-        # subsetH2Oframe <- subsetH2Oframe_2
-
-        outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
-        # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
-        NAfactors <- any(is.na(outfactors))
-        # fixing bug in h2o frame
-        if (NAfactors) {
-          message("FOUND NA OUTCOMES IN H2OFRAME WHEN THERE WERE NOT SUPPOSED TO BE ANY")
-          NA_idx_h2o <- which(as.logical(is.na(subsetH2Oframe[,outvar])))
-          orig.vals <- data$dat.sVar[rows_subset, ][NA_idx_h2o, outvar, with = FALSE][[outvar]]
-          # require("h2o")
-          subsetH2Oframe[NA_idx_h2o, outvar] <- orig.vals[1]
-          outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
-          NAfactors <- any(is.na(outfactors))
-        }
-
-        if (length(outfactors) < 2L | NAfactors) {
-          message("unable to run " %+% self$fit.class %+% " with h2o for input data with constant outcome, running speedglm as a backup...")
-          class(model.fit) <- "try-error"
-        } else if (length(outfactors) > 2L) {
-          # stop("cannot run binary regression/classification for outcome with more than 2 categories")
-        }
+        self$setdataH2O(data, subset_idx, outvar, predvars, self$classify, ...)
       }
 
-      if (!inherits(model.fit, "try-error")) {
-
-        # subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
-
-        private$subsetH2Oframe <- subsetH2Oframe
-        model.fit <- try(
+      if (!inherits(self$model.fit, "try-error")) {
+        self$model.fit <- try(
                       h2ofit(self$model.fit,
-                             subsetH2Oframe = subsetH2Oframe,
+                             subsetH2Oframe = private$subsetH2Oframe,
                              outvar = outvar,
                              predvars = predvars,
-                             rows_subset = rows_subset,
+                             rows_subset = which(subset_idx),
                              model_contrl = self$model_contrl, ...),
                 silent = TRUE)
-        if (inherits(model.fit, "try-error")) { # failed, need to define the Xmat now and try fitting speedglm/glm
+        if (inherits(self$model.fit, "try-error")) { # failed, need to define the Xmat now and try fitting speedglm/glm
           self$emptydata
           message("attempt at running " %+% self$fit.class %+% " with h2o failed, running speedglm as a backup...")
         }
       }
-      if (inherits(model.fit, "try-error")) { # failed, need to define the Xmat now and try fitting speedglm/glm
-        # message("unable to run " %+% self$fit.class %+% " with h2o, running speedglm as a backup...")
+      if (inherits(self$model.fit, "try-error")) { # failed, need to define the Xmat now and try fitting speedglm/glm
+        private$subsetH2Oframe <- NULL
         class(self$model.fit)[2] <- "speedglm"
-        model.fit <- super$fit(data, outvar, predvars, subset_idx, ...)
+        self$model.fit <- super$fit(data, outvar, predvars, subset_idx, ...)
       }
-      self$model.fit <- model.fit
       self$model.fit$params <- self$params
       return(self$model.fit)
+    },
+
+    setdataH2O = function(data, subset_idx, outvar, predvars, classify = TRUE, ...) {
+      rows_subset <- which(subset_idx)
+      load_subset_t <- system.time(
+        subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+                                                saveH2O = FALSE,
+                                                destination_frame = "newH2Osubset")
+      )
+      # subset_t <- system.time(
+      #   subsetH2Oframe_1 <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
+      # )
+      # print("subset_t: "); print(subset_t)
+      # change the column names of H2O.FRAME
+      # h2o::colnames(subsetH2Oframe) <- c("T", "C", "h", "N")
+      # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
+      # names(subsetH2Oframe)[1] <- "T2"%+%"_1"
+      if (gvars$verbose) {
+        print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
+      }
+      # print("length(rows_subset): "); print(length(rows_subset))
+      # print("2 frames are equivalent?"); print(all.equal(subsetH2Oframe_1, subsetH2Oframe_2))
+      # subsetH2Oframe <- subsetH2Oframe_2
+      outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
+      # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
+      NAfactors <- any(is.na(outfactors))
+      if (NAfactors) {
+        stop("FOUND NA OUTCOMES IN H2OFRAME WHEN THERE WERE NOT SUPPOSED TO BE ANY")
+        # message("FOUND NA OUTCOMES IN H2OFRAME WHEN THERE WERE NOT SUPPOSED TO BE ANY")
+        NA_idx_h2o <- which(as.logical(is.na(subsetH2Oframe[,outvar])))
+        orig.vals <- data$dat.sVar[rows_subset, ][NA_idx_h2o, outvar, with = FALSE][[outvar]]
+        subsetH2Oframe[NA_idx_h2o, outvar] <- orig.vals[1]
+        outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
+        NAfactors <- any(is.na(outfactors))
+      }
+
+      if (length(outfactors) < 2L | NAfactors) {
+        message("unable to run " %+% self$fit.class %+% " with h2o for input data with constant outcome, running speedglm as a backup...")
+        class(self$model.fit) <- "try-error"
+      }
+
+      if (classify) {
+        if (length(outfactors) > 2L) stop("cannot run binary regression/classification for outcome with more than 2 categories")
+        subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
+      }
+
+      if (!inherits(self$model.fit, "try-error")) private$subsetH2Oframe <- subsetH2Oframe
+
+      return(invisible(self))
     }
   ),
 

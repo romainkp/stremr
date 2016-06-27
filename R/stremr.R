@@ -173,17 +173,17 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
     regforms <- default.reg
   }
   if (!is.null(stratify.EXPRS)) assert_that(is.list(stratify.EXPRS))
-  outvars <- vector(mode="list", length=length(regforms))
-  predvars <- vector(mode="list", length=length(regforms))
+  # outvars <- vector(mode="list", length=length(regforms))
+  # predvars <- vector(mode="list", length=length(regforms))
   regs <- vector(mode="list", length=length(regforms))
 
   for (idx in seq_along(regforms)) {
     res <- process_regform(as.formula(regforms[[idx]]), sVar.map = sVar.map, factor.map = factor.map)
-    outvars[[idx]] <- res$outvars
-    if (!is.null(res$predvars)) predvars[[idx]] <- res$predvars
-    names(outvars)[idx] <- names(predvars)[idx] <- paste0(outvars[[idx]], collapse="+")
+    # outvars[[idx]] <- res$outvars
+    # if (!is.null(res$predvars)) predvars[[idx]] <- res$predvars
+    # names(outvars)[idx] <- names(predvars)[idx] <- paste0(outvars[[idx]], collapse="+")
     if (using.default && gvars$verbose)
-      message("Using the default regression formula: " %+% paste0(outvars[[idx]], collapse="+") %+% " ~ " %+% paste0(predvars[[idx]], collapse="+"))
+      message("Using the default regression formula: " %+% paste0(res$outvars, collapse="+") %+% " ~ " %+% paste0(res$predvars, collapse="+"))
 
       if (!missing(outvar.class)) {
         outvar.class <- as.list(rep.int(outvar.class, length(res$outvars)))
@@ -193,9 +193,14 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
       }
 
       subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
-      regobj <- SingleRegressionFormClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
+      regobj <- RegressionClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
                                               subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
                                               censoring = censoring)
+
+      # regobj <- SingleRegressionFormClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
+      #                                         subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
+      #                                         censoring = censoring)
+
       regs[[idx]] <- regobj
   }
   class(regs) <- c(class(regs), "ListOfRegressionForms")

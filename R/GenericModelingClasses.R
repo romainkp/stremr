@@ -21,6 +21,8 @@ newsummarymodel.binary <- function(regClass, reg, ...) BinaryOutcomeModel$new(re
 # Summary model constructor for Q-learning (sequential regression):
 newsummarymodel.Qlearn <- function(regClass, reg, ...) QlearnModel$new(reg = reg, ...)
 
+newsummarymodel.deterministic <- function(regClass, reg, ...) DeterministicBinaryOutcomeModel$new(reg = reg, ...)
+
 prettyprint_GenericModel <- function(self, reg, all.outvar.bin) {
   print("#----------------------------------------------------------------------------------")
   print("New instance of GenericModel:")
@@ -118,6 +120,10 @@ GenericModel <- R6Class(classname = "GenericModel",
         }
         # Calling the constructor for the summary model P(sA[j]|\bar{sA}[j-1], sW}), dispatching on reg_i class
         regS3class <- reg_i$S3class
+        if (is.null(regS3class)) {
+          regS3class <- "generic"; class(regS3class) <- "generic"
+        }
+
         PsAsW.model <- newsummarymodel(regS3class, reg_i, ...)
         private$PsAsW.models <- append(private$PsAsW.models, list(PsAsW.model))
         names(private$PsAsW.models)[k_i] <- "P(sA|sW)."%+%k_i

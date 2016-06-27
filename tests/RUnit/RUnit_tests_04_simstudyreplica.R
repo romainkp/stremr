@@ -87,7 +87,7 @@ add.gtheta.to.O <- function(O.data, ID = "ID", t = "t", TRT = "TI", CENS = "C", 
   O.dataDT_dhigh[, (rule_name2) := as.integer(get(rule_name2))]
   O.dataDT <- merge(O.dataDT, O.dataDT_dhigh, by=c(ID, t))
 
-  O.dataDT_TIdhigh <- stremr::defineCounterfactTRT(O.dataDT, theta = 1, ID = ID,
+  O.dataDT_TIdhigh <- stremr::defineIntervedTRT(O.dataDT, theta = 1, ID = ID,
                                             t = t, I = I, CENS = CENS, TRT = TRT,
                                             MONITOR = MONITOR,
                                             tsinceNis1 = "lastNat1",
@@ -186,21 +186,23 @@ O.dataDTrules <- add.gtheta.to.O(O.dataDT)
 # get the likelihood under N(t) Bernoulli with P(N(t)=1)=p:
 g.p <- function(O.dataDT, p, ID = "ID", OUTCOME = "Y", lastNat1 = "lastNat1", MONITOR = "N"){
   g.N <- rep(p, nrow(O.dataDT))
-  g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
+  # g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
   return(g.N)
 }
 # get the likelihood under N(t) Poisson:
 g.Pois <- function(O.dataDT, lambda, ID = "ID", OUTCOME = "Y", lastNat1 = "lastNat1", MONITOR = "N"){
   g.N <- 1 / (ppois(O.dataDT[[lastNat1]], lambda, lower.tail = FALSE) / dpois(O.dataDT[[lastNat1]], lambda) + 1)
-  g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
+  g.N[is.na(g.N)] <- 0
+  # g.N <- ifelse(O.dataDT[[MONITOR]] == 1, g.N, 1 - g.N) # will make it NA for rows when Y.t=1
   return(g.N)
 }
 
 gstar1.N.Pois3.yearly <- g.Pois(O.dataDTrules, lambda = 3)
 gstar1.N.Pois1.biyearly <- g.Pois(O.dataDTrules, lambda = 1)
 gstar2.N.p05 <- g.p(O.dataDTrules, p = 0.5)
-# O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := gstar1.N.Pois3.yearly][, gstar1.N.Pois1.biyearly := gstar1.N.Pois1.biyearly][, gstar2.N.p05 := gstar2.N.p05]
-O.dataDTrules_Nstar <- O.dataDTrules
+O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := NULL][, gstar1.N.Pois1.biyearly := NULL][, gstar2.N.p05 := NULL]
+O.dataDTrules_Nstar <- O.dataDTrules[, gstar1.N.Pois3.yearly := gstar1.N.Pois3.yearly][, gstar1.N.Pois1.biyearly := gstar1.N.Pois1.biyearly][, gstar2.N.p05 := gstar2.N.p05]
+# O.dataDTrules_Nstar <- O.dataDTrules
 # ---------------------------------------------------------------------------
 # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
 # Might expand this in the future to allow defining arbitrary summaries
@@ -251,6 +253,7 @@ stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
 OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 # OData$fast.load.to.H2O()
 # OData$H2O.dat.sVar
+OData$dat.sVar
 
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
 params_TRT = list(fit.package = "h2o", fit.algorithm = "GLM", ntrees = 50)
@@ -262,7 +265,8 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_
                               params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
 
 require("magrittr")
-St.dlow <- getIPWeights(OData, gstar_TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+#
+St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
            survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
@@ -284,7 +288,7 @@ St.dlow
 # 15 14   0.2335619     1362.924 0.0001713682 0.8084156 0.01701469 0.7406760
 # 16 15  10.9309710     1403.403 0.0077889054 0.8021189 0.02202990 0.7243590
 # 17 16   0.0000000        0.000          NaN       NaN         NA        NA
-St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
             survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
@@ -370,16 +374,16 @@ make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file
 # Testing gcomp for long data
 # ---------------------------------------------------------------------------------------------------------
 # intervention of interest:
-O.dataDTrules_Nstar[, A.gstar0 := 0L]
+# O.dataDTrules_Nstar[, A.gstar0 := 0L]
 # correctly define the rule followers as those who always adhere to A.gstar0:
-O.dataDTrules_Nstar[, follow.t := as.integer(TI == A.gstar0), ]
-O.dataDTrules_Nstar[, follow.allt := cumprod(follow.t), by = ID]
-O.dataDTrules_Nstar[1:100, ]
+# O.dataDTrules_Nstar[, follow.t := as.integer(TI == A.gstar0), ]
+# O.dataDTrules_Nstar[, follow.allt := cumprod(follow.t), by = ID]
+# O.dataDTrules_Nstar[1:100, ]
 
 options(stremr.verbose = TRUE)
+h2o::h2o.init()
 # require("h2o")
 # h2o::h2o.init(nthreads = 2)
-# h2o::h2o.init()
 # h2o::h2o.shutdown(prompt = FALSE)
 
 OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
@@ -390,19 +394,16 @@ stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
 t.surv <- 5
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (t.surv+1))
-gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms,
-                        stratifyQ_by_rule = TRUE)
 
 gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms,
+                        stratifyQ_by_rule = TRUE)
+gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms,
                         stratifyQ_by_rule = FALSE)
-# , rule_followers_colname = "follow.allt"
 
 gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms,
                         stratifyQ_by_rule = TRUE)
-
 gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms,
                         stratifyQ_by_rule = FALSE)
-# , rule_followers_colname = "follow.allt"
 
 
 
