@@ -4,7 +4,7 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats and survival estimates using pandoc.}
 \usage{
-make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, WTtables,
+make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, WTtables = NULL,
   AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"),
   skip.modelfits = FALSE, file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), ...)

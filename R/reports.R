@@ -54,7 +54,7 @@ openFileInOS <- function(f) {
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
+make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
   optArgReport <- list(...)
 
   if ("author" %in% names(optArgReport)) {

@@ -74,7 +74,7 @@ panderOptions('knitr.auto.asis', TRUE)
 #' # Distribution of the weights
 
 #+ echo=FALSE
-if (!missing(WTtables)) {
+if (!is.null(WTtables)) {
   # IPAWdists <- get_wtsummary(MSM$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150))
   # IPAWdistByRule <- IPAWdists$summary.table.byrule
   pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
@@ -82,7 +82,7 @@ if (!missing(WTtables)) {
 }
 
 #+ echo=FALSE
-if (!missing(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
+if (!is.null(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
   pander::set.caption("Counts of the stabilized IPA weights by each rule")
   pander::pander(WTtables$summary.DT.byrule, justify = c('right', rep("left",ncol(WTtables$summary.DT.byrule)-1)))
 }
