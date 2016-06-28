@@ -66,19 +66,8 @@
 #        Use the predictions in Q.kplus1[t-1] as new outcomes and repeat until reached minimum t.
 # ------------------------------------------------------------------------------------------
 #' @export
-fitTMLE <- function(OData,
-                    t_periods,
-                    Qforms,
-                    gstar_TRT = NULL,
-                    gstar_MONITOR = NULL,
-                    stratifyQ_by_rule = FALSE,
-                    IPWeights,
-                    rule_name,
-                    params = list(),
-                    verbose = getOption("stremr.verbose")) {
-  fitSeqGcomp(OData, t_periods, Qforms = Qforms, gstar_TRT = gstar_TRT, gstar_MONITOR = gstar_MONITOR,
-              stratifyQ_by_rule = stratifyQ_by_rule, TMLE = TRUE, IPWeights = IPWeights,
-              rule_name = rule_name, params = params, verbose = verbose)
+fitTMLE <- function(...) {
+  fitSeqGcomp(TMLE = TRUE, ...)
 }
 
 #' @export
@@ -92,6 +81,7 @@ fitSeqGcomp <- function(OData,
                         rule_name = paste0(c(gstar_TRT, gstar_MONITOR), collapse = ""),
                         IPWeights,
                         params = list(),
+                        parallel = FALSE,
                         verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
@@ -175,16 +165,28 @@ fitSeqGcomp <- function(OData,
 
   if (missing(t_periods)) stop("must specify survival 't_periods' of interest (time period values from column " %+% nodes$tnode %+% ")")
 
+  # ------------------------------------------------------------------------------------------------
+  # RUN GCOMP OR TMLE FOR SEVERAL TIME-POINTS EITHER IN PARALLEL OR SEQUENTIALLY
+  # ------------------------------------------------------------------------------------------------
   est_name <- ifelse(TMLE, "TMLE", "GCOMP")
-  riskP1_byt <- surv_byt <- vector(mode = "numeric", length = length(t_periods))
-  names(riskP1_byt) <- names(surv_byt) <- "t."%+%t_periods
-
-  for (t_idx in seq_along(t_periods)) {
-    t_period <- t_periods[t_idx]
-    riskP1_byt[t_idx] <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params, verbose)
-    surv_byt[t_idx] <- 1-riskP1_byt[t_idx]
+  if (parallel) {
+    mcoptions <- list(preschedule = FALSE)
+    res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
+                                  t_period <- t_periods[t_idx]
+                                  riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params, verbose)
+                                  surv_byt <- 1-riskP1_byt
+                                  data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
+                }
+  } else {
+    res_byt <- vector(mode = "list", length = length(t_periods))
+    for (t_idx in seq_along(t_periods)) {
+      t_period <- t_periods[t_idx]
+      riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params, verbose)
+      surv_byt <- 1-riskP1_byt
+      res_byt[[t_idx]] <- data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
+    }
   }
-  resultDT <- data.table(est_name = est_name, t = t_periods, risk = riskP1_byt, surv = surv_byt)
+  resultDT <- data.table(est_name = est_name, rbindlist(res_byt))
   return(resultDT)
 }
 

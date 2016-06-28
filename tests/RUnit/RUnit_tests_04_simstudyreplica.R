@@ -401,6 +401,17 @@ gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh"
 tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
 
+# ------------------------------------------------------------------------
+# PARALLEL TEST OF seq-GCOMP
+# ------------------------------------------------------------------------
+require("doParallel")
+registerDoParallel(cores = 4)
+
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, parallel = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, parallel = TRUE)
+gcomp_est; tmle_est
+
+# registerDoParallel(cores=detectCores())
 
 # ------------------------------------------------------------------------
 # TEST FOR ERROR WITH > 1 REGRESSION AND > 1 STATA
