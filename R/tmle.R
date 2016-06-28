@@ -16,6 +16,11 @@
 # ------------------------------------------------------------------------------------------
 # Outstanding issues:
 # ------------------------------------------------------------------------------------------
+# *** Pooling & performing only one TMLE update across all Q.k ***
+#     In general, we can pool all Q.kplus (across all t's) and do a single update on all of them
+#     Would make this TMLE iterative, but would not require refitting on the initial Q's
+#     See how fast is the G-comp formula prediction without fitting (the subseting/prediction loop alone) -> maybe fast enough to allow iterations
+# ------------------------------------------------------------------------------------------
 # *** Stochastic interventions ***
 #     Deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
 #     Need to do either MC integration (sample from g.star then predict Q)
@@ -66,6 +71,9 @@ fitSeqGcomp <- function(OData,
                         gstar_TRT = NULL,
                         gstar_MONITOR = NULL,
                         stratifyQ_by_rule = FALSE,
+                        TMLE = FALSE,
+                        rule_name = paste0(c(gstar_TRT,gstar_MONITOR), collapse = ""),
+                        IPWeights,
                         params = list(),
                         verbose = getOption("stremr.verbose")) {
 
@@ -74,6 +82,7 @@ fitSeqGcomp <- function(OData,
   new.factor.names <- OData$new.factor.names
   assert_that(is.list(params))
 
+  if (missing(rule_name)) rule_name <- paste0(c(gstar_TRT,gstar_MONITOR), collapse = "")
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
   # **** NOTE: THIS NEEDS TO BE TAKEN OUT OF HERE AND PUT AS A SEPARATE FUNCTION TO BE CALLED FROM getIPWeights and/or fitSeqGcomp
@@ -146,6 +155,28 @@ fitSeqGcomp <- function(OData,
   params$distribution <- "gaussian"
 
   # ------------------------------------------------------------------------------------------------
+  # **** Add weights if TMLE=TRUE and if weights were defined
+  # ------------------------------------------------------------------------------------------------
+  if (TMLE) {
+    if (missing(IPWeights)) {
+      # stop("Must specify IPWeights when running TMLE=TRUE")
+      message("...evaluating IPWeights for TMLE...")
+      # if (missing(rule_name)) rule_name <- paste0(c(gstar_TRT,gstar_MONITOR), collapse = "")
+      IPWeights <- getIPWeights(OData, gstar_TRT, gstar_MONITOR, rule_name, stabilize = FALSE)
+    } else {
+      getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
+      message("applying user-specified IPWeights, make sure these weights were obtained by making a call: \n'getIPWeights((OData, gstar_TRT, gstar_MONITOR, stabilize = FALSE)'")
+      message("the currently supplied weights were obtained with a call: \n" %+% deparse(getIPWeights_fun_call)[[1]])
+      assert_that(all.equal(attributes(IPWeights)[['gstar_TRT']], gstar_TRT))
+      assert_that(all.equal(attributes(IPWeights)[['gstar_MONITOR']], gstar_MONITOR))
+      assert_that(attributes(IPWeights)[['stabilize']] == FALSE)
+    }
+    assert_that(is.data.table(IPWeights))
+    assert_that("cumm.IPAW" %in% names(IPWeights))
+    OData$IPwts_by_regimen <- IPWeights
+  }
+
+  # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
   # ------------------------------------------------------------------------------------------------
   Q_regs_list <- vector(mode = "list", length = length(stratify_Q))
@@ -155,6 +186,7 @@ fitSeqGcomp <- function(OData,
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms[[i]]), sVar.map = nodes, factor.map = new.factor.names)
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i], stratifyQ_by_rule = stratifyQ_by_rule,
+                                     TMLE = TMLE,
                                      outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
                                      subset_vars = list("Q.kplus1"), subset_exprs = stratify_Q[i], model_contrl = params,
                                      censoring = FALSE)
@@ -166,28 +198,25 @@ fitSeqGcomp <- function(OData,
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
   Qlearn.fit$fit(data = OData)
 
-  browser()
-  OData$dat.sVar[1:60,c("ID",  "t", "CVD", "Y", "lastNat1", "highA1c", "TI", "C", "N", "AnyCensored", "barTIm1eq0", "dlow", "dhigh", "Y.tplus1", "A.gstar0", "Q.kplus1"), with = FALSE]
-  Qlearn.fit
+  # browser()
+  # OData$dat.sVar[1:60,c("ID",  "t", "CVD", "Y", "lastNat1", "highA1c", "TI", "C", "N", "AnyCensored", "barTIm1eq0", "dlow", "dhigh", "Y.tplus1", "A.gstar0", "Q.kplus1"), with = FALSE]
+  # Qlearn.fit
 
   # 1a. Grab the mean prediction from the very last regression (over all n observations);
   # this is the G-comp estimate of survival for the initial t value (t used in the first Q-reg)
     lastQ_inx <- Qreg_idx[1] # the index for the last Q-fit
     reslastQP1 <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
-    print(length(reslastQP1))
-    print(mean(reslastQP1))
+    print("No. of obs for last prediction of Q: " %+% length(reslastQP1))
+    print("EY^* estimate: " %+% mean(reslastQP1))
     # [1] 0.2111346 N=100K; for abar = 000000 / stratifyQ_by_rule = TRUE / t = 5
     # [1] 0.2207547 N=200K; for abar = 000000 / stratifyQ_by_rule = TRUE / t = 5
-
     # [1] wrong: 0.1803166 N=100K;for abar = 000000 / stratifyQ_by_rule = FALSE / t = 5
     # [1] 0.2229045 N=200K;for abar = 000000 / stratifyQ_by_rule = FALSE / t = 5
-
 # TRUE SURVIVAL (outcome[t+1]) UNDER abar = c(0,0,0,...) and N=500K
 #      Y_1      Y_2      Y_3      Y_4      Y_5      Y_6      Y_7      Y_8      Y_9     Y_10     Y_11     Y_12     Y_13     Y_14     Y_15
 # 0.008362 0.028496 0.061580 0.105884 0.159512 0.218272 0.278166 0.337492 0.393754 0.446770 0.495858 0.541162 0.582344 0.620662 0.655058
 #     Y_16
 # 0.686512
-
 # TRUE SURVIVAL (outcome[t+1]) UNDER abar = c(1,1,1,...) and N=500K
 #      Y_1      Y_2      Y_3      Y_4      Y_5      Y_6      Y_7      Y_8      Y_9     Y_10     Y_11     Y_12     Y_13     Y_14     Y_15
 # 0.008362 0.019062 0.030102 0.041762 0.053684 0.065804 0.078082 0.091002 0.104102 0.117490 0.131350 0.145544 0.159788 0.174474 0.189384
@@ -196,24 +225,44 @@ fitSeqGcomp <- function(OData,
     # [1] 0.06315338 N=100K;for abar = 11111 / stratifyQ_by_rule = TRUE
     # [1] 0.1193346  N=100K;for abar = 11111 / stratifyQ_by_rule = FALSE
 
-  # 1b. Grab the right model (QlearnModel) and pull it directly:
-    lastQ.fit <- Qlearn.fit$getPsAsW.models()[[lastQ_inx]]$getPsAsW.models()[[1]]
-    lastQ.fit
-    # for all observations in long format:
-    length(lastQ.fit$getprobA1)
-    head(lastQ.fit$getprobA1)
-    # for all unique IDs in the data:
-    length(lastQ.fit$predictAeqa())
-    head(lastQ.fit$predictAeqa())
-    mean(lastQ.fit$predictAeqa())
 
-  # 1c. Grab it directly from the data, using the appropriate strata-subsetting expression
-    subset_vars <- lastQ.fit$subset_vars
-    subset_exprs <- lastQ.fit$subset_exprs
-    subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
-    mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+  # # 1b. Grab the right model (QlearnModel) and pull it directly:
+  #   lastQ.fit <- Qlearn.fit$getPsAsW.models()[[lastQ_inx]]$getPsAsW.models()[[1]]
+  #   lastQ.fit
+  #   # for all observations in long format:
+  #   length(lastQ.fit$getprobA1)
+  #   head(lastQ.fit$getprobA1)
+  #   # for all unique IDs in the data:
+  #   length(lastQ.fit$predictAeqa())
+  #   head(lastQ.fit$predictAeqa())
+  #   mean(lastQ.fit$predictAeqa())
+
+  # # 1c. Grab it directly from the data, using the appropriate strata-subsetting expression
+  #   subset_vars <- lastQ.fit$subset_vars
+  #   subset_exprs <- lastQ.fit$subset_exprs
+  #   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
+  #   mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
 
   OData$Qlearn.fit <- Qlearn.fit
-
-  return(OData)
+  return(mean(reslastQP1))
 }
+
+
+#' @export
+fitTMLE <- function(OData,
+                    t = OData$max.t,
+                    Qforms,
+                    gstar_TRT = NULL,
+                    gstar_MONITOR = NULL,
+                    stratifyQ_by_rule = FALSE,
+                    IPWeights,
+                    rule_name,
+                    params = list(),
+                    verbose = getOption("stremr.verbose")) {
+  fitSeqGcomp(OData, t = t, Qforms = Qforms, gstar_TRT = gstar_TRT, gstar_MONITOR = gstar_MONITOR,
+              stratifyQ_by_rule = stratifyQ_by_rule, TMLE = TRUE, IPWeights = IPWeights,
+              rule_name = rule_name, params = params, verbose = verbose)
+}
+
+
+

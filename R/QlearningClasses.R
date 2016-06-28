@@ -5,11 +5,16 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
   public = list(
     Qreg_counter = integer(),
     t_period = integer(),
+    TMLE = FALSE,
+    regimen_names = NA,
     stratifyQ_by_rule = FALSE,
     pool_regimes = FALSE,
-    initialize = function(Qreg_counter, t_period, stratifyQ_by_rule, pool_regimes, ...) {
+    initialize = function(Qreg_counter, t_period, TMLE, regimen_names, stratifyQ_by_rule, pool_regimes, ...) {
       self$Qreg_counter <- Qreg_counter
       self$t_period <- t_period
+
+      if (!missing(TMLE)) self$TMLE <- TMLE
+      if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
       super$initialize(...)
@@ -19,6 +24,8 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
     get.reg = function() {
       list(Qreg_counter = self$Qreg_counter,
            t_period = self$t_period,
+           TMLE = self$TMLE,
+           regimen_names = self$regimen_names,
            outvar = self$outvar,
            predvars = self$predvars,
            outvar.class = self$outvar.class,
@@ -34,6 +41,46 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
   )
 )
 
+#************************************************
+# TMLEs
+#************************************************
+tmle.update <- function(Q.outcome, off, h_wts, determ.Q, predictQ = TRUE) {
+  QY.star <- NA
+  #************************************************
+  # TMLE update via weighted univariate ML (espsilon is intercept)
+  #************************************************
+  # SuppressGivenWarnings(
+  update_t <- system.time(
+    m.Q.star <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(Q.outcome)), y = Q.outcome, weights = h_wts, offset = off,
+                                      family = quasibinomial(), trace = FALSE, maxit = 1000)    # ,
+    )
+  print("time to perform tmle update:"); print(update_t)
+    # GetWarningsToSuppress(TRUE))
+  m.Q.star.coef <- m.Q.star$coef
+  # m.Q.star.fit <- list(coef = m.Q.star$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+  # class(m.Q.star.fit) <- c(class(m.Q.star.fit), c("speedglmS3"))
+  # SuppressGivenWarnings(m.Q.star <- glm(Y ~ offset(off), data = data.frame(Y = Y, off = off), weights = h_wts,
+                                            # subset = !determ.Q, family = "quasibinomial", control = ctrl), GetWarningsToSuppress(TRUE))
+
+  # m.Q.star.coef <- coef(m.Q.star)
+  # if (predictQ) {
+  #   QY.star <- Q.outcome
+  #   if (!is.na(m.Q.star.coef)) QY.star <- plogis(off + m.Q.star.coef)
+  # }
+
+  #************************************************
+  # (DISABLED) g_IPTW estimator (based on full likelihood factorization, prod(g^*)/prod(g_N):
+  #************************************************
+  # 02/16/13: IPTW estimator (Y_i * prod_{j \\in Fi} [g*(A_j|c^A)/g0_N(A_j|c^A)])
+  # g_wts <- iptw_est(k = est_params_list$Kmax, data = data, node_l = nodes, m.gN = est_params_list$m.g0N,
+  #                      f.gstar = est_params_list$f.gstar, f.g_args = est_params_list$f.g_args, family = "binomial",
+  #                      NetInd_k = est_params_list$NetInd_k, lbound = est_params_list$lbound, max_npwt = est_params_list$max_npwt,
+  #                      f.g0 = est_params_list$f.g0, f.g0_args = est_params_list$f.g0_args)
+  # Y_IPTW_g <- Y
+  # Y_IPTW_g[!determ.Q] <- Y[!determ.Q] * g_wts[!determ.Q]
+  return(list(m.Q.star.coef = m.Q.star.coef, QY.star = QY.star))
+}
+
 #' @export
 QlearnModel  <- R6Class(classname = "QlearnModel",
   inherit = BinaryOutcomeModel,
@@ -41,18 +88,22 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
   portable = TRUE,
   class = TRUE,
   public = list(
+    regimen_names = character(), # for future pooling across regimens
     classify = FALSE,
     TMLE = TRUE,
     nIDs = integer(),
     stratifyQ_by_rule = FALSE,
     Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
     t_period = integer(),
+    idx_used_to_fit_prevQ = NULL,
 
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
       self$stratifyQ_by_rule <- reg$stratifyQ_by_rule
       self$Qreg_counter <- reg$Qreg_counter
       self$t_period <- reg$t_period
+      self$regimen_names <- reg$regimen_names
+      self$TMLE <- reg$TMLE
       invisible(self)
     },
 
@@ -80,6 +131,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # if stratifying by rule, exclude all obs who are not following the rule:
       if (self$stratifyQ_by_rule) self$subset_idx <- self$subset_idx & data$rule_followers_idx
 
+      # save the subset used for fitting of this Q[t] -> will be used for targeting
+      self$idx_used_to_fit_prevQ <- self$subset_idx
+
       private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
 
       self$is.fitted <- TRUE
@@ -87,9 +141,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # **********************************************************************
       # PREDICTION STEP OF Q-LEARNING
+      # Q prediction for everyone (including those who just got censored and those who just stopped following the rule)
       # **********************************************************************
       # 1.
-      # Set A's to counterfactuals in data, then reset the whole design matrix with a new subset that includes everyone who just censored at t.
+      # Set A's to counterfactuals in data, then reset the whole design matrix with a new subset that also includes anyone who just got censored at t.
       interventionNodes.g0 <- data$interventionNodes.g0
       interventionNodes.gstar <- data$interventionNodes.gstar
       data$swapNodes(current = interventionNodes.g0, target = interventionNodes.gstar)
@@ -113,16 +168,48 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # *** NEED TO ADD: do MC sampling to perform the same integration
       # ------------------------------------------------------------------------------------------------------------------------
 
-      # 2. save all predicted vals as Q.kplus1[t] in row t (saved for later targeting/etc):
+      # take the Q prediction for everyone (including those who just got censored and those who just stopped following the rule)
+      Q.kplus1.temp <- private$probA1[self$subset_idx]
+      print("initial mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(Q.kplus1.temp))
+      # browser()
+      # **********************************************************************
+      # TARGETING STEP OF THE TMLE
+      # **********************************************************************
+      if (self$TMLE) {
+        # fit least favorable submodel only among obs who were used for fitting previous Q:
+        off <- qlogis(private$probA1[self$idx_used_to_fit_prevQ])  # offset based on initial prediction log(x/[1-x])
+        # the outcome (prediction) of the previous regression, was saved in current rows t:
+        Q.outcome <- data$dat.sVar[self$idx_used_to_fit_prevQ, "Q.kplus1", with = FALSE][[1]]
+        # iptw weights:
+        wts <- data$IPwts_by_regimen[self$idx_used_to_fit_prevQ, "cumm.IPAW", with = FALSE][[1]]
+        # wts <- data$IPwts_by_regimen[self$idx_used_to_fit_prevQ, self$regimen_names, with = FALSE][[1]]
+
+        # tmle update:
+        tmle.obj <- tmle.update(Q.outcome = Q.outcome, off = off, h_wts = wts)
+        print("tmle.obj$m.Q.star.coef: " %+% tmle.obj$m.Q.star.coef)
+        if (!is.na(tmle.obj$m.Q.star.coef)) {
+          m.Q.star.coef <- tmle.obj$m.Q.star.coef
+        } else {
+          m.Q.star.coef <- 0
+        }
+        # updated model prediction FOR EVERYONE (inc. new censored and newly non-followers)
+        Q.kplus1.temp <- plogis(qlogis(Q.kplus1.temp) + tmle.obj$m.Q.star.coef)
+        # Q.kplus1 <- plogis(off + m.Q.star.coef)
+        print("targeted update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(Q.kplus1.temp))
+      }
+
+      # 2. save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
       rowidx_t <- which(self$subset_idx)
-      data$dat.sVar[rowidx_t, "Q.kplus1" := private$probA1[self$subset_idx]]
+      data$dat.sVar[rowidx_t, "Q.kplus1" := Q.kplus1.temp]
+      # data$dat.sVar[rowidx_t, "Q.kplus1" := private$probA1[self$subset_idx]]
       # data$dat.sVar[1:40,]
 
       # 3. set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
       #    only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
         rowidx_t.minus1 <- rowidx_t - 1
-        data$dat.sVar[rowidx_t.minus1, "Q.kplus1" := private$probA1[self$subset_idx]]
+        data$dat.sVar[rowidx_t.minus1, "Q.kplus1" := Q.kplus1.temp]
+        # data$dat.sVar[rowidx_t.minus1, "Q.kplus1" := private$probA1[self$subset_idx]]
         private$probA1 <- NULL
         private$probAeqa <- NULL
       }
@@ -201,6 +288,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     wipe.alldat = function() {
       # private$probA1 <- NULL
       # private$probAeqa <- NULL
+      self$idx_used_to_fit_prevQ <- NULL
       self$subset_idx <- NULL
       self$binomialModelObj$emptydata
       self$binomialModelObj$emptyY

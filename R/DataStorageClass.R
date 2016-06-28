@@ -635,6 +635,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.rule_followers_idx <- rule_followers_idx
       }
     },
+    IPwts_by_regimen = function(IPwts) {
+      if (missing(IPwts)) {
+        return(private$.IPwts)
+      } else {
+        assert_that(is.data.table(IPwts))
+        private$.IPwts <- IPwts
+      }
+    },
     active.bin.sVar = function() { private$.active.bin.sVar },
     ord.sVar = function() { private$.ord.sVar },
     type.sVar = function() { private$.type.sVar }
@@ -652,6 +660,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     .type.sVar = NULL,            # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
     .uncensored_idx = NULL,       # logical vector for all observation indices that are not censored at current t
     .rule_followers_idx = NULL,   # logical vector for all observation indices that are following the current rule of interest at current t
+    .IPwts = NULL,
     # Replace all missing (NA) values with a default integer (0) for matrix
     fixmiss_sVar_mat = function() {
       self$dat.sVar[gvars$misfun(self$dat.sVar)] <- gvars$misXreplace

@@ -143,6 +143,7 @@ fitPropensity <- function(OData,
 # ---------------------------------------------------------------------------------------
 #' @export
 getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_name = paste0(c(gstar_TRT,gstar_MONITOR), collapse = ""), stabilize = TRUE) {
+  getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
@@ -244,7 +245,7 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # OData$dat.sVar <- OData$dat.sVar[cumm.IPAW > 0, ]
 
   # multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since it cancels):
-  if (stabilize) OData$dat.sVar[, cumm.IPAW := cum.stab.P * cumm.IPAW]
+  if (stabilize) OData$dat.sVar[, "cumm.IPAW" := cum.stab.P * cumm.IPAW]
   Ynode <- nodes$Ynode # Get the outcome var:
   # Multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
   OData$dat.sVar[, "Wt.OUTCOME" := get(Ynode)*cumm.IPAW]
@@ -262,6 +263,11 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # -------------------------------------------------------------------------------------------
   # "g0.A", "g0.C", "g0.N", "g0.CAN",
   OData$dat.sVar[, c("gstar.C", "gstar.A", "gstar.N", "gstar.CAN", "Wt.OUTCOME", "cumm.IPAW", "wt.by.t", "cum.stab.P", "N.follow.rule") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
+
+  attributes(wts.DT)[['getIPWeights_fun_call']] <- getIPWeights_fun_call
+  attributes(wts.DT)[['gstar_TRT']] <- gstar_TRT
+  attributes(wts.DT)[['gstar_MONITOR']] <- gstar_MONITOR
+  attributes(wts.DT)[['stabilize']] <- stabilize
   return(wts.DT)
 }
 
