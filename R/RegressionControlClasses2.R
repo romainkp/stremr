@@ -252,6 +252,88 @@ RegressionClass <- R6Class("RegressionClass",
   )
 )
 
+# ---------------------------------------------------------------------------------
+# S3 methods for regression subsetting/stratification/interval subsetting
+# ---------------------------------------------------------------------------------
+select_reg <- function(RegressionForms, reg, k_i, self) { UseMethod("select_reg") }
+select_reg.ListOfRegressionForms <- function(RegressionForms, reg, k_i, self) {
+  self$RegressionForms <- RegressionForms[[k_i]]
+  return(invisible(self))
+}
 
+select_reg.RegressionClass <- function(RegressionClassObj, k_i, self) {
+  n_regs <- get_n_regs(RegressionClassObj)
+  self$outvar.class <- RegressionClassObj$outvar.class[[k_i]]
+  self$outvar <- RegressionClassObj$outvar[[k_i]] # An outcome variable that is being modeled
+  self$model_contrl <- RegressionClassObj$model_contrl
 
+  if (self$reg_hazard) {
+    # Modeling hazards of bin indicators, no need to condition on previous outcomes as they will all be degenerate. P(A,B,C|D) -> P(A|D),P(B|D),P(C|D)
+    self$predvars <- RegressionClassObj$predvars # Predictors
+  } else {
+    # Factorizating the joint prob as P(A,B,C|D):=P(A|D)*P(B|A,D)*P(C|A,B,D)
+    self$predvars <- c(RegressionClassObj$outvar[-c(k_i:n_regs)], RegressionClassObj$predvars) # Predictors
+    # The subset_vars is a list when RegressionClass is used to specify several regression models.
+    # Obtain appropriate subset_vars for this regression (k_i) and set it to self.
+    # On the other hand, if subset_vars is a vector of variable names, all of those variables will be used for
+    # choosing the subset_vars for all n_regs regressions.
+  }
 
+  if (is.list(RegressionClassObj$subset_vars)) {
+    self$subset_vars <- RegressionClassObj$subset_vars[[k_i]]
+  }
+
+  # Doing the same for subset_exprs for stratified models on subsets
+  if (is.list(RegressionClassObj$subset_exprs)) {
+    self$subset_exprs <- RegressionClassObj$subset_exprs[[k_i]]
+  }
+
+  # Doing the same for intervals when modeling continuous outcomes
+  # if (("contin" %in% class(self)) && is.list(reg$intrvls)) {
+  # if (is.list(reg$intrvls)) {
+  #   outvar_idx <- which(names(reg$intrvls) %in% self$outvar)
+  #   self$intrvls <- reg$intrvls[[outvar_idx]]
+  # }
+
+  return(invisible(self))
+}
+
+# ---------------------------------------------------------------------------
+# S3 methods for SingleRegressionFormClass and ListOfRegressionForms
+# ---------------------------------------------------------------------------
+print.SingleRegressionFormClass <- function(singleregobj) singleregobj$show()
+
+get_n_regs <- function(singleregobj) { UseMethod("get_n_regs") }
+get_n_regs.ListOfRegressionForms <- function(regobjlist) return(length(regobjlist))
+get_n_regs.SingleRegressionFormClass <- function(singleregobj) return(length(singleregobj$outvar))
+# get_n_regs.RegressionClass <- function(regobj) return(get_n_regs(regobj$RegressionForms))
+get_n_regs.RegressionClass <- function(regobj) return(length(regobj$outvar))
+
+get_outvars <- function(regobjlist) { UseMethod("get_outvars") }
+get_outvars.ListOfRegressionForms <- function(regobjlist) {
+  outvars <- NULL
+  for (idx in seq_along(regobjlist))
+    outvars <- c(outvars, regobjlist[[idx]]$outvar)
+  return(outvars)
+}
+get_subset_exprs <- function(regobjlist) { UseMethod("get_subset_exprs") }
+get_subset_exprs.ListOfRegressionForms <- function(regobjlist) {
+  subset_exprs <- NULL
+  for (idx in seq_along(regobjlist))
+    subset_exprs <- c(subset_exprs, regobjlist[[idx]]$subset_exprs)
+  return(subset_exprs)
+}
+set_subset_exprs <- function(regobjlist, idx, subset_exprs) { UseMethod("set_subset_exprs") }
+set_subset_exprs.ListOfRegressionForms <- function(regobjlist, idx, subset_exprs) {
+  # subset_exprs <- NULL
+  idx_count <- 0
+  for (idx_reg in seq_along(regobjlist)) {
+    for (idx_outvar in seq_along(regobjlist[[idx_reg]]$outvar)) {
+      idx_count <- idx_count + 1
+      if (idx == idx_count) {
+        regobjlist[[idx_reg]]$subset_exprs[[idx_outvar]] <- subset_exprs
+        return(invisible(regobjlist[[idx_reg]]))
+      }
+    }
+  }
+}
