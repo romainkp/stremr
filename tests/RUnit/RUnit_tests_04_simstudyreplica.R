@@ -242,10 +242,10 @@ gform_MONITOR <- "N ~ 1"
 options(stremr.verbose = TRUE)
 require("h2o")
 # h2o::h2o.init(nthreads = 2)
-h2o::h2o.init()
-# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+# h2o::h2o.init()
+stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "glm", fit.algorithm = "GLM")
-stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
+# stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
 # h2o::h2o.shutdown(prompt = FALSE)
@@ -255,11 +255,12 @@ OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c
 # OData$H2O.dat.sVar
 OData$dat.sVar
 
-params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
-params_TRT = list(fit.package = "h2o", fit.algorithm = "GLM", ntrees = 50)
-params_MONITOR = list(fit.package = "glm", fit.algorithm = "GLM")
-# params_TRT = NULL,
-# params_MONITOR = NULL,
+# params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
+# params_TRT = list(fit.package = "h2o", fit.algorithm = "GLM", ntrees = 50)
+# params_MONITOR = list(fit.package = "glm", fit.algorithm = "GLM")
+params_CENS = list()
+params_TRT = list()
+params_MONITOR = list()
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
                               stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                               params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)

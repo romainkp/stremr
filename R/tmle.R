@@ -2,6 +2,7 @@
 # TO DO:
 # ------------------------------------------------------------------------------------------
 # *) Need to finish/clean-up the suit of tests for all componensts.
+# *) BUG with TMLE weights when applying to real data -> last row with NA's screws everything up.
 # *) The definition of Qperiods below needs to be based on actual periods observed in the data.
 # *) Consider bringing in tmlenet syntax for defining the interventions in a node-like style.
 # *) Need to be able to differentiate binomial (binary) outcome classification and continuous outcome regression for h2o:
