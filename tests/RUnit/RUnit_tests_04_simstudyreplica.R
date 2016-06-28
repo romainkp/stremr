@@ -379,26 +379,26 @@ stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
-t.surv <- 5
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (t.surv+1))
+t.surv <- c(1,2,3,4,5,6,7,8,9,10)
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
 # wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
 # wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh")
 
-gcomp_est <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
 gcomp_est; tmle_est
 
-gcomp_est <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
 
-gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
 gcomp_est; tmle_est
 
-gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
 
 
