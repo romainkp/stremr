@@ -247,7 +247,6 @@ fitSeqGcomp <- function(OData,
   return(mean(reslastQP1))
 }
 
-
 #' @export
 fitTMLE <- function(OData,
                     t = OData$max.t,

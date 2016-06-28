@@ -46,6 +46,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
 #************************************************
 tmle.update <- function(Q.outcome, off, h_wts, determ.Q, predictQ = TRUE) {
   QY.star <- NA
+  browser()
   #************************************************
   # TMLE update via weighted univariate ML (espsilon is intercept)
   #************************************************
@@ -176,6 +177,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # TARGETING STEP OF THE TMLE
       # **********************************************************************
       if (self$TMLE) {
+        browser()
         # fit least favorable submodel only among obs who were used for fitting previous Q:
         off <- qlogis(private$probA1[self$idx_used_to_fit_prevQ])  # offset based on initial prediction log(x/[1-x])
         # the outcome (prediction) of the previous regression, was saved in current rows t:
