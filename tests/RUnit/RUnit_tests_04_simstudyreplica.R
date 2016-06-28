@@ -382,9 +382,8 @@ stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 t.surv <- 5
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (t.surv+1))
 
-
-wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
-wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh")
+# wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
+# wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh")
 
 gcomp_est <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
 tmle_est <- fitTMLE(OData, t = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
@@ -401,7 +400,6 @@ gcomp_est; tmle_est
 gcomp_fit <- fitSeqGcomp(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 tmle_est <- fitTMLE(OData, t = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
-
 
 
 # ------------------------------------------------------------------------
