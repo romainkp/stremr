@@ -117,8 +117,8 @@ notrun.save.example.data <- function() {
   # -----------------------------------------------------------
   # SIMULATION PARAMS:
   # -----------------------------------------------------------
-  Nsize <- 200000
-  # Nsize <- 100000
+  # Nsize <- 200000
+  Nsize <- 100000
   # Nsize <- 10000
   # set to TRUE to only run scenarios dealing with bias for g.N w and w/out past N(t), no intervention on N(t)
   # SimParams <- Sim.and.Est.params
@@ -217,7 +217,7 @@ OUTCOME <- "Y"
 shifted.OUTCOME <- OUTCOME%+%".tplus1"
 O.dataDTrules_Nstar[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
 O.dataDTrules_Nstar <- O.dataDTrules_Nstar[!get(OUTCOME)%in%1,]
-O.dataDTrules_Nstar[1:50]
+# O.dataDTrules_Nstar[1:50]
 
 # --------------------------------
 # (IV) Estimate weights under observed (A,C,N)
@@ -255,19 +255,8 @@ OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c
 # OData$H2O.dat.sVar
 OData$dat.sVar
 
-# params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
-# params_TRT = list(fit.package = "h2o", fit.algorithm = "GLM", ntrees = 50)
-# params_MONITOR = list(fit.package = "glm", fit.algorithm = "GLM")
-params_CENS = list()
-params_TRT = list()
-params_MONITOR = list()
-OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
-                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
-
 require("magrittr")
-
-#
+# OData$dat.sVar
 St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
            survNPMSM(OData)  %$%
            IPW_estimates
@@ -379,6 +368,18 @@ stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
+
+# params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
+# params_TRT = list(fit.package = "h2o", fit.algorithm = "GLM", ntrees = 50)
+# params_MONITOR = list(fit.package = "glm", fit.algorithm = "GLM")
+params_CENS = list()
+params_TRT = list()
+params_MONITOR = list()
+OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
+                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
+
+
 t.surv <- c(1,2,3,4,5,6,7,8,9,10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
