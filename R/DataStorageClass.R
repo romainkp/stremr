@@ -545,7 +545,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
                                           header = TRUE,
                                           col.types = types,
                                           na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
-                                          destination_frame = tmpf)
+                                          destination_frame = gsub('/', '.', tmpf, fixed = TRUE))
                                           # destination_frame = destination_frame)
 
       # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
