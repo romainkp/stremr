@@ -356,7 +356,8 @@ make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file
 # O.dataDTrules_Nstar[, follow.allt := cumprod(follow.t), by = ID]
 # O.dataDTrules_Nstar[1:100, ]
 
-options(stremr.verbose = TRUE)
+# options(stremr.verbose = TRUE)
+options(stremr.verbose = FALSE)
 h2o::h2o.init()
 # require("h2o")
 # h2o::h2o.init(nthreads = 2)
@@ -407,7 +408,7 @@ gcomp_est; tmle_est
 # ------------------------------------------------------------------------
 require("doParallel")
 registerDoParallel(cores = 4)
-
+data.table::setthreads(1)
 gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, parallel = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, parallel = TRUE)
 gcomp_est; tmle_est
