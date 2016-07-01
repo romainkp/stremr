@@ -1,4 +1,31 @@
 # ------------------------------------------------------------------------------------------
+# H2O ISSUES WITH PARALLEL TRAINING:
+# ------------------------------------------------------------------------------------------
+# 1) EVERYTIME a subset [,] is done on frame (H2O.dat.sVar[rows_subset, vars]) a new frame is created with an automatically ID
+# 2) EVERYTIME a prediction is made a new h2o frame is created: predictions_"modelIDname"_on_"H2OFRAMENAME"
+# 3) EVERYTIME a prediction result is pulled ([,"p1"]), a new temp FRAME  is created
+# 4) WHEN DOING "subsetH2Oframe[, outvar]" in BinomialH2O$setdataH2O A NEW temp FRAME (AUTOMATIC ID) is CREATED
+# 5) Having Q.kplus1 as a column in the main DT or FRAME is also an issue, since parallel training might overwrite it
+
+# ------------------------------------------------------------------------------------------
+# POTENTIAL SOLUTION:
+# ------------------------------------------------------------------------------------------
+# *) PASS Q.kplus1 AS a vector argument?
+# *) using existing approach to LOADING A NEW FRAME FOR EVERY single call to QlearnModel$fit,
+#    but pass the args so that destination_frame is always different for each separate call of fitSeqGcomp_singlet()
+# *) remove all the implicit FRAME creating steps ('[,]' with automatic IDs) with explicit steps so that destination_frame can be specified
+# *) use h2o.removeAll() to remove all frames at once
+# *) use h2o.rm(ids) to remove a single frame by its ID
+# *) h2o.ls() to list all current frames
+# *) Classify a single instance at a time:
+# http://www.h2o.ai/product/faq/#H2OClassifyInstance
+# The plain Java (POJO) scoring predict API is: public final float[] predict( double[] data, float[] preds)
+# // Pass in data in a double[], pre-aligned to the Model's requirements.
+# // Jam predictions into the preds[] array; preds[0] is reserved for the
+# // main prediction (class for classifiers or value for regression),
+# // and remaining columns hold a probability distribution for classifiers.
+
+# ------------------------------------------------------------------------------------------
 # TO DO:
 # ------------------------------------------------------------------------------------------
 # *) Need to finish/clean-up the suit of tests for all componensts.
@@ -80,14 +107,14 @@ fitSeqGcomp <- function(OData,
                         TMLE = FALSE,
                         rule_name = paste0(c(gstar_TRT, gstar_MONITOR), collapse = ""),
                         IPWeights,
-                        params = list(),
+                        params_Q = list(),
                         parallel = FALSE,
                         verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  assert_that(is.list(params))
+  assert_that(is.list(params_Q))
 
   if (missing(rule_name)) rule_name <- paste0(c(gstar_TRT,gstar_MONITOR), collapse = "")
   # ------------------------------------------------------------------------------------------------
@@ -129,16 +156,35 @@ fitSeqGcomp <- function(OData,
   OData$interventionNodes.g0 <- interventionNodes.g0
   OData$interventionNodes.gstar <- interventionNodes.gstar
 
+
+
+
+  # ------------------------------------------------------------------------------------------------
+  # **** Load dat.sVar into H2O.Frame memory if loading data only once
+  # ------------------------------------------------------------------------------------------------
+  # mainH2Oframe <- OData$fast.load.to.H2O(OData$dat.sVar,
+  #                                       saveH2O = TRUE,
+  #                                       destination_frame = "H2OMainDataTable")
+  # ------------------------------------------------------------------------------------------------
+  # *** TO change the column names of H2O.FRAME (for Qlearning steps if data is loaded only once) ***
+  # ------------------------------------------------------------------------------------------------
+  # h2o::colnames(subsetH2Oframe) <- c("T", "C", "h", "N")
+  # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
+  # names(subsetH2Oframe)[1] <- "T2"%+%"_1"
+
+
+
+
   # ------------------------------------------------------------------------------------------------
   # **** Define regression paramers specific to Q-learning (continuous outcome)
   # ------------------------------------------------------------------------------------------------
   # parameter for running h2o.glm with continous outcome (this is the only sovler that works)
   # to try experimental solvers in h2o.glm (see line #901 of GLM.java)
-  # params$solver <- "COORDINATE_DESCENT"
-  # params$solver <- "COORDINATE_DESCENT_NAIVE"
-  params$solver <- "IRLSM"
+  # params_Q$solver <- "COORDINATE_DESCENT"
+  # params_Q$solver <- "COORDINATE_DESCENT_NAIVE"
+  params_Q$solver <- "IRLSM"
   # parameter for running GBM with continuous outcome (default is classification with "bernoulli" and 0/1 outcome):
-  params$distribution <- "gaussian"
+  params_Q$distribution <- "gaussian"
 
   # ------------------------------------------------------------------------------------------------
   # **** Add weights if TMLE=TRUE and if weights were defined
@@ -146,9 +192,7 @@ fitSeqGcomp <- function(OData,
   # ------------------------------------------------------------------------------------------------
   if (TMLE) {
     if (missing(IPWeights)) {
-      # stop("Must specify IPWeights when running TMLE=TRUE")
       message("...evaluating IPWeights for TMLE...")
-      # if (missing(rule_name)) rule_name <- paste0(c(gstar_TRT,gstar_MONITOR), collapse = "")
       IPWeights <- getIPWeights(OData, gstar_TRT, gstar_MONITOR, rule_name, stabilize = FALSE)
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
@@ -173,7 +217,7 @@ fitSeqGcomp <- function(OData,
     mcoptions <- list(preschedule = FALSE)
     res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
                                   t_period <- t_periods[t_idx]
-                                  riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params, verbose)
+                                  riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
                                   surv_byt <- 1-riskP1_byt
                                   data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
                 }
@@ -181,7 +225,7 @@ fitSeqGcomp <- function(OData,
     res_byt <- vector(mode = "list", length = length(t_periods))
     for (t_idx in seq_along(t_periods)) {
       t_period <- t_periods[t_idx]
-      riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params, verbose)
+      riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
       surv_byt <- 1-riskP1_byt
       res_byt[[t_idx]] <- data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
     }
@@ -195,7 +239,7 @@ fitSeqGcomp_singlet <- function(OData,
                                 Qforms,
                                 stratifyQ_by_rule,
                                 TMLE,
-                                params,
+                                params_Q,
                                 verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
@@ -223,6 +267,9 @@ fitSeqGcomp_singlet <- function(OData,
   }
 
   # ------------------------------------------------------------------------------------------------
+  #  ****** Q.kplus1 THIS NEEDS TO BE MOVED OUT OF THE MAIN data.table *****
+  # Running fitSeqGcomp_singlet might conflict with different Q.kplus1
+  # ------------------------------------------------------------------------------------------------
   # **** G-COMP: Initiate Q.kplus1 - (could be multiple if more than one regimen)
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)
   # ------------------------------------------------------------------------------------------------
@@ -241,7 +288,7 @@ fitSeqGcomp_singlet <- function(OData,
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i], stratifyQ_by_rule = stratifyQ_by_rule,
                                      TMLE = TMLE,
                                      outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
-                                     subset_vars = list("Q.kplus1"), subset_exprs = stratify_Q[i], model_contrl = params,
+                                     subset_vars = list("Q.kplus1"), subset_exprs = stratify_Q[i], model_contrl = params_Q,
                                      censoring = FALSE)
     Q_regs_list[[i]] <- reg
   }

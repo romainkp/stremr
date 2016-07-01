@@ -541,28 +541,22 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       types <- gsub("character", "string", types)
       types <- gsub("Date", "Time", types)
 
+      # replace all irregular characters to conform with destination_frame regular exprs format:
+      tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
+      tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
+      tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+
       H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
                                           header = TRUE,
                                           col.types = types,
                                           na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
                                           destination_frame = destination_frame)
-                                          # destination_frame = gsub('/', '.', tmpf, fixed = TRUE)
+                                          # destination_frame = tmpf.dest3)
 
       # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
 
       if (saveH2O) self$H2O.dat.sVar <- H2O.dat.sVar
 
-      # H2O.dat.sVar <- h2o::h2o.importFile(tmpf, destination_frame = "H2O.dat.sVar",
-      #                                     header = TRUE,
-      #                                     col.types = types,
-      #                                     col.names = colnames(dat.sVar, do.NULL = FALSE, prefix = "C"),
-      #                                     na.strings = rep(c("NA_h2o"),
-      #                                       ncol(dat.sVar)))
-      # H2O.dat.sVar <- h2o::h2o.uploadFile(tmpf, destination_frame = "H2O.dat.sVar",
-      #                                     header = TRUE,
-      #                                     col.types = types,
-      #                                     col.names = colnames(dat.sVar, do.NULL = FALSE, prefix = "C"),
-      #                                     na.strings = rep(c("NA_h2o"), ncol(dat.sVar)))
       file.remove(tmpf)
       # return(invisible(self))
       return(invisible(H2O.dat.sVar))

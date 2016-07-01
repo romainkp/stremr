@@ -53,7 +53,7 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
   update_t <- system.time(
     m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
                                         y = prev_Q.kplus1, weights = IPWts, offset = off,
-                                        family = quasibinomial(), trace = FALSE, maxit = 1000)    # ,
+                                        family = quasibinomial(), trace = FALSE, maxit = 1000)
     )
   print("time to perform tmle update:"); print(update_t)
     # GetWarningsToSuppress(TRUE))
@@ -178,18 +178,14 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
         # TMLE offset based will be based on the initial prediction of Q above log(x/[1-x]):
         init_Q_fitted_only <- private$probA1[self$idx_used_to_fit_initQ]
+        # tmle update will error out if some predictions are exactly 0:
+        init_Q_fitted_only[init_Q_fitted_only < 10^(-5)] <- 10^(-5)
+
         off_TMLE <- qlogis(init_Q_fitted_only)
         print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
 
         # Cumulative IPWeights for current t:
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cumm.IPAW", with = FALSE][[1]]
-
-# summary(off_TMLE)
-#    Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-# -36.0400 -22.1400  -4.8970 -12.4900  -3.5830   0.4458
-        # summary(init_Q_fitted_only)
-#     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
-# 0.000000 0.000000 0.007413 0.016660 0.027030 0.609600
 
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         tmle_res <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)

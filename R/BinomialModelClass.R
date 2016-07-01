@@ -341,78 +341,6 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       assert_that(self$is.fitted)
       return(invisible(self))
     },
-    # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
-    # Needs to know the values of b for prediction
-    # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    # predictAeqa = function(newdata, bw.j.sA_diff, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
-    #   if (missing(newdata) && !is.null(private$probAeqa)) {
-    #     return(private$probAeqa)
-    #   }
-    #   self$predict(newdata)
-    #   if (missing(newdata)) {
-    #     indA <- self$getoutvarval
-    #   } else {
-    #     indA <- newdata$get.outvar(TRUE, self$getoutvarnm) # Always a vector of 0/1
-    #   }
-    #   assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
-    #   probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-    #   probA1 <- private$probA1[self$getsubset]
-    #   assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
-    #   # Discrete version for the joint density:
-    #   probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
-    #   # continuous version for the joint density:
-    #   # probAeqa[self$getsubset] <- (probA1^indA) * exp(-probA1)^(1 - indA)
-    #   # Alternative intergrating the last hazard chunk up to x:
-    #   # difference of sA value and its left most bin cutoff: x - b_{j-1}
-    #   if (!missing(bw.j.sA_diff)) {
-    #     # + integrating the constant hazard all the way up to value of each sa:
-    #     # probAeqa[self$getsubset] <- probAeqa[self$getsubset] * (1 - bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
-    #     # cont. version of above:
-    #     probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
-    #   }
-    #   private$probAeqa <- probAeqa
-    #   # **********************************************************************
-    #   # to save RAM space when doing many stacked regressions wipe out all internal data:
-    #   self$wipe.alldat
-    #   # **********************************************************************
-    #   return(probAeqa)
-    # },
-    # define.subset.idx = function(data) {
-    #   if (is.logical(self$subset_vars)) {
-    #     subset_idx <- self$subset_vars
-    #   } else if (is.call(self$subset_vars)) {
-    #     stop("calls aren't allowed in binomialModelObj$subset_vars")
-    #   } else if (is.character(self$subset_vars)) {
-    #     subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
-    #   }
-    #   assert_that(is.logical(subset_idx))
-    #   if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
-    #     if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
-    #     subset_idx <- rep.int(subset_idx, data$p)
-    #     if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
-    #   }
-    #   assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
-    #   self$subset_idx <- subset_idx
-    #   return(invisible(self))
-    # },
-    # take fitted BinaryOutcomeModel class object as an input and save the fits to itself
-    # copy.fit = function(bin.out.model) {
-    #   assert_that("BinaryOutcomeModel" %in% class(bin.out.model))
-    #   private$model.fit <- bin.out.model$getfit
-    #   self$is.fitted <- TRUE
-    #   invisible(self)
-    # },
-    # # take BinaryOutcomeModel class object that contains the predictions for P(A=1|sW) and save these predictions to self$
-    # copy.predict = function(bin.out.model) {
-    #   assert_that("BinaryOutcomeModel" %in% class(bin.out.model))
-    #   assert_that(self$is.fitted)
-    #   private$probA1 <- bin.out.model$getprobA1
-    # },
-    # # Returns the object that contains the actual model fits (itself)
-    # get.fits = function() {
-    #   model.fit <- self$getfit
-    #   return(list(model.fit))
-    # },
 
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE) {
@@ -430,8 +358,6 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       # private$probAeqa <- NULL
       private$.outvar <- NULL
       self$subset_idx <- NULL
-      # self$binomialModelObj$emptydata
-      # self$binomialModelObj$emptyY
       return(self)
     },
     getfit = function() { private$model.fit },

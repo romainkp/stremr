@@ -94,15 +94,12 @@ fitPropensity <- function(OData,
   # Perform S3 method dispatch on ALL_g_regs, which will determine the nested tree of SummaryModel objects
   # Perform fit and prediction
   # ------------------------------------------------------------------------------------------
-  # browser()
-  # class(g_CAN_regs_list[[1]][[1]])
-  # class(g_CAN_regs_list[[1]])
-  # class(g_CAN_regs_list)
-
-  # ALL_g_regs <- RegressionClass$new(RegressionForms = g_CAN_regs_list)
-  # ALL_g_regs$S3class <- "generic"
   modelfits.g0 <- GenericModel$new(reg = g_CAN_regs_list, DataStorageClass.g0 = OData)
-  # modelfits.g0 <- newsummarymodel(reg = ALL_g_regs, DataStorageClass.g0 = OData)
+
+  # load data into h2o (not used):
+  # mainH2Oframe <- OData$fast.load.to.H2O(OData$dat.sVar,
+  #                                       saveH2O = TRUE,
+  #                                       destination_frame = "H2OMainDataTable")
 
   modelfits.g0$fit(data = OData, predict = TRUE)
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
@@ -117,8 +114,6 @@ fitPropensity <- function(OData,
   OData$modelfits.g0 <- modelfits.g0
 
   ALL_g_regs <- modelfits.g0$reg
-  # ALL_g_regs
-  # g_CAN_regs_list <- ALL_g_regs$RegressionForms
 
   OData$modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gC")]]
   OData$modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gA")]]
@@ -531,3 +526,75 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
   return(MSM_out)
 }
 
+runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
+  # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
+  # Does not handle cases with deterministic Anodes in the original data.
+  logispredict = function(m.fit, X_mat) {
+    eta <- X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
+    pAout <- match.fun(FUN = m.fit$linkfun)(eta)
+    return(pAout)
+  }
+  if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
+    if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
+    loadframe_t <- system.time(
+      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts_data,
+                                                  saveH2O = FALSE,
+                                                  destination_frame = "MSM.designmat.H2O")
+    )
+    if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
+    # OData$fast.load.to.H2O(wts_data, )
+    # temp.csv.path <- file.path(tempdir(), "wts_data.csv~")
+    # data.table::fwrite(wts_data, temp.csv.path, turbo = TRUE)
+    # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
+    # na.wts.idx <- which(as.logical(is.na(MSM.designmat.H2O[, "cumm.IPAW"])))
+    # MSM.designmat.H2O[na.wts.idx, ]
+    # wts_data[na.wts.idx, ]
+    m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
+                                  x = all_dummies,
+                                  intercept = FALSE,
+                                  weights_column = "cumm.IPAW",
+                                  training_frame = MSM.designmat.H2O,
+                                  family = "binomial",
+                                  standardize = FALSE,
+                                  solver = c("IRLSM"), # solver = c("L_BFGS"),
+                                  lambda = 0L,
+                                  max_iterations = 50,
+                                  ignore_const_cols = FALSE
+                                  ),
+                silent = TRUE)
+
+    out_coef <- vector(mode = "numeric", length = length(all_dummies))
+    out_coef[] <- NA
+    names(out_coef) <- c(all_dummies)
+    out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
+    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
+    wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
+  } else {
+    if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+    Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
+    m.fit <- try(speedglm::speedglm.wfit(
+                                       X = Xdesign.mat,
+                                       y = as.numeric(wts_data[[Ynode]]),
+                                       intercept = FALSE,
+                                       family = binomial(),
+                                       weights = wts_data[["cumm.IPAW"]],
+                                       trace = FALSE),
+                        silent = TRUE)
+    if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
+      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
+      ctrl <- glm.control(trace = FALSE)
+      SuppressGivenWarnings({
+        m.fit <- stats::glm.fit(x = Xdesign.mat,
+                                y = as.numeric(wts_data[[Ynode]]),
+                                family = binomial(),
+                                intercept = FALSE, control = ctrl)
+      }, GetWarningsToSuppress())
+    }
+    m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+    if (verbose) {
+      print("MSM fits"); print(m.fit$coef)
+    }
+    wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+  }
+  return(list(wts_data = wts_data, m.fit = m.fit))
+}

@@ -89,37 +89,6 @@ predictP1.glmfit <- function(m.fit, ParentObject, DataStorageObject, subset_idx,
   return(pAout)
 }
 
-# ----------------------------------------------------------------
-# Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
-# ----------------------------------------------------------------
-predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
-  assert_that(!is.null(subset_idx))
-
-  if (!missing(DataStorageObject)) {
-    rows_subset <- which(subset_idx)
-    data <- DataStorageObject
-    # subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, ] # old, slower approach
-    outvar <- m.fit$params$outvar
-    predvars <- m.fit$params$predvars
-    subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-                                            saveH2O = FALSE,
-                                            destination_frame = "subsetH2Oframe")
-    # ParentObject$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
-  } else {
-    subsetH2Oframe <- ParentObject$getsubsetH2Oframe
-  }
-
-  pAout <- rep.int(gvars$misval, n)
-  if (sum(subset_idx) > 0) {
-    predictFrame <- h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
-    if ("p1" %in% colnames(predictFrame)) {
-      pAout[subset_idx] <- as.vector(predictFrame[,"p1"])
-    } else {
-      pAout[subset_idx] <- as.vector(predictFrame[,"predict"])
-    }
-  }
-  return(pAout)
-}
 
 ## ---------------------------------------------------------------------
 #' R6 class for storing the design matrix and the binary outcome for a single GLM (logistic) regression

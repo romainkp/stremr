@@ -17,18 +17,6 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 # ---------------------------------------------------------------------------
 # for running logistic regression with continuous outcome range [0-1]
 # ---------------------------------------------------------------------------
-# model.fit <- h2o::h2o.glm(x = predvars,
-#                           y = outvar,
-#                           intercept = TRUE,
-#                           training_frame = subsetH2Oframe,
-#                           family = "binomial",
-#                           standardize = TRUE,
-#                           lambda = 0L,
-#                           solver = "IRLSM",
-#                           max_iterations = 100,
-#                           ignore_const_cols = FALSE,
-#                           missing_values_handling = "Skip")
-
 # S3 method for fitting h2o GLM with binomial() family (logistic regression):
 # use solver="L_BFGS" when doing classification and use "IRLSM" when not
 h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
@@ -39,7 +27,9 @@ h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
                   family = "binomial",
                   standardize = TRUE,
                   solver = "L_BFGS",
-                  # solver = c("IRLSM"),
+                  # solver = "IRLSM",
+                  # solver = "COORDINATE_DESCENT",
+                  # solver = "COORDINATE_DESCENT_NAIVE",
                   lambda = 0L,
                   max_iterations = 100,
                   ignore_const_cols = FALSE,
@@ -103,7 +93,6 @@ h2ofit.h2oRF <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mod
 # S3 method for h2o GBM fit, takes BinDat data object:
 # use "bernoulli" when doing classification and use "gaussian" when not
 h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  # browser()
   mainArgs <- list(x = predvars, y = outvar,
                    training_frame = subsetH2Oframe,
                    distribution = "bernoulli",
@@ -134,6 +123,50 @@ h2ofit.h2oSL <- function(fit, subsetH2Oframe, outvar, predvars, subset_idx, ...)
   # ... SuperLearner TO BE IMPLEMENTED ...
 }
 
+# ----------------------------------------------------------------
+# Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
+# ----------------------------------------------------------------
+predictP1.h2ofit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+  assert_that(!is.null(subset_idx))
+
+  if (!missing(DataStorageObject)) {
+    rows_subset <- which(subset_idx)
+    data <- DataStorageObject
+
+    outvar <- m.fit$params$outvar
+    predvars <- m.fit$params$predvars
+
+
+
+
+    # 1. works on a single core, but fails in parallel:
+    subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+                                            saveH2O = FALSE,
+                                            destination_frame = "subsetH2Oframe")
+    #2. old, slower approach, but may work on many cores (since data is loaded only once)
+    # subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
+    # old version of setting data, no longer used:
+    # ParentObject$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
+
+
+
+
+  } else {
+    subsetH2Oframe <- ParentObject$getsubsetH2Oframe
+  }
+
+  pAout <- rep.int(gvars$misval, n)
+  if (sum(subset_idx) > 0) {
+    predictFrame <- h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
+    if ("p1" %in% colnames(predictFrame)) {
+      pAout[subset_idx] <- as.vector(predictFrame[,"p1"])
+    } else {
+      pAout[subset_idx] <- as.vector(predictFrame[,"predict"])
+    }
+  }
+  return(pAout)
+}
+
 # IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o
 # NEEDS TO be able to pass on THE REGRESSION SETTINGS FOR h2o-specific functions
 BinomialH2O  <- R6Class(classname = "BinomialH2O",
@@ -159,7 +192,8 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     fit = function(data, outvar, predvars, subset_idx, ...) {
       assert_that(is.DataStorageClass(data))
       # a penalty for being able to obtain predictions from predictAeqA() right after fitting: need to store Yvals
-      private$Yvals <- data$get.outvar(subset_idx, self$ParentModel$outvar) # Always a vector
+      private$Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
+
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L)) {
         class(self$model.fit) <- "try-error"
         message("unable to run " %+% self$fit.class %+% " with h2o for intercept only models or input data with zero observations, running speedglm as a backup...")
@@ -192,26 +226,41 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
 
     setdataH2O = function(data, subset_idx, outvar, predvars, classify = TRUE, ...) {
       rows_subset <- which(subset_idx)
+
+
+
+      # ---------------------------------------------------
+      # ***!!!!NEED TO ALLOW USING BOTH VERSIONS BELOW!!!!***
+      # ---------------------------------------------------
+      # 1. works on single core but fails in parallel:
       load_subset_t <- system.time(
         subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
                                                 saveH2O = FALSE,
                                                 destination_frame = "newH2Osubset")
       )
-      # subset_t <- system.time(
-      #   subsetH2Oframe_1 <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
-      # )
-      # print("subset_t: "); print(subset_t)
-      # change the column names of H2O.FRAME
-      # h2o::colnames(subsetH2Oframe) <- c("T", "C", "h", "N")
-      # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
-      # names(subsetH2Oframe)[1] <- "T2"%+%"_1"
       if (gvars$verbose) {
         print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
       }
-      # print("length(rows_subset): "); print(length(rows_subset))
-      # print("2 frames are equivalent?"); print(all.equal(subsetH2Oframe_1, subsetH2Oframe_2))
-      # subsetH2Oframe <- subsetH2Oframe_2
+      # 2. old version, less efficient when subsetting really large frames:
+      # ---------------------------------------------------
+      # everytime you do a subset H2O creates a frame on its cluster
+      # if you run this in parallel, it will try to assign the same name to two different subsets calls below
+      # resuling in an error
+      # ---------------------------------------------------
+      # subset_t <- system.time(
+      #   subsetH2Oframe <- data$H2O.dat.sVar[rows_subset, c(outvar, predvars)]
+      # )
+      # if (gvars$verbose) {
+      #   print("time to subset data into H2OFRAME: "); print(subset_t)
+      # }
+
+
+
+      # **** WILL CREATE A TEMPORARY h2o FRAME ****
       outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
+
+
+
       # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
       NAfactors <- any(is.na(outfactors))
       if (NAfactors) {
