@@ -243,9 +243,9 @@ options(stremr.verbose = TRUE)
 require("h2o")
 # h2o::h2o.init(nthreads = 2)
 h2o::h2o.init()
-# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
-stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
+# stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
 # h2o::h2o.shutdown(prompt = FALSE)
 
@@ -276,7 +276,6 @@ St.dhigh
 
 St.dlow[13, "St.IPTW"]-St.dhigh[13, "St.IPTW"] # [1] 0.1260063
 St.list <- list(dlow = St.dlow[,"St.IPTW"], dhigh = St.dhigh[,"St.IPTW"])
-
 
 wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
 # wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow")
@@ -314,90 +313,3 @@ report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_r
 
 # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-
-
-# ---------------------------------------------------------------------------------------------------------
-# TESTING GCOMP AND TMLE
-# ---------------------------------------------------------------------------------------------------------
-# intervention of interest:
-# O.dataDTrules_Nstar[, A.gstar0 := 0L]
-# correctly define the rule followers as those who always adhere to A.gstar0:
-# O.dataDTrules_Nstar[, follow.t := as.integer(TI == A.gstar0), ]
-# O.dataDTrules_Nstar[, follow.allt := cumprod(follow.t), by = ID]
-# O.dataDTrules_Nstar[1:100, ]
-
-
-require("h2o")
-h2o::h2o.init()
-# h2o::h2o.init(nthreads = 4)
-# h2o::h2o.shutdown(prompt = FALSE)
-
-# options(stremr.verbose = FALSE)
-options(stremr.verbose = TRUE)
-
-OData <- importData(O.dataDTrules_Nstar, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
-
-# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
-# stremr_options(fit.package = "h2o", fit.algorithm = "GLM"); model <- "h2o.GLM"
-stremr_options(fit.package = "h2o", fit.algorithm = "RF"); model <- "h2o.RF"
-# stremr_options(fit.package = "h2o", fit.algorithm = "GBM"); model <- "h2o.GBM"
-
-# params_CENS = list(fit.package = "speedglm", fit.algorithm = "GLM")
-# params_TRT = list(fit.package = "h2o", fit.algorithm = "GLM", ntrees = 50)
-# params_MONITOR = list(fit.package = "glm", fit.algorithm = "GLM")
-params_CENS = list()
-params_TRT = list()
-params_MONITOR = list()
-OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
-                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
-
-
-# t.surv <- c(1,2,3,4,5,6,7,8,9,10)
-t.surv <- c(1,2,3)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-
-params = list(ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
-# wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
-# wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh")
-
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-gcomp_est; tmle_est
-
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-gcomp_est; tmle_est
-
-gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-gcomp_est; tmle_est
-
-gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-gcomp_est; tmle_est
-
-# ------------------------------------------------------------------------
-# PARALLEL TEST OF seq-GCOMP
-# ------------------------------------------------------------------------
-require("doParallel")
-registerDoParallel(cores = 2)
-data.table::setthreads(1)
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, parallel = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, parallel = TRUE)
-gcomp_est; tmle_est
-
-# registerDoParallel(cores=detectCores())
-
-# ------------------------------------------------------------------------
-# TEST FOR ERROR WITH > 1 REGRESSION AND > 1 STATA
-# ------------------------------------------------------------------------
-gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
-stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
-O.dataDTrules_Nstar_test <- O.dataDTrules_Nstar
-O.dataDTrules_Nstar_test[, "C1" := C]
-O.dataDTrules_Nstar_test[, "C2" := C]
-OData <- importData(O.dataDTrules_Nstar_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
-OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
-                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
