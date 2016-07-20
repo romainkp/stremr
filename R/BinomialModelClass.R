@@ -302,7 +302,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
 DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutcomeModel",
   inherit = BinaryOutcomeModel,
-  cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
+  cloneable = TRUE,
   portable = TRUE,
   class = TRUE,
   public = list(
@@ -315,17 +315,21 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
+      self$subset_vars <- reg$subset_vars
+      self$subset_exprs <- reg$subset_exprs
+      assert_that(length(self$subset_exprs) <= 1)
+      self$ReplMisVal0 <- reg$ReplMisVal0
       invisible(self)
     },
     # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
     # store these predictions in private$probA1 and private$probAeqa
     fit = function(overwrite = FALSE, data, predict = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
+      self$define.subset.idx(data)
       private$probA1 <- data$get.outvar(TRUE, self$gstar.Name)
       self$subset_idx <- rep.int(TRUE, self$n)
       private$.outvar <- data$get.outvar(TRUE, self$getoutvarnm) # Always a vector of 0/1
       self$is.fitted <- TRUE
-
       if (predict) {
         self$predictAeqa(...)
       }
@@ -341,6 +345,31 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       assert_that(self$is.fitted)
       return(invisible(self))
     },
+
+    # predictAeqa = function(newdata, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+    #   if (missing(newdata) && !is.null(private$probAeqa)) return(private$probAeqa)
+    #   if (missing(newdata)) {
+    #     indA <- self$getoutvarval[self$getsubset]
+    #   } else {
+    #     indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
+    #   }
+    #   assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
+    #   probAeqa <- private$probA1 # for missing values, the likelihood is always set to P(A = a) = 1.
+    #   assert_that(!any(is.na(private$probA1[self$getsubset]))) # check that predictions P(A=1 | dmat) exist for all obs.
+    #   probAeqa[self$getsubset] <- private$probA1[self$getsubset]^(indA) * (1 - private$probA1[self$getsubset])^(1L - indA)
+    #   # continuous version for the joint density:
+    #   # probAeqa[self$getsubset] <- (probA1^indA) * exp(-probA1)^(1 - indA)
+    #   # Alternative intergrating the last hazard chunk up to x:
+    #   # difference of sA value and its left most bin cutoff: x - b_{j-1}
+    #   if (!missing(bw.j.sA_diff)) {
+    #     # + integrating the constant hazard all the way up to value of each sa:
+    #     # probAeqa[self$getsubset] <- probAeqa[self$getsubset] * (1 - bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
+    #     # cont. version of above:
+    #     probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
+    #   }
+    #   private$probAeqa <- probAeqa
+    #   return(probAeqa)
+    # },
 
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE) {

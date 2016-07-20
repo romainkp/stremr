@@ -142,7 +142,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       interventionNodes.gstar <- data$interventionNodes.gstar
       data$swapNodes(current = interventionNodes.g0, target = interventionNodes.gstar)
 
-      # Add to design matrix all obs that were also censored at t and (possibly) those just stopped following the rule:
+      # Add to design matrix all obs that were also censored at t and (possibly) those who just stopped following the rule:
       self$subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
       print("performing initial Q-prediction for N = " %+% sum(self$subset_idx))
 

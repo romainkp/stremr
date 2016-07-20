@@ -53,15 +53,15 @@
 #     Deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
 #     Need to do either MC integration (sample from g.star then predict Q)
 #     or direct weighted sum of predicted Q's with weights given by g.star (on A and N).
-# *) gstar_TRT/gstar_MONITOR are vectors of coutnerfactual probs -> allow each to be multivariate (>1 cols)
-# *) For column 0<gstar_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=gstar_TRT[t].
+# *) intervened_TRT/intervened_MONITOR are vectors of counterfactual probs -> allow each to be multivariate (>1 cols)
+# *) For column 0<intervened_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=intervened_TRT[t].
 # *) gstar can be a vector, i.e., abar=(0,0,0,0) or a matrix of counterfactual treatments, like in ltmle.
 # ------------------------------------------------------------------------------------------
 #  *** rule_followers:
 #     Once you go off the treatment first time, this is it, the person is censored for the rest of the follow-up.
-#     Rule followers are now evaluated automatically by comparing (gstar_TRT and TRT and CENS) and (gstar_MONITOR and MONITOR and CENS).
-#     Rule followers are: (gstar_TRT = 1) & (TRT == 1) or (gstar_TRT = 0) & (TRT == 0) or (gstar_TRT > 0 & gstar_TRT < 0) & (Not Censored).
-#     Exactly the same logic is also applied to (gstar_MONITOR & MONITOR) when these are specified.
+#     Rule followers are now evaluated automatically by comparing (intervened_TRT and TRT and CENS) and (intervened_MONITOR and MONITOR and CENS).
+#     Rule followers are: (intervened_TRT = 1) & (TRT == 1) or (intervened_TRT = 0) & (TRT == 0) or (intervened_TRT > 0 & intervened_TRT < 0) & (Not Censored).
+#     Exactly the same logic is also applied to (intervened_MONITOR & MONITOR) when these are specified.
 #     If either TRT or MONITOR is multivariate (>1 col), this logic needs to be applied FOR EACH COLUMN of TRT/MONITOR.
 # ------------------------------------------------------------------------------------------
 # *** Accessing correct QlearnModel ***
@@ -101,11 +101,11 @@ fitTMLE <- function(...) {
 fitSeqGcomp <- function(OData,
                         t_periods,
                         Qforms,
-                        gstar_TRT = NULL,
-                        gstar_MONITOR = NULL,
+                        intervened_TRT = NULL,
+                        intervened_MONITOR = NULL,
                         stratifyQ_by_rule = FALSE,
                         TMLE = FALSE,
-                        rule_name = paste0(c(gstar_TRT, gstar_MONITOR), collapse = ""),
+                        rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
                         IPWeights,
                         params_Q = list(),
                         parallel = FALSE,
@@ -116,7 +116,7 @@ fitSeqGcomp <- function(OData,
   new.factor.names <- OData$new.factor.names
   assert_that(is.list(params_Q))
 
-  if (missing(rule_name)) rule_name <- paste0(c(gstar_TRT,gstar_MONITOR), collapse = "")
+  if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
   # **** NOTE: THIS NEEDS TO BE TAKEN OUT OF HERE AND PUT AS A SEPARATE FUNCTION TO BE CALLED FROM getIPWeights and/or fitSeqGcomp
@@ -127,9 +127,9 @@ fitSeqGcomp <- function(OData,
   # ------------------------------------------------------------------------------------------------
   # **** Define the intervention nodes
   # ------------------------------------------------------------------------------------------------
-  if (!is.null(gstar_TRT)) {
-    gstar.A <- gstar_TRT
-    for (gstar_TRT_col in gstar_TRT) CheckVarNameExists(OData$dat.sVar, gstar_TRT_col)
+  if (!is.null(intervened_TRT)) {
+    gstar.A <- intervened_TRT
+    for (intervened_TRT_col in intervened_TRT) CheckVarNameExists(OData$dat.sVar, intervened_TRT_col)
     # UPDATE RULE FOLLOWERS FOR TRT IF DOING stratified G-COMP:
     if (stratifyQ_by_rule) {
       rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Anodes, gstar.NodeName = gstar.A)
@@ -139,9 +139,9 @@ fitSeqGcomp <- function(OData,
     gstar.A <- nodes$Anodes # use the actual observed exposure (no intervention on TRT)
   }
 
-  if (!is.null(gstar_MONITOR)) {
-    gstar.N <- gstar_MONITOR
-    for (gstar_MONITOR_col in gstar_MONITOR) CheckVarNameExists(OData$dat.sVar, gstar_MONITOR_col)
+  if (!is.null(intervened_MONITOR)) {
+    gstar.N <- intervened_MONITOR
+    for (intervened_MONITOR_col in intervened_MONITOR) CheckVarNameExists(OData$dat.sVar, intervened_MONITOR_col)
     # UPDATE RULE FOLLOWERS FOR MONITOR IF DOING stratified G-COMP:
     if (stratifyQ_by_rule) {
       rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Nnodes, gstar.NodeName = gstar.N)
@@ -155,7 +155,6 @@ fitSeqGcomp <- function(OData,
   interventionNodes.gstar <- c(gstar.A, gstar.N)
   OData$interventionNodes.g0 <- interventionNodes.g0
   OData$interventionNodes.gstar <- interventionNodes.gstar
-
 
 
 
@@ -193,13 +192,13 @@ fitSeqGcomp <- function(OData,
   if (TMLE) {
     if (missing(IPWeights)) {
       message("...evaluating IPWeights for TMLE...")
-      IPWeights <- getIPWeights(OData, gstar_TRT, gstar_MONITOR, rule_name, stabilize = FALSE)
+      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, rule_name, stabilize = FALSE)
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
-      message("applying user-specified IPWeights, make sure these weights were obtained by making a call: \n'getIPWeights((OData, gstar_TRT, gstar_MONITOR, stabilize = FALSE)'")
+      message("applying user-specified IPWeights, make sure these weights were obtained by making a call: \n'getIPWeights((OData, intervened_TRT, intervened_MONITOR, stabilize = FALSE)'")
       message("the currently supplied weights were obtained with a call: \n" %+% deparse(getIPWeights_fun_call)[[1]])
-      assert_that(all.equal(attributes(IPWeights)[['gstar_TRT']], gstar_TRT))
-      assert_that(all.equal(attributes(IPWeights)[['gstar_MONITOR']], gstar_MONITOR))
+      assert_that(all.equal(attributes(IPWeights)[['intervened_TRT']], intervened_TRT))
+      assert_that(all.equal(attributes(IPWeights)[['intervened_MONITOR']], intervened_MONITOR))
       assert_that(attributes(IPWeights)[['stabilize']] == FALSE)
     }
     assert_that(is.data.table(IPWeights))

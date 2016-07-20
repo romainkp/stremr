@@ -83,11 +83,11 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_
                               stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
 # get IPW-adjusted and KM survival (with hazards over time)
-wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
+wts.St.dlow <- getIPWeights(OData, intervened_TRT = "TI.gstar.dlow")
 St.dlow <- survNPMSM(wts.St.dlow, OData)
 St.dlow
 
-wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh")
+wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "TI.gstar.dhigh")
 St.dhigh <- survNPMSM(wts.St.dhigh, OData)
 St.dhigh
 
@@ -100,23 +100,23 @@ t.surv <- c(1,2,3,4,5,6,7,8,9,10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
 # stratified modeling by rule followers only:
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
 gcomp_est; tmle_est
 
 # pooling all observations (no stratification):
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
 
 # stratified modeling by rule followers only:
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
 gcomp_est; tmle_est
 
 # pooling all observations (no stratification):
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
 
 # ------------------------------------------------------------------------
@@ -126,12 +126,12 @@ require("doParallel")
 registerDoParallel(cores = 4)
 data.table::setthreads(1)
 
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
 gcomp_est; tmle_est
 
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
 gcomp_est; tmle_est
 
 # ---------------------------------------------------------------------------------------------------------
@@ -145,12 +145,12 @@ params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100, learn_rat
 t.surv <- c(1,2,3,4,5,6,7,8,9,10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
 
-gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, gstar_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 gcomp_est; tmle_est
 
 # ------------------------------------------------------------------------

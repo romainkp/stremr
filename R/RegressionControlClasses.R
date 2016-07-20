@@ -191,7 +191,8 @@ RegressionClass <- R6Class("RegressionClass",
     fit.package = c("speedglm", "glm", "h2o"),
     fit.algorithm = c("GLM", "GBM", "RF", "SL"),
     parfit = logical(),            # TRUE for fitting binary regressions in parallel
-    initialize = function(ReplMisVal0 = TRUE, # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
+    # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
+    initialize = function(ReplMisVal0 = TRUE,
                           fit.package = getopt("fit.package"),
                           fit.algorithm = getopt("fit.algorithm"),
                           parfit = getopt("parfit"), ...) {

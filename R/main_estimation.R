@@ -1,7 +1,19 @@
-
-# ------------------------------------------------------------------
-# - BLOCK 1: Process inputs and define OData R6 object
-# ------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------
+#' Import data, define various nodes, define dummies for factor columns and define OData R6 object
+#'
+#' @param data Input dataset, can be a data.frame or a data.table
+#' @param ID ...
+#' @param t_name ...
+#' @param covars ...
+#' @param CENS ...
+#' @param TRT ...
+#' @param MONITOR ...
+#' @param OUTCOME ...
+#' @param noCENScat ...
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#' @return ...
+# @seealso \code{\link{stremr-package}} for the general overview of the package,
+# @example tests/examples/1_stremr_example.R
 #' @export
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y", noCENScat = 0L, verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
@@ -55,9 +67,25 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   return(OData)
 }
 
-# ------------------------------------------------------------------
-# - BLOCK 2: define regression models, define a single RegressionClass & fit the propensity score for observed data, summary.g0 g0 (C,A,N)
-# ------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------
+#' Define and fit propensity score models.
+#'
+#' Defines and fits regression models for the propensity scores for censoring, treatment and monitoring.
+#'
+#' @param OData Input data object created by \code{importData} function.
+#' @param gform_CENS ...
+#' @param gform_TRT ...
+#' @param gform_MONITOR ...
+#' @param stratify_CENS ...
+#' @param stratify_TRT ...
+#' @param stratify_MONITOR ...
+#' @param params_CENS ...
+#' @param params_TRT ...
+#' @param params_MONITOR ...
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#' @return ...
+# @seealso \code{\link{stremr-package}} for the general overview of the package,
+# @example tests/examples/1_stremr_example.R
 #' @export
 fitPropensity <- function(OData,
                           gform_CENS, gform_TRT, gform_MONITOR,
@@ -128,28 +156,66 @@ fitPropensity <- function(OData,
   return(OData)
 }
 
+defineNodeGstar <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
+  # probability of P(A^*(t)=1) under counterfactual intervention A^*(t) on A(t).
+  # if intervened_NODE returns more than one rule-column, estimate for each.
+  if (!is.null(intervened_NODE)) {
+    for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
+    assert_that(length(intervened_NODE) == length(NodeNames))
+
+    # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
+    Q_regs_list <- vector(mode = "list", length = length(NodeNames))
+    names(Q_regs_list) <- c(NodeNames)
+    class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
+    for (i in seq_along(NodeNames)) {
+      reg <- RegressionClass$new(outvar = NodeNames[i], predvars = NULL, outvar.class = list("deterministic"),
+                                 subset_vars = list(NodeNames[i]),
+                                 model_contrl = list(gstar.Name = intervened_NODE[i]))
+      Q_regs_list[[i]] <- reg
+    }
+    gstar.NODE.obj <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+    gstar.NODE <- gstar.NODE.obj$fit(data = OData, predict = TRUE)$predictAeqa(n = OData$nobs)
+    subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
+    gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
+  } else {
+    gstar.NODE <- g.obs # use the actual observed exposure probability (no intervention on NODE)
+  }
+  return(gstar.NODE)
+}
+
 # ---------------------------------------------------------------------------------------
-#' Evaluate weights based gstar_TRT, gstar_MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
+#' Inverse Probability Weights.
 #'
-#' Requires specification of probabilities for regimens of interest (either as rule followers or as counterfactual indicators)
-#' The output is person-specific data with evaluated weights, wts.DT, only observation-times with non-zero weight are kept
+#' Evaluate the inverse probability weights for up to 3 intervention nodes: \code{CENS}, \code{TRT} and \code{MONITOR}.
+#' This is based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
+#' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
+#' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
+#' The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero weight are kept
 #' Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
 #' Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 #' @param OData Input data object created by \code{importData} function.
-#' @param gstar_TRT Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.
-#' @param gstar_MONITOR Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.
-#' @param rule_name Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
-#' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.
+#' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
+#' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on the monitoring node(s).
+#' @param useonly_t_TRT Use for intervening only on some subset of observation and time-specific treatment nodes.
+#' Should be a character string with a logical expression that defines the subset of intervention observations.
+#' For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being equal to zero.
+#' The expression can contain any variable name that was defined in the input dataset.
+#' Leave as \code{NULL} when intervening on all observations/time-points.
+#' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
+#' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @param stabilize Set to \code{TRUE} to return stabilized weights
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 # @example tests/examples/1_stremr_example.R
 #' @export
-getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_name = paste0(c(gstar_TRT,gstar_MONITOR), collapse = ""), stabilize = TRUE) {
-  # t_skip_TRT = NULL, t_skip_MONITOR = NULL
-
+getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""), stabilize = TRUE) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
+  if (!is.null(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
+  if (!is.null(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
+
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
@@ -159,73 +225,24 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # (2) gA.star: prob of following one treatment rule; and
   # (3) gN.star prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
+
   # indicator that the person is uncensored at each t (continuation of follow-up)
-  # gstar.C <- "gstar.C"
   gstar.CENS = as.integer(OData$eval_uncensored())
-  # OData$dat.sVar[, "gstar.C" := as.integer(OData$eval_uncensored())]
-  # OData$uncensored_idx <- OData$eval_uncensored()
-  # OData$dat.sVar[, "gstar.C" := as.integer(rowSums(.SD, na.rm = TRUE) == eval(OData$noCENScat)), .SDcols = nodes$Cnodes]
-  # OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a rule follower by default)
+  # probability of P(A^*(t)=1) under counterfactual intervention A^*(t) on A(t):
+  gstar.TRT <- defineNodeGstar(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, OData$dat.sVar[["g0.A"]])
+  # probability of monitoring P(N^*(t)=1) under counterfactual intervention N^*(t) on N(t):
+  gstar.MONITOR <- defineNodeGstar(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, OData$dat.sVar[["g0.N"]])
 
-  # probability of P(A^*(t)=1) under counterfactual intervention A^*(t) on A(t).
-  # if gstar_TRT is a function then call it, if its a list of functions, then call one at a time.
-  # if gstar_TRT returns more than one rule-column, estimate for each.
-  if (!is.null(gstar_TRT)) {
-    # gstar.A <- as.name(gstar_TRT)
-    for (gstar_TRT_col in gstar_TRT) CheckVarNameExists(OData$dat.sVar, gstar_TRT_col)
-    assert_that(length(gstar_TRT) == length(nodes$Anodes))
-
-    # From gstar_TRT we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in gstar_TRT
-    Q_regs_list <- vector(mode = "list", length = length(nodes$Anodes))
-    names(Q_regs_list) <- c(nodes$Anodes)
-    class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
-    for (i in seq_along(nodes$Anodes)) {
-      reg <- RegressionClass$new(outvar = nodes$Anodes[i], predvars = NULL, outvar.class = list("deterministic"),
-                                 subset_vars = list(nodes$Anodes[i]), model_contrl = list(gstar.Name = gstar_TRT[i]))
-      Q_regs_list[[i]] <- reg
-    }
-    modelfits.gstar_TRT <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-    gstar.TRT <- modelfits.gstar_TRT$fit(data = OData, predict = TRUE)$predictAeqa(n = OData$nobs)
-    # self$dat.sVar[, gstar.TRT = as.integer(cumprod(gstar.TRT) > 0), by = eval(self$nodes$IDnode)]
-  } else {
-    gstar.TRT <- OData$dat.sVar[["g0.A"]]
-    # gstar.A <- as.name("g0.A") # use the actual observed exposure probability (no intervention on TRT)
-  }
-  # OData$dat.sVar[, "gstar.A" := get(gstar.A)]
-
-  # probability of monitoring P(N^*(t)=1) under counterfactual intervention N^*(t) on N(t).
-  # if gstar_MONITOR is a function then call it, if its a list of functions, then call one at a time.
-  # if gstar_MONITOR returns more than one rule-column, use each.
-  if (!is.null(gstar_MONITOR)) {
-    gstar.N <- as.name(gstar_MONITOR)
-    for (gstar_MONITOR_col in gstar_MONITOR) CheckVarNameExists(OData$dat.sVar, gstar_MONITOR_col)
-    assert_that(length(gstar_MONITOR) == length(nodes$Nnodes))
-
-    # From gstar_MONITOR we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t)
-    Q_regs_list <- vector(mode = "list", length = length(nodes$Nnodes))
-    names(Q_regs_list) <- c(nodes$Nnodes)
-    class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
-    for (i in seq_along(nodes$Nnodes)) {
-      reg <- RegressionClass$new(outvar = nodes$Nnodes[i], predvars = NULL, outvar.class = list("deterministic"),
-                                 subset_vars = list(nodes$Nnodes[i]), model_contrl = list(gstar.Name = gstar_MONITOR[i]))
-      Q_regs_list[[i]] <- reg
-    }
-    modelfits.gstar.MONITOR <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-    gstar.MONITOR <- modelfits.gstar.MONITOR$fit(data = OData, predict = TRUE)$predictAeqa(n = OData$nobs)
-  } else {
-    gstar.MONITOR <- OData$dat.sVar[["g0.N"]]
-    # gstar.N <- as.name("g0.N") # use the actual observed monitoring probability (no intervention on MONITOR)
-  }
-
-  # Joint probability for all 3 node types:
-  gstar.CAN.evaluated = gstar.CENS * gstar.TRT * gstar.MONITOR
-  OData$dat.sVar[, "gstar.C" := gstar.CENS]
-  OData$dat.sVar[, "gstar.A" := gstar.TRT]
-  OData$dat.sVar[, "gstar.N" := gstar.MONITOR]
-  OData$dat.sVar[, "gstar.CAN" := gstar.CAN.evaluated]
-
+  # Save all likelihoods relating to propensity scores in separate dataset:
+  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode, "g0.A", "g0.C", "g0.N", "g0.CAN"), with = FALSE] # [wt.by.t > 0, ]
+  setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
+  wts.DT[, "gstar.C" := gstar.CENS]
+  wts.DT[, "gstar.A" := gstar.TRT]
+  wts.DT[, "gstar.N" := gstar.MONITOR]
+  # Joint likelihoood for all 3 node types:
+  wts.DT[, "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR]
   # Weights by time and cummulative weights by time:
-  OData$dat.sVar[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+  wts.DT[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
   # -------------------------------------------------------------------------------------------
   # Weight stabilization - get emp P(followed rule at time t | followed rule up to now)
@@ -236,44 +253,32 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
   # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
   # (The total sum of all subjects who WERE AT RISK at t)
   # (FASTER) Version outside data.table, then merge back results:
-  OData$dat.sVar[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
-  n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
-  OData$dat.sVar[, "rule.follower.gCAN" := NULL]
-
-  # n.follow.rule.t <- OData$dat.sVar[, list(N.follow.rule = sum(eval(gstar.A), na.rm = TRUE)), by = eval(nodes$tnode)]
+  wts.DT[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
+  n.follow.rule.t <- wts.DT[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
+  wts.DT[, "rule.follower.gCAN" := NULL]
   n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
-  # n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 0)][, cum.stab.P := cumprod(stab.P)]
-
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols = nodes$tnode)
-  OData$dat.sVar <- OData$dat.sVar[n.follow.rule.t, on = nodes$tnode]
-  setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
-  # Disabled: remove all observation-times that got zero weight:
-  # OData$dat.sVar <- OData$dat.sVar[cumm.IPAW > 0, ]
+  wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
+  setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
 
   # multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since it cancels):
-  if (stabilize) OData$dat.sVar[, "cumm.IPAW" := cum.stab.P * cumm.IPAW]
-  Ynode <- nodes$Ynode # Get the outcome var:
-  # Multiply the shifted outcomes by the current (cummulative) weight cumm.IPAW:
-  OData$dat.sVar[, "Wt.OUTCOME" := get(Ynode)*cumm.IPAW]
+  if (stabilize) wts.DT[, "cumm.IPAW" := cum.stab.P * cumm.IPAW]
+
+  # Multiply the outcome by the current (cummulative) weight cumm.IPAW:
+  wts.DT[, "Wt.OUTCOME" := get(nodes$Ynode)*cumm.IPAW]
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
   # row_idx_outcome <- OData$dat.sVar[, .I[get(Ynode) %in% 1L], by = eval(ID)][["V1"]]
 
-  # Make a copy of the data.table only with relevant columns and keeping only the observations with non-zero weights
-  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", Ynode, "Wt.OUTCOME"), with = FALSE] # [wt.by.t > 0, ]
+  # Make a copy of the data.table only with relevant columns
+  # wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", Ynode, "Wt.OUTCOME"), with = FALSE]
+  # to remove all obs that got zero weights (DISABLED):
+  # wts.DT <- wts.DT[cumm.IPAW > 0, ]
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
-  # wts.DT[, "rule.name.TRT" := eval(as.character(gstar.A))]
-  # wts.DT[, "rule.name.MONITOR" := eval(as.character(gstar.N))]
-
-  # -------------------------------------------------------------------------------------------
-  # NEED TO CLEAN UP OData$dat.sVar TO MAKE SURE ITS IN EXACTLY THE SAME STATE WHEN THIS FUNCTION WAS CALLED
-  # -------------------------------------------------------------------------------------------
-  # "g0.A", "g0.C", "g0.N", "g0.CAN",
-  OData$dat.sVar[, c("gstar.C", "gstar.A", "gstar.N", "gstar.CAN", "Wt.OUTCOME", "cumm.IPAW", "wt.by.t", "cum.stab.P", "N.follow.rule") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
 
   attributes(wts.DT)[['getIPWeights_fun_call']] <- getIPWeights_fun_call
-  attributes(wts.DT)[['gstar_TRT']] <- gstar_TRT
-  attributes(wts.DT)[['gstar_MONITOR']] <- gstar_MONITOR
+  attributes(wts.DT)[['intervened_TRT']] <- intervened_TRT
+  attributes(wts.DT)[['intervened_MONITOR']] <- intervened_MONITOR
   attributes(wts.DT)[['stabilize']] <- stabilize
   return(wts.DT)
 }
@@ -417,7 +422,7 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
 
   if (max(t_breaks) < maxt) t_breaks <- sort(c(t_breaks, maxt)) # pad on the right (if needed with maxt):
 
-  # 3. Create the dummies I(d == gstar_TRT) for the logistic MSM for d-specific hazard
+  # 3. Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
   for( dummy.j in rules_TRT ){
     wts_data[, (dummy.j) := as.integer(rule.name %in% dummy.j)]
@@ -447,7 +452,7 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
     all.t.dummies <- c(all.t.dummies, dummy.j)
   }
 
-  # 5. Create interaction dummies I(t in interval.j & d == gstar_TRT)
+  # 5. Create interaction dummies I(t in interval.j & d == intervened_TRT)
   for (d.dummy in all.d.dummies) {
     for (t.dummy in all.t.dummies) {
       if (verbose)
