@@ -298,10 +298,3 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     subsetH2Oframe = NULL
   )
 )
-
-
-
-
-
-
-

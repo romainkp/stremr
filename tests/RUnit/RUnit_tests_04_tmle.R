@@ -67,7 +67,8 @@ OData <- importData(O.dataDT, ID = "ID", t = "t", covars = c("highA1c", "lastNat
 # --------------------------------
 # Fitting the propensity scores for observed variables (A,C,N)
 # --------------------------------
-gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
+# + N.tminus1
+gform_TRT <- "TI ~ CVD + highA1c"
 stratify_TRT <- list(
   TI=c("t == 0L",                                            # MODEL TI AT t=0
        "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED

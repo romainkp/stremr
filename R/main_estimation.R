@@ -129,15 +129,25 @@ fitPropensity <- function(OData,
 }
 
 # ---------------------------------------------------------------------------------------
-# - BLOCK 3: evaluate weights based gstar_TRT, gstar_MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
-# ---------------------------------------------------------------------------------------
-# Requires specification of probabilities for regimens of interest (either as rule followers or as counterfactual indicators)
-# The output is person-specific data with evaluated weights, wts.DT, only observation-times with non-zero weight are kept
-# Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
-# Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
-# ---------------------------------------------------------------------------------------
+#' Evaluate weights based gstar_TRT, gstar_MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
+#'
+#' Requires specification of probabilities for regimens of interest (either as rule followers or as counterfactual indicators)
+#' The output is person-specific data with evaluated weights, wts.DT, only observation-times with non-zero weight are kept
+#' Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
+#' Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
+#' @param OData Input data object created by \code{importData} function.
+#' @param gstar_TRT Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.
+#' @param gstar_MONITOR Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.
+#' @param rule_name Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
+#' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.
+#' @param stabilize Set to \code{TRUE} to return stabilized weights
+#' @return ...
+# @seealso \code{\link{stremr-package}} for the general overview of the package,
+# @example tests/examples/1_stremr_example.R
 #' @export
 getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_name = paste0(c(gstar_TRT,gstar_MONITOR), collapse = ""), stabilize = TRUE) {
+  # t_skip_TRT = NULL, t_skip_MONITOR = NULL
+
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
@@ -165,9 +175,10 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
     for (gstar_TRT_col in gstar_TRT) CheckVarNameExists(OData$dat.sVar, gstar_TRT_col)
     assert_that(length(gstar_TRT) == length(nodes$Anodes))
 
-    # From gstar_TRT we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t)
+    # From gstar_TRT we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in gstar_TRT
     Q_regs_list <- vector(mode = "list", length = length(nodes$Anodes))
-    names(Q_regs_list) <- c(nodes$Anodes); class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
+    names(Q_regs_list) <- c(nodes$Anodes)
+    class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
     for (i in seq_along(nodes$Anodes)) {
       reg <- RegressionClass$new(outvar = nodes$Anodes[i], predvars = NULL, outvar.class = list("deterministic"),
                                  subset_vars = list(nodes$Anodes[i]), model_contrl = list(gstar.Name = gstar_TRT[i]))
@@ -192,7 +203,8 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
 
     # From gstar_MONITOR we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t)
     Q_regs_list <- vector(mode = "list", length = length(nodes$Nnodes))
-    names(Q_regs_list) <- c(nodes$Nnodes); class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
+    names(Q_regs_list) <- c(nodes$Nnodes)
+    class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
     for (i in seq_along(nodes$Nnodes)) {
       reg <- RegressionClass$new(outvar = nodes$Nnodes[i], predvars = NULL, outvar.class = list("deterministic"),
                                  subset_vars = list(nodes$Nnodes[i]), model_contrl = list(gstar.Name = gstar_MONITOR[i]))
@@ -267,10 +279,12 @@ getIPWeights <- function(OData, gstar_TRT = NULL, gstar_MONITOR = NULL, rule_nam
 }
 
 # ---------------------------------------------------------------------------------------
-# - BLOCK 4A: Non-parametric (saturated) MSM for survival, with weight stabilization,
-# input either single weights dataset or a list of weights datasets.
-# Each dataset containing weights non-zero weights for single regimen
-# ---------------------------------------------------------------------------------------
+#' Non-parametric (saturated) MSM for survival based on previously evaluated IP weights.
+#' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
+#' right-censoring.
+#' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
+#' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.
+#' @return A data.table with hazard and survival function estimates by time. Also include the unadjusted Kaplan-Maier estimates.
 #' @export
 survNPMSM <- function(wts_data, OData) {
   nodes <- OData$nodes

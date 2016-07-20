@@ -8,13 +8,18 @@ glmfit <- function(fit, ...) UseMethod("glmfit")
 # glmfit.glmS3 <- function(BinDatObject, ...) {
 glmfit.glm <- function(fit, Xmat, Yvals, ...) {
   if (gvars$verbose) print("calling glm.fit...")
-  ctrl <- glm.control(trace = FALSE)
-  SuppressGivenWarnings({
-    model.fit <- stats::glm.fit(x = Xmat,
-                                y = Yvals,
-                                family = binomial() ,
-                                control = ctrl)
-  }, GetWarningsToSuppress())
+  if (nrow(Xmat) == 0L) {
+    model.fit <- list()
+    model.fit$coef = rep.int(NA_real_, ncol(Xmat))
+  } else {
+    ctrl <- glm.control(trace = FALSE)
+    SuppressGivenWarnings({
+      model.fit <- stats::glm.fit(x = Xmat,
+                                  y = Yvals,
+                                  family = binomial() ,
+                                  control = ctrl)
+    }, GetWarningsToSuppress())
+  }
 
   fit$coef <- model.fit$coef;
   fit$fitfunname <- "glm";
@@ -33,17 +38,22 @@ glmfit.glm <- function(fit, Xmat, Yvals, ...) {
 # S3 method for speedglm binomial family fit, takes BinDat data object:
 glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
   if (gvars$verbose) print("calling speedglm.wfit...")
-  # method = c('eigen','Cholesky','qr')
-  # row.chunk=NULL
-  # t_reg <- system.time(
-  model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
-                                           y = Yvals,
-                                           method = 'Cholesky',
-                                           family = binomial(),
-                                           trace = FALSE),
-                      silent = TRUE)
-  # print(t_reg)
-  # model.fit
+  if (nrow(Xmat) == 0L) {
+    model.fit <- list()
+    model.fit$coef = rep.int(NA_real_, ncol(Xmat))
+  } else {
+    # method = c('eigen','Cholesky','qr')
+    # row.chunk=NULL
+    # t_reg <- system.time(
+    model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
+                                             y = Yvals,
+                                             method = 'Cholesky',
+                                             family = binomial(),
+                                             trace = FALSE),
+                    silent = TRUE)
+    # print(t_reg)
+    # model.fit
+  }
 
   if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
     message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
@@ -152,9 +162,9 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
     fit = function(data, outvar, predvars, subset_idx, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
       # Xmat has 0 rows: return NA's and avoid throwing exception:
-      if (sum(subset_idx) == 0L) {
-        self$model.fit$coef = rep.int(NA_real_, ncol(private$Xmat))
-      } else {
+      # if (sum(subset_idx) == 0L) {
+      #   self$model.fit$coef = rep.int(NA_real_, ncol(private$Xmat))
+      # } else {
         self$model.fit <- glmfit(self$model.fit,
                                  Xmat = private$Xmat,
                                  Yvals = private$Yvals,
@@ -163,7 +173,7 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
                                  predvars = predvars,
                                  subset_idx = subset_idx,
                                  model_contrl = self$model_contrl, ...)
-      }
+      # }
       self$model.fit$params <- self$params
       return(self$model.fit)
     },
