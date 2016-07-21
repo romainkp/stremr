@@ -78,9 +78,9 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables = NULL,
   }
 
   if (!missing(MSM)) {
-    # if ()
     # handle separately if MSM is a list of many MSMs -> will need to do the plotting for each MSM in the list
     SurvByRegimen <- MSM$St
+    wts_data <- MSM.IPAW$wts_data
   }
 
   if (!missing(MSMlist)) {

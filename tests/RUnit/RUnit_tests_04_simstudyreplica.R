@@ -25,7 +25,7 @@ notrun.save.example.data <- function() {
   # -----------------------------------------------------------
   # SIMULATION PARAMS:
   # -----------------------------------------------------------
-  Nsize <- 1000000
+  Nsize <- 500000
   # Nsize <- 10000
   prob.t0 <- prob.tplus <- 0.5
 
@@ -124,8 +124,8 @@ notrun.save.example.data <- function() {
   # --------------------------------
   # save data as csv
   # --------------------------------
-  obsDTg05_1mil <- OdatDT
-  data.table::fwrite(obsDTg05_1mil, "./obsDTg05_1mil.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+  obsDTg05_500K <- OdatDT
+  data.table::fwrite(obsDTg05_500K, "./obsDTg05_500K.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
 
   # --------------------------------
   # save as compressed R file
@@ -141,13 +141,12 @@ notrun.save.example.data <- function() {
 options(width = 100)
 `%+%` <- function(a, b) paste0(a, b)
 require("data.table")
-obsDTg05_1mil <- data.table::fread(input = "./obsDTg05_1mil.csv", header = TRUE, na.strings = "NA_h2o")
-# data(obsDTg05_1mil)
-Odat_DT <- obsDTg05_1mil
+obsDTg05_500K <- data.table::fread(input = "./obsDTg05_500K.csv", header = TRUE, na.strings = "NA_h2o")
+Odat_DT <- obsDTg05_500K
 setkeyv(Odat_DT, cols = c("ID", "t"))
 head(Odat_DT)
 nrow(Odat_DT)
-# [1] 13945095
+# [1] 13,945,095
 
 # ---------------------------------------------------------------------------
 # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
@@ -175,11 +174,12 @@ h2o::h2o.init(nthreads = -1)
 # h2o::h2o.shutdown(prompt = FALSE)
 
 OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+# to see the input data.table:
+# OData$dat.sVar
 
-# --------------------------------
+# ------------------------------------------------------------------
 # Fit propensity scores for Treatment, Censoring & Monitoring
-# --------------------------------
-
+# ------------------------------------------------------------------
 gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
 stratify_TRT <- list(
   TI=c("t == 0L",                                            # MODEL TI AT t=0
@@ -188,8 +188,9 @@ stratify_TRT <- list(
        "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
       ))
 
-gform_CENS <- c("C ~ highA1c")
-stratify_CENS <- list(C=c("t < 16", "t == 16"))
+gform_CENS <- c("C ~ highA1c + t")
+# stratify_CENS <- list(C=c("t < 16", "t == 16"))
+# stratify_CENS <- list()
 
 gform_MONITOR <- "N ~ 1"
 
@@ -197,55 +198,58 @@ gform_MONITOR <- "N ~ 1"
 # gform_TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
 #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
 
-# ----------------------------------------------------------------
-# TESTING IPW and IPW-MSM. Fitting with speedglm, h2oglm, RF and GBM
-# ----------------------------------------------------------------
-params_CENS = list()
-params_TRT = list()
-params_MONITOR = list()
+OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                        stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
-OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
-                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
+wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+survNPMSM(wts.St.dlow, OData)
 
+wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+survNPMSM(wts.St.dhigh, OData)
+
+
+
+# ------------------------------------------------------------------
+# Piping the workflow
+# ------------------------------------------------------------------
 require("magrittr")
-# OData$dat.sVar
-St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
            survNPMSM(OData)  %$%
            IPW_estimates
 St.dlow
 
-St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly") %>%
+St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
             survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
 
-wts.St.dlow <- getIPWeights(OData, gstar_TRT = "TI.gstar.dlow")
-# wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow")
-wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "TI.gstar.dhigh")
-# wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh")
-# wts.St.dlow <- getIPWeights(OData, gstar_TRT = "dlow", gstar_MONITOR = "gstar1.N.Pois3.yearly")
-# wts.St.dhigh <- getIPWeights(OData, gstar_TRT = "dhigh", gstar_MONITOR = "gstar1.N.Pois3.yearly")
-wts.all.list <- list(dlow = wts.St.dlow, dhigh = wts.St.dhigh)
+# ------------------------------------------------------------------
+# Running IPW-adjusted MSM for the hazard
+# ------------------------------------------------------------------
+# wts.all.list <-
 wts.all <- rbindlist(wts.all.list)
-
-tjmin <- c(1:8,9,13)-1; tjmax <- c(1:8,12,16)-1
+# tjmin <- c(1:8,9,13)-1; tjmax <-
 # MSM for hazard with regular weights:
-MSM.IPAW <- survMSM(OData, wts_data = wts.all, t_breaks = tjmax,
-                    # tjmin = tjmin, tjmax = tjmax,
-                    use_weights = TRUE, est_name = "IPAW", getSEs = TRUE)
-report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_report"
+MSM.IPAW <- survMSM(OData, wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
+                    t_breaks = c(1:8,12,16)-1, est_name = "IPAW", getSEs = FALSE)
+MSM.IPAW
 
-# print everything:
-# make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
-#                 RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
-#                 WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-#                 file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# ------------------------------------------------------------------
+# Make a report:
+# ------------------------------------------------------------------
+report.path <- "/home/ubuntu/stremr_example"
+make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = FALSE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
-# make_report_rmd(OData, MSM = MSM.IPAW,
-#                 RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
-#                 WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-#                 file.name = model%+%"_sim.data", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# ------------------------------------------------------------------
+# Make a report w/ follow-up tables:
+# ------------------------------------------------------------------
+make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
 # # omit extra h2o model output stuff (only coefficients):
 # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
@@ -256,3 +260,13 @@ report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_test_r
 
 # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, format = "word",file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+
+
+
+
+
+
+
+
+
+

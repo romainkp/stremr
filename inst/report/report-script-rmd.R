@@ -99,8 +99,8 @@ if (AddFUPtables) {
   follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name"))]
   data.table::setnames(follow_up_rule_ID, c(OData$nodes$IDnode, "rule.name", "max.t"))
   data.table::setkeyv(follow_up_rule_ID, cols = OData$nodes$IDnode)
-  # MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
-  rules <- unique(wts.all[["rule.name"]])
+  # MONITOR.rules <- unique(wts_data[["rule.name.MONITOR"]])
+  rules <- unique(wts_data[["rule.name"]])
   # for (M.rule in MONITOR.rules) {
     for (T.rule in rules) {
       one_ruleID <- follow_up_rule_ID[(rule.name %in% eval(T.rule)), max.t]
@@ -115,8 +115,8 @@ if (AddFUPtables) {
   # t.name.col <- OData$nodes$tnode
   # follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(ID, rule.name, rule.name.MONITOR)]
   # setkeyv(follow_up_rule_ID, cols = "ID")
-  # MONITOR.rules <- unique(wts.all[["rule.name.MONITOR"]])
-  # rules <- unique(wts.all[["rule.name"]])
+  # MONITOR.rules <- unique(wts_data[["rule.name.MONITOR"]])
+  # rules <- unique(wts_data[["rule.name"]])
   # for (M.rule in MONITOR.rules) {
     for (T.rule in rules) {
       one_ruleID <- follow_up_rule_ID[(rule.name %in% eval(T.rule)), max.t]

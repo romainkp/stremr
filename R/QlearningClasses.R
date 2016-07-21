@@ -221,7 +221,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # 2. When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
       # ...
 
-
       init_Q_all_obs <- private$probA1[self$subset_idx]
 
       # ------------------------------------------------------------------------------------------------------------------------
@@ -239,10 +238,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # ------------------------------------------------------------------------------------------------------------------------
       # *** NEED TO ADD: do MC sampling to perform the same integration for stochastic g^*
       # ------------------------------------------------------------------------------------------------------------------------
+      # print("initial mean(Q.kplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
 
 
-
-      print("initial mean(Q.kplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
       # **********************************************************************
       # TARGETING STEP OF THE TMLE
       # the TMLE update is performed only among obs who were involved in fitting of the initial Q above (self$idx_used_to_fit_initQ)
