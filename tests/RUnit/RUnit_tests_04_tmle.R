@@ -14,45 +14,49 @@ data(O.data.simstudy.g05)
 O.data <- O.data.simstudy.g05
 head(O.data)
 
+# --------------------------------
+# Test data with 1mil obs:
+# --------------------------------
+data(Odatg05_1mil)
 ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y"; I <- "highA1c";
 
-# --------------------------------
-# Define counterfactual treatment assignment under two rules (dlow & dhigh)
-# --------------------------------
-O.dataDT <- data.table(O.data, key = c(ID, t))
-# Counterfactual TRT assignment for rule dlow (equivalent to always treated):
-rule_name1 <- "dlow"
-O.dataDT[,"TI.gstar." %+% rule_name1 := 1L]
-# Counterfactual TRT assignment for dynamic rule dhigh -> start TRT only when I=1 (highA1c = 1)
-rule_name2 <- "dhigh"
-O.dataDT_TIdhigh <- stremr::defineIntervedTRT(O.dataDT, theta = 1, ID = ID,
-                                          t = t, I = I, CENS = CENS, TRT = TRT,
-                                          MONITOR = MONITOR,
-                                          tsinceNis1 = "lastNat1",
-                                          new.TRT.names = "TI.gstar." %+% rule_name2)
-O.dataDT <- merge(O.dataDT, O.dataDT_TIdhigh, by=c(ID, t))
+# # --------------------------------
+# # Define counterfactual treatment assignment under two rules (dlow & dhigh)
+# # --------------------------------
+# Odat_DT <- data.table(Odatg05_1mil, key = c(ID, t))
+# # Counterfactual TRT assignment for rule dlow (equivalent to always treated):
+# rule_name1 <- "dlow"
+# Odat_DT[,"TI.gstar." %+% rule_name1 := 1L]
+# # Counterfactual TRT assignment for dynamic rule dhigh -> start TRT only when I=1 (highA1c = 1)
+# rule_name2 <- "dhigh"
+# Odat_DT_TIdhigh <- stremr::defineIntervedTRT(Odat_DT, theta = 1, ID = ID,
+#                                           t = t, I = I, CENS = CENS, TRT = TRT,
+#                                           MONITOR = MONITOR,
+#                                           tsinceNis1 = "lastNat1",
+#                                           new.TRT.names = "TI.gstar." %+% rule_name2)
+# Odat_DT <- merge(Odat_DT, Odat_DT_TIdhigh, by=c(ID, t))
+# # -------------------------------------------------------------------------------------------
+# # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
+# # -------------------------------------------------------------------------------------------
+# OUTCOME <- "Y"
+# shifted.OUTCOME <- OUTCOME%+%".tplus1"
+# Odat_DT[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
+# Odat_DT <- Odat_DT[!get(OUTCOME)%in%1,]
 
 # ---------------------------------------------------------------------------
 # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
 # Might expand this in the future to allow defining arbitrary summaries
 # ---------------------------------------------------------------------------
+Odat_DT <- obsDTg05_1mil
+
 lagnodes <- c("C", "TI", "N")
 newVarnames <- lagnodes %+% ".tminus1"
-O.dataDT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
-
+Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
 # indicator that the person has never been on treatment up to current t
-TIcovarname <- "barTIm1eq0"
-O.dataDT[, (TIcovarname) := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
+Odat_DT[, "barTIm1eq0" := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
+Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 
-# -------------------------------------------------------------------------------------------
-# Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
-# -------------------------------------------------------------------------------------------
-OUTCOME <- "Y"
-shifted.OUTCOME <- OUTCOME%+%".tplus1"
-O.dataDT[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
-O.dataDT <- O.dataDT[!get(OUTCOME)%in%1,]
-
-O.dataDT[1:100, ]
+Odat_DT[1:100, ]
 
 # --------------------------------
 # Define global options for stremr (which R packages to use for model fitting)
@@ -62,7 +66,7 @@ options(stremr.verbose = TRUE)
 stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 
 # import data into stremr object:
-OData <- importData(O.dataDT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 
 # --------------------------------
 # Fitting the propensity scores for observed variables (A,C,N)
@@ -158,10 +162,10 @@ gcomp_est; tmle_est
 # ------------------------------------------------------------------------
 gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
 stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
-O.dataDT_test <- O.dataDT
-O.dataDT_test[, "C1" := C]
-O.dataDT_test[, "C2" := C]
-OData <- importData(O.dataDT_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+Odat_DT_test <- Odat_DT
+Odat_DT_test[, "C1" := C]
+Odat_DT_test[, "C2" := C]
+OData <- importData(Odat_DT_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
 OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
                               stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                               params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
