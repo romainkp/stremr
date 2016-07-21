@@ -117,8 +117,9 @@ notrun.save.example.data <- function() {
   # -----------------------------------------------------------
   # SIMULATION PARAMS:
   # -----------------------------------------------------------
+  Nsize <- 1000000
   # Nsize <- 200000
-  Nsize <- 100000
+  # Nsize <- 100000
   # Nsize <- 10000
   # set to TRUE to only run scenarios dealing with bias for g.N w and w/out past N(t), no intervention on N(t)
   # SimParams <- Sim.and.Est.params
@@ -152,18 +153,23 @@ notrun.save.example.data <- function() {
   }
   DAGrm <- set.DAG(DAGrm)
 
-  O.data.simstudy <- sim(DAG = DAGrm, n = Nsize, wide = FALSE, rndseed = 55466)
+  Odat <- sim(DAG = DAGrm, n = Nsize, wide = FALSE, rndseed = 55466)
   # O.data.simstudy <- sim(DAG = DAGrm, n = Nsize, wide = TRUE, LTCF = "Y", rndseed = 55466)
   # head(O.data.simstudy)
   # colMeans(O.data.simstudy[,"Y_"%+%c(1:16)])
-
-  O.data.simstudy[O.data.simstudy[,"t"]%in%16,"lastNat1"] <- NA
-  O.data.simstudy.g05 <- O.data.simstudy
+  Odat[Odat[,"t"]%in%16,"lastNat1"] <- NA
+  # Odatg05 <- Odat
+  Odatg05_1mil <- Odat
+  head(Odatg05_1mil)
+  nrow(Odatg05_1mil)
   # O.data.simstudy.g05 <- O.data.simstudy[,!names(O.data.simstudy)%in%c("highA1c.UN", "timelowA1c.UN")]
 
-  save(O.data.simstudy.g05, compress = TRUE, file = "O.data.simstudy.g05.rda", compression_level = 9)
+  save(Odatg05_1mil, compress = TRUE, file = "Odatg05_1mil.rda", compression_level = 9)
+  save(Odatg05, compress = TRUE, file = "Odatg05.rda", compression_level = 9)
   library("tools")
-  resaveRdaFiles("./O.data.simstudy.g05.rda", compress = "bzip2")
+  resaveRdaFiles("./Odatg05_1mil.rda", compress = "bzip2")
+  resaveRdaFiles("./Odatg05.rda", compress = "bzip2")
+
 }
 
 data(O.data.simstudy.g05)
