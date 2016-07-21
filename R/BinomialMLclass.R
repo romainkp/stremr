@@ -227,8 +227,6 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     setdataH2O = function(data, subset_idx, outvar, predvars, classify = TRUE, ...) {
       rows_subset <- which(subset_idx)
 
-
-
       # ---------------------------------------------------
       # ***!!!!NEED TO ALLOW USING BOTH VERSIONS BELOW!!!!***
       # ---------------------------------------------------

@@ -68,7 +68,6 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
   #   QY.star <- prev_Q.kplus1
   #   if (!is.na(update.Qstar.coef)) QY.star <- plogis(off + update.Qstar.coef)
   # }
-
   #************************************************
   # (DISABLED) g_IPTW estimator (based on full likelihood factorization, prod(g^*)/prod(g_N):
   #************************************************
@@ -137,17 +136,93 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # PREDICTION STEP OF Q-LEARNING
       # Q prediction for everyone (including those who just got censored and those who just stopped following the rule)
       # **********************************************************************
-      # Set current A's to the counterfactual exposures in the data (for predicting Q):
       interventionNodes.g0 <- data$interventionNodes.g0
       interventionNodes.gstar <- data$interventionNodes.gstar
-      data$swapNodes(current = interventionNodes.g0, target = interventionNodes.gstar)
 
-      # Add to design matrix all obs that were also censored at t and (possibly) those who just stopped following the rule:
+      # Determine which nodes are actually stochastic and need to be summed out
+      stoch.gstar <- c("TI.gstar.dhigh", "g.star.N")
+      stoch_nodes_idx <- which(interventionNodes.gstar %in% stoch.gstar)
+
+      # Add to the design matrix all obs that were also censored at t and (possibly) those who just stopped following the rule:
       self$subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
       print("performing initial Q-prediction for N = " %+% sum(self$subset_idx))
 
-      # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
-      probAeqa <- self$predictAeqa(data, subset_idx = self$subset_idx)
+      # browser()
+      # ------------------------------------------------------------------------------------------------------------------------
+      # Set current A's and N's to the counterfactual exposures in the data (for predicting Q):
+      # ------------------------------------------------------------------------------------------------------------------------
+      data$swapNodes(current = interventionNodes.g0, target = interventionNodes.gstar)
+
+      # ------------------------------------------------------------------------------------------------------------------------
+      # For all stochastic nodes, need to integrate out w.r.t. the support of each node
+      # ------------------------------------------------------------------------------------------------------------------------
+      # Dimensionality across all stochastic nodes:
+      bit_list <- rep.int(list(c(0,1)), length(stoch.gstar))
+
+      # 1. Create a grid matrix, a single loop over the support of all nodes is a loop over the rows on the matrix
+      all_vals_mat <- do.call(expand.grid, bit_list)
+      d_all <- nrow(all_vals_mat)
+      colnames(all_vals_mat) <- stoch.gstar
+      # 2. Save the probability of each stochastic intervention node
+      stoch.probs <- data$dat.sVar[self$subset_idx, interventionNodes.g0[stoch_nodes_idx], with = FALSE]
+      colnames(stoch.probs) <- stoch.gstar
+
+      probA1 <- self$predict(data, subset_idx = self$subset_idx)
+      print("Initial mean prediction:")
+      print(mean(probA1[self$subset_idx]))
+      # [1] 3.543983e-11
+
+      # 3. Loop over the grid mat
+      # don't need to evaluate for everyone, just those obs that were used in prediction:
+      stoch.probA1 <- 0
+      for (i in 1:nrow(all_vals_mat)) {
+        # browser()
+
+        # 4. Assign the values in all_vals_mat[i,] to stochastic nodes in newdata
+        # modify data to assign a single value from the support of each stochastic node TO all observations
+        # WARNING: THIS STEP IS IRREVERSIBLE, ERASES ALL CURRENT VALUES IN interventionNodes.g0[stoch_nodes_idx]:
+        data$dat.sVar[self$subset_idx, interventionNodes.g0[stoch_nodes_idx] := all_vals_mat[i,], with = FALSE]
+        # data$dat.sVar[self$subset_idx,]
+
+        # 5. Predict using newdata, obtain probAeqa_stoch
+        # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
+        # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
+        probA1 <- self$predict(data, subset_idx = self$subset_idx)
+
+        print("Single predicted mean for ");
+        print(all_vals_mat[i,]);
+        print(mean(probA1[self$subset_idx]))
+        # [1] 3.543983e-11
+
+        # 6. Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cummulative product) based on the probabilities from original column
+        jointProb <- rep.int(1L, nrow(stoch.probs))
+        for (node_idx in stoch_nodes_idx) {
+          stoch.node.nm <- colnames(all_vals_mat[i,])[node_idx]
+          IndNodeVal <- all_vals_mat[i, stoch.node.nm]
+          stoch.prob <- stoch.probs[[stoch.node.nm]]
+          stoch.prob <- (stoch.prob)^IndNodeVal * (1L-stoch.prob)^(1-IndNodeVal)
+          jointProb <- jointProb * stoch.prob
+
+          # put the stochastic probabilities back into data:
+          data$dat.sVar[self$subset_idx, interventionNodes.g0[node_idx] := stoch.probs[[stoch.node.nm]], with = FALSE]
+        }
+
+        # 7. Weight the current prediction by its probability
+        probA1[self$subset_idx] <- probA1[self$subset_idx] * jointProb
+
+        # 8. Sum and keep looping
+        stoch.probA1 <- stoch.probA1 + probA1[self$subset_idx]
+      }
+      stoch.probA1 <- stoch.probA1
+      print("summed stoch.probA1 over support of stochastic nodes:"); print(mean(stoch.probA1))
+      private$probA1[self$subset_idx] <- stoch.probA1
+
+
+      # 2. When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
+      # ...
+
+
+      init_Q_all_obs <- private$probA1[self$subset_idx]
 
       # ------------------------------------------------------------------------------------------------------------------------
       # Alternative to above:
@@ -165,8 +240,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # *** NEED TO ADD: do MC sampling to perform the same integration for stochastic g^*
       # ------------------------------------------------------------------------------------------------------------------------
 
-      # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
-      init_Q_all_obs <- private$probA1[self$subset_idx]
+
+
       print("initial mean(Q.kplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
       # **********************************************************************
       # TARGETING STEP OF THE TMLE
@@ -176,7 +251,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Predicted outcome from the previous Seq-GCOMP/TMLE iteration, was saved in the current row t
         # If the person just failed at t this is always 1 (deterministic)
         prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
-        # TMLE offset based will be based on the initial prediction of Q above log(x/[1-x]):
+        # TMLE offset will be based on the initial prediction of Q only (log(x/[1-x])):
         init_Q_fitted_only <- private$probA1[self$idx_used_to_fit_initQ]
         # tmle update will error out if some predictions are exactly 0:
         init_Q_fitted_only[init_Q_fitted_only < 10^(-5)] <- 10^(-5)
@@ -212,7 +287,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         rowidx_t.minus1 <- rowidx_t - 1
         data$dat.sVar[rowidx_t.minus1, "Q.kplus1" := init_Q_all_obs]
         private$probA1 <- NULL
-        private$probAeqa <- NULL
+      } else {
+        # save prediction P(Q.kplus=1) only for a subset in self$getsubset that was used for prediction
+        private$probAeqa <- init_Q_all_obs
+        private$probA1 <- NULL
       }
 
       # Reset back the observed exposure to A[t] (swap back by renaming columns)
@@ -242,28 +320,20 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           self$subset_idx <- subset_idx
         }
         private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-        return(private$probA1)
+        assert_that(!any(is.na(private$probA1[self$getsubset]))) # check that predictions P(A=1 | dmat) exist for all obs.
+        invisible(return(private$probA1))
       }
     },
 
-    # Predict P(Q=1)
-    # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    predictAeqa = function(newdata, subset_idx, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+    # Return the presaved prediction P(Q.kplus=1) only for a subset based on self$getsubset and private$probA1 (which has all n predictions)
+    predictAeqa = function(newdata, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
       if (missing(newdata) && !is.null(private$probAeqa)) {
         return(private$probAeqa)
+      } else {
+        stop("$predictAeqa should never be called for making actual predictions")
       }
-      if (is.null(self$getsubset)) stop("cannot make predictions after self$subset_idx is erased (set to NULL)")
-      self$predict(newdata = newdata, subset_idx = subset_idx)
-      # probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-      probA1 <- private$probA1[self$getsubset]
-      assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
-      # probAeqa[self$getsubset] <- probA1
-      private$probAeqa <- probA1
-      # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
-      # self$wipe.alldat
-      # **********************************************************************
-      return(probA1)
+      # if (is.null(self$getsubset)) stop("cannot make predictions after self$subset_idx is erased (set to NULL)")
+      # invisible(return(private$probAeqa))
     },
 
     define.subset.idx = function(data, subset_vars, subset_exprs) {

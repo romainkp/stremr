@@ -157,12 +157,11 @@ fitPropensity <- function(OData,
 }
 
 defineNodeGstar <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
-  # probability of P(A^*(t)=1) under counterfactual intervention A^*(t) on A(t).
+  # probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
   # if intervened_NODE returns more than one rule-column, estimate for each.
   if (!is.null(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
-
     # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
     Q_regs_list <- vector(mode = "list", length = length(NodeNames))
     names(Q_regs_list) <- c(NodeNames)
@@ -210,12 +209,12 @@ defineNodeGstar <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 # @example tests/examples/1_stremr_example.R
 #' @export
-getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""), stabilize = TRUE) {
+getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
+                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""), stabilize = TRUE) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
   if (!is.null(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
   if (!is.null(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
-
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
@@ -225,14 +224,12 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   # (2) gA.star: prob of following one treatment rule; and
   # (3) gN.star prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
-
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
-  # probability of P(A^*(t)=1) under counterfactual intervention A^*(t) on A(t):
+  # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
   gstar.TRT <- defineNodeGstar(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, OData$dat.sVar[["g0.A"]])
-  # probability of monitoring P(N^*(t)=1) under counterfactual intervention N^*(t) on N(t):
+  # Likelihood for monitoring P(N^*(t)=N(t)) under counterfactual intervention N^*(t) on N(t):
   gstar.MONITOR <- defineNodeGstar(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, OData$dat.sVar[["g0.N"]])
-
   # Save all likelihoods relating to propensity scores in separate dataset:
   wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode, "g0.A", "g0.C", "g0.N", "g0.CAN"), with = FALSE] # [wt.by.t > 0, ]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
@@ -262,16 +259,16 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
 
-  # multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since it cancels):
+  # Multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since it cancels):
   if (stabilize) wts.DT[, "cumm.IPAW" := cum.stab.P * cumm.IPAW]
 
   # Multiply the outcome by the current (cummulative) weight cumm.IPAW:
   wts.DT[, "Wt.OUTCOME" := get(nodes$Ynode)*cumm.IPAW]
+
   # Row indices for all subjects at t who had the event at t+1 (NOT USING)
   # row_idx_outcome <- OData$dat.sVar[, .I[get(Ynode) %in% 1L], by = eval(ID)][["V1"]]
 
   # Make a copy of the data.table only with relevant columns
-  # wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, "wt.by.t", "cumm.IPAW", "cum.stab.P", Ynode, "Wt.OUTCOME"), with = FALSE]
   # to remove all obs that got zero weights (DISABLED):
   # wts.DT <- wts.DT[cumm.IPAW > 0, ]
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
@@ -343,7 +340,7 @@ survNPMSM <- function(wts_data, OData) {
 #' For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ), I(0 < t <= 1) and I(1 < t <= max(t)).
 #' On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
 #' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable for every unique period in the observed data.
-
+#'
 #' @section MSM for the hazard:
 #' **********************************************************************
 #'

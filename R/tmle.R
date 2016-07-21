@@ -92,17 +92,54 @@
 #     Fitting:
 #        Use the predictions in Q.kplus1[t-1] as new outcomes and repeat until reached minimum t.
 # ------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------
+#' TMLE wrapper for \code{fitSeqGcomp}
+#'
+#' Calls \code{fitSeqGcomp} with argument \code{TMLE = TRUE}.
+#' @return ...
 #' @export
 fitTMLE <- function(...) {
   fitSeqGcomp(TMLE = TRUE, ...)
 }
 
+# ---------------------------------------------------------------------------------------
+#' Fit TMLE or sequential GCOMP for survival
+#'
+#' Evaluate the inverse probability weights for up to 3 intervention nodes: \code{CENS}, \code{TRT} and \code{MONITOR}.
+#' This is based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
+#' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
+#' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
+#' The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero weight are kept
+#' Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
+#' Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
+#' @param OData Input data object created by \code{importData} function.
+#' @param t_periods ...
+#' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
+#' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on the monitoring node(s).
+#' @param useonly_t_TRT Use for intervening only on some subset of observation and time-specific treatment nodes.
+#' Should be a character string with a logical expression that defines the subset of intervention observations.
+#' For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being equal to zero.
+#' The expression can contain any variable name that was defined in the input dataset.
+#' Leave as \code{NULL} when intervening on all observations/time-points.
+#' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
+#' @param stratifyQ_by_rule ...
+#' @param TMLE ...
+#' @param rule_name Optional name for the treatment/monitoring regimen.
+#' @param IPWeights Pass a dataset of IPWeights for TMLE (if missing, these will be evaluated automatically)
+#' @param params_Q ...
+#' @param parallel ...
+#' @param verbose ...
+#' @return ...
+# @seealso \code{\link{stremr-package}} for the general overview of the package,
+# @example tests/examples/1_stremr_example.R
 #' @export
 fitSeqGcomp <- function(OData,
                         t_periods,
                         Qforms,
-                        intervened_TRT = NULL,
-                        intervened_MONITOR = NULL,
+                        intervened_TRT = NULL, intervened_MONITOR = NULL,
+                        useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
                         stratifyQ_by_rule = FALSE,
                         TMLE = FALSE,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
@@ -153,10 +190,14 @@ fitSeqGcomp <- function(OData,
 
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
+
+  # When the same node names belongs to both g0 and gstar it doesn't need to be intervened upon, so exclude
+  common_names <- intersect(interventionNodes.g0, interventionNodes.gstar)
+  interventionNodes.g0 <- interventionNodes.g0[!interventionNodes.g0 %in% common_names]
+  interventionNodes.gstar <- interventionNodes.gstar[!interventionNodes.gstar %in% common_names]
+
   OData$interventionNodes.g0 <- interventionNodes.g0
   OData$interventionNodes.gstar <- interventionNodes.gstar
-
-
 
   # ------------------------------------------------------------------------------------------------
   # **** Load dat.sVar into H2O.Frame memory if loading data only once
@@ -170,9 +211,6 @@ fitSeqGcomp <- function(OData,
   # h2o::colnames(subsetH2Oframe) <- c("T", "C", "h", "N")
   # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
   # names(subsetH2Oframe)[1] <- "T2"%+%"_1"
-
-
-
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression paramers specific to Q-learning (continuous outcome)
@@ -192,7 +230,7 @@ fitSeqGcomp <- function(OData,
   if (TMLE) {
     if (missing(IPWeights)) {
       message("...evaluating IPWeights for TMLE...")
-      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, rule_name, stabilize = FALSE)
+      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, stabilize = FALSE)
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
       message("applying user-specified IPWeights, make sure these weights were obtained by making a call: \n'getIPWeights((OData, intervened_TRT, intervened_MONITOR, stabilize = FALSE)'")
@@ -301,6 +339,7 @@ fitSeqGcomp_singlet <- function(OData,
   lastQ_inx <- Qreg_idx[1] # the index for the last Q-fit
   res_lastPredQ_Prob1 <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
   mean_est_t <- mean(res_lastPredQ_Prob1)
+
   print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
   print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
   # # 1b. Grab the right model (QlearnModel) and pull it directly:

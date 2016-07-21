@@ -441,27 +441,36 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       return(x)
     },
     set.sVar = function(name.sVar, new.sVarVal) {
-      assert_that(is.integer(new.sVarVal) | is.numeric(new.sVarVal))
+      # assert_that(is.integer(new.sVarVal) | is.numeric(new.sVarVal))
       assert_that(length(new.sVarVal)==self$nobs | length(new.sVarVal)==1)
       assert_that(name.sVar %in% colnames(self$dat.sVar))
       self$dat.sVar[, (name.sVar) := new.sVarVal]
       invisible(self)
     },
-    replaceOneAnode = function(AnodeName, newAnodeVal) {
-      self$set.sVar(AnodeName, newAnodeVal)
-      invisible(self)
-    },
-    replaceManyAnodes = function(Anodes, newAnodesMat) {
-      assert_that(is.matrix(newAnodesMat))
-      assert_that(ncol(newAnodesMat) == length(Anodes))
-      for (col in Anodes) {
-        idx <- which(Anodes %in% col)
-        assert_that(col %in% colnames(newAnodesMat))
-        assert_that(col %in% colnames(self$dat.sVar))
-        self$dat.sVar[, (col) := newAnodesMat[, idx]]
-      }
-      invisible(self)
-    },
+
+    # replaceOneNode = function(NodeName, newNodeVal) {
+    #   self$set.sVar(NodeName, newNodeVal)
+    #   invisible(self)
+    # },
+    # replaceManyNodes = function(Nodes, newNodesMat) {
+    #   assert_that(is.matrix(newNodesMat))
+    #   assert_that(ncol(newNodesMat) == length(Nodes))
+    #   for (col in Nodes) {
+    #     idx <- which(Nodes %in% col)
+    #     assert_that(col %in% colnames(newNodesMat))
+    #     assert_that(col %in% colnames(self$dat.sVar))
+    #     self$dat.sVar[, (col) := newNodesMat[, idx]]
+    #   }
+    #   invisible(self)
+    # },
+    # # Replace a column or columns in private$Xmat with new values
+    # replaceCols = function(subset_idx, colnames) {
+    #   for (colname in colnames) {
+    #     private$Xmat[, colname]  <- self$get.dat.sVar(subset_idx, colname)
+    #   }
+    #   return(invisible(self))
+    # }
+
     # swap node names in the data.table: current -> target and target -> current
     swapNodes = function(current, target) {
       # if current and target have the same node names, will result in error, so exclude

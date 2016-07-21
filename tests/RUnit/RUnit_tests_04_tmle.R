@@ -100,24 +100,24 @@ t.surv <- c(1,2,3,4,5,6,7,8,9,10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
 # stratified modeling by rule followers only:
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-gcomp_est; tmle_est
+gcomp_est1 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+tmle_est1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+gcomp_est1; tmle_est1
 
 # pooling all observations (no stratification):
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-gcomp_est; tmle_est
+gcomp_est2 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+tmle_est2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+gcomp_est2; tmle_est2
 
 # stratified modeling by rule followers only:
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-gcomp_est; tmle_est
+gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+gcomp_est3; tmle_est3
 
 # pooling all observations (no stratification):
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-gcomp_est; tmle_est
+gcomp_est4 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+gcomp_est4; tmle_est4
 
 # ------------------------------------------------------------------------
 # RUN PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)
