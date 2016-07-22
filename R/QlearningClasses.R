@@ -46,23 +46,37 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
 #************************************************
 tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
   QY.star <- NA
-  #************************************************
-  # TMLE update via weighted univariate ML (espsilon is intercept)
-  #************************************************
-  # SuppressGivenWarnings(
-  update_t <- system.time(
-    m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
-                                        y = prev_Q.kplus1, weights = IPWts, offset = off,
-                                        family = quasibinomial(), trace = FALSE, maxit = 1000)
-    )
-  print("time to perform tmle update:"); print(update_t)
-    # GetWarningsToSuppress(TRUE))
-  update.Qstar.coef <- m.Qstar$coef
+  if (sum(abs(IPWts)) < 10^-9) {
+    update.Qstar.coef <- NaN
+    message("TMLE update cannot be performed since all IP-weights are exactly zero!")
+    warning("TMLE update cannot be performed since all IP-weights are exactly zero!")
+  } else {
+    #************************************************
+    # TMLE update via weighted univariate ML (espsilon is intercept)
+    #************************************************
+    m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
+                                          y = prev_Q.kplus1, weights = IPWts, offset = off,
+                                          family = quasibinomial(), trace = FALSE, maxit = 1000),
+                  silent = TRUE)
+    # SuppressGivenWarnings(
+    #   m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
+    #                                       y = prev_Q.kplus1, weights = IPWts, offset = off,
+    #                                       family = quasibinomial(), trace = FALSE, maxit = 1000),
+    #   GetWarningsToSuppress(TRUE))
+
+    if (inherits(m.Qstar, "try-error")) { # TMLE update failed
+      message("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
+      warning("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
+      update.Qstar.coef <- NaN
+    } else {
+      update.Qstar.coef <- m.Qstar$coef
+    }
+  }
+
   # m.Qstar.fit <- list(coef = m.Qstar$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
   # class(m.Qstar.fit) <- c(class(m.Qstar.fit), c("speedglmS3"))
   # SuppressGivenWarnings(m.Qstar <- glm(Y ~ offset(off), data = data.frame(Y = Y, off = off), weights = IPWts,
                                             # subset = !determ.Q, family = "quasibinomial", control = ctrl), GetWarningsToSuppress(TRUE))
-
   # update.Qstar.coef <- coef(m.Qstar)
   # if (predictQ) {
   #   QY.star <- prev_Q.kplus1
@@ -113,7 +127,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
 
-      if (gvars$verbose) print("fitting G-COMP model: " %+% self$show())
+      # if (gvars$verbose) print("fitting G-COMP model: " %+% self$show())
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
       # **********************************************************************
@@ -131,7 +145,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       self$is.fitted <- TRUE
 
-      print("Q-learning for: " %+% self$subset_exprs); print(self$get.fits())
+      # print("Q-learning for: " %+% self$subset_exprs); print(self$get.fits())
       # **********************************************************************
       # PREDICTION STEP OF Q-LEARNING
       # Q prediction for everyone (including those who just got censored and those who just stopped following the rule)
@@ -146,7 +160,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # Add to the design matrix all obs that were also censored at t and (possibly) those who just stopped following the rule:
       self$subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
-      print("performing initial Q-prediction for N = " %+% sum(self$subset_idx))
+      # print("performing initial Q-prediction for N = " %+% sum(self$subset_idx))
 
       # browser()
       # ------------------------------------------------------------------------------------------------------------------------
@@ -169,8 +183,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       colnames(stoch.probs) <- stoch.gstar
 
       probA1 <- self$predict(data, subset_idx = self$subset_idx)
-      print("Initial mean prediction:")
-      print(mean(probA1[self$subset_idx]))
+      # print("Initial mean prediction:")
+      # print(mean(probA1[self$subset_idx]))
       # [1] 3.543983e-11
 
       # # 3. Loop over the grid mat
@@ -189,9 +203,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
         probA1 <- self$predict(data, subset_idx = self$subset_idx)
 
-        print("Single predicted mean for ");
-        print(all_vals_mat[i,]);
-        print(mean(probA1[self$subset_idx]))
+        # print("Single predicted mean for ");
+        # print(all_vals_mat[i,]);
+        # print(mean(probA1[self$subset_idx]))
         # [1] 0.00664748
 
         # 6. Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cummulative product) based on the probabilities from original column
@@ -212,10 +226,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # 8. Sum and keep looping
         stoch.probA1 <- stoch.probA1 + probA1[self$subset_idx]
       }
-      stoch.probA1 <- stoch.probA1
-      print("summed stoch.probA1 over support of stochastic nodes:"); print(mean(stoch.probA1))
-      private$probA1[self$subset_idx] <- stoch.probA1
 
+      stoch.probA1 <- stoch.probA1
+      # print("summed stoch.probA1 over support of stochastic nodes:"); print(mean(stoch.probA1))
+      private$probA1[self$subset_idx] <- stoch.probA1
 
       # 2. When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
       # ...
@@ -254,15 +268,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         init_Q_fitted_only[init_Q_fitted_only < 10^(-5)] <- 10^(-5)
 
         off_TMLE <- qlogis(init_Q_fitted_only)
-        print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
+        # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
 
         # Cumulative IPWeights for current t:
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cumm.IPAW", with = FALSE][[1]]
 
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         tmle_res <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)
-        print("TMLE Intercept: " %+% round(tmle_res$update.Qstar.coef, 5))
-        if (!is.na(tmle_res$update.Qstar.coef)) {
+        # print("TMLE Intercept: " %+% round(tmle_res$update.Qstar.coef, 5))
+        if (!is.na(tmle_res$update.Qstar.coef) && !is.nan(tmle_res$update.Qstar.coef)) {
           update.Qstar.coef <- tmle_res$update.Qstar.coef
         } else {
           update.Qstar.coef <- 0
@@ -271,7 +285,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + tmle_res$update.Qstar.coef)
         # Q.kplus1 <- plogis(off_TMLE + update.Qstar.coef)
-        print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))
+        # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))
       }
 
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
