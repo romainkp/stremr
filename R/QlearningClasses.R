@@ -148,7 +148,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
       print("performing initial Q-prediction for N = " %+% sum(self$subset_idx))
 
-      browser()
+      # browser()
       # ------------------------------------------------------------------------------------------------------------------------
       # Set current A's and N's to the counterfactual exposures in the data (for predicting Q):
       # ------------------------------------------------------------------------------------------------------------------------
