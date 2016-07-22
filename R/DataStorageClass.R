@@ -484,16 +484,12 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     eval_rule_followers = function(NodeName, gstar.NodeName) {
-      # this part will be automatically determined by gstarA/gstarN (the likelihood)
-      self$dat.sVar[, "rule.follower.dx" := as.integer(get(NodeName) == get(gstar.NodeName))]
-      # self$dat.sVar[, "rule.follower.dx" := as.integer(get(NodeName) == get(gstar.NodeName))]
-
+      dat.rulefollow <- self$dat.sVar[, c(self$nodes$IDnode, NodeName, gstar.NodeName), with = FALSE]
+      setkeyv(dat.rulefollow, cols = self$nodes$IDnode)
+      # likelihood of N(t) under counterfactual g^*:
+      dat.rulefollow[, "rule.follower.byt" := get(gstar.NodeName)^get(NodeName) * (1L-get(gstar.NodeName))^(1-get(NodeName))]
       # rule follower whenever the probability of observing the current history \bar{(O(t))} is > 0
-      self$dat.sVar[, "rule.follower.dx" := as.integer(cumprod(rule.follower.dx) > 0), by = eval(self$nodes$IDnode)]
-      # self$dat.sVar[, "rule.follower.dx" := as.integer(cumprod(rule.follower.dx)), by = eval(self$nodes$IDnode)]
-
-      rule_followers_idx <- self$dat.sVar[["rule.follower.dx"]]
-      self$dat.sVar[, "rule.follower.dx" := NULL]
+      rule_followers_idx <- dat.rulefollow[, "rule.followers" := as.integer(cumprod(rule.follower.byt) > 0), by = eval(self$nodes$IDnode)][["rule.followers"]]
       return(as.logical(rule_followers_idx))
     },
 

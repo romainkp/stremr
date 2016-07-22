@@ -68,9 +68,47 @@ library("magrittr")
 data(OdataCatCENS)
 OdataDT <- as.data.table(OdataCatCENS, key=c(ID, t))
 # Indicator that the person has never been treated in the past:
-OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) %in% 0), by = ID]
+# ---------------------------------------------------------------------------
+# Define some summaries (lags C[t-1], A[t-1], N[t-1])
+# ---------------------------------------------------------------------------
+ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
+lagnodes <- c("C", "TI", "N")
+newVarnames <- lagnodes %+% ".tminus1"
+Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
+# indicator that the person has never been on treatment up to current t
+Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
+Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 ```
 
+Define two dynamic regimes (counterfactual treatment assignment under two rules (`dlow` & `dhigh`)):
+
+```R
+# Counterfactual TRT assignment for rule dlow (equivalent to always treated):
+rule_name1 <- "dlow"
+OdatDT[,"gTI." %+% rule_name1 := 1L]
+# Counterfactual TRT assignment for dynamic rule dhigh -> start TRT only when I=1 (highA1c = 1)
+rule_name2 <- "dhigh"
+OdatDT_TIdhigh <- stremr::defineIntervedTRT(OdatDT, theta = 1, ID = ID,
+                                          t = t, I = I, CENS = CENS, TRT = TRT, MONITOR = MONITOR,
+                                          tsinceNis1 = "lastNat1",
+                                          new.TRT.names = "gTI." %+% rule_name2)
+OdatDT <- merge(OdatDT, OdatDT_TIdhigh, by=c(ID, t))
+```
+
+
+Define counterfactual monitoring probabilit(ies):
+
+```R
+# N^*(t) Bernoulli with P(N^*(t)=1)=p
+g.p <- function(Odat, p) return(rep(p, nrow(Odat)))
+# N^*(t) Poisson:
+g.Pois <- function(Odat, lambda, lastNat1 = "lastNat1") {
+  g.N <- 1 / (ppois(Odat[[lastNat1]], lambda, lower.tail = FALSE) / dpois(Odat[[lastNat1]], lambda) + 1)
+  g.N[is.na(g.N)] <- 0
+  return(g.N)
+}
+OdatDT <- OdatDT[, c("gPois3.yrly", "gPois3.biyrly", "gp05") := list(g.Pois(OdatDT, lambda = 3), g.Pois(OdatDT, lambda = 1), g.p(OdatDT, p = 0.5))][]
+```
 
 Regressions for modeling the exposure (TRT). Fit a separate model for TRT (stratify) for each of the following subsets:
 
@@ -89,7 +127,7 @@ stratify_TRT <- list(
       ))
 ```
 
-Regressions for modeling the categorical censoring (CENS). Stratify the model fits by time-points (separate model for all t<16 and t=16):
+Regressions for modeling the categorical censoring (CENS). Stratify the model fits by time-points (separate model for all `t<16` and `t=16`):
 
 ```R
 gform_CENS <- c("CatC ~ highA1c")
@@ -111,7 +149,7 @@ OdataDT[, "gstar.N" := ifelse(N == 1L, eval(p), 1-eval(p))]
 
 ```
 
-Define the indicator of following the counterfactual treatment rule (dynamic treatment rule) and perform estimation:
+Define the indicator of counterfactual treatment (dynamic treatment rule): 
 
 ```R
 # Define rule followers/non-followers for two rules: dlow & dhigh
@@ -121,17 +159,120 @@ res <- follow.rule.d.DT(OdataDT,
         rule.names = c("dlow", "dhigh")) %>%
 # Merge rule definitions into main dataset:
   merge(OdataDT, ., by=c("ID", "t")) %>%
-# Estimate hazard and survival for a rule "dhigh":
-  stremr(gstar_TRT = "dhigh", gstar_MONITOR = "gstar.N",
-        ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
-        CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-        TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
-        MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y")
-
-res$IPW_estimates
-res$dataDT
 ```
 
+### Fit the propensity score models for censoring, exposure and monitoring:
+
+```R
+OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                        stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+```
+
+
+
+### Fit survival with non-parametric MSM  (IPTW-ADJUSTED KM):
+
+```R
+wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+survNPMSM(wts.St.dlow, OData)
+
+wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+survNPMSM(wts.St.dhigh, OData)
+```
+
+### Turning the workflow into pipes:
+```R
+require("magrittr")
+St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
+            survNPMSM(OData) %$%
+            IPW_estimates
+St.dhigh
+```
+
+### Fitting IPW-adjusted MSM for hazard of the survival function
+
+```R
+MSM.IPAW <- survMSM(OData,
+                    wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
+                    t_breaks = c(1:8,12,16)-1,
+                    est_name = "IPAW", getSEs = FALSE)
+MSM.IPAW
+```
+
+
+### Creating automatic reports:
+
+html report:
+
+```R
+make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example")
+```
+
+pdf report:
+
+```R
+make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example", format = "pdf")
+
+# omit extra modeling stuff (only coefficients):
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# skip modeling stuff alltogether:
+make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# skip RD tables by simply not including them:
+make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+```
+
+### Fitting Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data.
+
+```R
+t.surv <- c(10)
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+params = list(fit.package = "speedglm", fit.algorithm = "GLM")
+```
+
+Stratified modeling by rule followers only:
+
+```R
+tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+tmle_est3
+```
+
+Pooling all observations (no stratification):
+
+```R
+tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+tmle_est4
+```
+
+RUN in PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER):
+
+```R
+require("doParallel")
+registerDoParallel(cores = 40)
+data.table::setthreads(1)
+t.surv <- c(1,2,3,4,5,6,7,8,9,10)
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+
+tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+tmle_est_par1
+```
+
+TMLE w/ h2o random forest:
+
+```R
+params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100,
+              learn_rate = 0.05, sample_rate = 0.8,
+              col_sample_rate = 0.8, balance_classes = TRUE)
+t.surv <- c(10)
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+tmle_est
+```
 
 ### Citation
 

@@ -4,7 +4,7 @@
 # --------------------------------
 # devtools::install_github('Rdatatable/data.table')
 require("data.table")
-# devtools::install_github('osofr/stremr', ref = "tmle", build_vignettes = FALSE)
+# devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 require("stremr")
 
 # --------------------------------
@@ -19,29 +19,6 @@ head(O.data)
 # --------------------------------
 data(Odatg05_1mil)
 ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y"; I <- "highA1c";
-
-# # --------------------------------
-# # Define counterfactual treatment assignment under two rules (dlow & dhigh)
-# # --------------------------------
-# Odat_DT <- data.table(Odatg05_1mil, key = c(ID, t))
-# # Counterfactual TRT assignment for rule dlow (equivalent to always treated):
-# rule_name1 <- "dlow"
-# Odat_DT[,"TI.gstar." %+% rule_name1 := 1L]
-# # Counterfactual TRT assignment for dynamic rule dhigh -> start TRT only when I=1 (highA1c = 1)
-# rule_name2 <- "dhigh"
-# Odat_DT_TIdhigh <- stremr::defineIntervedTRT(Odat_DT, theta = 1, ID = ID,
-#                                           t = t, I = I, CENS = CENS, TRT = TRT,
-#                                           MONITOR = MONITOR,
-#                                           tsinceNis1 = "lastNat1",
-#                                           new.TRT.names = "TI.gstar." %+% rule_name2)
-# Odat_DT <- merge(Odat_DT, Odat_DT_TIdhigh, by=c(ID, t))
-# # -------------------------------------------------------------------------------------------
-# # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
-# # -------------------------------------------------------------------------------------------
-# OUTCOME <- "Y"
-# shifted.OUTCOME <- OUTCOME%+%".tplus1"
-# Odat_DT[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
-# Odat_DT <- Odat_DT[!get(OUTCOME)%in%1,]
 
 # ---------------------------------------------------------------------------
 # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])

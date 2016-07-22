@@ -158,7 +158,7 @@ fitPropensity <- function(OData,
 
 defineNodeGstar <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
   # probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
-  # if intervened_NODE returns more than one rule-column, estimate for each.
+  # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
   if (!is.null(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
@@ -177,7 +177,8 @@ defineNodeGstar <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
     gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
   } else {
-    gstar.NODE <- g.obs # use the actual observed exposure probability (no intervention on NODE)
+    # use the actual observed exposure probability (no intervention on NODE)
+    gstar.NODE <- g.obs
   }
   return(gstar.NODE)
 }
