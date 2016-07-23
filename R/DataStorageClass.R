@@ -185,6 +185,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     Qlearn.fit = NULL,
     interventionNodes.g0 = NULL,
     interventionNodes.gstar = NULL,
+    gstarNodes_stoch = NULL,
     modelfits.g0 = NULL,
     modelfit.gC = NULL,
     modelfit.gA = NULL,
@@ -495,6 +496,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
     eval_uncensored = function() {
       return(self$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat))), .SDcols = self$nodes$Cnodes][["uncensored_idx"]])
+    },
+
+    define.stoch.nodes = function(NodeNames) {
+      gstarNodes_stoch <- vector(mode = "logical", length = length(NodeNames))
+      names(gstarNodes_stoch) <- NodeNames
+      for (gstarNode in NodeNames) {
+        gstarNodes_stoch[[gstarNode]] <- !is.integerish(self$get.sVar(gstarNode))
+      }
+      self$gstarNodes_stoch <- gstarNodes_stoch
+      return(gstarNodes_stoch)
     },
 
     # ---------------------------------------------------------------------------
