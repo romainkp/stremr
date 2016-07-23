@@ -18,7 +18,7 @@ glmfit.glm <- function(fit, Xmat, Yvals, ...) {
                                   y = Yvals,
                                   family = binomial() ,
                                   control = ctrl)
-    }, GetWarningsToSuppress(TRUE))
+    }, GetWarningsToSuppress())
   }
 
   fit$coef <- model.fit$coef;
@@ -44,7 +44,6 @@ glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
   } else {
     # method = c('eigen','Cholesky','qr')
     # row.chunk=NULL
-    # t_reg <- system.time(
     SuppressGivenWarnings({
     model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
                                              y = Yvals,
@@ -52,9 +51,7 @@ glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
                                              family = binomial(),
                                              trace = FALSE),
                     silent = TRUE)
-    }, GetWarningsToSuppress(TRUE))
-    # print(t_reg)
-    # model.fit
+    }, GetWarningsToSuppress())
   }
 
   if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm

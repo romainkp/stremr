@@ -51,6 +51,7 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
     message("TMLE update cannot be performed since all IP-weights are exactly zero!")
     warning("TMLE update cannot be performed since all IP-weights are exactly zero!")
   } else {
+    # browser()
     #************************************************
     # TMLE update via weighted univariate ML (espsilon is intercept)
     #************************************************
@@ -155,6 +156,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # Determine which nodes are actually stochastic and need to be summed out
       # stoch.gstar <- c("TI.gstar.dhigh", "g.star.N")
+      # data$define.stoch.nodes()
+
       stoch.gstar <- c("g.star.N")
       stoch_nodes_idx <- which(interventionNodes.gstar %in% stoch.gstar)
 
@@ -162,7 +165,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
       # print("performing initial Q-prediction for N = " %+% sum(self$subset_idx))
 
-      # browser()
       # ------------------------------------------------------------------------------------------------------------------------
       # Set current A's and N's to the counterfactual exposures in the data (for predicting Q):
       # ------------------------------------------------------------------------------------------------------------------------
@@ -178,6 +180,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       all_vals_mat <- do.call(expand.grid, bit_list)
       d_all <- nrow(all_vals_mat)
       colnames(all_vals_mat) <- stoch.gstar
+
       # 2. Save the probability of each stochastic intervention node
       stoch.probs <- data$dat.sVar[self$subset_idx, interventionNodes.g0[stoch_nodes_idx], with = FALSE]
       colnames(stoch.probs) <- stoch.gstar
@@ -187,8 +190,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # print(mean(probA1[self$subset_idx]))
       # [1] 3.543983e-11
 
-      # # 3. Loop over the grid mat
-      # # don't need to evaluate for everyone, just those obs that were used in prediction:
+      # # 3. Loop over the grid mat; don't need to evaluate for everyone, just those obs that were used in prediction:
       stoch.probA1 <- 0
       for (i in 1:nrow(all_vals_mat)) {
         # browser()
@@ -196,18 +198,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # modify data to assign a single value from the support of each stochastic node TO all observations
         # WARNING: THIS STEP IS IRREVERSIBLE, ERASES ALL CURRENT VALUES IN interventionNodes.g0[stoch_nodes_idx]:
         data$dat.sVar[self$subset_idx, interventionNodes.g0[stoch_nodes_idx] := all_vals_mat[i,], with = FALSE]
-        # data$dat.sVar[self$subset_idx,]
 
         # 5. Predict using newdata, obtain probAeqa_stoch
         # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
         # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
         probA1 <- self$predict(data, subset_idx = self$subset_idx)
-
         # print("Single predicted mean for ");
         # print(all_vals_mat[i,]);
         # print(mean(probA1[self$subset_idx]))
         # [1] 0.00664748
-
         # 6. Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cummulative product) based on the probabilities from original column
         jointProb <- rep.int(1L, nrow(stoch.probs))
         for (node_idx in stoch_nodes_idx) {
@@ -219,10 +218,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           # put the probabilities back into input data:
           data$dat.sVar[self$subset_idx, interventionNodes.g0[node_idx] := stoch.probs[[stoch.node.nm]], with = FALSE]
         }
-
         # 7. Weight the current prediction by its probability
         probA1[self$subset_idx] <- probA1[self$subset_idx] * jointProb
-
         # 8. Sum and keep looping
         stoch.probA1 <- stoch.probA1 + probA1[self$subset_idx]
       }
@@ -233,6 +230,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # 2. When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
       # ...
+
 
       init_Q_all_obs <- private$probA1[self$subset_idx]
 
@@ -253,7 +251,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # ------------------------------------------------------------------------------------------------------------------------
       # print("initial mean(Q.kplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
 
-
       # **********************************************************************
       # TARGETING STEP OF THE TMLE
       # the TMLE update is performed only among obs who were involved in fitting of the initial Q above (self$idx_used_to_fit_initQ)
@@ -266,13 +263,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         init_Q_fitted_only <- private$probA1[self$idx_used_to_fit_initQ]
         # tmle update will error out if some predictions are exactly 0:
         init_Q_fitted_only[init_Q_fitted_only < 10^(-5)] <- 10^(-5)
-
         off_TMLE <- qlogis(init_Q_fitted_only)
         # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
-
         # Cumulative IPWeights for current t:
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cumm.IPAW", with = FALSE][[1]]
-
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         tmle_res <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)
         # print("TMLE Intercept: " %+% round(tmle_res$update.Qstar.coef, 5))
@@ -281,10 +275,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         } else {
           update.Qstar.coef <- 0
         }
-
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + tmle_res$update.Qstar.coef)
-        # Q.kplus1 <- plogis(off_TMLE + update.Qstar.coef)
+        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
+        # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + tmle_res$update.Qstar.coef)
+
         # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))
       }
 

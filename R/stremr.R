@@ -57,9 +57,8 @@ SuppressGivenWarnings <- function(expr, warningsToIgnore) {
 GetWarningsToSuppress <- function(update.step=FALSE) {
   warnings.to.suppress <- c("glm.fit: fitted probabilities numerically 0 or 1 occurred",
                             "prediction from a rank-deficient fit may be misleading",
-                            "In eval(expr, envir, enclos) : non-integer #successes in a binomial glm!",
-                            "In chol.default(B, pivot = TRUE) :
-                              the matrix is either rank-deficient or indefinite")
+                            "non-integer #successes in a binomial glm!",
+                            "the matrix is either rank-deficient or indefinite")
   if (update.step) {
     warnings.to.suppress <- c(warnings.to.suppress, "glm.fit: algorithm did not converge")
   }
