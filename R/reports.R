@@ -49,12 +49,13 @@ openFileInOS <- function(f) {
 #' @param skip.modelfits Do not report any of the modeling stats.
 #' @param file.name File name for the report file without extension. Default file name is assigned based on the current date.
 #' @param file.path Directory path where the report file(s) should be written. Default is to use the system temporary directory.
+#' @param openFile Open the report file with OS default viewer?
 #' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
 #' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), ...) {
+make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), openFile = TRUE, ...) {
   optArgReport <- list(...)
 
   if ("author" %in% names(optArgReport)) {
@@ -167,7 +168,8 @@ make_report_rmd <- function(OData, MSM, MSMlist, SurvByRegimen, WTtables = NULL,
     }
   }
 
-  openFileInOS(outfile)
+  if (openFile) openFileInOS(outfile)
+
   # resetting directory and other options
   options(opts.bak)
   setwd(wd.bak)
