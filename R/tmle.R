@@ -162,31 +162,91 @@ fitSeqGcomp <- function(OData,
   OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
   # ------------------------------------------------------------------------------------------------
-  # **** Define the intervention nodes
+  # Define the intervention nodes
   # ------------------------------------------------------------------------------------------------
-  if (!is.null(intervened_TRT)) {
-    gstar.A <- intervened_TRT
-    for (intervened_TRT_col in intervened_TRT) CheckVarNameExists(OData$dat.sVar, intervened_TRT_col)
-    # UPDATE RULE FOLLOWERS FOR TRT IF DOING stratified G-COMP:
-    if (stratifyQ_by_rule) {
-      rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Anodes, gstar.NodeName = gstar.A)
-      OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
-    }
-  } else {
-    gstar.A <- nodes$Anodes # use the actual observed exposure (no intervention on TRT)
-  }
+  # ------------------------------------------------------------------------------------------------------------------------
+  # When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
+  # ------------------------------------------------------------------------------------------------------------------------
+  #  Do it separately for gstar_TRT & gstar_MONITOR
+  #   Loop over each node in gstar_TRT / gstar_MONITOR
+  #  Do it only once for all observations inside main tmle call
+  #  Back-up a copy of all gstar nodes first, the original copy is then restored when finished running
+  #  The observations which get swapped with g0 values are defined by:
+  #   subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
 
-  if (!is.null(intervened_MONITOR)) {
-    gstar.N <- intervened_MONITOR
-    for (intervened_MONITOR_col in intervened_MONITOR) CheckVarNameExists(OData$dat.sVar, intervened_MONITOR_col)
-    # UPDATE RULE FOLLOWERS FOR MONITOR IF DOING stratified G-COMP:
+# Example call:
+# defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
+defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, stratifyQ_by_rule) {
+  # probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
+  # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
+  if (!is.null(intervened_NODE)) {
+    gstar.NODEs <- intervened_TRT
+    for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
+    assert_that(length(intervened_NODE) == length(NodeNames))
+
+    # ------------------------------------------------------------------------------------------
+    # NOT IMPLEMENTED:
+    # create a back-up of the observed input gstar nodes (created by user in input data):
+    # needs to know how to add new columns (not backed up yet) TO SAME backup data.table
+    # OData$backupNodes(intervened_NODE)
+    # subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
+    # # NOT IMPLEMENTED:
+    # # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
+    # OData$replaceNodesVals(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
+    # ------------------------------------------------------------------------------------------
+
+
+    # ------------------------------------------------------------------------------------------
+    # update rule followers for trt if doing stratified G-COMP:
+    # Note this will define rule followers based on REPLACED intervened_NODE in dat.sVar (i.e., modified n^*(t) under NDE)
+    # ------------------------------------------------------------------------------------------
+    # Q: FOR NDE BASED TMLE, DOES THE DEFINITION OF RULE-FOLLOWERS CHANGE ACCORDINGLY????
+    #    I.E., should we  define rule followers based on modified n^*(t) and a^*(t)?
+    #    most likely YES YES YES, but need to double check with romain.
     if (stratifyQ_by_rule) {
-      rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Nnodes, gstar.NodeName = gstar.N)
+      rule_followers_idx <- OData$eval_rule_followers(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
       OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
     }
+
+
+
   } else {
-    gstar.N <- nodes$Nnodes # use the actual observed monitoring probability (no intervention on MONITOR)
+    # use the actual (observed) node names under g0:
+    gstar.NODEs <- NodeNames
   }
+  return(gstar.NODEs)
+}
+
+  # replacing below with one function call:
+  gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
+  # if (!is.null(intervened_TRT)) {
+  #   gstar.A <- intervened_TRT
+  #   for (intervened_TRT_col in intervened_TRT) CheckVarNameExists(OData$dat.sVar, intervened_TRT_col)
+  #   # update rule followers for trt if doing stratified G-COMP:
+  #   # Q: FOR NDE BASED TMLE, DOES THE DEFINITION OF RULE-FOLLOWERS CHANGE ACCORDINGLY????
+  #   #    I.E., should we  define rule followers based on modified n^*(t) and a^*(t)?
+  #   #    most likely YES YES YES, but need to double check with romain.
+  #   if (stratifyQ_by_rule) {
+  #     rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Anodes, gstar.NodeName = gstar.A)
+  #     OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
+  #   }
+  # } else {
+  #   gstar.A <- nodes$Anodes # use the actual observed exposure (no intervention on TRT)
+  # }
+
+  # replacing below with one function call:
+  gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
+  # if (!is.null(intervened_MONITOR)) {
+  #   gstar.N <- intervened_MONITOR
+  #   for (intervened_MONITOR_col in intervened_MONITOR) CheckVarNameExists(OData$dat.sVar, intervened_MONITOR_col)
+  #   # UPDATE RULE FOLLOWERS FOR MONITOR IF DOING stratified G-COMP:
+  #   if (stratifyQ_by_rule) {
+  #     rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Nnodes, gstar.NodeName = gstar.N)
+  #     OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
+  #   }
+  # } else {
+  #   gstar.N <- nodes$Nnodes # use the actual observed monitoring probability (no intervention on MONITOR)
+  # }
 
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
@@ -253,17 +313,17 @@ fitSeqGcomp <- function(OData,
   if (parallel) {
     mcoptions <- list(preschedule = FALSE)
     res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
-                                  t_period <- t_periods[t_idx]
-                                  riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
-                                  surv_byt <- 1-riskP1_byt
-                                  data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
-                }
+      t_period <- t_periods[t_idx]
+      riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
+      surv_byt <- 1-riskP1_byt
+      data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
+    }
   } else {
     res_byt <- vector(mode = "list", length = length(t_periods))
     for (t_idx in seq_along(t_periods)) {
       t_period <- t_periods[t_idx]
       riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
-      surv_byt <- 1-riskP1_byt
+      surv_byt <- 1 - riskP1_byt
       res_byt[[t_idx]] <- data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
     }
   }

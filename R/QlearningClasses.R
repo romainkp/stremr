@@ -166,12 +166,11 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         probA1 <- self$predictStatic(data, g0 = interventionNodes.g0, gstar = interventionNodes.gstar, subset_idx = self$subset_idx)
       } else {
         # For all stochastic nodes, need to integrate out w.r.t. the support of each node
-        probA1 <- self$predictStochastic(data, g0 = interventionNodes.g0, gstar = interventionNodes.gstar, subset_idx = self$subset_idx, stoch_indicator = stoch_indicator)
+        probA1 <- self$predictStochastic(data, g0 = interventionNodes.g0,
+                                               gstar = interventionNodes.gstar,
+                                               subset_idx = self$subset_idx,
+                                               stoch_indicator = stoch_indicator)
       }
-
-
-      # 2. When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
-      # ...
 
       init_Q_all_obs <- probA1[self$subset_idx]
 

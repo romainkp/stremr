@@ -449,10 +449,77 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       invisible(self)
     },
 
+
+    # ## ---------------------------------------------------------------------
+    # # Save Anodes and summaries sA from main data.table into separate fields
+    # ## ---------------------------------------------------------------------
+    # backupAnodes = function(Anodes, sA) {
+    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
+    #   private$.A_g0_DT <- self$dat.sVar[, Anodes, with = FALSE]
+    #   # Back-up the summary measures as well (to not have to reconstruct them):
+    #   if (!missing(sA)) {
+    #     sA.Vars <- unlist(sA$sVar.names.map)
+    #     private$.save_sA_Vars <- sA.Vars[!sA.Vars%in%Anodes]
+    #     private$.sA_g0_DT <- self$dat.sVar[, private$.save_sA_Vars, with = FALSE]
+    #   }
+    #   invisible(self)
+    # },
+
+
+    # create a back-up of the observed input gstar nodes (created by user in input data):
+    # needs to know how to add new columns (not backed up yet) TO SAME backup data.table
+    backupNodes = function(intervened_NODE) {
+      if (is.null(private$.saveGstarsDT)) {
+        private$.saveGstarsDT <- self$dat.sVar[, intervened_NODE, with = FALSE]
+      } else {
+        private$.saveGstarsDT[, (intervened_NODE) := self$dat.sVar[, intervened_NODE, with = FALSE]]
+      }
+      invisible(return(self))
+    },
+
+    # ## ---------------------------------------------------------------------
+    # # Put saved Anodes and summaries sA back into main data.table
+    # ## ---------------------------------------------------------------------
+    # restoreAnodes = function(Anodes) {
+    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
+    #   if (is.null(private$.A_g0_DT)) stop("Anodes in dat.sVar cannot be restored, private$.A_g0_DT is null!")
+    #   self$dat.sVar[, (Anodes) := private$.A_g0_DT, with=FALSE]
+    #   if (!is.null(private$.sA_g0_DT) && !is.null(self$save_sA_Vars)) {
+    #     self$dat.sVar[, (self$save_sA_Vars) := private$.sA_g0_DT, with = FALSE]
+    #     private$.restored_sA_Vars <- TRUE
+    #   } else {
+    #     private$.restored_sA_Vars <- FALSE
+    #   }
+    #   invisible(self)
+    # },
+
+    # ## ---------------------------------------------------------------------
+    # # Swap re-saved Anodes and summaries sA with those in main data.table
+    # ## ---------------------------------------------------------------------
+    # swapAnodes = function(Anodes) {
+    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
+    #   # 1) Save the current values of Anodes and sA in the data:
+    #   temp.Anodes <- self$dat.sVar[, Anodes, with = FALSE]
+    #   if (!is.null(private$.sA_g0_DT) && !is.null(self$save_sA_Vars)) {
+    #     temp.sA <- self$dat.sVar[, self$save_sA_Vars, with = FALSE]
+    #   } else {
+    #     temp.sA <- NULL
+    #   }
+    #   # 2) Restore previously saved Anodes / sA into the data:
+    #   self$restoreAnodes()
+    #   # 3) Over-write the back-up values with new ones:
+    #   private$.A_g0_DT <- temp.Anodes
+    #   private$.sA_g0_DT <- temp.sA
+    #   # 4) Reverse the indicator of current data Anodes:
+    #   self$curr_data_A_g0 <- !self$curr_data_A_g0
+    #   invisible(self)
+    # },
+
     # replaceOneNode = function(NodeName, newNodeVal) {
     #   self$set.sVar(NodeName, newNodeVal)
     #   invisible(self)
     # },
+
     # replaceManyNodes = function(Nodes, newNodesMat) {
     #   assert_that(is.matrix(newNodesMat))
     #   assert_that(ncol(newNodesMat) == length(Nodes))
@@ -464,13 +531,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     #   }
     #   invisible(self)
     # },
+
     # # Replace a column or columns in private$Xmat with new values
     # replaceCols = function(subset_idx, colnames) {
     #   for (colname in colnames) {
     #     private$Xmat[, colname]  <- self$get.dat.sVar(subset_idx, colname)
     #   }
     #   return(invisible(self))
-    # }
+    # },
 
     # swap node names in the data.table: current -> target and target -> current
     swapNodes = function(current, target) {
@@ -839,6 +907,7 @@ DatNetStorageClass <- R6Class(classname = "DatNetStorageClass",
   ),
 
   private = list(
+    .saveGstarsDT = NULL,
     .A_g0_DT = NULL,              # Backed-up versions of the Anodes vars that come from the observed data
     .sA_g0_DT = NULL,             # Backed-up versions of the summaries in sA (but not Anodes) that come from the observed data
     .save_sA_Vars = NULL,         # Summary measure variables that were pre-saved (backed-up) and were not part of new.sA (Anodes)
