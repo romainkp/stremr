@@ -17,14 +17,15 @@ head(O.data)
 # --------------------------------
 # Test data with 1mil obs:
 # --------------------------------
-data(Odatg05_1mil)
+# data(Odatg05_1mil)
 ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y"; I <- "highA1c";
 
 # ---------------------------------------------------------------------------
 # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
 # Might expand this in the future to allow defining arbitrary summaries
 # ---------------------------------------------------------------------------
-Odat_DT <- obsDTg05_1mil
+# Odat_DT <- obsDTg05_1mil
+Odat_DT <- O.data
 
 lagnodes <- c("C", "TI", "N")
 newVarnames <- lagnodes %+% ".tminus1"

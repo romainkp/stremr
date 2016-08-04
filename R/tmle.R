@@ -180,7 +180,7 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
   # probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
   # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
   if (!is.null(intervened_NODE)) {
-    gstar.NODEs <- intervened_TRT
+    gstar.NODEs <- intervened_NODE
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
 
@@ -203,6 +203,7 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
     # Q: FOR NDE BASED TMLE, DOES THE DEFINITION OF RULE-FOLLOWERS CHANGE ACCORDINGLY????
     #    I.E., should we  define rule followers based on modified n^*(t) and a^*(t)?
     #    most likely YES YES YES, but need to double check with romain.
+
     if (stratifyQ_by_rule) {
       rule_followers_idx <- OData$eval_rule_followers(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
       OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx

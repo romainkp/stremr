@@ -35,8 +35,8 @@ notrun.save.example.data <- function() {
   # -----------------------------------------------------------
   # SIMULATION PARAMS:
   # -----------------------------------------------------------
-  Nsize <- 500000
-  # Nsize <- 10000
+  # Nsize <- 500000
+  Nsize <- 10000
   prob.t0 <- prob.tplus <- 0.5
 
   ###########################################################################################################
@@ -129,12 +129,12 @@ notrun.save.example.data <- function() {
     g.N[is.na(g.N)] <- 0
     return(g.N)
   }
-  OdatDT <- OdatDT[, c("gPois3.yrly", "gPois3.biyrly", "gp05") := list(g.Pois(OdatDT, lambda = 3), g.Pois(OdatDT, lambda = 1), g.p(OdatDT, p = 0.5))][]
+  Odat_DT <- OdatDT[, c("gPois3.yrly", "gPois3.biyrly", "gp05") := list(g.Pois(OdatDT, lambda = 3), g.Pois(OdatDT, lambda = 1), g.p(OdatDT, p = 0.5))][]
 
   # --------------------------------
   # save data as csv
   # --------------------------------
-  obsDTg05_500K <- OdatDT
+  obsDTg05_500K <- Odat_DT
   data.table::fwrite(obsDTg05_500K, "./obsDTg05_500K.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
 
   # --------------------------------
@@ -143,7 +143,7 @@ notrun.save.example.data <- function() {
   # library("tools")
   # save(obsDTg05_1mil, compress = TRUE, file = "obsDTg05_1mil.rda", compression_level = 9)
   # resaveRdaFiles("./obsDTg05_1mil.rda", compress = "bzip2")
-  # obsDTg05_10K <- OdatDT
+  # obsDTg05_10K <- Odat_DT
   # save(obsDTg05_10K, compress = TRUE, file = "obsDTg05_10K.rda", compression_level = 9)
   # resaveRdaFiles("./obsDTg05_10K.rda", compress = "bzip2")
 }
@@ -174,8 +174,8 @@ Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 # ----------------------------------------------------------------
 require("stremr")
 options(stremr.verbose = TRUE)
-# stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
-stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
+stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+# stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 

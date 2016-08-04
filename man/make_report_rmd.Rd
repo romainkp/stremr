@@ -7,7 +7,7 @@
 make_report_rmd(OData, MSM, MSMlist, SurvByRegimen, WTtables = NULL,
   AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"),
   skip.modelfits = FALSE, file.name = getOption("stremr.file.name"),
-  file.path = getOption("stremr.file.path"), ...)
+  file.path = getOption("stremr.file.path"), openFile = TRUE, ...)
 }
 \arguments{
 \item{OData}{Input data object returned by the function \code{importData}.}
@@ -32,6 +32,8 @@ Note that the html report file is always produced in addition to any other selec
 \item{file.name}{File name for the report file without extension. Default file name is assigned based on the current date.}
 
 \item{file.path}{Directory path where the report file(s) should be written. Default is to use the system temporary directory.}
+
+\item{openFile}{Open the report file with OS default viewer?}
 
 \item{...}{Additional arguments may specify the report title (\code{author}), author (\code{title}).
 Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
