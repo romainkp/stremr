@@ -308,3 +308,22 @@ Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 tmle_est
 
+# ---------------------------------------------------------------------------------------------------------
+# TMLE / GCOMP with intervention on MONITOR
+# ---------------------------------------------------------------------------------------------------------
+t.surv <- c(10)
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+params = list(fit.package = "speedglm", fit.algorithm = "GLM")
+
+gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+
+# stratified modeling by rule followers only:
+tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+tmle_est3
+
+# pooling all observations (no stratification):
+tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+tmle_est4
+
+
+

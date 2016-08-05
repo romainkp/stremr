@@ -7,7 +7,7 @@
 getIPWeights(OData, intervened_TRT = NULL, intervened_MONITOR = NULL,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
   rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-  stabilize = TRUE)
+  weights = NULL, stabilize = TRUE)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -27,6 +27,9 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 \item{useonly_t_MONITOR}{Same as \code{useonly_t_TRT}, but for monitoring nodes.}
 
 \item{rule_name}{Optional name for the treatment/monitoring regimen.}
+
+\item{weights}{Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
+The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).}
 
 \item{stabilize}{Set to \code{TRUE} to return stabilized weights}
 }

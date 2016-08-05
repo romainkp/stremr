@@ -2,19 +2,19 @@
 % Please edit documentation in R/tmle.R
 \name{fitSeqGcomp}
 \alias{fitSeqGcomp}
-\title{Fit TMLE or sequential GCOMP for survival}
+\title{Fit sequential GCOMP and TMLE for survival}
 \usage{
 fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
   intervened_MONITOR = NULL, useonly_t_TRT = NULL,
   useonly_t_MONITOR = NULL, stratifyQ_by_rule = FALSE, TMLE = FALSE,
   rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-  IPWeights, params_Q = list(), parallel = FALSE,
+  IPWeights, weights = NULL, params_Q = list(), parallel = FALSE,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
 
-\item{t_periods}{...}
+\item{t_periods}{Specify the vector of time-points for which the survival function (and risk) should be estimated}
 
 \item{intervened_TRT}{Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
 Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).}
@@ -30,17 +30,19 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 
 \item{useonly_t_MONITOR}{Same as \code{useonly_t_TRT}, but for monitoring nodes.}
 
-\item{stratifyQ_by_rule}{...}
+\item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
+Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression)}
 
-\item{TMLE}{...}
+\item{TMLE}{Set to \code{TRUE} to run TMLE}
 
 \item{rule_name}{Optional name for the treatment/monitoring regimen.}
 
 \item{IPWeights}{Pass a dataset of IPWeights for TMLE (if missing, these will be evaluated automatically)}
 
-\item{params_Q}{...}
+\item{weights}{Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
+The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).}
 
-\item{parallel}{...}
+\item{params_Q}{Optional parameters to be passed to the specific fitting algorithm for Q-learning}
 
 \item{verbose}{...}
 }
@@ -48,12 +50,9 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 ...
 }
 \description{
-Evaluate the inverse probability weights for up to 3 intervention nodes: \code{CENS}, \code{TRT} and \code{MONITOR}.
-This is based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
+Interventions on up to 3 nodes are allowed: \code{CENS}, \code{TRT} and \code{MONITOR}.
+TMLE adjustment will be based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
 multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
 Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
-The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero weight are kept
-Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
-Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 }
 

@@ -449,49 +449,31 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       invisible(self)
     },
 
-
-    # ## ---------------------------------------------------------------------
-    # # Save Anodes and summaries sA from main data.table into separate fields
-    # ## ---------------------------------------------------------------------
-    # backupAnodes = function(Anodes, sA) {
-    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
-    #   private$.A_g0_DT <- self$dat.sVar[, Anodes, with = FALSE]
-    #   # Back-up the summary measures as well (to not have to reconstruct them):
-    #   if (!missing(sA)) {
-    #     sA.Vars <- unlist(sA$sVar.names.map)
-    #     private$.save_sA_Vars <- sA.Vars[!sA.Vars%in%Anodes]
-    #     private$.sA_g0_DT <- self$dat.sVar[, private$.save_sA_Vars, with = FALSE]
-    #   }
-    #   invisible(self)
-    # },
-
-
     # create a back-up of the observed input gstar nodes (created by user in input data):
     # needs to know how to add new columns (not backed up yet) TO SAME backup data.table
-    backupNodes = function(intervened_NODE) {
-      if (is.null(private$.saveGstarsDT)) {
-        private$.saveGstarsDT <- self$dat.sVar[, intervened_NODE, with = FALSE]
-      } else {
-        private$.saveGstarsDT[, (intervened_NODE) := self$dat.sVar[, intervened_NODE, with = FALSE]]
-      }
+    backupNodes = function(nodes) {
+      nodes <- nodes[!is.null(nodes)]
+      for (node in nodes) CheckVarNameExists(self$dat.sVar, node)
+      private$.saveGstarsDT <- self$dat.sVar[, nodes, with = FALSE]
       invisible(return(self))
     },
 
-    # ## ---------------------------------------------------------------------
-    # # Put saved Anodes and summaries sA back into main data.table
-    # ## ---------------------------------------------------------------------
-    # restoreAnodes = function(Anodes) {
-    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
-    #   if (is.null(private$.A_g0_DT)) stop("Anodes in dat.sVar cannot be restored, private$.A_g0_DT is null!")
-    #   self$dat.sVar[, (Anodes) := private$.A_g0_DT, with=FALSE]
-    #   if (!is.null(private$.sA_g0_DT) && !is.null(self$save_sA_Vars)) {
-    #     self$dat.sVar[, (self$save_sA_Vars) := private$.sA_g0_DT, with = FALSE]
-    #     private$.restored_sA_Vars <- TRUE
-    #   } else {
-    #     private$.restored_sA_Vars <- FALSE
-    #   }
-    #   invisible(self)
-    # },
+    restoreNodes = function(nodes) {
+      nodes <- nodes[!is.null(nodes)]
+      for (node in nodes) CheckVarNameExists(self$dat.sVar, node)
+      if (is.null(private$.saveGstarsDT)) stop("Nodes in dat.sVar cannot be restored, private$.saveGstarsDT is null!")
+      self$dat.sVar[, (nodes) := private$.saveGstarsDT[, nodes, with = FALSE], with = FALSE]
+      invisible(return(self))
+    },
+
+    # Modify the values in node nodes_to_repl in self$dat.sVar with values from source_for_repl using only the IDs in subset_idx:
+    replaceNodesVals = function(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames) {
+      for (node_idx in seq_along(nodes_to_repl)) {
+        source_node <- self$dat.sVar[subset_idx, (source_for_repl[node_idx]), with = FALSE]
+        self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node, with = FALSE]
+      }
+      invisible(return(self))
+    },
 
     # ## ---------------------------------------------------------------------
     # # Swap re-saved Anodes and summaries sA with those in main data.table
@@ -570,7 +552,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       gstarNodes_stoch <- vector(mode = "logical", length = length(NodeNames))
       names(gstarNodes_stoch) <- NodeNames
       for (gstarNode in NodeNames) {
-        gstarNodes_stoch[[gstarNode]] <- !is.integerish(self$get.sVar(gstarNode))
+        gstarNodes_stoch[[gstarNode]] <- !is.integerish(self$get.sVar(gstarNode)[!is.na(self$get.sVar(gstarNode))])
       }
       self$gstarNodes_stoch <- gstarNodes_stoch
       return(gstarNodes_stoch)
@@ -728,6 +710,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
   ),
 
   private = list(
+    .saveGstarsDT = NULL,
     .nodes = list(),              # names of the nodes in the data (Anode, Ynode, etc..)
     .protected.YnodeVals = NULL,  # Actual observed values of the binary outcome (Ynode), along with deterministic vals
     .mat.sVar = NULL,             # pointer to data.table object storing the entire dataset (including all summaries sVars)

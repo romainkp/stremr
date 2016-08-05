@@ -102,18 +102,58 @@ fitTMLE <- function(...) {
   fitSeqGcomp(TMLE = TRUE, ...)
 }
 
+# ------------------------------------------------------------------------------------------------------------------------
+# When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
+# ------------------------------------------------------------------------------------------------------------------------
+# Do it separately for gstar_TRT & gstar_MONITOR
+# Loop over each node in gstar_TRT / gstar_MONITOR
+# Do it only once for all observations inside main tmle call
+# Back-up a copy of all gstar nodes first, the original copy is then restored when finished running
+# The observations which get swapped with g0 values are defined by:
+# subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
+# probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
+# Example call:
+# defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
+defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, stratifyQ_by_rule) {
+  # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
+  if (!is.null(intervened_NODE)) {
+    gstar.NODEs <- intervened_NODE
+    for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
+    assert_that(length(intervened_NODE) == length(NodeNames))
+
+    # ------------------------------------------------------------------------------------------
+    # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
+    # ------------------------------------------------------------------------------------------
+    subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
+    OData$replaceNodesVals(!subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
+    # ------------------------------------------------------------------------------------------
+
+    # ------------------------------------------------------------------------------------------
+    # update rule followers for trt if doing stratified G-COMP:
+    # Note this will define rule followers based on REPLACED intervened_NODE in dat.sVar (i.e., modified n^*(t) under N.D.E.)
+    # FOR NDE BASED TMLE THE DEFINITION OF RULE-FOLLOWERS CHANGE ACCORDINGLY based on modified n^*(t) and a^*(t)
+    # ------------------------------------------------------------------------------------------
+    if (stratifyQ_by_rule) {
+      rule_followers_idx <- OData$eval_rule_followers(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
+      OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
+    }
+
+  } else {
+    # use the actual (observed) node names under g0:
+    gstar.NODEs <- NodeNames
+  }
+  return(gstar.NODEs)
+}
+
 # ---------------------------------------------------------------------------------------
-#' Fit TMLE or sequential GCOMP for survival
+#' Fit sequential GCOMP and TMLE for survival
 #'
-#' Evaluate the inverse probability weights for up to 3 intervention nodes: \code{CENS}, \code{TRT} and \code{MONITOR}.
-#' This is based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
+#' Interventions on up to 3 nodes are allowed: \code{CENS}, \code{TRT} and \code{MONITOR}.
+#' TMLE adjustment will be based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
 #' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
 #' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
-#' The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero weight are kept
-#' Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
-#' Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 #' @param OData Input data object created by \code{importData} function.
-#' @param t_periods ...
+#' @param t_periods Specify the vector of time-points for which the survival function (and risk) should be estimated
 #' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
 #' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
 #' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
@@ -124,12 +164,15 @@ fitTMLE <- function(...) {
 #' The expression can contain any variable name that was defined in the input dataset.
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
-#' @param stratifyQ_by_rule ...
-#' @param TMLE ...
+#' @param stratifyQ_by_rule Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
+#' Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression)
+#' @param TMLE Set to \code{TRUE} to run TMLE
 #' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @param IPWeights Pass a dataset of IPWeights for TMLE (if missing, these will be evaluated automatically)
-#' @param params_Q ...
-#' @param parallel ...
+#' @param weights Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
+#' The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).
+#' @param params_Q Optional parameters to be passed to the specific fitting algorithm for Q-learning
+#' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{%dopar%} and requires a previously defined parallel back-end cluster)
 #' @param verbose ...
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
@@ -143,7 +186,7 @@ fitSeqGcomp <- function(OData,
                         stratifyQ_by_rule = FALSE,
                         TMLE = FALSE,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                        IPWeights,
+                        IPWeights, weights = NULL,
                         params_Q = list(),
                         parallel = FALSE,
                         verbose = getOption("stremr.verbose")) {
@@ -161,64 +204,17 @@ fitSeqGcomp <- function(OData,
   OData$uncensored_idx <- OData$eval_uncensored()
   OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
+  # ------------------------------------------------------------------------------------------
+  # Create a back-up of the observed input gstar nodes (created by user in input data):
+  # Will add new columns (that were not backed up yet) TO SAME backup data.table
+  # ------------------------------------------------------------------------------------------
+  OData$backupNodes(c(intervened_TRT,intervened_MONITOR))
+
   # ------------------------------------------------------------------------------------------------
   # Define the intervention nodes
   # ------------------------------------------------------------------------------------------------
-  # ------------------------------------------------------------------------------------------------------------------------
-  # When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
-  # ------------------------------------------------------------------------------------------------------------------------
-  #  Do it separately for gstar_TRT & gstar_MONITOR
-  #   Loop over each node in gstar_TRT / gstar_MONITOR
-  #  Do it only once for all observations inside main tmle call
-  #  Back-up a copy of all gstar nodes first, the original copy is then restored when finished running
-  #  The observations which get swapped with g0 values are defined by:
-  #   subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
-
-# Example call:
-# defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
-defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, stratifyQ_by_rule) {
-  # probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
-  # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
-  if (!is.null(intervened_NODE)) {
-    gstar.NODEs <- intervened_NODE
-    for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
-    assert_that(length(intervened_NODE) == length(NodeNames))
-
-    # ------------------------------------------------------------------------------------------
-    # NOT IMPLEMENTED:
-    # create a back-up of the observed input gstar nodes (created by user in input data):
-    # needs to know how to add new columns (not backed up yet) TO SAME backup data.table
-    # OData$backupNodes(intervened_NODE)
-    # subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
-    # # NOT IMPLEMENTED:
-    # # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
-    # OData$replaceNodesVals(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
-    # ------------------------------------------------------------------------------------------
-
-
-    # ------------------------------------------------------------------------------------------
-    # update rule followers for trt if doing stratified G-COMP:
-    # Note this will define rule followers based on REPLACED intervened_NODE in dat.sVar (i.e., modified n^*(t) under NDE)
-    # ------------------------------------------------------------------------------------------
-    # Q: FOR NDE BASED TMLE, DOES THE DEFINITION OF RULE-FOLLOWERS CHANGE ACCORDINGLY????
-    #    I.E., should we  define rule followers based on modified n^*(t) and a^*(t)?
-    #    most likely YES YES YES, but need to double check with romain.
-
-    if (stratifyQ_by_rule) {
-      rule_followers_idx <- OData$eval_rule_followers(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
-      OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
-    }
-
-  } else {
-    # use the actual (observed) node names under g0:
-    gstar.NODEs <- NodeNames
-  }
-  return(gstar.NODEs)
-}
-
   gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
   gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
-
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
 
@@ -261,7 +257,7 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
   if (TMLE) {
     if (missing(IPWeights)) {
       message("...evaluating IPWeights for TMLE...")
-      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, stabilize = FALSE)
+      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, weights = weights, stabilize = FALSE)
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
       message("applying user-specified IPWeights, make sure these weights were obtained by making a call: \n'getIPWeights((OData, intervened_TRT, intervened_MONITOR, stabilize = FALSE)'")
@@ -297,17 +293,23 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
     }
   }
 
+  # ------------------------------------------------------------------------------------------------
+  # Restore backed up nodes
+  # ------------------------------------------------------------------------------------------------
+  OData$restoreNodes(c(intervened_TRT,intervened_MONITOR))
+
+
   resultDT <- data.table(est_name = est_name, rbindlist(res_byt))
   return(resultDT)
 }
 
 fitSeqGcomp_onet <- function(OData,
-                                t_period,
-                                Qforms,
-                                stratifyQ_by_rule,
-                                TMLE,
-                                params_Q,
-                                verbose = getOption("stremr.verbose")) {
+                            t_period,
+                            Qforms,
+                            stratifyQ_by_rule,
+                            TMLE,
+                            params_Q,
+                            verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -377,10 +379,6 @@ fitSeqGcomp_onet <- function(OData,
   lastQ_inx <- Qreg_idx[1] # the index for the last Q-fit
   res_lastPredQ_Prob1 <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
   mean_est_t <- mean(res_lastPredQ_Prob1)
-
-  if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
-  if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
-
   # # 1b. Grab the right model (QlearnModel) and pull it directly:
   #   lastQ.fit <- Qlearn.fit$getPsAsW.models()[[lastQ_inx]]$getPsAsW.models()[[1]]
   #   lastQ.fit
@@ -396,8 +394,8 @@ fitSeqGcomp_onet <- function(OData,
   #   subset_exprs <- lastQ.fit$subset_exprs
   #   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
   #   mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+  if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
+  if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
 
   return(list(riskP1 = mean_est_t, ALLsuccessTMLE = ALLsuccessTMLE, nFailedUpdates = nFailedUpdates))
 }
-
-

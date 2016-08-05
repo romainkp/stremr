@@ -205,13 +205,17 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
 #' @param rule_name Optional name for the treatment/monitoring regimen.
+#' @param weights Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
+#' The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param stabilize Set to \code{TRUE} to return stabilized weights
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 # @example tests/examples/1_stremr_example.R
 #' @export
 getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
-                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""), stabilize = TRUE) {
+                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
+                         weights = NULL,
+                         stabilize = TRUE) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
   if (!is.null(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
