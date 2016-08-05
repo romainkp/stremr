@@ -25,7 +25,7 @@ ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y"; 
 # Might expand this in the future to allow defining arbitrary summaries
 # ---------------------------------------------------------------------------
 # Odat_DT <- obsDTg05_1mil
-Odat_DT <- O.data
+Odat_DT <- data.table(O.data)
 
 lagnodes <- c("C", "TI", "N")
 newVarnames <- lagnodes %+% ".tminus1"

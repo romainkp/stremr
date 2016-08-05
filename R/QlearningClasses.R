@@ -48,7 +48,7 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
     update.Qstar.coef <- NaN
-    message("TMLE update cannot be performed since all IP-weights are exactly zero!")
+    if (gvars$verbose) message("TMLE update cannot be performed since all IP-weights are exactly zero!")
     warning("TMLE update cannot be performed since all IP-weights are exactly zero!")
   } else {
     # browser()
@@ -59,14 +59,9 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
                                           y = prev_Q.kplus1, weights = IPWts, offset = off,
                                           family = quasibinomial(), trace = FALSE, maxit = 1000),
                   silent = TRUE)
-    # SuppressGivenWarnings(
-    #   m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
-    #                                       y = prev_Q.kplus1, weights = IPWts, offset = off,
-    #                                       family = quasibinomial(), trace = FALSE, maxit = 1000),
-    #   GetWarningsToSuppress(TRUE))
 
     if (inherits(m.Qstar, "try-error")) { # TMLE update failed
-      message("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
+      if (gvars$verbose) message("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
       warning("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
       update.Qstar.coef <- NaN
     } else {
@@ -74,26 +69,10 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
     }
   }
 
-  # m.Qstar.fit <- list(coef = m.Qstar$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
-  # class(m.Qstar.fit) <- c(class(m.Qstar.fit), c("speedglmS3"))
-  # SuppressGivenWarnings(m.Qstar <- glm(Y ~ offset(off), data = data.frame(Y = Y, off = off), weights = IPWts,
-                                            # subset = !determ.Q, family = "quasibinomial", control = ctrl), GetWarningsToSuppress(TRUE))
-  # update.Qstar.coef <- coef(m.Qstar)
-  # if (predictQ) {
-  #   QY.star <- prev_Q.kplus1
-  #   if (!is.na(update.Qstar.coef)) QY.star <- plogis(off + update.Qstar.coef)
-  # }
-  #************************************************
-  # (DISABLED) g_IPTW estimator (based on full likelihood factorization, prod(g^*)/prod(g_N):
-  #************************************************
-  # 02/16/13: IPTW estimator (Y_i * prod_{j \\in Fi} [g*(A_j|c^A)/g0_N(A_j|c^A)])
-  # g_wts <- iptw_est(k = est_params_list$Kmax, data = data, node_l = nodes, m.gN = est_params_list$m.g0N,
-  #                      f.gstar = est_params_list$f.gstar, f.g_args = est_params_list$f.g_args, family = "binomial",
-  #                      NetInd_k = est_params_list$NetInd_k, lbound = est_params_list$lbound, max_npwt = est_params_list$max_npwt,
-  #                      f.g0 = est_params_list$f.g0, f.g0_args = est_params_list$f.g0_args)
-  # Y_IPTW_g <- Y
-  # Y_IPTW_g[!determ.Q] <- Y[!determ.Q] * g_wts[!determ.Q]
-  return(list(update.Qstar.coef = update.Qstar.coef, QY.star = QY.star))
+  fit <- list(TMLE.intercept = update.Qstar.coef)
+  class(fit)[2] <- "tmlefit"
+  return(fit)
+  # return(list(update.Qstar.coef = update.Qstar.coef, QY.star = QY.star))
 }
 
 #' @export
@@ -208,17 +187,16 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Cumulative IPWeights for current t:
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cumm.IPAW", with = FALSE][[1]]
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
-        tmle_res <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)
-        # print("TMLE Intercept: " %+% round(tmle_res$update.Qstar.coef, 5))
-        if (!is.na(tmle_res$update.Qstar.coef) && !is.nan(tmle_res$update.Qstar.coef)) {
-          update.Qstar.coef <- tmle_res$update.Qstar.coef
+        private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)
+        TMLE.intercept <- private$TMLE.fit$TMLE.intercept
+        # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
+        if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
+          update.Qstar.coef <- TMLE.intercept
         } else {
           update.Qstar.coef <- 0
         }
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
-        # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + tmle_res$update.Qstar.coef)
-
         # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))
       }
 
@@ -355,7 +333,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     # Returns the object that contains the actual model fits (itself)
     get.fits = function() {
       model.fit <- self$getfit
-      return(list(model.fit))
+      tmle.fit <- self$getTMLEfit
+      return(list(model.fit, tmle.fit))
     }
   ),
 
@@ -368,6 +347,16 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$binomialModelObj$emptydata
       self$binomialModelObj$emptyY
       return(self)
-    }
+    },
+    getfit = function() { private$model.fit },
+    getTMLEfit = function() { private$TMLE.fit }
+  ),
+
+  private = list(
+    model.fit = list(),   # the model fit (either coefficients or the model fit object)
+    TMLE.fit = list(NA),
+    .outvar = NULL,
+    probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
+    probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
   )
 )

@@ -12,7 +12,7 @@
 # ------------------------------------------------------------------------------------------
 # *) PASS Q.kplus1 AS a vector argument?
 # *) using existing approach to LOADING A NEW FRAME FOR EVERY single call to QlearnModel$fit,
-#    but pass the args so that destination_frame is always different for each separate call of fitSeqGcomp_singlet()
+#    but pass the args so that destination_frame is always different for each separate call of fitSeqGcomp_onet()
 # *) remove all the implicit FRAME creating steps ('[,]' with automatic IDs) with explicit steps so that destination_frame can be specified
 # *) use h2o.removeAll() to remove all frames at once
 # *) use h2o.rm(ids) to remove a single frame by its ID
@@ -209,8 +209,6 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
       OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
     }
 
-
-
   } else {
     # use the actual (observed) node names under g0:
     gstar.NODEs <- NodeNames
@@ -218,36 +216,8 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
   return(gstar.NODEs)
 }
 
-  # replacing below with one function call:
   gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
-  # if (!is.null(intervened_TRT)) {
-  #   gstar.A <- intervened_TRT
-  #   for (intervened_TRT_col in intervened_TRT) CheckVarNameExists(OData$dat.sVar, intervened_TRT_col)
-  #   # update rule followers for trt if doing stratified G-COMP:
-  #   # Q: FOR NDE BASED TMLE, DOES THE DEFINITION OF RULE-FOLLOWERS CHANGE ACCORDINGLY????
-  #   #    I.E., should we  define rule followers based on modified n^*(t) and a^*(t)?
-  #   #    most likely YES YES YES, but need to double check with romain.
-  #   if (stratifyQ_by_rule) {
-  #     rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Anodes, gstar.NodeName = gstar.A)
-  #     OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
-  #   }
-  # } else {
-  #   gstar.A <- nodes$Anodes # use the actual observed exposure (no intervention on TRT)
-  # }
-
-  # replacing below with one function call:
   gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
-  # if (!is.null(intervened_MONITOR)) {
-  #   gstar.N <- intervened_MONITOR
-  #   for (intervened_MONITOR_col in intervened_MONITOR) CheckVarNameExists(OData$dat.sVar, intervened_MONITOR_col)
-  #   # UPDATE RULE FOLLOWERS FOR MONITOR IF DOING stratified G-COMP:
-  #   if (stratifyQ_by_rule) {
-  #     rule_followers_idx <- OData$eval_rule_followers(NodeName = nodes$Nnodes, gstar.NodeName = gstar.N)
-  #     OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
-  #   }
-  # } else {
-  #   gstar.N <- nodes$Nnodes # use the actual observed monitoring probability (no intervention on MONITOR)
-  # }
 
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
@@ -315,24 +285,23 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
     mcoptions <- list(preschedule = FALSE)
     res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
       t_period <- t_periods[t_idx]
-      riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
-      surv_byt <- 1-riskP1_byt
-      data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
+      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
+      data.frame(t = t_period, risk = res$riskP1, surv = 1 - res$riskP1, ALLsuccessTMLE = res$ALLsuccessTMLE, nFailedUpdates = res$nFailedUpdates)
     }
   } else {
     res_byt <- vector(mode = "list", length = length(t_periods))
     for (t_idx in seq_along(t_periods)) {
       t_period <- t_periods[t_idx]
-      riskP1_byt <- fitSeqGcomp_singlet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
-      surv_byt <- 1 - riskP1_byt
-      res_byt[[t_idx]] <- data.frame(t = t_period, risk = riskP1_byt, surv = surv_byt)
+      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
+      res_byt[[t_idx]] <- data.frame(t = t_period, risk = res$riskP1, surv = 1 - res$riskP1, ALLsuccessTMLE = res$ALLsuccessTMLE, nFailedUpdates = res$nFailedUpdates)
     }
   }
+
   resultDT <- data.table(est_name = est_name, rbindlist(res_byt))
   return(resultDT)
 }
 
-fitSeqGcomp_singlet <- function(OData,
+fitSeqGcomp_onet <- function(OData,
                                 t_period,
                                 Qforms,
                                 stratifyQ_by_rule,
@@ -366,7 +335,7 @@ fitSeqGcomp_singlet <- function(OData,
 
   # ------------------------------------------------------------------------------------------------
   #  ****** Q.kplus1 THIS NEEDS TO BE MOVED OUT OF THE MAIN data.table *****
-  # Running fitSeqGcomp_singlet might conflict with different Q.kplus1
+  # Running fitSeqGcomp_onet might conflict with different Q.kplus1
   # ------------------------------------------------------------------------------------------------
   # **** G-COMP: Initiate Q.kplus1 - (could be multiple if more than one regimen)
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)
@@ -395,14 +364,23 @@ fitSeqGcomp_singlet <- function(OData,
   Qlearn.fit$fit(data = OData)
   OData$Qlearn.fit <- Qlearn.fit
 
+  # get the individual TMLE updates and evaluate if any updates have failed
+  allQmodels <- Qlearn.fit$getPsAsW.models()
+  allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getPsAsW.models()[[1]]$getTMLEfit)
+  TMLEfits <- unlist(allTMLEfits)
+  successTMLEupdates <- !is.na(TMLEfits) & !is.nan(TMLEfits)
+  ALLsuccessTMLE <- all(successTMLEupdates)
+  nFailedUpdates <- sum(!successTMLEupdates)
+
   # 1a. Grab the mean prediction from the very last regression (over all n observations);
   # this is the G-COMP/TMLE estimate of survival for a single t period (t specified in the first Q-reg)
   lastQ_inx <- Qreg_idx[1] # the index for the last Q-fit
   res_lastPredQ_Prob1 <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
   mean_est_t <- mean(res_lastPredQ_Prob1)
 
-  print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
-  print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
+  if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
+  if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
+
   # # 1b. Grab the right model (QlearnModel) and pull it directly:
   #   lastQ.fit <- Qlearn.fit$getPsAsW.models()[[lastQ_inx]]$getPsAsW.models()[[1]]
   #   lastQ.fit
@@ -419,7 +397,7 @@ fitSeqGcomp_singlet <- function(OData,
   #   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
   #   mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
 
-  return(mean_est_t)
+  return(list(riskP1 = mean_est_t, ALLsuccessTMLE = ALLsuccessTMLE, nFailedUpdates = nFailedUpdates))
 }
 
 
