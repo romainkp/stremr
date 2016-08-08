@@ -186,7 +186,9 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
       probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
       probA1 <- private$probA1[self$getsubset]
+
       assert_that(!any(is.na(probA1))) # check that predictions P(A=1 | dmat) exist for all obs.
+
       # Discrete version for joint density:
       probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
       # continuous version for the joint density:
@@ -308,6 +310,7 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
   public = list(
     gstar.Name = character(),
     is.fitted = TRUE,
+
     initialize = function(reg, ...) {
       self$model_contrl <- reg$model_contrl
       self$gstar.Name <- reg$model_contrl[["gstar.Name"]]
@@ -321,29 +324,44 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       self$ReplMisVal0 <- reg$ReplMisVal0
       invisible(self)
     },
+
     # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
     # store these predictions in private$probA1 and private$probAeqa
-    fit = function(overwrite = FALSE, data, predict = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
+    fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       self$define.subset.idx(data)
       private$probA1 <- data$get.outvar(TRUE, self$gstar.Name)
+      # private$.isNA.probA1 <- is.na(private$probA1)
       self$subset_idx <- rep.int(TRUE, self$n)
       private$.outvar <- data$get.outvar(TRUE, self$getoutvarnm) # Always a vector of 0/1
+      # private$.isNA.outvar <- is.na(private$.outvar)
       self$is.fitted <- TRUE
-      if (predict) {
-        self$predictAeqa(...)
-      }
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
+      # self$wipe.alldat
       # **********************************************************************
       invisible(self)
     },
+
     # get the fixed (known) the gstar P(A^*(t) = 1|W, bar{L(t)});
     # should be already saved earlier in private$probA1, so there is nothing to do here
     predict = function(newdata, ...) {
       assert_that(self$is.fitted)
       return(invisible(self))
+    },
+    predictAeqa = function(newdata, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+      assert_that(self$is.fitted)
+      if (missing(newdata)) {
+        indA <- self$getoutvarval
+      } else {
+        indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
+      }
+      assert_that(is.integerish(indA)) # check that observed exposure is always a vector of integers
+      probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+      probA1 <- private$probA1[self$getsubset]
+      probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
+      self$wipe.alldat # to save RAM space when doing many stacked regressions wipe out all internal data:
+      return(probAeqa)
     },
 
     # Output info on the general type of regression being fitted:
@@ -358,8 +376,8 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
 
   active = list(
     wipe.alldat = function() {
-      # private$probA1 <- NULL
-      # private$probAeqa <- NULL
+      private$probA1 <- NULL
+      private$probAeqa <- NULL
       private$.outvar <- NULL
       self$subset_idx <- NULL
       return(self)
@@ -370,10 +388,13 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
     getoutvarnm = function() { self$outvar },
     getoutvarval = function() { private$.outvar }
   ),
+
   private = list(
     model.fit = list(),   # the model fit (either coefficients or the model fit object)
     .outvar = NULL,
-    probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
-    probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
+    # .isNA.outvar = NULL,
+    probA1 = NULL,      # Predicted probA^s=1 conditional on Xmat
+    # .isNA.probA1 = NULL,
+    probAeqa = NULL     # Likelihood of observing a particular value A^s=a^s conditional on Xmat
   )
 )

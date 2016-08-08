@@ -173,8 +173,13 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
       Q_regs_list[[i]] <- reg
     }
     gstar.NODE.obj <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-    gstar.NODE <- gstar.NODE.obj$fit(data = OData, predict = TRUE)$predictAeqa(n = OData$nobs)
+    gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
+
+    if (any(is.na(subset_idx))) {
+      stop("the subset index evaluation for the expression '" %+% useonly_t_NODE %+% "' resulted in NAs")
+    }
+
     gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
   } else {
     # use the actual observed exposure probability (no intervention on NODE)

@@ -204,28 +204,6 @@ fitSeqGcomp <- function(OData,
   OData$uncensored_idx <- OData$eval_uncensored()
   OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
-  # ------------------------------------------------------------------------------------------
-  # Create a back-up of the observed input gstar nodes (created by user in input data):
-  # Will add new columns (that were not backed up yet) TO SAME backup data.table
-  # ------------------------------------------------------------------------------------------
-  OData$backupNodes(c(intervened_TRT,intervened_MONITOR))
-
-  # ------------------------------------------------------------------------------------------------
-  # Define the intervention nodes
-  # ------------------------------------------------------------------------------------------------
-  gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
-  gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
-  interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
-  interventionNodes.gstar <- c(gstar.A, gstar.N)
-
-  # When the same node names belongs to both g0 and gstar it doesn't need to be intervened upon, so exclude
-  common_names <- intersect(interventionNodes.g0, interventionNodes.gstar)
-  interventionNodes.g0 <- interventionNodes.g0[!interventionNodes.g0 %in% common_names]
-  interventionNodes.gstar <- interventionNodes.gstar[!interventionNodes.gstar %in% common_names]
-
-  OData$interventionNodes.g0 <- interventionNodes.g0
-  OData$interventionNodes.gstar <- interventionNodes.gstar
-
   # ------------------------------------------------------------------------------------------------
   # **** Load dat.sVar into H2O.Frame memory if loading data only once
   # ------------------------------------------------------------------------------------------------
@@ -254,6 +232,9 @@ fitSeqGcomp <- function(OData,
   # **** Add weights if TMLE=TRUE and if weights were defined
   # NOTE: This needs to be done only once if evaluating survival over several t_periods
   # ------------------------------------------------------------------------------------------------
+  # OData$dat.sVar[1:100,]
+  # OData$backup.savedGstarsDT
+
   if (TMLE) {
     if (missing(IPWeights)) {
       message("...evaluating IPWeights for TMLE...")
@@ -272,6 +253,28 @@ fitSeqGcomp <- function(OData,
   }
 
   if (missing(t_periods)) stop("must specify survival 't_periods' of interest (time period values from column " %+% nodes$tnode %+% ")")
+
+  # ------------------------------------------------------------------------------------------
+  # Create a back-up of the observed input gstar nodes (created by user in input data):
+  # Will add new columns (that were not backed up yet) TO SAME backup data.table
+  # ------------------------------------------------------------------------------------------
+  OData$backupNodes(c(intervened_TRT,intervened_MONITOR))
+
+  # ------------------------------------------------------------------------------------------------
+  # Define the intervention nodes
+  # ------------------------------------------------------------------------------------------------
+  gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
+  gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
+  interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
+  interventionNodes.gstar <- c(gstar.A, gstar.N)
+
+  # When the same node names belongs to both g0 and gstar it doesn't need to be intervened upon, so exclude
+  common_names <- intersect(interventionNodes.g0, interventionNodes.gstar)
+  interventionNodes.g0 <- interventionNodes.g0[!interventionNodes.g0 %in% common_names]
+  interventionNodes.gstar <- interventionNodes.gstar[!interventionNodes.gstar %in% common_names]
+
+  OData$interventionNodes.g0 <- interventionNodes.g0
+  OData$interventionNodes.gstar <- interventionNodes.gstar
 
   # ------------------------------------------------------------------------------------------------
   # RUN GCOMP OR TMLE FOR SEVERAL TIME-POINTS EITHER IN PARALLEL OR SEQUENTIALLY

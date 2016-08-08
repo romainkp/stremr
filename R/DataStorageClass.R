@@ -496,12 +496,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     #   self$curr_data_A_g0 <- !self$curr_data_A_g0
     #   invisible(self)
     # },
-
     # replaceOneNode = function(NodeName, newNodeVal) {
     #   self$set.sVar(NodeName, newNodeVal)
     #   invisible(self)
     # },
-
     # replaceManyNodes = function(Nodes, newNodesMat) {
     #   assert_that(is.matrix(newNodesMat))
     #   assert_that(ncol(newNodesMat) == length(Nodes))
@@ -513,7 +511,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     #   }
     #   invisible(self)
     # },
-
     # # Replace a column or columns in private$Xmat with new values
     # replaceCols = function(subset_idx, colnames) {
     #   for (colname in colnames) {
@@ -662,6 +659,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.mat.bin.sVar <- dat.bin.sVar
       }
     },
+    backup.savedGstarsDT = function() { private$.saveGstarsDT },
     emptydat.sVar = function() { private$.mat.sVar <- NULL },         # wipe out mat.sVar
     # wipe out binirized .mat.sVar:
     emptydat.bin.sVar = function() {
