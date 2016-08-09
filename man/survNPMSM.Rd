@@ -7,8 +7,7 @@
 survNPMSM(wts_data, OData)
 }
 \arguments{
-\item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
-This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.}
+\item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.}
 
 \item{OData}{The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
 right-censoring.}

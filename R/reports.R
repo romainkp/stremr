@@ -39,10 +39,8 @@ openFileInOS <- function(f) {
 #'
 #' @param OData Input data object returned by the function \code{importData}.
 #' @param MSM The MSM object fits returned by the function \code{survMSM}.
-#' @param MSMlist ...NOT IMPLEMENTED...
 #' @param TMLE ...
 #' @param GCOMP ...
-#' @param SurvByRegimen ... NOT IMPLEMENTED...
 #' @param WTtables Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}
 #' @param AddFUPtables Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times by rule (monitoring and treatment).
 #' @param RDtables List of tables with risk differences returned by the function \code{get_MSM_RDs}.
@@ -57,7 +55,7 @@ openFileInOS <- function(f) {
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, MSMlist, TMLE, GCOMP, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), openFile = TRUE, ...) {
+make_report_rmd <- function(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), openFile = TRUE, ...) {
   optArgReport <- list(...)
 
   if ("author" %in% names(optArgReport)) {
@@ -78,18 +76,6 @@ make_report_rmd <- function(OData, MSM, MSMlist, TMLE, GCOMP, SurvByRegimen, WTt
     assert_that(is.logical(only.coefs))
   } else {
     only.coefs <- FALSE
-  }
-
-  if (!missing(MSM)) {
-    # handle separately if MSM is a list of many MSMs -> will need to do the plotting for each MSM in the list
-    SurvByRegimen <- MSM$St
-    wts_data <- MSM$wts_data
-  }
-
-  if (!missing(MSMlist)) {
-    # need to figure out how to handle it -> define some variables which will control report-scrit-rmd.R
-    # ...
-    SurvByRegimen <- MSM$St
   }
 
   # -------------------------------------------------------------------------------------

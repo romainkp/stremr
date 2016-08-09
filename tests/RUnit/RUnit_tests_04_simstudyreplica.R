@@ -146,6 +146,8 @@ notrun.save.example.data <- function() {
   # obsDTg05_10K <- Odat_DT
   # save(obsDTg05_10K, compress = TRUE, file = "obsDTg05_10K.rda", compression_level = 9)
   # resaveRdaFiles("./obsDTg05_10K.rda", compress = "bzip2")
+
+  return(Odat_DT)
 }
 
 options(width = 100)
@@ -179,9 +181,9 @@ stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 # stremr_options(fit.package = "h2o", fit.algorithm = "RF")
 # stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
 
-require("h2o")
-h2o::h2o.init(nthreads = -1)
-h2o::h2o.shutdown(prompt = FALSE)
+# require("h2o")
+# h2o::h2o.init(nthreads = -1)
+# h2o::h2o.shutdown(prompt = FALSE)
 
 OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
 # to see the input data.table:
@@ -217,8 +219,6 @@ survNPMSM(wts.St.dlow, OData)
 wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
 survNPMSM(wts.St.dhigh, OData)
 
-
-
 # ------------------------------------------------------------------
 # Piping the workflow
 # ------------------------------------------------------------------
@@ -242,37 +242,15 @@ MSM.IPAW <- survMSM(OData,
                     est_name = "IPAW", getSEs = FALSE)
 MSM.IPAW
 
-# ------------------------------------------------------------------
-# Make a report:
-# ------------------------------------------------------------------
-report.path <- "/home/ubuntu/stremr_example"
-make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
-                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                file.name = "sim.data.example.fup", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-
-# pdf or word:
-make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
-                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                file.name = "sim.data.example.fup", format = "pdf", file.path = report.path, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-
-# # omit extra modeling stuff (only coefficients):
-# make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# # skip modeling stuff alltogether:
-# make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# # skip RD tables by simply not including them:
-# make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-
-
 # ---------------------------------------------------------------------------------------------------------
 # TMLE / GCOMP
 # ---------------------------------------------------------------------------------------------------------
-t.surv <- c(10)
+t.surv <- c(9,10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 params = list(fit.package = "speedglm", fit.algorithm = "GLM")
 
 gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+gcomp_est3
 
 # stratified modeling by rule followers only:
 tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
@@ -288,25 +266,56 @@ tmle_est4
 # require("doRedis")
 # registerDoRedis("jobs", password = "JFEFlfki249fkjsk2~.<+JFEFl;")
 require("doParallel")
-registerDoParallel(cores = 40)
+registerDoParallel(cores = 4)
 data.table::setthreads(1)
 
-t.surv <- c(1,2,3,4,5,6,7,8,9,10)
+t.surv <- c(0:15)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
 tmle_est_par1
-tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pool.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
 tmle_est_par2
 
-# ---------------------------------------------------------------------------------------------------------
-# TMLE w/ h2o random forest
-# ---------------------------------------------------------------------------------------------------------
-params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
-t.surv <- c(10)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-tmle_est
+tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "strat.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+tmle_est_par3
+tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "strat.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+tmle_est_par4
+
+# ------------------------------------------------------------------
+# Make a report:
+# ------------------------------------------------------------------
+make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe")
+
+is.list(tmle_est_par2)
+
+# report.path <- "/home/ubuntu/stremr_example"
+# file.path = report.path,
+
+make_report_rmd(OData, MSM = MSM.IPAW, TMLE = tmle_est_par1,
+                AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+
+make_report_rmd(OData, MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+                AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+
+make_report_rmd(OData, MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+                AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95, format = "pdf")
+
+# # omit extra modeling stuff (only coefficients):
+# make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# # skip modeling stuff alltogether:
+# make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+# # skip RD tables by simply not including them:
+# make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
 # ---------------------------------------------------------------------------------------------------------
 # TMLE / GCOMP with intervention on MONITOR
@@ -324,6 +333,11 @@ tmle_est3
 # pooling all observations (no stratification):
 tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 tmle_est4
-
-
-
+# ---------------------------------------------------------------------------------------------------------
+# TMLE w/ h2o random forest
+# ---------------------------------------------------------------------------------------------------------
+params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+t.surv <- c(10)
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+tmle_est

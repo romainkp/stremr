@@ -4,10 +4,9 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats and survival estimates using pandoc.}
 \usage{
-make_report_rmd(OData, MSM, MSMlist, TMLE, GCOMP, SurvByRegimen,
-  WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html",
-  "pdf", "word"), skip.modelfits = FALSE,
-  file.name = getOption("stremr.file.name"),
+make_report_rmd(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL,
+  AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"),
+  skip.modelfits = FALSE, file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), openFile = TRUE, ...)
 }
 \arguments{
@@ -15,13 +14,9 @@ make_report_rmd(OData, MSM, MSMlist, TMLE, GCOMP, SurvByRegimen,
 
 \item{MSM}{The MSM object fits returned by the function \code{survMSM}.}
 
-\item{MSMlist}{...NOT IMPLEMENTED...}
-
 \item{TMLE}{...}
 
 \item{GCOMP}{...}
-
-\item{SurvByRegimen}{... NOT IMPLEMENTED...}
 
 \item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}}
 

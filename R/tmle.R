@@ -131,7 +131,7 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
     # ------------------------------------------------------------------------------------------
     # update rule followers for trt if doing stratified G-COMP:
     # Note this will define rule followers based on REPLACED intervened_NODE in dat.sVar (i.e., modified n^*(t) under N.D.E.)
-    # FOR NDE BASED TMLE THE DEFINITION OF RULE-FOLLOWERS CHANGE ACCORDINGLY based on modified n^*(t) and a^*(t)
+    # FOR NDE BASED TMLE THE DEFINITION OF RULE-FOLLOWERS CHANGES ACCORDINGLY based on modified n^*(t) and a^*(t)
     # ------------------------------------------------------------------------------------------
     if (stratifyQ_by_rule) {
       rule_followers_idx <- OData$eval_rule_followers(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
@@ -199,7 +199,6 @@ fitSeqGcomp <- function(OData,
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
-  # **** NOTE: THIS NEEDS TO BE TAKEN OUT OF HERE AND PUT AS A SEPARATE FUNCTION TO BE CALLED FROM getIPWeights and/or fitSeqGcomp
   # ------------------------------------------------------------------------------------------------
   OData$uncensored_idx <- OData$eval_uncensored()
   OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
@@ -301,8 +300,9 @@ fitSeqGcomp <- function(OData,
   # ------------------------------------------------------------------------------------------------
   OData$restoreNodes(c(intervened_TRT,intervened_MONITOR))
 
-
   resultDT <- data.table(est_name = est_name, rbindlist(res_byt))
+  resultDT[, "rule.name" := eval(as.character(rule_name))]
+
   return(resultDT)
 }
 

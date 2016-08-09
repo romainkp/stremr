@@ -294,14 +294,17 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
 #' Non-parametric (saturated) MSM for survival based on previously evaluated IP weights.
 #' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
 #' right-censoring.
-#' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
-#' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.
+#' @param wts_data \code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.
 #' @return A data.table with hazard and survival function estimates by time. Also include the unadjusted Kaplan-Maier estimates.
 #' @export
 survNPMSM <- function(wts_data, OData) {
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
+
+  rule.name <- unique(wts_data[["rule.name"]])
+  if (length(rule.name)>1) stop("wts_data must contain the weights for a single rule, found more than one unique rule name under in 'rule.name' column")
+
   # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
   ht.crude <- wts_data[cumm.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t_name)
@@ -316,6 +319,7 @@ survNPMSM <- function(wts_data, OData) {
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
   # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
   St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all=TRUE)
+  St_ht_IPAW[, "rule.name" := rule.name]
   return(list(IPW_estimates = data.frame(St_ht_IPAW)))
 }
 
@@ -538,17 +542,17 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
   }
   MSM_out <- list(
               est_name = est_name,
+              periods = periods,
               St = S2.IPAW,
               ht = hazard.IPAW,
               MSM.fit = m.fit,
               MSM.intervals = MSM.intervals,
               IC.Var.S.d = IC.Var.S.d,
-              nID = nID, periods = periods,
+              nID = nID,
               wts_data = wts_data,
               use_weights = use_weights,
               trunc_weights = trunc_weights
             )
-
   return(MSM_out)
 }
 
