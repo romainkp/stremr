@@ -160,19 +160,19 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' Leave the argument unspecified (\code{NULL}) when not intervening on the monitoring node(s).
 #' @param useonly_t_TRT Use for intervening only on some subset of observation and time-specific treatment nodes.
 #' Should be a character string with a logical expression that defines the subset of intervention observations.
-#' For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being equal to zero.
+#' For example, using \code{TRT==0} will intervene only at observations with the value of \code{TRT} being equal to zero.
 #' The expression can contain any variable name that was defined in the input dataset.
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
 #' @param stratifyQ_by_rule Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
-#' Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression)
+#' Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).
 #' @param TMLE Set to \code{TRUE} to run TMLE
 #' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @param IPWeights Pass a dataset of IPWeights for TMLE (if missing, these will be evaluated automatically)
-#' @param weights Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
-#' The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).
+#' @param weights Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param params_Q Optional parameters to be passed to the specific fitting algorithm for Q-learning
-#' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{%dopar%} and requires a previously defined parallel back-end cluster)
+#' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with %\code{dopar}% and requires a previously defined parallel back-end cluster)
 #' @param verbose ...
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,

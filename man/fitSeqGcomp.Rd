@@ -24,14 +24,14 @@ Leave the argument unspecified (\code{NULL}) when not intervening on the monitor
 
 \item{useonly_t_TRT}{Use for intervening only on some subset of observation and time-specific treatment nodes.
 Should be a character string with a logical expression that defines the subset of intervention observations.
-For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being equal to zero.
+For example, using \code{TRT==0} will intervene only at observations with the value of \code{TRT} being equal to zero.
 The expression can contain any variable name that was defined in the input dataset.
 Leave as \code{NULL} when intervening on all observations/time-points.}
 
 \item{useonly_t_MONITOR}{Same as \code{useonly_t_TRT}, but for monitoring nodes.}
 
 \item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
-Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression)}
+Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).}
 
 \item{TMLE}{Set to \code{TRUE} to run TMLE}
 
@@ -39,10 +39,12 @@ Setting to \code{FALSE} will fit the outcome model (Q-learning) across all obser
 
 \item{IPWeights}{Pass a dataset of IPWeights for TMLE (if missing, these will be evaluated automatically)}
 
-\item{weights}{Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
-The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).}
+\item{weights}{Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
 \item{params_Q}{Optional parameters to be passed to the specific fitting algorithm for Q-learning}
+
+\item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with %\code{dopar}% and requires a previously defined parallel back-end cluster)}
 
 \item{verbose}{...}
 }
