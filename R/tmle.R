@@ -44,25 +44,19 @@
 # ------------------------------------------------------------------------------------------
 # Outstanding issues:
 # ------------------------------------------------------------------------------------------
-# *** Pooling & performing only one TMLE update across all Q.k ***
-#     In general, we can pool all Q.kplus (across all t's) and do a single update on all of them
-#     Would make this TMLE iterative, but would not require refitting on the initial Q's
-#     See how fast is the G-comp formula prediction without fitting (the subseting/prediction loop alone) -> maybe fast enough to allow iterations
-# ------------------------------------------------------------------------------------------
 # *** Stochastic interventions ***
-#     Deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration or MC sim
-#     Need to do either MC integration (sample from g.star then predict Q)
-#     or direct weighted sum of predicted Q's with weights given by g.star (on A and N).
-# *) intervened_TRT/intervened_MONITOR are vectors of counterfactual probs -> allow each to be multivariate (>1 cols)
+# *) intervened_TRT/intervened_MONITOR are vectors of counterfactual probs -> need to allow each to be multivariate (>1 cols)
 # *) For column 0<intervened_TRT<1 it defines the counterfactual probability that P(TRT[t]^*=1)=intervened_TRT[t].
 # *) gstar can be a vector, i.e., abar=(0,0,0,0) or a matrix of counterfactual treatments, like in ltmle.
+#     Deal with stochastic interventions in QlearnModel class (possibly daughter classes) with direct intergration
+#     eval'ed as direct weighted sum of predicted Q's with weights given by g.star (on A and N).
 # ------------------------------------------------------------------------------------------
 #  *** rule_followers:
 #     Once you go off the treatment first time, this is it, the person is censored for the rest of the follow-up.
 #     Rule followers are now evaluated automatically by comparing (intervened_TRT and TRT and CENS) and (intervened_MONITOR and MONITOR and CENS).
 #     Rule followers are: (intervened_TRT = 1) & (TRT == 1) or (intervened_TRT = 0) & (TRT == 0) or (intervened_TRT > 0 & intervened_TRT < 0) & (Not Censored).
 #     Exactly the same logic is also applied to (intervened_MONITOR & MONITOR) when these are specified.
-#     If either TRT or MONITOR is multivariate (>1 col), this logic needs to be applied FOR EACH COLUMN of TRT/MONITOR.
+#     NOT TESTED: If either TRT or MONITOR is multivariate (>1 col), this logic needs to be applied FOR EACH COLUMN of TRT/MONITOR.
 # ------------------------------------------------------------------------------------------
 # *** Accessing correct QlearnModel ***
 #     Need to come up with a good way of accessing correct terminal QlearnModel to get final Q-predictions in private$probAeqa.
@@ -70,6 +64,11 @@
 #     However, if we do stratify=TRUE and use a stack version of g-comp with different strata all in one stacked database it will be difficult
 #     to pull the right QlearnModel.
 #     Alaternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos).
+# ------------------------------------------------------------------------------------------
+# *** Pooling & performing only one TMLE update across all Q.k ***
+#     In general, we can pool all Q.kplus (across all t's) and do a single update on all of them
+#     Would make this TMLE iterative, but would not require refitting on the initial Q's
+#     See how fast is the G-comp formula prediction without fitting (the subseting/prediction loop alone) -> maybe fast enough to allow iterations
 # ------------------------------------------------------------------------------------------
 # *** Pooling across regimens ***
 #     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen:
@@ -231,9 +230,6 @@ fitSeqGcomp <- function(OData,
   # **** Add weights if TMLE=TRUE and if weights were defined
   # NOTE: This needs to be done only once if evaluating survival over several t_periods
   # ------------------------------------------------------------------------------------------------
-  # OData$dat.sVar[1:100,]
-  # OData$backup.savedGstarsDT
-
   if (TMLE) {
     if (missing(IPWeights)) {
       message("...evaluating IPWeights for TMLE...")

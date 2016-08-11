@@ -210,7 +210,7 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
 #' @param rule_name Optional name for the treatment/monitoring regimen.
-#' @param weights Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
+#' @param weights Optional \code{data.table} with observation-time-specific additional weights.  Must contain column with subject \code{ID}s, time-points \code{t}s and \code{"weight"}.
 #' The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param stabilize Set to \code{TRUE} to return stabilized weights
 #' @return ...
@@ -272,11 +272,22 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   # Multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since it cancels):
   if (stabilize) wts.DT[, "cumm.IPAW" := cum.stab.P * cumm.IPAW]
 
+  # Add the observation-specific weights to the weighted outcome, merge in by ID & t
+  if (!is.null(weights)) {
+    if (!is.data.table(weights) || (length(names(weights))>3) || !all(c(nodes$IDnode,nodes$tnode) %in% names(weights))) {
+      stop("input 'weights' must be a data.table with 3 columns, two of which must be named as: '" %+%  nodes$IDnode %+% "' and '" %+% nodes$tnode %+% "'.")
+    }
+    wt_col_name <- names(weights)[which(!(names(weights) %in% c(nodes$IDnode,nodes$tnode)))[1]]
+    new_weights <- weights
+    setkeyv(new_weights, cols = c(nodes$IDnode, nodes$tnode))
+    wts.DT <- merge(wts.DT, new_weights, all.x = TRUE)
+  }
+
   # Multiply the outcome by the current (cummulative) weight cumm.IPAW:
   wts.DT[, "Wt.OUTCOME" := get(nodes$Ynode)*cumm.IPAW]
 
-  # Row indices for all subjects at t who had the event at t+1 (NOT USING)
-  # row_idx_outcome <- OData$dat.sVar[, .I[get(Ynode) %in% 1L], by = eval(ID)][["V1"]]
+  # Multiply the outcome by additional user-supplied weights:
+  if (!is.null(weights)) wts.DT[, "Wt.OUTCOME" := Wt.OUTCOME*get(wt_col_name)]
 
   # Make a copy of the data.table only with relevant columns
   # to remove all obs that got zero weights (DISABLED):

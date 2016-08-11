@@ -28,7 +28,7 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 
 \item{rule_name}{Optional name for the treatment/monitoring regimen.}
 
-\item{weights}{Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{"weight"}.
+\item{weights}{Optional \code{data.table} with observation-time-specific additional weights.  Must contain column with subject \code{ID}s, time-points \code{t}s and \code{"weight"}.
 The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).}
 
 \item{stabilize}{Set to \code{TRUE} to return stabilized weights}
