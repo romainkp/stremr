@@ -71,6 +71,7 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
 
   fit <- list(TMLE.intercept = update.Qstar.coef)
   class(fit)[2] <- "tmlefit"
+  if (gvars$verbose) print("tmle update: " %+% round(update.Qstar.coef,4))
   return(fit)
   # return(list(update.Qstar.coef = update.Qstar.coef, QY.star = QY.star))
 }

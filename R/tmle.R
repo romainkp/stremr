@@ -233,7 +233,8 @@ fitSeqGcomp <- function(OData,
   if (TMLE) {
     if (missing(IPWeights)) {
       message("...evaluating IPWeights for TMLE...")
-      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, weights = weights, stabilize = FALSE)
+      # IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, weights = weights, stabilize = FALSE)
+      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, weights = weights, stabilize = TRUE)
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
       message("applying user-specified IPWeights, make sure these weights were obtained by making a call: \n'getIPWeights((OData, intervened_TRT, intervened_MONITOR, stabilize = FALSE)'")
