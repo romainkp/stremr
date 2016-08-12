@@ -118,6 +118,33 @@ h2ofit.h2oGBM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
   return(fit)
 }
 
+# S3 method for h2o deeplearning fit, takes BinDat data object:
+# use "bernoulli" when doing classification and use "gaussian" when doing regression
+h2ofit.h2odeeplearning <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
+  mainArgs <- list(x = predvars, y = outvar,
+                   training_frame = subsetH2Oframe,
+                   distribution = "bernoulli",
+                   # distribution = "gaussian",
+                   balance_classes = TRUE,
+                   ignore_const_cols = FALSE)
+
+  mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
+  if (gvars$verbose) {
+    print("running h2o.gbm with args: "); print(mainArgs)
+  } else {
+    h2o.no_progress()
+  }
+  model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
+
+  fit$coef <- NULL;
+  fit$fitfunname <- "h2o.deeplearning";
+  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
+  fit$H2O.model.object <- model.fit
+  class(fit) <- c(class(fit)[1], c("h2ofit"))
+  return(fit)
+}
+
 h2ofit.h2oSL <- function(fit, subsetH2Oframe, outvar, predvars, subset_idx, ...) {
   # ...
   # ... SuperLearner TO BE IMPLEMENTED ...
@@ -175,8 +202,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
   portable = TRUE,
   class = TRUE,
   public = list(
-
-    fit.class = c("GLM", "RF", "GBM", "SL"),
+    fit.class = c("GLM", "RF", "GBM", "deeplearning", "SL"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA),
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {

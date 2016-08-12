@@ -263,7 +263,7 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   wts.DT[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
   n.follow.rule.t <- wts.DT[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
   wts.DT[, "rule.follower.gCAN" := NULL]
-  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := N.follow.rule / N.risk][, cum.stab.P := cumprod(stab.P)]
+  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 1)][, cum.stab.P := cumprod(stab.P)]
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols = nodes$tnode)
   wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
