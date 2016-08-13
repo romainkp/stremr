@@ -94,7 +94,7 @@ if (!is.null(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
 if (AddFUPtables) {
   t.name.col <- OData$nodes$tnode
   ID.name.col <- OData$nodes$IDnode
-  follow_up_rule_ID <- MSM$wts_data[cumm.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name"))]
+  follow_up_rule_ID <- MSM$wts_data[cum.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name"))]
   data.table::setnames(follow_up_rule_ID, c(OData$nodes$IDnode, "rule.name", "max.t"))
   data.table::setkeyv(follow_up_rule_ID, cols = OData$nodes$IDnode)
   rules <- unique(MSM$wts_data[["rule.name"]])

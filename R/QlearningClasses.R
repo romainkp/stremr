@@ -186,7 +186,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         off_TMLE <- qlogis(init_Q_fitted_only)
         # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
         # Cumulative IPWeights for current t:
-        wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cumm.IPAW", with = FALSE][[1]]
+        wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
@@ -288,7 +288,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
         probA1 <- self$predictStatic(data, g0 = g0, gstar = gstar, subset_idx = subset_idx)
 
-        # Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cummulative product) based on the probabilities from original column
+        # Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cumulative product) based on the probabilities from original column
         jointProb <- rep.int(1L, nrow(stoch.probs))
         for (stoch.node.nm in stoch_nodes_names) {
           IndNodeVal <- all_vals_mat[i, stoch.node.nm]

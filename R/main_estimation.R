@@ -210,29 +210,26 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
 #' @param rule_name Optional name for the treatment/monitoring regimen.
-#' @param weights Optional \code{data.table} with observation-time-specific additional weights.  Must contain column with subject \code{ID}s, time-points \code{t}s and \code{"weight"}.
-#' The column named \code{"weight"} is merged back into the original data according to (\code{ID}, \code{t}).
-#' @param stabilize Set to \code{TRUE} to return stabilized weights
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 # @example tests/examples/1_stremr_example.R
 #' @export
 getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
-                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                         weights = NULL,
-                         stabilize = TRUE) {
+                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = "")
+                         ) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
   if (!is.null(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
   if (!is.null(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
+
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
   # ------------------------------------------------------------------------------------------------------------------------------
-  # (1) gC.star: the indicator of not being censored.
-  # (2) gA.star: prob of following one treatment rule; and
-  # (3) gN.star prob following the monitoring regime; and
+  # (1) gstar.CENS: the indicator of not being censored.
+  # (2) gstar.TRT: prob of following one treatment rule; and
+  # (3) gstar.MONITOR prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
@@ -248,8 +245,8 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   wts.DT[, "gstar.N" := gstar.MONITOR]
   # Joint likelihoood for all 3 node types:
   wts.DT[, "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR]
-  # Weights by time and cummulative weights by time:
-  wts.DT[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cumm.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+  # Weights by time and cumulative weights by time:
+  wts.DT[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
   # -------------------------------------------------------------------------------------------
   # Weight stabilization - get emp P(followed rule at time t | followed rule up to now)
@@ -269,69 +266,107 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
 
-  # Multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since it cancels):
-  if (stabilize) wts.DT[, "cumm.IPAW" := cum.stab.P * cumm.IPAW]
+  # Multiply the weight by stabilization factor (numerator) (doesn't change the estimand for saturated MSMs, since cum.stab.P cancels out, but makes weights smaller):
+  # if (stabilize) wts.DT[, "cum.IPAW" := cum.stab.P * cum.IPAW]
+  # # Add the observation-specific weights to the weighted outcome, merge in by ID & t
+  # if (!is.null(weights)) {
+  #   if (!is.data.table(weights) || (length(names(weights))>3) || !all(c(nodes$IDnode,nodes$tnode) %in% names(weights))) {
+  #     stop("input 'weights' must be a data.table with 3 columns, two of which must be named as: '" %+%  nodes$IDnode %+% "' and '" %+% nodes$tnode %+% "'.")
+  #   }
+  #   wt_col_name <- names(weights)[which(!(names(weights) %in% c(nodes$IDnode,nodes$tnode)))[1]]
+  #   weights_used <- weights
+  #   setkeyv(weights_used, cols = c(nodes$IDnode, nodes$tnode))
+  #   wts.DT <- merge(wts.DT, weights_used, all.x = TRUE)
+  # }
+  # # Multiply the outcome by the current (cumulative) weight cum.IPAW:
+  # wts.DT[, "Wt.OUTCOME" := get(nodes$Ynode)*cum.IPAW]
+  # # Multiply the outcome by additional user-supplied weights:
+  # if (!is.null(weights)) wts.DT[, "Wt.OUTCOME" := Wt.OUTCOME*get(wt_col_name)]
 
-  # Add the observation-specific weights to the weighted outcome, merge in by ID & t
-  if (!is.null(weights)) {
-    if (!is.data.table(weights) || (length(names(weights))>3) || !all(c(nodes$IDnode,nodes$tnode) %in% names(weights))) {
-      stop("input 'weights' must be a data.table with 3 columns, two of which must be named as: '" %+%  nodes$IDnode %+% "' and '" %+% nodes$tnode %+% "'.")
-    }
-    wt_col_name <- names(weights)[which(!(names(weights) %in% c(nodes$IDnode,nodes$tnode)))[1]]
-    new_weights <- weights
-    setkeyv(new_weights, cols = c(nodes$IDnode, nodes$tnode))
-    wts.DT <- merge(wts.DT, new_weights, all.x = TRUE)
-  }
-
-  # Multiply the outcome by the current (cummulative) weight cumm.IPAW:
-  wts.DT[, "Wt.OUTCOME" := get(nodes$Ynode)*cumm.IPAW]
-
-  # Multiply the outcome by additional user-supplied weights:
-  if (!is.null(weights)) wts.DT[, "Wt.OUTCOME" := Wt.OUTCOME*get(wt_col_name)]
-
-  # Make a copy of the data.table only with relevant columns
-  # to remove all obs that got zero weights (DISABLED):
-  # wts.DT <- wts.DT[cumm.IPAW > 0, ]
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
 
   attributes(wts.DT)[['getIPWeights_fun_call']] <- getIPWeights_fun_call
   attributes(wts.DT)[['intervened_TRT']] <- intervened_TRT
   attributes(wts.DT)[['intervened_MONITOR']] <- intervened_MONITOR
-  attributes(wts.DT)[['stabilize']] <- stabilize
+  # attributes(wts.DT)[['stabilize']] <- stabilize
   return(wts.DT)
+}
+
+process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
+  if (!is.null(weights)) {
+    if (!is.data.table(weights) || (length(names(weights)) > 3) || !all(c(nodes$IDnode,nodes$tnode) %in% names(weights))) {
+      stop("input 'weights' must be a data.table with 3 columns, two of which must be named as: '" %+%  nodes$IDnode %+% "' and '" %+% nodes$tnode %+% "'.")
+    }
+    wt_col_name <- names(weights)[which(!(names(weights) %in% c(nodes$IDnode,nodes$tnode)))[1]]
+    setkeyv(weights, cols = c(nodes$IDnode, nodes$tnode))
+    wts_data <- merge(wts_data, weights, all.x = TRUE)
+    # Multiply the outcome by additional user-supplied weights:
+    if ("Wt.OUTCOME" %in% names(wts_data) && adjust_outcome) {
+      wts_data[, "Wt.OUTCOME" := eval(as.name("Wt.OUTCOME")) * get(wt_col_name)]
+    } else if (!adjust_outcome) {
+      wts_data[, "cum.IPAW" := eval(as.name("cum.IPAW")) * get(wt_col_name)]
+    }
+  }
+  return(wts_data)
 }
 
 # ---------------------------------------------------------------------------------------
 #' Non-parametric (saturated) MSM for survival based on previously evaluated IP weights.
-#' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
-#' right-censoring.
 #' @param wts_data \code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.
+#' @param OData The object returned by function \code{fitPropensity}. Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
+#' right-censoring.
+#' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
+#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @return A data.table with hazard and survival function estimates by time. Also include the unadjusted Kaplan-Maier estimates.
 #' @export
-survNPMSM <- function(wts_data, OData) {
+survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
-
   rule.name <- unique(wts_data[["rule.name"]])
   if (length(rule.name)>1) stop("wts_data must contain the weights for a single rule, found more than one unique rule name under in 'rule.name' column")
 
-  # CRUDE HAZARD ESTIMATE AND KM SURVIVAL:
-  ht.crude <- wts_data[cumm.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
+  wts_data_used <- wts_data[,c(nodes$IDnode,nodes$tnode,nodes$Ynode,"cum.stab.P","cum.IPAW"), with = FALSE]
+  setkeyv(wts_data_used, cols = c(nodes$IDnode, nodes$tnode))
+
+  # Initialize weighted outcome 'Wt.OUTCOME' to Ynode:
+  wts_data_used[, "Wt.OUTCOME" := get(nodes$Ynode)]
+
+  # Add the observation-specific weights to the weighted outcome, merge in by ID & t:
+  wts_data_used <- process_opt_wts(wts_data_used, weights, nodes)
+
+  # ------------------------------------------------------------------------
+  # CRUDE HAZARD AND KM ESTIMATE OF SURVIVAL:
+  # ------------------------------------------------------------------------
+  ht.crude <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name("Wt.OUTCOME")), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
+  # ht.crude <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t_name)
+
+  # ------------------------------------------------------------------------
+  # IPW-ADJUSTED KM (SATURATED MSM):
+  # ------------------------------------------------------------------------
+  # Multiply the weight by stabilization factor (numerator) (doesn't change the estimand in saturated MSMs, but makes weights smaller):
+  wts_data_used[, "cum.IPAW" := eval(as.name("cum.stab.P")) * eval(as.name("cum.IPAW"))]
+
+  # If trunc_weights < Inf then truncate the weights:
+  if (trunc_weights < Inf) wts_data_used[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
+
+  # Multiply the outcome by cumulative weights in cum.IPAW:
+  wts_data_used[, "Wt.OUTCOME" := eval(as.name("Wt.OUTCOME"))*eval(as.name("cum.IPAW"))]
+  # wts_data_used[, "Wt.OUTCOME" := get(nodes$Ynode)*cum.IPAW]
+
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- wts_data[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Ywt, cols = t_name)
-  # sum_Ywt <- OData$dat.sVar[, .(sum_Y_IPAW=sum(Wt.OUTCOME)), by = eval(t_name)]; setkeyv(sum_Ywt, cols=t_name)
-  # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t:
-  # (equivalent to summing cummulative weights cumm.IPAW by t)
-  sum_Allwt <- wts_data[, .(sum_all_IPAW = sum(cumm.IPAW, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
-  # sum_Allwt <- OData$dat.sVar[, .(sum_all_IPAW=sum(cumm.IPAW)), by = eval(t_name)]; setkeyv(sum_Allwt, cols=t_name)
+  sum_Ywt <- wts_data_used[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Ywt, cols = t_name)
+
+  # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t (equivalent to summing cumulative weights cum.IPAW by t):
+  sum_Allwt <- wts_data_used[, .(sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
+
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
-  # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("m1ht", "St") := .(1-ht, cumprod(1-ht))]
   St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all=TRUE)
   St_ht_IPAW[, "rule.name" := rule.name]
-  return(list(IPW_estimates = data.frame(St_ht_IPAW)))
+  return(list(wts_data = wts_data_used, trunc_weights = trunc_weights, IPW_estimates = data.frame(St_ht_IPAW)))
 }
 
 # ---------------------------------------------------------------------------------------
@@ -345,23 +380,26 @@ survNPMSM <- function(wts_data, OData) {
 #' When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
 #' in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function \code{fitPropensity}), allowing
 #' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly informative right-censoring.
-#' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
-#' right-censoring.
 #' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
 #' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.
+#' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
+#' right-censoring.
 #' @param t_breaks The vector of integer (or numeric) breaks that defines the dummy indicators of the follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for the survival hazard. See Details.
 #' @param use_weights Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and fit a "crude" MSM that does not adjust for the possible confounding due to non-random
 #' assignment of the exposure/censoring and monitoring indicators.
+#' @param stabilize Set to \code{TRUE} for weight stabilization
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
-#' @param est_name A string naming the current MSM estimator. Ignored by the current routine but is used when generating reports with \code{make_report_rmd}.
+#' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param getSEs A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the estimated survival by using the MSM influence curve.
+#' @param est_name A string naming the current MSM estimator. Ignored by the current routine but is used when generating reports with \code{make_report_rmd}.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #'
 #' @section Details:
 #' **********************************************************************
 #'
 #' \code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the survival hazard function.
-#' The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsquent value in \code{t_breaks} defining a single right-closed time-interval.
+#' The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
 #' For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ), I(0 < t <= 1) and I(1 < t <= max(t)).
 #' On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
 #' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable for every unique period in the observed data.
@@ -385,14 +423,14 @@ survNPMSM <- function(wts_data, OData) {
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/4_survMSM_example.R
 #' @export
-survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights = 10^6, est_name = "IPAW", getSEs = TRUE, verbose = getOption("stremr.verbose")) {
+survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = TRUE, trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW", verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
 
-  # 2a. Stack the weighted data sets, if those came in a list:
+  # Stack the weighted data sets, if those came in a list:
   if (is.data.table(wts_data)) {
     # ...do nothing...
   } else if (is.list(wts_data)) {
@@ -403,30 +441,34 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
   }
 
   rules_TRT <- sort(unique(wts_data[["rule.name"]]))
+
   if (verbose) print("performing estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
 
-  # 2b. Remove all observations with 0 weights and run speedglm on design matrix with no intercept
-  wts_data <- wts_data[!is.na(cumm.IPAW) & !is.na(eval(as.name(Ynode))) & (cumm.IPAW > 0), ]
-  setkeyv(wts_data, cols = c(nodes$IDnode, nodes$tnode))
+  # Remove all observations with 0 cumulative weights & copy the weights data.table
+  wts_data_used <- wts_data[!is.na(cum.IPAW) & !is.na(eval(as.name(Ynode))) & (cum.IPAW > 0), ]
+  setkeyv(wts_data_used, cols = c(nodes$IDnode, nodes$tnode))
 
-  # 2c. If trunc_weights < Inf, do truncation of the weights
-  if (trunc_weights < Inf) {
-    wts_data[cumm.IPAW > trunc_weights, cumm.IPAW := trunc_weights]
-  }
-  # 2d. use_weights==FALSE, do a crude estimator by setting all non-zero weights to 1
-  if (use_weights == FALSE) {
-    wts_data[cumm.IPAW > 0, cumm.IPAW := 1L]
-  }
+  # Multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since cum.stab.P cancels out):
+  if (stabilize) wts_data_used[, "cum.IPAW" := eval(as.name("cum.stab.P")) * eval(as.name("cum.IPAW"))]
 
-  # 2.e. define all observed sequence of periods (t's)
-  mint <- min(wts_data[[t_name]], na.rm = TRUE); maxt <- max(wts_data[[t_name]], na.rm = TRUE)
+  # If trunc_weights < Inf, do truncation of the weights
+  if (trunc_weights < Inf) wts_data_used[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
+
+  # Add additional observation-specific weights to the cumulative weights:
+  wts_data_used <- process_opt_wts(wts_data_used, weights, nodes, adjust_outcome = FALSE)
+
+  # When !use_weights run a crude estimator by setting all non-zero weights to 1
+  if (!use_weights) wts_data_used[cum.IPAW > 0, cum.IPAW := 1L]
+
+  # Define all observed sequence of periods (t's)
+  mint <- min(wts_data_used[[t_name]], na.rm = TRUE); maxt <- max(wts_data_used[[t_name]], na.rm = TRUE)
   periods <- (mint:maxt)
   periods_idx <- seq_along(periods)
   if (verbose) {
     print("periods"); print(periods)
   }
 
-  # 2.f. default t_breaks, error checks for t_breaks, plus padding w/ mint & maxt:
+  # Default t_breaks, error checks for t_breaks, plus padding w/ mint & maxt:
   if (missing(t_breaks)) {
     # default t_breaks is to use a saturated (non-parametric) MSM
     t_breaks <- sort(periods)
@@ -444,14 +486,14 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
 
   if (max(t_breaks) < maxt) t_breaks <- sort(c(t_breaks, maxt)) # pad on the right (if needed with maxt):
 
-  # 3. Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
+  # Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
   for( dummy.j in rules_TRT ){
-    wts_data[, (dummy.j) := as.integer(rule.name %in% dummy.j)]
+    wts_data_used[, (dummy.j) := as.integer(rule.name %in% dummy.j)]
     all.d.dummies <- c(all.d.dummies, dummy.j)
   }
 
-  # 4. Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
+  # Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
   all.t.dummies <- NULL
   t_breaks.mint <- c(mint, t_breaks) # pad t_breaks on the left (with mint)
   MSM.intervals <- matrix(NA, ncol = 2, nrow = length(t_breaks)) # save the actual intervals
@@ -464,22 +506,22 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
     if (t.idx == 2L) {
       dummy.j <- paste("Periods.", low.t, "to", high.t, sep="")
       MSM.intervals[t.idx - 1, ] <- c(low.t, high.t); t.per.inteval[[t.idx - 1]] <- unique(low.t:high.t)
-      wts_data[, (dummy.j) := as.integer(eval(as.name(t_name)) >= low.t & eval(as.name(t_name)) <= high.t)]
+      wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= low.t & eval(as.name(t_name)) <= high.t)]
     } else {
       dummy.j <- paste("Periods.", (low.t + 1), "to", high.t, sep="")
       MSM.intervals[t.idx - 1, ] <- c(low.t + 1, high.t); t.per.inteval[[t.idx - 1]] <- unique((low.t+1):high.t)
-      wts_data[, (dummy.j) := as.integer(eval(as.name(t_name)) >= (low.t + 1) & eval(as.name(t_name)) <= high.t)]
+      wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= (low.t + 1) & eval(as.name(t_name)) <= high.t)]
     }
     print("defined t.dummy: " %+% dummy.j)
     all.t.dummies <- c(all.t.dummies, dummy.j)
   }
 
-  # 5. Create interaction dummies I(t in interval.j & d == intervened_TRT)
+  # Create interaction dummies I(t in interval.j & d == intervened_TRT)
   for (d.dummy in all.d.dummies) {
     for (t.dummy in all.t.dummies) {
       if (verbose)
         print(t.dummy %+% "_" %+% d.dummy)
-      wts_data[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
+      wts_data_used[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
     }
   }
 
@@ -487,12 +529,12 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
                         return(paste(paste(paste(all.t.dummies, x, sep="_"), sep="")))
                         }))
 
-  # 6. fit the hazard MSM
-  resglmMSM <- runglmMSM(OData, wts_data, all_dummies, Ynode, verbose)
-  wts_data <- resglmMSM$wts_data
+  # Fit the hazard MSM
+  resglmMSM <- runglmMSM(OData, wts_data_used, all_dummies, Ynode, verbose)
+  wts_data_used[, glm.IPAW.predictP1 := resglmMSM$glm.IPAW.predictP1]
   m.fit <- resglmMSM$m.fit
 
-  # 7. Compute the Survival curves under each d
+  # Compute the Survival curves under each d
   S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,maxt-mint+1)), length(rules_TRT))
   names(S2.IPAW) <- names(hazard.IPAW) <- rules_TRT
 
@@ -535,7 +577,7 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
       design.t[period.idx, col.idx] <- 1
     }
     beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
-                              MSMdata = wts_data, MSMdesign = as.matrix(wts_data[, all_dummies, with = FALSE]),
+                              MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
                               MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use_weights)
 
     for(d.j in names(S2.IPAW)) {
@@ -560,7 +602,7 @@ survMSM <- function(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights
               MSM.intervals = MSM.intervals,
               IC.Var.S.d = IC.Var.S.d,
               nID = nID,
-              wts_data = wts_data,
+              wts_data = wts_data_used,
               use_weights = use_weights,
               trunc_weights = trunc_weights
             )
@@ -583,17 +625,19 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
                                                   destination_frame = "MSM.designmat.H2O")
     )
     if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
+
     # OData$fast.load.to.H2O(wts_data, )
     # temp.csv.path <- file.path(tempdir(), "wts_data.csv~")
     # data.table::fwrite(wts_data, temp.csv.path, turbo = TRUE)
     # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
-    # na.wts.idx <- which(as.logical(is.na(MSM.designmat.H2O[, "cumm.IPAW"])))
+    # na.wts.idx <- which(as.logical(is.na(MSM.designmat.H2O[, "cum.IPAW"])))
     # MSM.designmat.H2O[na.wts.idx, ]
     # wts_data[na.wts.idx, ]
+
     m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
                                   x = all_dummies,
                                   intercept = FALSE,
-                                  weights_column = "cumm.IPAW",
+                                  weights_column = "cum.IPAW",
                                   training_frame = MSM.designmat.H2O,
                                   family = "binomial",
                                   standardize = FALSE,
@@ -609,7 +653,8 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
     names(out_coef) <- c(all_dummies)
     out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
     m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
-    wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
+    glm.IPAW.predictP1 <- as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])
+    # wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
   } else {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
     Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
@@ -617,8 +662,8 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
                                        X = Xdesign.mat,
                                        y = as.numeric(wts_data[[Ynode]]),
                                        intercept = FALSE,
-                                       family = binomial(),
-                                       weights = wts_data[["cumm.IPAW"]],
+                                       family = quasibinomial(),
+                                       weights = wts_data[["cum.IPAW"]],
                                        trace = FALSE),
                         silent = TRUE)
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
@@ -627,7 +672,7 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
       SuppressGivenWarnings({
         m.fit <- stats::glm.fit(x = Xdesign.mat,
                                 y = as.numeric(wts_data[[Ynode]]),
-                                family = binomial(),
+                                family = quasibinomial(),
                                 intercept = FALSE, control = ctrl)
       }, GetWarningsToSuppress())
     }
@@ -635,7 +680,9 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
     if (verbose) {
       print("MSM fits"); print(m.fit$coef)
     }
-    wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+    glm.IPAW.predictP1 <- logispredict(m.fit, Xdesign.mat)
+    # wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
   }
-  return(list(wts_data = wts_data, m.fit = m.fit))
+  return(list(glm.IPAW.predictP1 = glm.IPAW.predictP1, m.fit = m.fit))
+  # return(list(wts_data = wts_data, m.fit = m.fit))
 }

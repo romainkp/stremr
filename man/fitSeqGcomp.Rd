@@ -6,9 +6,10 @@
 \usage{
 fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
   intervened_MONITOR = NULL, useonly_t_TRT = NULL,
-  useonly_t_MONITOR = NULL, stratifyQ_by_rule = FALSE, TMLE = FALSE,
-  rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-  IPWeights, weights = NULL, params_Q = list(), parallel = FALSE,
+  useonly_t_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
+  intervened_MONITOR), collapse = ""), stratifyQ_by_rule = FALSE,
+  TMLE = FALSE, stabilize = FALSE, trunc_weights = 10^6,
+  IPWeights = NULL, params_Q = list(), weights = NULL, parallel = FALSE,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
@@ -30,19 +31,23 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 
 \item{useonly_t_MONITOR}{Same as \code{useonly_t_TRT}, but for monitoring nodes.}
 
+\item{rule_name}{Optional name for the treatment/monitoring regimen.}
+
 \item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
 Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).}
 
 \item{TMLE}{Set to \code{TRUE} to run TMLE}
 
-\item{rule_name}{Optional name for the treatment/monitoring regimen.}
+\item{stabilize}{Set to \code{TRUE} to use stabilized weights for the TMLE}
 
-\item{IPWeights}{Pass a dataset of IPWeights for TMLE (if missing, these will be evaluated automatically)}
+\item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 
-\item{weights}{Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
-The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
+\item{IPWeights}{(Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)}
 
 \item{params_Q}{Optional parameters to be passed to the specific fitting algorithm for Q-learning}
+
+\item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
 \item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with %\code{dopar}% and requires a previously defined parallel back-end cluster)}
 

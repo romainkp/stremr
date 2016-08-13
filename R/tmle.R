@@ -163,14 +163,16 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' The expression can contain any variable name that was defined in the input dataset.
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
+#' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @param stratifyQ_by_rule Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
 #' Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).
 #' @param TMLE Set to \code{TRUE} to run TMLE
-#' @param rule_name Optional name for the treatment/monitoring regimen.
-#' @param IPWeights Pass a dataset of IPWeights for TMLE (if missing, these will be evaluated automatically)
-#' @param weights Optional \code{data.table} with observation-time-specific additinal weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
-#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
+#' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
+#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
+#' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param params_Q Optional parameters to be passed to the specific fitting algorithm for Q-learning
+#' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with %\code{dopar}% and requires a previously defined parallel back-end cluster)
 #' @param verbose ...
 #' @return ...
@@ -182,11 +184,14 @@ fitSeqGcomp <- function(OData,
                         Qforms,
                         intervened_TRT = NULL, intervened_MONITOR = NULL,
                         useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
+                        rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
                         stratifyQ_by_rule = FALSE,
                         TMLE = FALSE,
-                        rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                        IPWeights, weights = NULL,
+                        stabilize = FALSE,
+                        trunc_weights = 10^6,
+                        IPWeights = NULL,
                         params_Q = list(),
+                        weights = NULL,
                         parallel = FALSE,
                         verbose = getOption("stremr.verbose")) {
 
@@ -222,7 +227,9 @@ fitSeqGcomp <- function(OData,
   # to try experimental solvers in h2o.glm (see line #901 of GLM.java)
   # params_Q$solver <- "COORDINATE_DESCENT"
   # params_Q$solver <- "COORDINATE_DESCENT_NAIVE"
-  params_Q$solver <- "IRLSM"
+  # params_Q$solver <- "IRLSM"
+  # params_Q$solver = "L_BFGS"
+
   # parameter for running GBM with continuous outcome (default is classification with "bernoulli" and 0/1 outcome):
   params_Q$distribution <- "gaussian"
 
@@ -231,21 +238,25 @@ fitSeqGcomp <- function(OData,
   # NOTE: This needs to be done only once if evaluating survival over several t_periods
   # ------------------------------------------------------------------------------------------------
   if (TMLE) {
-    if (missing(IPWeights)) {
-      message("...evaluating IPWeights for TMLE...")
-      # IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, weights = weights, stabilize = FALSE)
-      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name, weights = weights, stabilize = TRUE)
+    if (is.null(IPWeights)) {
+      if (gvars$verbose) message("...evaluating IPWeights for TMLE...")
+      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name)
+      if (stabilize) IPWeights[, "cum.IPAW" := eval(as.name("cum.stab.P")) * eval(as.name("cum.IPAW"))]
+      if (trunc_weights < Inf) IPWeights[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
-      message("applying user-specified IPWeights, make sure these weights were obtained by making a call: \n'getIPWeights((OData, intervened_TRT, intervened_MONITOR, stabilize = FALSE)'")
-      message("the currently supplied weights were obtained with a call: \n" %+% deparse(getIPWeights_fun_call)[[1]])
+      if (gvars$verbose) message("applying user-specified IPWeights obtained with a call: \n" %+% deparse(getIPWeights_fun_call)[[1]])
       assert_that(all.equal(attributes(IPWeights)[['intervened_TRT']], intervened_TRT))
       assert_that(all.equal(attributes(IPWeights)[['intervened_MONITOR']], intervened_MONITOR))
-      assert_that(attributes(IPWeights)[['stabilize']] == FALSE)
+      # assert_that(attributes(IPWeights)[['stabilize']] == FALSE)
     }
     assert_that(is.data.table(IPWeights))
-    assert_that("cumm.IPAW" %in% names(IPWeights))
+    assert_that("cum.IPAW" %in% names(IPWeights))
     OData$IPwts_by_regimen <- IPWeights
+
+    if (!is.null(weights)) stop("optional argument 'weights' is not implemented for TMLE or GCOMP")
+    # Add additional observation-specific weights to the cumulative weights:
+    # IPWeights <- process_opt_wts(IPWeights, weights, nodes, adjust_outcome = FALSE)
   }
 
   if (missing(t_periods)) stop("must specify survival 't_periods' of interest (time period values from column " %+% nodes$tnode %+% ")")

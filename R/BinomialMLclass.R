@@ -26,6 +26,7 @@ h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
                   training_frame = subsetH2Oframe,
                   family = "binomial",
                   standardize = TRUE,
+                  # standardize = FALSE,
                   solver = "L_BFGS",
                   # solver = "IRLSM",
                   # solver = "COORDINATE_DESCENT",
@@ -60,6 +61,7 @@ h2ofit.h2oGLM <- function(fit, subsetH2Oframe, outvar, predvars, rows_subset, mo
   if (gvars$verbose) {
     print("h2oglm fits:"); print(fit$coef)
   }
+
   # class(fit) <- c(class(fit)[1], c("glmfit"))
   class(fit) <- c(class(fit)[1], c("h2ofit"))
   return(fit)

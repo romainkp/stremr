@@ -62,11 +62,11 @@ makeFreqTable <- function(rawFreq){
 
 #' @export
 get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE) {
-  # quant99 <- quantile(wts_data[["cumm.IPAW"]], p = 0.99, na.rm = TRUE)
-  # quant999 <- quantile(wts_data[["cumm.IPAW"]], p = 0.999, na.rm = TRUE)
+  # quant99 <- quantile(wts_data[["cum.IPAW"]], p = 0.99, na.rm = TRUE)
+  # quant999 <- quantile(wts_data[["cum.IPAW"]], p = 0.999, na.rm = TRUE)
 
   # get the counts for each category (bin) + missing count:
-  na.count <- sum(is.na(wts_data[["cumm.IPAW"]]))
+  na.count <- sum(is.na(wts_data[["cum.IPAW"]]))
   na.yes <- (na.count > 0L)
 
   # define a list of intervals:
@@ -74,12 +74,12 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   idx <- seq_along(cutoffs2); idx <- idx[-length(idx)]
   intervals_list <- lapply(idx, function(i) c(cutoffs2[i], cutoffs2[i+1]))
 
-  # summary <- wts_data[, summary(cumm.IPAW)]
-  x.freq.counts.DT <- wts_data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE))]
+  # summary <- wts_data[, summary(cum.IPAW)]
+  x.freq.counts.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE))]
   x.freq.counts <- as.integer(x.freq.counts.DT[1,])
   if (na.yes) {
     x.freq.counts <- c(x.freq.counts, na.count)
-    x.freq.counts.DT <- cbind(x.freq.counts.DT, wts_data[, sum(is.na(cumm.IPAW), na.rm = TRUE)])
+    x.freq.counts.DT <- cbind(x.freq.counts.DT, wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE)])
   }
 
   # create labels:
@@ -101,11 +101,11 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   # do the same by separately for each rule:
   if (by.rule) {
     # setkeyv(wts_data, cols = "rule.name")
-    x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE)), by = rule.name]
-    # x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cumm.IPAW >= int[1]) & (cumm.IPAW < int[2]), na.rm = TRUE)), by = list(rule.name, rule.name.MONITOR)]
+    x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE)), by = rule.name]
+    # x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE)), by = list(rule.name, rule.name.MONITOR)]
     if (na.yes) {
-      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cumm.IPAW), na.rm = TRUE), by = rule.name], on = c("rule.name")]
-      # x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cumm.IPAW), na.rm = TRUE), by = list(rule.name, rule.name.MONITOR)], on = c("rule.name", "rule.name.MONITOR")]
+      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE), by = rule.name], on = c("rule.name")]
+      # x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE), by = list(rule.name, rule.name.MONITOR)], on = c("rule.name", "rule.name.MONITOR")]
     }
     colnames(x.freq.counts.byrule.DT)[-1] <- catNames
     # colnames(x.freq.counts.byrule.DT)[-(1:2)] <- catNames
@@ -153,12 +153,19 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
   fileText <- paste(esti,ifelse(RDscale,"RD","RR"),sep="")
   captionText2 <- ifelse(RDscale,"differences","ratios")
   captionText3 <- ifelse(RDscale,"$-$","$/$")
-  if(esti=="IPAW")estimates <- "Stabilized inverse weighting"
-  if(esti=="IPAWtrunc")estimates <- "Stabilized, truncated inverse weighting"
-  if(esti=="crude")estimates <- "Crude"
+
+  if (esti %in% c("IPAW", "IPW")) {
+    estimates <- "Stabilized inverse weighting"
+  } else if(esti %in% c("IPAWtrunc","IPWtrunc")){
+    estimates <- "Stabilized, truncated inverse weighting"
+  } else if (esti %in% "crude") {
+    estimates <- "Crude"
+  } else {
+    estimates <- ""
+  }
+
   model <- "MSM"
-  if(esti=="crude")model <- "model"
-  est <- "IPAW"
+  if(esti %in% "crude") model <- "model"
 
   caption <- paste(estimates,
       " estimates of the (cumulative) risk ",

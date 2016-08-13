@@ -5,16 +5,16 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   # browser()
 
   # head(MSMdata)
-  cumm.IPAW <- "cumm.IPAW"
+  cum.IPAW <- "cum.IPAW"
 
-  IC.data <- MSMdata[ ,c(ID, t.var, Yname, cumm.IPAW, MSMpredict), with = FALSE] # contains data for all obs compatible with at least one rule
+  IC.data <- MSMdata[ ,c(ID, t.var, Yname, cum.IPAW, MSMpredict), with = FALSE] # contains data for all obs compatible with at least one rule
   # MSMepsilon <- IC.data[,Yname, with = FALSE]-IC.data[,MSMpredict, with = FALSE]
   # IC.data <- cbind(IC.data,MSMepsilon)
 
   IC.data[, "MSMepsilon" := get(Yname) - get(MSMpredict)]
 
   if (IPW_MSMestimator) {
-    sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[["MSMepsilon"]]
+    sweep.tmp <- IC.data[[cum.IPAW]] * IC.data[["MSMepsilon"]]
   }else{
     sweep.tmp <- IC.data[["MSMepsilon"]]
   }
@@ -33,7 +33,7 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   }
 
   if(IPW_MSMestimator){
-    sweep.tmp <- IC.data[[cumm.IPAW]] * IC.data[[MSMpredict]] * (1 - IC.data[[MSMpredict]])
+    sweep.tmp <- IC.data[[cum.IPAW]] * IC.data[[MSMpredict]] * (1 - IC.data[[MSMpredict]])
   } else {
     sweep.tmp <- IC.data[[MSMpredict]] * (1 - IC.data[[MSMpredict]])
   }

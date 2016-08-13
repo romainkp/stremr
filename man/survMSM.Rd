@@ -4,26 +4,32 @@
 \alias{survMSM}
 \title{Estimate Survival with a particular MSM for the survival-hazard function using previously fitted weights.}
 \usage{
-survMSM(OData, wts_data, t_breaks, use_weights = TRUE, trunc_weights = 10^6,
-  est_name = "IPAW", getSEs = TRUE, verbose = getOption("stremr.verbose"))
+survMSM(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = TRUE,
+  trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW",
+  verbose = getOption("stremr.verbose"))
 }
 \arguments{
-\item{OData}{The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
-right-censoring.}
-
 \item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
 This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.}
+
+\item{OData}{The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
+right-censoring.}
 
 \item{t_breaks}{The vector of integer (or numeric) breaks that defines the dummy indicators of the follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for the survival hazard. See Details.}
 
 \item{use_weights}{Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and fit a "crude" MSM that does not adjust for the possible confounding due to non-random
 assignment of the exposure/censoring and monitoring indicators.}
 
+\item{stabilize}{Set to \code{TRUE} for weight stabilization}
+
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 
-\item{est_name}{A string naming the current MSM estimator. Ignored by the current routine but is used when generating reports with \code{make_report_rmd}.}
+\item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
 \item{getSEs}{A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the estimated survival by using the MSM influence curve.}
+
+\item{est_name}{A string naming the current MSM estimator. Ignored by the current routine but is used when generating reports with \code{make_report_rmd}.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 }
@@ -58,7 +64,7 @@ adjustment for confounding by possibly non-random assignment to exposure and mon
 **********************************************************************
 
 \code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the survival hazard function.
-The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsquent value in \code{t_breaks} defining a single right-closed time-interval.
+The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
 For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ), I(0 < t <= 1) and I(1 < t <= max(t)).
 On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
 If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable for every unique period in the observed data.

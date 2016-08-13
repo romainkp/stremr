@@ -4,13 +4,18 @@
 \alias{survNPMSM}
 \title{Non-parametric (saturated) MSM for survival based on previously evaluated IP weights.}
 \usage{
-survNPMSM(wts_data, OData)
+survNPMSM(wts_data, OData, weights = NULL, trunc_weights = 10^6)
 }
 \arguments{
 \item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.}
 
-\item{OData}{The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
+\item{OData}{The object returned by function \code{fitPropensity}. Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
 right-censoring.}
+
+\item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
+
+\item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 }
 \value{
 A data.table with hazard and survival function estimates by time. Also include the unadjusted Kaplan-Maier estimates.
