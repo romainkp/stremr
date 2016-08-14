@@ -12,4 +12,7 @@ fitTMLE(...)
 \description{
 Calls \code{fitSeqGcomp} with argument \code{TMLE = TRUE}.
 }
+\seealso{
+\code{\link{fitSeqGcomp}}
+}
 

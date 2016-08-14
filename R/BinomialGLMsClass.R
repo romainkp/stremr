@@ -8,7 +8,6 @@ fit <- function(fit, ...) UseMethod("fit")
 predictP1 <- function(m.fit, ...) UseMethod("predictP1")
 
 # S3 method for glm binomial family fit, takes BinDat data object:
-# fit.glmS3 <- function(BinDatObject, ...) {
 fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
   if (gvars$verbose) print("calling glm.fit...")
   if (nrow(Xmat) == 0L) {
@@ -58,7 +57,7 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
 
   if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
     message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
-    return(fit.glm(fit, Xmat, Yvals, ...))
+    return(fit.glm(fit.class, fit, Xmat, Yvals, ...))
   }
 
   fit$coef <- model.fit$coef;

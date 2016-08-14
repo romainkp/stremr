@@ -96,6 +96,7 @@
 #'
 #' Calls \code{fitSeqGcomp} with argument \code{TMLE = TRUE}.
 #' @return ...
+#' @seealso \code{\link{fitSeqGcomp}}
 #' @export
 fitTMLE <- function(...) {
   fitSeqGcomp(TMLE = TRUE, ...)
@@ -176,7 +177,7 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with %\code{dopar}% and requires a previously defined parallel back-end cluster)
 #' @param verbose ...
 #' @return ...
-# @seealso \code{\link{stremr-package}} for the general overview of the package,
+#' @seealso \code{\link{stremr-package}} for the general overview of the package,
 # @example tests/examples/1_stremr_example.R
 #' @export
 fitSeqGcomp <- function(OData,
