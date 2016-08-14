@@ -63,7 +63,7 @@ print_stremr_opts <- function() {
 #' @export
 #'
 stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
-                            fit.algorithm = c("GLM", "GBM", "RF", "SL"),
+                            fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
                             bin.method = c("equal.len", "equal.mass", "dhist"),
                             parfit = FALSE,
                             nbins = NA,
@@ -79,7 +79,7 @@ stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
   assert_that(fit.package %in% c("speedglm", "glm", "h2o"))
 
   fit.algorithm <- fit.algorithm[1L]
-  assert_that(fit.algorithm %in% c("GLM", "GBM", "RF", "SL"))
+  if (!(fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"))) stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner'")
 
   # GLMpackage <- GLMpackage[1L]
   # if (GLMpackage %in% "glm") {

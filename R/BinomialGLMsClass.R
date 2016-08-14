@@ -2,11 +2,14 @@
 NULL
 
 # Generic for fitting the logistic (binomial family) GLM model
-glmfit <- function(fit, ...) UseMethod("glmfit")
+fit <- function(fit, ...) UseMethod("fit")
+
+# Generic for predicting P(A=1|...) from either logistic (binomial family) GLM model or H2O model
+predictP1 <- function(m.fit, ...) UseMethod("predictP1")
 
 # S3 method for glm binomial family fit, takes BinDat data object:
-# glmfit.glmS3 <- function(BinDatObject, ...) {
-glmfit.glm <- function(fit, Xmat, Yvals, ...) {
+# fit.glmS3 <- function(BinDatObject, ...) {
+fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
   if (gvars$verbose) print("calling glm.fit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
@@ -30,13 +33,12 @@ glmfit.glm <- function(fit, Xmat, Yvals, ...) {
     print("glm fits:")
     print(fit$coef)
   }
-  class(fit)[2] <- "glmfit"
-
+  class(fit)[2] <- "GLMmodel"
   return(fit)
 }
 
 # S3 method for speedglm binomial family fit, takes BinDat data object:
-glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
+fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
   if (gvars$verbose) print("calling speedglm.wfit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
@@ -56,7 +58,7 @@ glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
 
   if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
     message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
-    return(glmfit.glm(fit, Xmat, Yvals, ...))
+    return(fit.glm(fit, Xmat, Yvals, ...))
   }
 
   fit$coef <- model.fit$coef;
@@ -68,24 +70,15 @@ glmfit.speedglm <- function(fit, Xmat, Yvals, ...) {
     print("speedglm fits:")
     print(fit$coef)
   }
-  class(fit)[2] <- "glmfit"
-
+  class(fit)[2] <- "GLMmodel"
   return(fit)
 }
 
-# ----------------------------------------------------------------
-# Generic for predicting P(A=1|...) from either logistic (binomial family) GLM model or H2O model
-# ----------------------------------------------------------------
-predictP1 <- function(m.fit, ...) UseMethod("predictP1")
-
-# ----------------------------------------------------------------
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
-# ----------------------------------------------------------------
-predictP1.glmfit <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
   if (!missing(DataStorageObject)) {
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
   }
-
   Xmat <- ParentObject$getXmat
   assert_that(!is.null(Xmat)); assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
@@ -151,28 +144,23 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
       self$ParentModel <- ParentModel
       self$classify <- ParentModel$classify
       self$model_contrl <- ParentModel$model_contrl
-      if (!("GLM" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'GLM', since fit.package was set to 'speedglm' or 'glm'")
+      if (!("glm" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'glm', since fit.package was set to 'speedglm' or 'glm'")
       assert_that(any(c("glm", "speedglm") %in% fit.package))
       self$fit.class <- fit.package
-      class(self$model.fit) <- c(class(self$model.fit), self$fit.class)
+      class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
       invisible(self)
     },
 
     fit = function(data, outvar, predvars, subset_idx, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
-      # Xmat has 0 rows: return NA's and avoid throwing exception:
-      # if (sum(subset_idx) == 0L) {
-      #   self$model.fit$coef = rep.int(NA_real_, ncol(private$Xmat))
-      # } else {
-        self$model.fit <- glmfit(self$model.fit,
-                                 Xmat = private$Xmat,
-                                 Yvals = private$Yvals,
-                                 DataStorageObject = data,
-                                 outvar = outvar,
-                                 predvars = predvars,
-                                 subset_idx = subset_idx,
-                                 model_contrl = self$model_contrl, ...)
-      # }
+      self$model.fit <- fit(self$fit.class, self$model.fit,
+                               Xmat = private$Xmat,
+                               Yvals = private$Yvals,
+                               DataStorageObject = data,
+                               outvar = outvar,
+                               predvars = predvars,
+                               subset_idx = subset_idx,
+                               model_contrl = self$model_contrl, ...)
       self$model.fit$params <- self$params
       return(self$model.fit)
     },

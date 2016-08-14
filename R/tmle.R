@@ -4,7 +4,7 @@
 # 1) EVERYTIME a subset [,] is done on frame (H2O.dat.sVar[rows_subset, vars]) a new frame is created with an automatically ID
 # 2) EVERYTIME a prediction is made a new h2o frame is created: predictions_"modelIDname"_on_"H2OFRAMENAME"
 # 3) EVERYTIME a prediction result is pulled ([,"p1"]), a new temp FRAME  is created
-# 4) WHEN DOING "subsetH2Oframe[, outvar]" in BinomialH2O$setdataH2O A NEW temp FRAME (AUTOMATIC ID) is CREATED
+# 4) WHEN DOING "subsetH2Oframe[, outvar]" in BinomialH2O$setdata A NEW temp FRAME (AUTOMATIC ID) is CREATED
 # 5) Having Q.kplus1 as a column in the main DT or FRAME is also an issue, since parallel training might overwrite it
 
 # ------------------------------------------------------------------------------------------

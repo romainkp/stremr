@@ -5,9 +5,10 @@
 \title{Setting Options for \code{stremr}}
 \usage{
 stremr_options(fit.package = c("speedglm", "glm", "h2o"),
-  fit.algorithm = c("GLM", "GBM", "RF", "SL"), bin.method = c("equal.len",
-  "equal.mass", "dhist"), parfit = FALSE, nbins = NA, maxncats = 20,
-  poolContinVar = FALSE, maxNperBin = 1000)
+  fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning",
+  "SuperLearner"), bin.method = c("equal.len", "equal.mass", "dhist"),
+  parfit = FALSE, nbins = NA, maxncats = 20, poolContinVar = FALSE,
+  maxNperBin = 1000)
 }
 \arguments{
 \item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}

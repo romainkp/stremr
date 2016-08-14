@@ -57,7 +57,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
     fit.package = c("speedglm", "glm", "h2o"),
-    fit.algorithm = c("GLM", "GBM", "RF", "SL"),
+    fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
     model_contrl = list(),
 
     n = NA_integer_,        # number of rows in the input data
@@ -69,24 +69,23 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
-      model_contrl <- reg$model_contrl
       self$model_contrl <- reg$model_contrl
 
-      if ("fit.package" %in% names(model_contrl)) {
-        self$fit.package <- model_contrl[['fit.package']]
+      if ("fit.package" %in% names(self$model_contrl)) {
+        self$fit.package <- self$model_contrl[['fit.package']]
         assert_that(is.character(self$fit.package))
-        assert_that(self$fit.package %in% c("speedglm", "glm", "h2o"))
       } else {
         self$fit.package <- reg$fit.package[1]
       }
+      if (!(self$fit.package %in% c("speedglm", "glm", "h2o"))) stop("fit.package must be one of: 'speedglm', 'glm', 'h2o'")
 
-      if ("fit.algorithm" %in% names(model_contrl)) {
-        self$fit.algorithm <- model_contrl[['fit.algorithm']]
+      if ("fit.algorithm" %in% names(self$model_contrl)) {
+        self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
         assert_that(is.character(self$fit.algorithm))
-        assert_that(self$fit.algorithm %in% c("GLM", "GBM", "RF", "SL"))
       } else {
         self$fit.algorithm <- reg$fit.algorithm[1]
       }
+      if (!(self$fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"))) stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner'")
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -107,7 +106,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       # ***************************************************************************
       # Add any additional options passed on to modeling functions as extra args
       # ***************************************************************************
-      if (self$fit.package %in% "h2o") {
+      if (self$fit.package %in% c("h2o", "h2oEnsemble")) {
         self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
       } else {
         self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
@@ -137,8 +136,16 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
       self$define.subset.idx(data)
+      model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
 
-      private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      if (inherits(model.fit, "try-error")) {
+        message("running " %+% self$binomialModelObj$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")
+        self$binomialModelObj <- BinomialGLM$new(fit.algorithm = "GLM", fit.package = "speedglm", ParentModel = self, ...)
+        self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
+        model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      }
+
+      private$model.fit <- model.fit
 
       self$is.fitted <- TRUE
       if (predict) {
@@ -147,8 +154,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
       # **********************************************************************
+      self$wipe.alldat
       invisible(self)
     },
 
@@ -157,7 +164,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     predict = function(newdata, ...) {
       assert_that(self$is.fitted)
       if (missing(newdata) && is.null(private$probA1)) {
-        # stop("must provide newdata for BinaryOutcomeModel$predict()")
         private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
       } else {
         self$n <- newdata$nobs
