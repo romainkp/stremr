@@ -75,12 +75,12 @@ pander.H2ORegressionMetrics <- function(H2ORegressionMetricsObject) {
 
 #' S3 methods for printing model fit summary for glmfit class object
 #'
-#' Prints the modeling summary for the GLM fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
-#' @param model.fit The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm
-#' @param ... Additional options passed on to \code{summary.glmfit}.
-#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.glmfit}.
+#' Prints the modeling summary for the glm fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
+#' @param model.fit The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm
+#' @param ... Additional options passed on to \code{summary.GLMmodel}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.GLMmodel}.
 #' @export
-print.glmfit <- function(model.fit, ...) {
+print.GLMmodel <- function(model.fit, ...) {
   model.summary <- summary(model.fit, ...)
   cat(paste(model.summary, collapse = '\n'))
 }
@@ -93,7 +93,7 @@ print.glmfit <- function(model.fit, ...) {
 #' @param ... Additional options (not used)
 #' @return The markdown-formated model summary returned by \code{pander::pander_return}.
 #' @export
-summary.glmfit <- function(model.fit, format_table = TRUE, ...) {
+summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
   makeModelCaption <- function(model.fit) {
     return(
       "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
@@ -116,16 +116,16 @@ summary.glmfit <- function(model.fit, format_table = TRUE, ...) {
   out
 }
 
-#' S3 methods for getting model fit summary for h2ofit class object
+#' S3 methods for getting model fit summary for H2Omodel class object
 #'
 #' Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
-#' @param model.fit The model fit object produced by any stremr S3 function starting with \code{stremr:::h2ofit.}
-#' @param only.coefs Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "GLM"}).
-#' @param format_table Format the coefficients into a data.frame table (when running \code{fit.algorithm = "GLM"})?
+#' @param model.fit The model fit object produced by any stremr S3 function based on h2o
+#' @param only.coefs Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "glm"}).
+#' @param format_table Format the coefficients into a data.frame table (when running \code{fit.algorithm = "glm"})?
 #' @param ... Additional options (not used)
 #' @return The markdown-formated model summary returned by \code{pander::pander_return}.
 #' @export
-summary.h2ofit <- function(model.fit, only.coefs = FALSE, format_table = TRUE, ...) {
+summary.H2Omodel <- function(model.fit, only.coefs = FALSE, format_table = TRUE, ...) {
   h2o.model <- model.fit$H2O.model.object
   modelID <- h2o.model@model$training_metrics@metrics$model$name
   out <- NULL
@@ -133,7 +133,7 @@ summary.h2ofit <- function(model.fit, only.coefs = FALSE, format_table = TRUE, .
   # -----------------------------------------------------------------
   # some basic model info:
   # -----------------------------------------------------------------
-  coef_summary_out <- summary.glmfit(model.fit, format_table)
+  coef_summary_out <- summary.GLMmodel(model.fit, format_table)
   out <- c(out, coef_summary_out)
 
   if (!only.coefs) {
@@ -163,15 +163,15 @@ summary.h2ofit <- function(model.fit, only.coefs = FALSE, format_table = TRUE, .
   return(out)
 }
 
-#' S3 methods for printing model fit summary for h2ofit class object
+#' S3 methods for printing model fit summary for H2Omodel class object
 #'
 #' Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
-#' @param model.fit The model fit object produced by any stremr S3 function starting with \code{stremr:::h2ofit.}
+#' @param model.fit The model fit object produced by any stremr S3 function starting with \code{stremr:::H2Omodel.}
 #' @param only.coefs Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "GLM"}).
-#' @param ... Additional options passed on to \code{summary.h2ofit}.
-#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.h2ofit}.
+#' @param ... Additional options passed on to \code{summary.H2Omodel}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.H2Omodel}.
 #' @export
-print.h2ofit <- function(model.fit, only.coefs = FALSE, ...) {
+print.H2Omodel <- function(model.fit, only.coefs = FALSE, ...) {
   model.summary <- summary(model.fit, only.coefs, ...)
   cat(paste(model.summary, collapse = '\n'))
 }

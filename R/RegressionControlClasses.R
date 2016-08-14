@@ -57,7 +57,9 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
       }
 
       assert_that(is.list(model_contrl))
-      if (any(is.null(names(model_contrl))) || any(names(model_contrl) %in% "")) stop("all items in list 'model_contrl' must be named")
+      if (length(model_contrl)>0) {
+        if (any(is.null(names(model_contrl))) || any(names(model_contrl) %in% "")) stop("all items in list 'model_contrl' must be named")
+      }
 
       self$model_contrl <- model_contrl
 
