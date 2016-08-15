@@ -174,7 +174,7 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' @param params_Q Optional parameters to be passed to the specific fitting algorithm for Q-learning
 #' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
-#' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with %\code{dopar}% and requires a previously defined parallel back-end cluster)
+#' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)
 #' @param verbose ...
 #' @return ...
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,

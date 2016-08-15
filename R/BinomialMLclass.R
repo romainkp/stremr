@@ -27,8 +27,6 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
   return(mainArgs)
 }
 
-
-
 # ---------------------------------------------------------------------------
 # for running logistic regression with continuous outcome range [0-1]
 # ---------------------------------------------------------------------------
@@ -191,19 +189,22 @@ fit.h2ogrid <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_s
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = algo_fun) # Add user args that pertain to this specific learner:
   mainArgs$algorithm <- algorithm
-  mainArgs$search_criteria <- model_contrl$search_criteria
-  if (is.null(mainArgs$search_criteria)) stop("must specify 'search_criteria' when running 'h2o.grid'")
+  mainArgs$search_criteria <- model_contrl[["search_criteria"]]
   mainArgs$hyper_params <- model_contrl[[algorithm]]
 
-  # Remove any args that appear in mainArgs, but also in hyper_params:
+  if (!is.null(mainArgs$hyper_params[["search_criteria"]])) {
+    mainArgs$search_criteria <- mainArgs$hyper_params[["search_criteria"]]
+    mainArgs$hyper_params[["search_criteria"]] <- NULL
+  }
+  if (is.null(mainArgs$search_criteria)) stop("must specify 'search_criteria' when running 'h2o.grid'")
+
+  # Remove any args from mainArgs that also appear in hyper_params:
   common_hyper_args <- intersect(names(mainArgs), names(mainArgs$hyper_params))
   if(length(common_hyper_args) > 0) mainArgs <- mainArgs[!(names(mainArgs) %in% common_hyper_args)]
 
-  # browser()
-
   if (gvars$verbose) {
     print("running h2o.grid algorithm: "); print(algorithm)
-    print("running h2o.grid with args: "); print(mainArgs)
+    # print("running h2o.grid with args: "); print(mainArgs)
   }
 
   # old way to extract hyper-parameters:
@@ -215,6 +216,11 @@ fit.h2ogrid <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_s
 
   model.fit <- do.call(h2o::h2o.grid, mainArgs)
   fit$fitfunname <- "h2o.h2ogrid";
+
+  if (gvars$verbose) {
+    print("grid search fitted models:"); print(model.fit)
+  }
+  # browser()
 
   fit$H2O.model.object <- model.fit
   class(fit) <- c(class(fit)[1], c("H2Omodel"))

@@ -49,7 +49,7 @@ Setting to \code{FALSE} will fit the outcome model (Q-learning) across all obser
 \item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
-\item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with %\code{dopar}% and requires a previously defined parallel back-end cluster)}
+\item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)}
 
 \item{verbose}{...}
 }

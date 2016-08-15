@@ -20,12 +20,17 @@ fit.h2oSuperLearner <- function(fit.class, fit, subsetH2Oframe, outvar, predvars
   }
   # Specify a defalt GLM as the metalearner
   metalearner <- model_contrl$metalearner
+
   # metalearner <- "h2o.glm.wrapper"
   stack <- h2oEnsemble::h2o.stack(models = fitted_models_all, response_frame = subsetH2Oframe[,outvar], metalearner = metalearner)
 
+  # str(stack)
+  print("SuperLearner fit:"); print(stack$metafit)
+  # browser()
+
   # Compute test set performance:
   perf <- h2oEnsemble::h2o.ensemble_performance(stack, newdata = subsetH2Oframe)
-  print("SL performance on training data: "); print(perf)
+  print("SuperLearner overall performance on the training set: "); print(perf)
   # h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negative = non_negative)
   # stack3 <- h2o.metalearn(stack, metalearner = "h2o.glm_nn")
   # perf3 <- h2o.ensemble_performance(stack3, newdata = subsetH2Oframe, score_base_models = FALSE)
