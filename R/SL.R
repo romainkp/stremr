@@ -28,8 +28,8 @@ fit.h2oSuperLearner <- function(fit.class, fit, subsetH2Oframe, outvar, predvars
   # ----------------------------------------------------------------------------------------------------
   print("SuperLearner fit:"); print(stack$metafit)
   perf <- h2oEnsemble::h2o.ensemble_performance(stack, newdata = subsetH2Oframe, score_base_models = FALSE)
-  print("SuperLearner overall performance (AUC) on the training set: "); print(perf, metric = "AUC")
-  print("SuperLearner overall performance (MSE) on the training set: "); print(perf, metric = "MSE")
+  print("SuperLearner overall performance (AUC) on the training set: "); print(perf)
+  print("SuperLearner overall performance (MSE) on the training set: "); print(perf$ensemble@metrics$MSE)
 
   # h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negative = non_negative)
   # stack3 <- h2o.metalearn(stack, metalearner = "h2o.glm_nn")

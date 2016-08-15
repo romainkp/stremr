@@ -196,7 +196,7 @@ fit.h2ogrid <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_s
     mainArgs$search_criteria <- mainArgs$hyper_params[["search_criteria"]]
     mainArgs$hyper_params[["search_criteria"]] <- NULL
   }
-  if (is.null(mainArgs$search_criteria)) stop("must specify 'search_criteria' when running 'h2o.grid'")
+  if (is.null(mainArgs$search_criteria)) stop("must specify 'search_criteria' when running 'h2o.grid' for algorithm " %+% algorithm)
 
   # Remove any args from mainArgs that also appear in hyper_params:
   common_hyper_args <- intersect(names(mainArgs), names(mainArgs$hyper_params))
