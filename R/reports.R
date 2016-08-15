@@ -50,12 +50,14 @@ openFileInOS <- function(f) {
 #' @param file.name File name for the report file without extension. Default file name is assigned based on the current date.
 #' @param file.path Directory path where the report file(s) should be written. Default is to use the system temporary directory.
 #' @param openFile Open the report file with OS default viewer?
+#' @param keep_md Keep the source .md files?
+#' @param keep_tex Keep the source .tex files for pdf output?
 #' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
 #' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), openFile = TRUE, ...) {
+make_report_rmd <- function(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)
 
   if ("author" %in% names(optArgReport)) {
@@ -122,7 +124,7 @@ make_report_rmd <- function(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = N
   figure.dir <- file.path(getwd(), "figure/stremr-")
   report.html <- tryCatch(rmarkdown::render(report.file,
                           output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE,
-                          output_options = list(keep_md = TRUE, toc = TRUE, toc_float = TRUE,
+                          output_options = list(keep_md = keep_md, toc = TRUE, toc_float = TRUE,
                                                 number_sections = TRUE, fig_caption = TRUE,
                                                 # mathjax = "local", self_contained = FALSE)
                                                 md_extensions = "+escaped_line_breaks")
@@ -137,7 +139,7 @@ make_report_rmd <- function(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = N
 
   if (!format %in% "html"){
       if (format %in% "pdf") {
-        output_options <- list(keep_tex = TRUE, toc = TRUE, number_sections = TRUE, fig_caption = TRUE,
+        output_options <- list(keep_tex = keep_tex, toc = TRUE, number_sections = TRUE, fig_caption = TRUE,
                                md_extensions = "+escaped_line_breaks")
         # output_options <- list(keep_tex = TRUE, pandoc = list(arg="+escaped_line_breaks"))
         # output_options <- list(keep_tex = TRUE, pandoc = list(arg="markdown+escaped_line_breaks"))
