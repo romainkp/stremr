@@ -23,10 +23,7 @@ fit.h2oSuperLearner <- function(fit.class, fit, subsetH2Oframe, outvar, predvars
 
   # metalearner <- "h2o.glm.wrapper"
   stack <- h2oEnsemble::h2o.stack(models = fitted_models_all, response_frame = subsetH2Oframe[,outvar], metalearner = metalearner)
-
-  # str(stack)
   print("SuperLearner fit:"); print(stack$metafit)
-  # browser()
 
   # Compute test set performance:
   perf <- h2oEnsemble::h2o.ensemble_performance(stack, newdata = subsetH2Oframe)
@@ -36,10 +33,29 @@ fit.h2oSuperLearner <- function(fit.class, fit, subsetH2Oframe, outvar, predvars
   # perf3 <- h2o.ensemble_performance(stack3, newdata = subsetH2Oframe, score_base_models = FALSE)
   # print(perf3)
 
-  fit$coef <- NULL;
-  fit$fitfunname <- "h2o.SL";
+  out_coef <- vector(mode = "numeric", length = length(fitted_models_all)+1)
+  out_coef[] <- NA
+  names(out_coef) <- names(stack$metafit@model$coefficients)
+  out_coef[names(stack$metafit@model$coefficients)] <- stack$metafit@model$coefficients
+
+  fit$coef <- out_coef;
+  fit$linkfun <- NA
+  fit$nobs <- length(rows_subset)
+
+  if (gvars$verbose) {
+    print("SuperLearner fits:")
+    print(fit$coef)
+  }
+
+  fit$fitfunname <- "h2oEnsemble::h2o.stack";
   fit$H2O.model.object <- stack
+
+  # browser()
+  # TO DIRECTLY SAVE ALL MODELS FIT DURING GRID SEARCH
+  # fit$fitted_models_all <- fitted_models_all
+
   class(fit) <- c(class(fit)[1], c("H2Oensemblemodel"))
+
   return(fit)
 
     # Random Grid Search (e.g. 120 second maximum)

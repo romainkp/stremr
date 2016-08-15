@@ -409,5 +409,8 @@ fitSeqGcomp_onet <- function(OData,
   if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
   if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
 
-  return(list(riskP1 = mean_est_t, ALLsuccessTMLE = ALLsuccessTMLE, nFailedUpdates = nFailedUpdates))
+  return(list(riskP1 = mean_est_t,
+              ALLsuccessTMLE = ALLsuccessTMLE,
+              nFailedUpdates = nFailedUpdates,
+              type = ifelse(stratifyQ_by_rule, "stratified", "pooled")))
 }

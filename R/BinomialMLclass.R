@@ -338,6 +338,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         self$emptyY
         return(self$model.fit)
       }
+      self$model.fit$params <- self$params
       self$model.fit <- try(
                     fit(self$fit.class, self$model.fit,
                            subsetH2Oframe = private$subsetH2Oframe,
@@ -352,8 +353,6 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         self$emptyY
         return(self$model.fit)
       }
-
-      self$model.fit$params <- self$params
       return(self$model.fit)
     },
 
