@@ -57,8 +57,43 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
     #************************************************
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
                                           y = prev_Q.kplus1, weights = IPWts, offset = off,
+                                          # method=c('eigen','Cholesky','qr'),
                                           family = quasibinomial(), trace = FALSE, maxit = 1000),
                   silent = TRUE)
+
+    # df.wts <- data.table(y = prev_Q.kplus1, weights = IPWts, offset = off)
+    # df.wts[weights>0, ]
+    # df.wts[weights>0, weights := 1]
+    # m.Qstar
+    # browser()
+    # speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
+    #                         y = prev_Q.kplus1, weights = df.wts[["weights"]], offset = off,
+    #                         # method=c('eigen','Cholesky','qr'),
+    #                         method=c('qr'),
+    #                         family = quasibinomial(), trace = FALSE, maxit = 1000)
+
+    # res.glm <- glm.fit(x = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
+    #                    y = prev_Q.kplus1, weights = df.wts[["weights"]], offset = off, family = quasibinomial())
+    # names(res.glm)
+    # res.glm$coefficients
+    # # , trace = FALSE, maxit = 1000
+
+    # Xdesign <- matrix(IPWts, ncol=1)
+    # nrow(Xdesign)
+    # length(prev_Q.kplus1)
+
+    glm.cleverCov <- glm.fit(x = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = quasibinomial())
+    # speedglm::speedglm.wfit(X = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = binomial())
+    # , trace = FALSE, maxit = 1000,
+    # , intercept = TRUE
+    cleverCov.coef <- glm.cleverCov$coefficients
+    # QY.star <- plogis(off + cleverCov.coef * IPWts)
+    # QY.star
+
+    # df.wts <- data.table(y = prev_Q.kplus1, weights = IPWts, offset = off, m.Q.star.coef = m.Q.star.coef, QY.star = QY.star)
+    # df.wts[weights>0, ]
+    # df.wts[weights>0, weights := 1]
+    # m.Qstar
 
     if (inherits(m.Qstar, "try-error")) { # TMLE update failed
       if (gvars$verbose) message("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
@@ -69,7 +104,10 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
     }
   }
 
-  fit <- list(TMLE.intercept = update.Qstar.coef)
+  # fit <- list(TMLE.intercept = update.Qstar.coef)
+  fit <- list(TMLE.intercept = update.Qstar.coef,
+              TMLE.cleverCov.coef = cleverCov.coef)
+
   class(fit)[2] <- "tmlefit"
   if (gvars$verbose) print("tmle update: " %+% round(update.Qstar.coef,4))
   return(fit)
@@ -190,6 +228,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
+        TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
         # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
         if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
           update.Qstar.coef <- TMLE.intercept
@@ -197,7 +236,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           update.Qstar.coef <- 0
         }
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
+        # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
+        wts_TMLE_all_obs <- data$IPwts_by_regimen[self$subset_idx, "cum.IPAW", with = FALSE][[1]]
+        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + TMLE.cleverCov.coef * wts_TMLE_all_obs)
         # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))
       }
 

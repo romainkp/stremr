@@ -337,6 +337,7 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
 
   all.ID.t <- as.data.table(cbind(rep(UID,each=(tmax+1)), rep(0:tmax,length(UID)) ))
   names(all.ID.t) <- c(nodes$IDnode, t_name)
+
   all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE)
   all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(eval(as.name("cum.IPAW"))), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
@@ -344,7 +345,7 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   numIPW <- all.ID.t[, .(sum_Y_IPAW = sum(get(Ynode)*cum.IPAW, na.rm = TRUE)), by = eval(t_name)]
 
   ## Denominator of bounded IPW for survival:
-  denomIPW <- all.ID.t[, .(sum_IPAW = sum(cum.IPAW, na.rm = TRUE)), by = eval(t_name)]
+  denomIPW <- all.ID.t[, .(sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
   ## Bounded IPW of survival (direct):
   risk.t <- (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
