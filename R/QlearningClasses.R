@@ -48,6 +48,7 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
     update.Qstar.coef <- NaN
+    cleverCov.coef <- 0
     if (gvars$verbose) message("TMLE update cannot be performed since all IP-weights are exactly zero!")
     warning("TMLE update cannot be performed since all IP-weights are exactly zero!")
   } else {
@@ -82,6 +83,14 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
     # nrow(Xdesign)
     # length(prev_Q.kplus1)
 
+    glm.cleverCov <- glm.fit(x = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = quasibinomial())
+    # speedglm::speedglm.wfit(X = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = binomial())
+    # , trace = FALSE, maxit = 1000,
+    # , intercept = TRUE
+    cleverCov.coef <- glm.cleverCov$coefficients
+    # QY.star <- plogis(off + cleverCov.coef * IPWts)
+    # QY.star
+
     # df.wts <- data.table(y = prev_Q.kplus1, weights = IPWts, offset = off, m.Q.star.coef = m.Q.star.coef, QY.star = QY.star)
     # df.wts[weights>0, ]
     # df.wts[weights>0, weights := 1]
@@ -95,14 +104,6 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
       update.Qstar.coef <- m.Qstar$coef
     }
   }
-
-  glm.cleverCov <- glm.fit(x = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = quasibinomial())
-  # speedglm::speedglm.wfit(X = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = binomial())
-  # , trace = FALSE, maxit = 1000,
-  # , intercept = TRUE
-  cleverCov.coef <- glm.cleverCov$coefficients
-  # QY.star <- plogis(off + cleverCov.coef * IPWts)
-  # QY.star
 
   # fit <- list(TMLE.intercept = update.Qstar.coef)
   fit <- list(TMLE.intercept = update.Qstar.coef,
