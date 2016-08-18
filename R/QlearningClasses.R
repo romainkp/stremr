@@ -243,7 +243,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
         # browser()
         datDTtest <- data.table(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, off_TMLE = qlogis(init_Q_fitted_only), wts_TMLE = wts_TMLE)
-        print(datDTtest[wts_TMLE>0, ])
+        # print(datDTtest[wts_TMLE>0, ])
         # # prev_Q.kplus1[prev_Q.kplus1<10^(-5)] <- 0
         # res <- glm(data = datDTtest, formula = "prev_Q.kplus1 ~ 1", offset = off_TMLE, weights = wts_TMLE, family = quasibinomial())
         # print("coefs from glm: "); print(coef(res))
@@ -262,6 +262,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
         # TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
         # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
+        print("TMLE Intercept: " %+% TMLE.intercept)
+
         if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
           update.Qstar.coef <- TMLE.intercept
         } else {
