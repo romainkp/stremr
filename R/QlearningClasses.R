@@ -44,29 +44,38 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
 #************************************************
 # TMLEs
 #************************************************
-tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
+tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, predictQ = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
-    update.Qstar.coef <- NaN
-    cleverCov.coef <- 0
+    update.Qstar.coef <- 0
     if (gvars$verbose) message("TMLE update cannot be performed since all IP-weights are exactly zero!")
     warning("TMLE update cannot be performed since all IP-weights are exactly zero!")
+  } else if (sum(prev_Q.kplus1[IPWts > 0]) < 10^-5) {
+    update.Qstar.coef <- 0
   } else {
     # browser()
     #************************************************
     # TMLE update via weighted univariate ML (espsilon is intercept)
     #************************************************
+    prev_Q.kplus1[prev_Q.kplus1 < 10^(-4)] <- 10^(-4)
+    init_Q_fitted_only[init_Q_fitted_only < 10^(-4)] <- 10^(-4)
+    off_TMLE <- qlogis(init_Q_fitted_only)
+
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
-                                          y = prev_Q.kplus1, weights = IPWts, offset = off,
+                                          y = prev_Q.kplus1, weights = IPWts, offset = off_TMLE,
                                           # method=c('eigen','Cholesky','qr'),
                                           family = quasibinomial(), trace = FALSE, maxit = 1000),
                   silent = TRUE)
 
+    # browser()
+    # prev_Q.kplus1.tmp <- prev_Q.kplus1
+    # prev_Q.kplus1.tmp[prev_Q.kplus1.tmp < 10^(-10)] <- 10^(-2)
+
     # df.wts <- data.table(y = prev_Q.kplus1, weights = IPWts, offset = off)
-    # df.wts[weights>0, ]
+    # df.wts[weights > 0, ]
     # df.wts[weights>0, weights := 1]
     # m.Qstar
-    # browser()
+
     # speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
     #                         y = prev_Q.kplus1, weights = df.wts[["weights"]], offset = off,
     #                         # method=c('eigen','Cholesky','qr'),
@@ -83,11 +92,11 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
     # nrow(Xdesign)
     # length(prev_Q.kplus1)
 
-    glm.cleverCov <- glm.fit(x = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = quasibinomial())
+    # glm.cleverCov <- glm.fit(x = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = quasibinomial())
     # speedglm::speedglm.wfit(X = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = binomial())
     # , trace = FALSE, maxit = 1000,
     # , intercept = TRUE
-    cleverCov.coef <- glm.cleverCov$coefficients
+    # cleverCov.coef <- glm.cleverCov$coefficients
     # QY.star <- plogis(off + cleverCov.coef * IPWts)
     # QY.star
 
@@ -105,12 +114,13 @@ tmle.update <- function(prev_Q.kplus1, off, IPWts, determ.Q, predictQ = TRUE) {
     }
   }
 
-  # fit <- list(TMLE.intercept = update.Qstar.coef)
-  fit <- list(TMLE.intercept = update.Qstar.coef,
-              TMLE.cleverCov.coef = cleverCov.coef)
+  fit <- list(TMLE.intercept = update.Qstar.coef)
+  # fit <- list(TMLE.intercept = update.Qstar.coef,
+  #             TMLE.cleverCov.coef = cleverCov.coef)
 
   class(fit)[2] <- "tmlefit"
-  if (gvars$verbose) print("tmle update: " %+% round(update.Qstar.coef,4))
+  # if (gvars$verbose) print("tmle update: " %+% round(update.Qstar.coef,4))
+  if (gvars$verbose) print("tmle update: " %+% update.Qstar.coef)
   return(fit)
   # return(list(update.Qstar.coef = update.Qstar.coef, QY.star = QY.star))
 }
@@ -214,22 +224,43 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # TARGETING STEP OF THE TMLE
       # the TMLE update is performed only among obs who were involved in fitting of the initial Q above (self$idx_used_to_fit_initQ)
       # **********************************************************************
+
       if (self$TMLE) {
         # Predicted outcome from the previous Seq-GCOMP/TMLE iteration, was saved in the current row t
         # If the person just failed at t this is always 1 (deterministic)
         prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
-        # TMLE offset will be based on the initial prediction of Q only (log(x/[1-x])):
+        # TMLE offset will be based on the initial prediction of Q among fitted only (log(x/[1-x])):
         init_Q_fitted_only <- probA1[self$idx_used_to_fit_initQ]
+
         # tmle update will error out if some predictions are exactly 0:
-        init_Q_fitted_only[init_Q_fitted_only < 10^(-5)] <- 10^(-5)
+        # init_Q_fitted_only[init_Q_fitted_only < 10^(-5)] <- 10^(-5)
+        # init_Q_fitted_only[init_Q_fitted_only <= 10^(-5)] <- 0
+        # init_Q_fitted_only[init_Q_fitted_only < 10^(-4)] <- 0.1
         off_TMLE <- qlogis(init_Q_fitted_only)
         # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
         # Cumulative IPWeights for current t:
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
+
+        # browser()
+        datDTtest <- data.table(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, off_TMLE = qlogis(init_Q_fitted_only), wts_TMLE = wts_TMLE)
+        print(datDTtest[wts_TMLE>0, ])
+        # # prev_Q.kplus1[prev_Q.kplus1<10^(-5)] <- 0
+        # res <- glm(data = datDTtest, formula = "prev_Q.kplus1 ~ 1", offset = off_TMLE, weights = wts_TMLE, family = quasibinomial())
+        # print("coefs from glm: "); print(coef(res))
+        # datDTtest2 <- copy(datDTtest)
+        # datDTtest2[prev_Q.kplus1 < 10^(-4), prev_Q.kplus1:= 10^(-4)]
+        # datDTtest2[init_Q_fitted_only < 10^(-4), init_Q_fitted_only:= 10^(-4)]
+        # datDTtest2[prev_Q.kplus1 > 1 - 10^(-5), prev_Q.kplus1:= prev_Q.kplus1-10^(-4)]
+        # datDTtest2[, off_TMLE := qlogis(init_Q_fitted_only)]
+        # datDTtest2[wts_TMLE > 400, wts_TMLE := 400]
+        # datDTtest2[, wts_TMLE := wts_TMLE/10]
+        # res <- glm(data = datDTtest2, formula = "prev_Q.kplus1 ~ 1", offset = off_TMLE, weights = wts_TMLE, family = quasibinomial())
+        # coef(res)
+
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
-        private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, off = off_TMLE, IPWts = wts_TMLE)
+        private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, IPWts = wts_TMLE)
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
-        TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
+        # TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
         # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
         if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
           update.Qstar.coef <- TMLE.intercept
@@ -237,10 +268,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           update.Qstar.coef <- 0
         }
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
-        wts_TMLE_all_obs <- data$IPwts_by_regimen[self$subset_idx, "cum.IPAW", with = FALSE][[1]]
-        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + TMLE.cleverCov.coef * wts_TMLE_all_obs)
-        # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))
+        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
+        # wts_TMLE_all_obs <- data$IPwts_by_regimen[self$subset_idx, "cum.IPAW", with = FALSE][[1]]
+        # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + TMLE.cleverCov.coef * wts_TMLE_all_obs)
+        # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))]
       }
 
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:

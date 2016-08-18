@@ -326,14 +326,14 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   Ynode <- nodes$Ynode
 
   ## Extract relevant information
-  ID.t.IPW.Y <- wts_data[,list(get(nodes$IDnode),get(t_name),cum.IPAW,get(Ynode))]
+  ID.t.IPW.Y <- wts_data[,list(get(nodes$IDnode), get(t_name), cum.IPAW, get(Ynode))]
   names(ID.t.IPW.Y) <- c(nodes$IDnode, t_name, "cum.IPAW", Ynode)
 
   ## Make sure every patient has an entry for every time point by LVCF
   tmax <- wts_data[, max(get(t_name))]
 
   tmax <- tmax - 1
-  UID <- wts_data[,unique(get(nodes$IDnode))]
+  UID <- wts_data[, unique(get(nodes$IDnode))]
 
   all.ID.t <- as.data.table(cbind(rep(UID,each=(tmax+1)), rep(0:tmax,length(UID)) ))
   names(all.ID.t) <- c(nodes$IDnode, t_name)
@@ -342,7 +342,7 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(eval(as.name("cum.IPAW"))), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
   ## Numerator of bounded IPW for survival:
-  numIPW <- all.ID.t[, .(sum_Y_IPAW = sum(get(Ynode)*cum.IPAW, na.rm = TRUE)), by = eval(t_name)]
+  numIPW <- all.ID.t[, .(sum_Y_IPAW = sum(get(Ynode)*eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
   ## Denominator of bounded IPW for survival:
   denomIPW <- all.ID.t[, .(sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
