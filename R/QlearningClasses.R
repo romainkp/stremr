@@ -224,11 +224,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # TARGETING STEP OF THE TMLE
       # the TMLE update is performed only among obs who were involved in fitting of the initial Q above (self$idx_used_to_fit_initQ)
       # **********************************************************************
+      # Predicted outcome from the previous Seq-GCOMP/TMLE iteration, was saved in the current row t
+      # If the person just failed at t this is always 1 (deterministic)
+      prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
+      data$dat.sVar[self$idx_used_to_fit_initQ, "prev_Q.kplus1" := eval(as.name("Q.kplus1"))]
+      # data$dat.sVar[self$idx_used_to_fit_initQ, ]
+      # browser()
 
       if (self$TMLE) {
-        # Predicted outcome from the previous Seq-GCOMP/TMLE iteration, was saved in the current row t
-        # If the person just failed at t this is always 1 (deterministic)
-        prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
+
         # TMLE offset will be based on the initial prediction of Q among fitted only (log(x/[1-x])):
         init_Q_fitted_only <- probA1[self$idx_used_to_fit_initQ]
 
@@ -242,7 +246,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
 
         # browser()
-        datDTtest <- data.table(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, off_TMLE = qlogis(init_Q_fitted_only), wts_TMLE = wts_TMLE)
+        # datDTtest <- data.table(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, off_TMLE = qlogis(init_Q_fitted_only), wts_TMLE = wts_TMLE)
         # print(datDTtest[wts_TMLE>0, ])
         # # prev_Q.kplus1[prev_Q.kplus1<10^(-5)] <- 0
         # res <- glm(data = datDTtest, formula = "prev_Q.kplus1 ~ 1", offset = off_TMLE, weights = wts_TMLE, family = quasibinomial())
@@ -269,6 +273,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         } else {
           update.Qstar.coef <- 0
         }
+
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
         # wts_TMLE_all_obs <- data$IPwts_by_regimen[self$subset_idx, "cum.IPAW", with = FALSE][[1]]
