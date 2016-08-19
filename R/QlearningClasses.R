@@ -266,7 +266,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
         # TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
         # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
-        print("TMLE Intercept: " %+% TMLE.intercept)
+        # print("TMLE Intercept: " %+% TMLE.intercept)
 
         if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
           update.Qstar.coef <- TMLE.intercept
