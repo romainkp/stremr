@@ -66,16 +66,12 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, pred
                                           # method=c('eigen','Cholesky','qr'),
                                           family = quasibinomial(), trace = FALSE, maxit = 1000),
                   silent = TRUE)
-
-    # browser()
     # prev_Q.kplus1.tmp <- prev_Q.kplus1
     # prev_Q.kplus1.tmp[prev_Q.kplus1.tmp < 10^(-10)] <- 10^(-2)
-
     # df.wts <- data.table(y = prev_Q.kplus1, weights = IPWts, offset = off)
     # df.wts[weights > 0, ]
     # df.wts[weights>0, weights := 1]
     # m.Qstar
-
     # speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
     #                         y = prev_Q.kplus1, weights = df.wts[["weights"]], offset = off,
     #                         # method=c('eigen','Cholesky','qr'),
@@ -87,11 +83,9 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, pred
     # names(res.glm)
     # res.glm$coefficients
     # # , trace = FALSE, maxit = 1000
-
     # Xdesign <- matrix(IPWts, ncol=1)
     # nrow(Xdesign)
     # length(prev_Q.kplus1)
-
     # glm.cleverCov <- glm.fit(x = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = quasibinomial())
     # speedglm::speedglm.wfit(X = matrix(IPWts, ncol=1), y = prev_Q.kplus1, offset = off, family = binomial())
     # , trace = FALSE, maxit = 1000,
@@ -99,7 +93,6 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, pred
     # cleverCov.coef <- glm.cleverCov$coefficients
     # QY.star <- plogis(off + cleverCov.coef * IPWts)
     # QY.star
-
     # df.wts <- data.table(y = prev_Q.kplus1, weights = IPWts, offset = off, m.Q.star.coef = m.Q.star.coef, QY.star = QY.star)
     # df.wts[weights>0, ]
     # df.wts[weights>0, weights := 1]
@@ -108,18 +101,14 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, pred
     if (inherits(m.Qstar, "try-error")) { # TMLE update failed
       if (gvars$verbose) message("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
       warning("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
-      update.Qstar.coef <- NaN
+      update.Qstar.coef <- 0
     } else {
       update.Qstar.coef <- m.Qstar$coef
     }
   }
 
   fit <- list(TMLE.intercept = update.Qstar.coef)
-  # fit <- list(TMLE.intercept = update.Qstar.coef,
-  #             TMLE.cleverCov.coef = cleverCov.coef)
-
   class(fit)[2] <- "tmlefit"
-  # if (gvars$verbose) print("tmle update: " %+% round(update.Qstar.coef,4))
   if (gvars$verbose) print("tmle update: " %+% update.Qstar.coef)
   return(fit)
   # return(list(update.Qstar.coef = update.Qstar.coef, QY.star = QY.star))
@@ -151,48 +140,69 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       invisible(self)
     },
 
-    # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
-    # store these predictions in private$probA1 and save those to input data
+    define.subset.idx = function(data, subset_vars, subset_exprs) {
+      subset_idx <- data$evalsubst(subset_vars, subset_exprs)
+      assert_that(is.logical(subset_idx))
+      if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
+        if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
+        subset_idx <- rep.int(subset_idx, data$p)
+        if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
+      }
+      assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
+      return(subset_idx)
+    },
+
+    define_idx_to_fit_initQ = function(data) {
+      # self$subset_vars is the name of the outcome var, checks for (!is.na(self$subset_vars))
+      # self$subset_exprs is the time variable for selecting certain rows
+      subset_idx <- self$define.subset.idx(data, subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
+      # excluded all censored observations:
+      subset_idx <- subset_idx & data$uncensored_idx
+      # if stratifying by rule, exclude all obs who are not following the rule:
+      if (self$stratifyQ_by_rule) subset_idx <- subset_idx & data$rule_followers_idx
+      return(subset_idx)
+    },
+
+    # Add all obs that were also censored at t and (possibly) those who just stopped following the rule
+    define_idx_to_predictQ = function(data) {
+      subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
+      return(subset_idx)
+    },
+
     fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
-
-      # if (gvars$verbose) print("fitting G-COMP model: " %+% self$show())
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
+      # browser()
 
       # **********************************************************************
       # FITTING STEP OF Q-LEARNING
+      # Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
       # **********************************************************************
-      # select all obs at current t, with no missing outcome (!is.na(self$subset_vars))
-      self$subset_idx <- self$define.subset.idx(data, subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
-      # excluded all censored observations:
-      self$subset_idx <- self$subset_idx & data$uncensored_idx
-      # if stratifying by rule, exclude all obs who are not following the rule:
-      if (self$stratifyQ_by_rule) self$subset_idx <- self$subset_idx & data$rule_followers_idx
+      self$subset_idx <- self$define_idx_to_fit_initQ(data)
       # save the subset used for fitting of the current initial Q[t] -> will be used for targeting
       self$idx_used_to_fit_initQ <- self$subset_idx
-      # obtain the inital model fit for Q[t]:
+      # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       self$is.fitted <- TRUE
 
-      # print("Q-learning for: " %+% self$subset_exprs); print(self$get.fits())
       # **********************************************************************
       # PREDICTION STEP OF Q-LEARNING
       # Q prediction for everyone (including those who just got censored and those who just stopped following the rule)
       # **********************************************************************
       interventionNodes.g0 <- data$interventionNodes.g0
       interventionNodes.gstar <- data$interventionNodes.gstar
-
       # Determine which nodes are actually stochastic and need to be summed out
       stoch_indicator <- data$define.stoch.nodes(interventionNodes.gstar)
       any_stoch <- sum(stoch_indicator) > 0
 
-      # Add to the design matrix all obs that were also censored at t and (possibly) those who just stopped following the rule:
-      self$subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
-      # print("performing initial Q-prediction for N = " %+% sum(self$subset_idx))
+      # For prediction need to add all obs that were also censored at t and (possibly) those who just stopped following the rule
+      self$subset_idx <- self$define_idx_to_predictQ(data)
 
       if (!any_stoch) {
-        probA1 <- self$predictStatic(data, g0 = interventionNodes.g0, gstar = interventionNodes.gstar, subset_idx = self$subset_idx)
+        probA1 <- self$predictStatic(data, g0 = interventionNodes.g0,
+                                           gstar = interventionNodes.gstar,
+                                           subset_idx = self$subset_idx)
       } else {
         # For all stochastic nodes, need to integrate out w.r.t. the support of each node
         probA1 <- self$predictStochastic(data, g0 = interventionNodes.g0,
@@ -200,7 +210,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                                subset_idx = self$subset_idx,
                                                stoch_indicator = stoch_indicator)
       }
-
       init_Q_all_obs <- probA1[self$subset_idx]
 
       # ------------------------------------------------------------------------------------------------------------------------
@@ -229,17 +238,12 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
       data$dat.sVar[self$idx_used_to_fit_initQ, "prev_Q.kplus1" := eval(as.name("Q.kplus1"))]
       # data$dat.sVar[self$idx_used_to_fit_initQ, ]
-      # browser()
 
       if (self$TMLE) {
-
         # TMLE offset will be based on the initial prediction of Q among fitted only (log(x/[1-x])):
         init_Q_fitted_only <- probA1[self$idx_used_to_fit_initQ]
 
         # tmle update will error out if some predictions are exactly 0:
-        # init_Q_fitted_only[init_Q_fitted_only < 10^(-5)] <- 10^(-5)
-        # init_Q_fitted_only[init_Q_fitted_only <= 10^(-5)] <- 0
-        # init_Q_fitted_only[init_Q_fitted_only < 10^(-4)] <- 0.1
         off_TMLE <- qlogis(init_Q_fitted_only)
         # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
         # Cumulative IPWeights for current t:
@@ -304,24 +308,56 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       invisible(self)
     },
 
-    # Predict the response P(Bin = 1|sW = sw);
-    # uses private$model.fit to generate predictions for data:
+    # THIS FUNCTION NEEDS TO BE OUTSIDE OF THE NESTED Q CLASSES.
+    # I.E. NEEDS TO BE BASED ON THE METHOD THAT CONTROLS ITERATIVE TMLE FITS
+    # Iterate_TMLE_fit_only = function(overwrite = TRUE, data, ...) { # Move overwrite to a field? ... self$overwrite
+    # },
+
+    Propagate_TMLE_fit = function(overwrite = TRUE, data, new.TMLE.fit, ...) { # Move overwrite to a field? ... self$overwrite
+      self$n <- data$nobs
+      self$nIDs <- data$nuniqueIDs
+      if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
+      TMLE.intercept <- new.TMLE.fit$TMLE.intercept
+      if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
+        update.Qstar.coef <- TMLE.intercept
+      } else {
+        update.Qstar.coef <- 0
+      }
+      rowidx_t <- which(self$subset_idx)
+      # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
+      Q.kplus1 <- data$dat.sVar[rowidx_t, "Q.kplus1", with = FALSE]
+      Q.kplus1.new <- plogis(qlogis(Q.kplus1) + update.Qstar.coef)
+      # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
+      data$dat.sVar[rowidx_t, "Q.kplus1" := Q.kplus1.new]
+      # Set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
+      # only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
+      if (self$Qreg_counter > 1) {
+        rowidx_t.minus1 <- rowidx_t - 1
+        data$dat.sVar[rowidx_t.minus1, "prev_Q.kplus1" := Q.kplus1.new]
+        # private$probA1 <- NULL
+      }
+      # **********************************************************************
+      # to save RAM space when doing many stacked regressions wipe out all internal data:
+      # self$wipe.alldat
+      # **********************************************************************
+      invisible(self)
+    },
+
+    # Predict the response P(Bin = 1|sW = sw); Uses private$model.fit to generate predictions for data:
     predict = function(newdata, subset_idx, ...) {
       assert_that(self$is.fitted)
       if (missing(newdata) && !is.null(private$probA1)) {
         return(private$probA1)
       } else if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
+        private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
         return(private$probA1)
       } else {
         self$n <- newdata$nobs
         if (missing(subset_idx)) {
-          self$subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
-        } else {
-          self$subset_idx <- subset_idx
+          subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
-        private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-        assert_that(!any(is.na(private$probA1[self$getsubset]))) # check that predictions P(A=1 | dmat) exist for all obs.
+        private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
+        assert_that(!any(is.na(private$probA1[subset_idx]))) # check that predictions P(A=1 | dmat) exist for all obs.
         invisible(return(private$probA1))
       }
     },
@@ -352,7 +388,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       d_all <- nrow(all_vals_mat)
       colnames(all_vals_mat) <- stoch_nodes_names
       # Save the probability of each stochastic intervention node
-      stoch.probs <- data$dat.sVar[self$subset_idx, stoch_nodes_names, with = FALSE]
+      stoch.probs <- data$dat.sVar[subset_idx, stoch_nodes_names, with = FALSE]
       colnames(stoch.probs) <- stoch_nodes_names
 
       # Loop over the grid mat; don't need to evaluate for everyone, just those obs that were used in prediction:
@@ -361,7 +397,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Assign the values in all_vals_mat[i,] to stochastic nodes in newdata
         # modify data to assign a single value from the support of each stochastic node TO all observations
         # WARNING: THIS STEP IS IRREVERSIBLE, ERASES ALL CURRENT VALUES IN interventionNodes.g0[stoch_nodes_idx]:
-        data$dat.sVar[self$subset_idx, stoch_nodes_names := all_vals_mat[i,], with = FALSE]
+        data$dat.sVar[subset_idx, stoch_nodes_names := all_vals_mat[i,], with = FALSE]
 
         # Predict using newdata, obtain probAeqa_stoch
         # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
@@ -376,15 +412,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           stoch.prob <- (stoch.prob)^IndNodeVal * (1L-stoch.prob)^(1-IndNodeVal)
           jointProb <- jointProb * stoch.prob
           # put the probabilities back into input data:
-          data$dat.sVar[self$subset_idx, stoch.node.nm := stoch.probs[[stoch.node.nm]], with = FALSE]
+          data$dat.sVar[subset_idx, stoch.node.nm := stoch.probs[[stoch.node.nm]], with = FALSE]
         }
         # Weight the current prediction by its probability
-        probA1[self$subset_idx] <- probA1[self$subset_idx] * jointProb
+        probA1[subset_idx] <- probA1[subset_idx] * jointProb
         # Sum and keep looping
-        stoch.probA1 <- stoch.probA1 + probA1[self$subset_idx]
+        stoch.probA1 <- stoch.probA1 + probA1[subset_idx]
       }
       stoch.probA1 <- stoch.probA1
-      private$probA1[self$subset_idx] <- stoch.probA1
+      private$probA1[subset_idx] <- stoch.probA1
       invisible(return(private$probA1))
     },
 
@@ -397,18 +433,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
       # if (is.null(self$getsubset)) stop("cannot make predictions after self$subset_idx is erased (set to NULL)")
       # invisible(return(private$probAeqa))
-    },
-
-    define.subset.idx = function(data, subset_vars, subset_exprs) {
-      subset_idx <- data$evalsubst(subset_vars, subset_exprs)
-      assert_that(is.logical(subset_idx))
-      if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
-        if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
-        subset_idx <- rep.int(subset_idx, data$p)
-        if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
-      }
-      assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
-      return(subset_idx)
     },
 
     # Returns the object that contains the actual model fits (itself)

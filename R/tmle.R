@@ -238,7 +238,7 @@ fitSeqGcomp <- function(OData,
   # **** Add weights if TMLE=TRUE and if weights were defined
   # NOTE: This needs to be done only once if evaluating survival over several t_periods
   # ------------------------------------------------------------------------------------------------
-  if (TMLE) {
+  # if (TMLE) {
     if (is.null(IPWeights)) {
       if (gvars$verbose) message("...evaluating IPWeights for TMLE...")
       IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name)
@@ -258,7 +258,7 @@ fitSeqGcomp <- function(OData,
     if (!is.null(weights)) stop("optional argument 'weights' is not implemented for TMLE or GCOMP")
     # Add additional observation-specific weights to the cumulative weights:
     # IPWeights <- process_opt_wts(IPWeights, weights, nodes, adjust_outcome = FALSE)
-  }
+  # }
 
   if (missing(t_periods)) stop("must specify survival 't_periods' of interest (time period values from column " %+% nodes$tnode %+% ")")
 
@@ -396,7 +396,6 @@ fitSeqGcomp_onet <- function(OData,
   mean_est_t <- mean(res_lastPredQ_Prob1)
   # 1-mean_est_t
   # [1] 0.8430826
-
   # # 1b. Grab the right model (QlearnModel) and pull it directly:
   #   lastQ.fit <- Qlearn.fit$getPsAsW.models()[[lastQ_inx]]$getPsAsW.models()[[1]]
   #   lastQ.fit
@@ -415,39 +414,59 @@ fitSeqGcomp_onet <- function(OData,
   if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
   if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
 
-  # # browser()
-  #   # OData$dat.sVar[, prev_Q.kplus1]
-  #   # OData$dat.sVar[1:100, ]
-  #   # OData$dat.sVar[, ]
-  #   TMLE_one_step_DT <- OData$dat.sVar[t <= t_period, c("ID", "t","TI", "C", "N", "Y.tplus1", "prev_Q.kplus1", "Q.kplus1"), with = FALSE]
-  #   # TMLE_one_step_DT[1:100, ]
-  #   # off_TMLE <- qlogis(init_Q_fitted_only)
-  #   TMLE_one_step_DT[, "off_TMLE" := qlogis(eval(as.name("Q.kplus1")))]
-  #   setkeyv(TMLE_one_step_DT, cols = c("ID", "t"))
-  #   TMLE_one_step_DT <- merge(TMLE_one_step_DT, OData$IPwts_by_regimen[, c("ID", "t", "cum.IPAW"), with = FALSE])
-  #   # wts_TMLE <- OData$IPwts_by_regimen[t <= t_period, "cum.IPAW", with = FALSE][[1]]
-  #   # length(wts_TMLE)
-  #   print("running one step TMLE:")
-  #   browser()
-  #   m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=nrow(TMLE_one_step_DT)),
-  #                                         y = TMLE_one_step_DT[["prev_Q.kplus1"]],
-  #                                         weights = TMLE_one_step_DT[["cum.IPAW"]],
-  #                                         offset = TMLE_one_step_DT[["off_TMLE"]],
-  #                                         # method=c('eigen','Cholesky','qr'),
-  #                                         family = quasibinomial(), trace = FALSE, maxit = 1000)
-  #   print("finished running one step TMLE")
-  #   TMLE_one_step_DT[, "Q.star" := plogis(qlogis(Q.kplus1) + m.Qstar$coef)]
-  #   risk_TMLEoneStep <-  TMLE_one_step_DT[t==0, mean(Q.star)]
-    # print("GCOMP survival result for t: " %+% t_period)
-    # print(1 - TMLE_one_step_DT[t==0, mean(Q.kplus1)])
-    # print("One-step TMLE survival result for t: " %+% t_period)
-    # print("Universal TMLE epsilon: " %+% m.Qstar$coef)
-    # print(1 - TMLE_one_step_DT[t==0, mean(Q.star)])
+  onestepTMLE <- function(TMLE_one_step_DT, t_period, max_iter = 10, tol.eps = 0.001) {
+    # max_iter <- 50
+    for (iter in 1:max_iter) {
+      print("running one step TMLE iter:" %+% iter)
+      TMLE_one_step_DT[, "off_TMLE" := qlogis(eval(as.name("Q.kplus1")))]
+      m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=nrow(TMLE_one_step_DT)),
+                                            y = TMLE_one_step_DT[["prev_Q.kplus1"]],
+                                            weights = TMLE_one_step_DT[["cum.IPAW"]],
+                                            offset = TMLE_one_step_DT[["off_TMLE"]],
+                                            # method=c('eigen','Cholesky','qr'),
+                                            family = quasibinomial(), trace = FALSE, maxit = 1000)
+      # print("finished running one step TMLE")
+      TMLE_one_step_DT[, "Q.star" := plogis(qlogis(Q.kplus1) + m.Qstar$coef)]
+      risk_TMLEoneStep <- TMLE_one_step_DT[t == 0, mean(Q.star)]
+      print("Universal TMLE epsilon: " %+% m.Qstar$coef)
+      print(1 - TMLE_one_step_DT[t==0, mean(Q.star)])
+
+      for (t.idx in (t_period:0)) {
+        if (t.idx > 0) {
+          TMLE_one_step_DT[which(t == eval(t.idx)) - 1, prev_Q.kplus1 := TMLE_one_step_DT[t == eval(t.idx), Q.star]]
+        }
+      }
+      TMLE_one_step_DT[, Q.kplus1 := Q.star]
+      # quit loop if the error tolerance level has been reached
+      if (!is.null(tol.eps) & (abs(m.Qstar$coef) <= tol.eps)) break
+    }
+    return(TMLE_one_step_DT)
+  }
+
+# Qlearn.fit$getPsAsW.models()[[1]]$getPsAsW.models()
+# OData$dat.sVar[, prev_Q.kplus1]
+# OData$dat.sVar[1:100, ]
+# OData$dat.sVar[, ]
+TMLE_one_step_DT <- OData$dat.sVar[t <= t_period, c("ID", "t","TI", "C", "N", "Y.tplus1", "prev_Q.kplus1", "Q.kplus1"), with = FALSE]
+# TMLE_one_step_DT[1:100, ]
+# off_TMLE <- qlogis(init_Q_fitted_only)
+setkeyv(TMLE_one_step_DT, cols = c("ID", "t"))
+TMLE_one_step_DT <- merge(TMLE_one_step_DT, OData$IPwts_by_regimen[, c("ID", "t", "cum.IPAW"), with = FALSE])
+# wts_TMLE <- OData$IPwts_by_regimen[t <= t_period, "cum.IPAW", with = FALSE][[1]]
+# length(wts_TMLE)
+
+  print("GCOMP survival result for t: " %+% t_period)
+  print(1 - TMLE_one_step_DT[t==0, mean(Q.kplus1)])
+
+  # browser()
+  TMLE_one_step_DT <- onestepTMLE(TMLE_one_step_DT, t_period, max_iter = 50, tol.eps = 0.001)
+  risk_TMLEoneStep <-  TMLE_one_step_DT[t==0, mean(Q.star)]
+  # 1-risk_TMLEoneStep
 
   resDF <- data.frame(t = t_period,
                       risk = mean_est_t,
                       surv = 1 - mean_est_t,
-                      # TMLEoneStepSurv = 1 - risk_TMLEoneStep,
+                      TMLEoneStepSurv = 1 - risk_TMLEoneStep,
                       ALLsuccessTMLE = ALLsuccessTMLE,
                       nFailedUpdates = nFailedUpdates,
                       type = ifelse(stratifyQ_by_rule, "stratified", "pooled")
