@@ -6,16 +6,18 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
     Qreg_counter = integer(),
     t_period = integer(),
     TMLE = FALSE,
-    regimen_names = NA,
     stratifyQ_by_rule = FALSE,
+    lower_bound_zero_Q = TRUE,
+    regimen_names = NA,
     pool_regimes = FALSE,
-    initialize = function(Qreg_counter, t_period, TMLE, regimen_names, stratifyQ_by_rule, pool_regimes, ...) {
+    initialize = function(Qreg_counter, t_period, TMLE, stratifyQ_by_rule, lower_bound_zero_Q, regimen_names, pool_regimes, ...) {
       self$Qreg_counter <- Qreg_counter
       self$t_period <- t_period
 
       if (!missing(TMLE)) self$TMLE <- TMLE
-      if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
+      if (!missing(lower_bound_zero_Q)) self$lower_bound_zero_Q <- lower_bound_zero_Q
+      if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
       super$initialize(...)
     }
@@ -25,7 +27,6 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
       list(Qreg_counter = self$Qreg_counter,
            t_period = self$t_period,
            TMLE = self$TMLE,
-           regimen_names = self$regimen_names,
            outvar = self$outvar,
            predvars = self$predvars,
            outvar.class = self$outvar.class,
@@ -33,6 +34,8 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
            subset_exprs = self$subset_exprs,
            subset_censored = self$subset_censored,
            stratifyQ_by_rule = self$stratifyQ_by_rule,
+           lower_bound_zero_Q = self$lower_bound_zero_Q,
+           regimen_names = self$regimen_names,
            pool_regimes = self$pool_regimes,
            model_contrl = self$model_contrl,
            censoring = self$censoring
@@ -44,7 +47,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
 #************************************************
 # TMLEs
 #************************************************
-tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, predictQ = TRUE) {
+tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_zero_Q = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
     update.Qstar.coef <- 0
@@ -57,8 +60,10 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, pred
     #************************************************
     # TMLE update via weighted univariate ML (espsilon is intercept)
     #************************************************
-    prev_Q.kplus1[prev_Q.kplus1 < 10^(-4)] <- 10^(-4)
-    init_Q_fitted_only[init_Q_fitted_only < 10^(-4)] <- 10^(-4)
+    if (lower_bound_zero_Q) {
+      prev_Q.kplus1[prev_Q.kplus1 < 10^(-4)] <- 10^(-4)
+      init_Q_fitted_only[init_Q_fitted_only < 10^(-4)] <- 10^(-4)
+    }
     off_TMLE <- qlogis(init_Q_fitted_only)
 
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
@@ -66,6 +71,7 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, determ.Q, pred
                                           # method=c('eigen','Cholesky','qr'),
                                           family = quasibinomial(), trace = FALSE, maxit = 1000),
                   silent = TRUE)
+
     # prev_Q.kplus1.tmp <- prev_Q.kplus1
     # prev_Q.kplus1.tmp[prev_Q.kplus1.tmp < 10^(-10)] <- 10^(-2)
     # df.wts <- data.table(y = prev_Q.kplus1, weights = IPWts, offset = off)
@@ -126,6 +132,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     TMLE = TRUE,
     nIDs = integer(),
     stratifyQ_by_rule = FALSE,
+    lower_bound_zero_Q = TRUE,
     Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
     t_period = integer(),
     idx_used_to_fit_initQ = NULL,
@@ -133,6 +140,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
       self$stratifyQ_by_rule <- reg$stratifyQ_by_rule
+      self$lower_bound_zero_Q <- reg$lower_bound_zero_Q
       self$Qreg_counter <- reg$Qreg_counter
       self$t_period <- reg$t_period
       self$regimen_names <- reg$regimen_names
@@ -266,7 +274,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # coef(res)
 
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
-        private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, IPWts = wts_TMLE)
+        private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, IPWts = wts_TMLE, lower_bound_zero_Q = self$lower_bound_zero_Q)
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
         # TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
         # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
@@ -312,7 +320,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     # I.E. NEEDS TO BE BASED ON THE METHOD THAT CONTROLS ITERATIVE TMLE FITS
     # Iterate_TMLE_fit_only = function(overwrite = TRUE, data, ...) { # Move overwrite to a field? ... self$overwrite
     # },
-
     Propagate_TMLE_fit = function(overwrite = TRUE, data, new.TMLE.fit, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs

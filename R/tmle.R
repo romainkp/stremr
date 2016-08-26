@@ -168,9 +168,11 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' @param stratifyQ_by_rule Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
 #' Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).
 #' @param TMLE Set to \code{TRUE} to run TMLE
+#' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
-#' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
+#' @param lower_bound_zero_Q Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
+#' Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.
 #' @param params_Q Optional parameters to be passed to the specific fitting algorithm for Q-learning
 #' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
@@ -188,9 +190,10 @@ fitSeqGcomp <- function(OData,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
                         stratifyQ_by_rule = FALSE,
                         TMLE = FALSE,
+                        IPWeights = NULL,
                         stabilize = FALSE,
                         trunc_weights = 10^6,
-                        IPWeights = NULL,
+                        lower_bound_zero_Q = TRUE,
                         params_Q = list(),
                         weights = NULL,
                         parallel = FALSE,
@@ -238,7 +241,7 @@ fitSeqGcomp <- function(OData,
   # **** Add weights if TMLE=TRUE and if weights were defined
   # NOTE: This needs to be done only once if evaluating survival over several t_periods
   # ------------------------------------------------------------------------------------------------
-  # if (TMLE) {
+  if (TMLE) {
     if (is.null(IPWeights)) {
       if (gvars$verbose) message("...evaluating IPWeights for TMLE...")
       IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name)
@@ -258,7 +261,7 @@ fitSeqGcomp <- function(OData,
     if (!is.null(weights)) stop("optional argument 'weights' is not implemented for TMLE or GCOMP")
     # Add additional observation-specific weights to the cumulative weights:
     # IPWeights <- process_opt_wts(IPWeights, weights, nodes, adjust_outcome = FALSE)
-  # }
+  }
 
   if (missing(t_periods)) stop("must specify survival 't_periods' of interest (time period values from column " %+% nodes$tnode %+% ")")
 
@@ -293,16 +296,14 @@ fitSeqGcomp <- function(OData,
     mcoptions <- list(preschedule = FALSE)
     res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
       t_period <- t_periods[t_idx]
-      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
-      # data.frame(t = t_period, risk = res$riskP1, surv = 1 - res$riskP1, ALLsuccessTMLE = res$ALLsuccessTMLE, nFailedUpdates = res$nFailedUpdates)
+      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, lower_bound_zero_Q, TMLE, params_Q, verbose)
       return(res)
     }
   } else {
     res_byt <- vector(mode = "list", length = length(t_periods))
     for (t_idx in seq_along(t_periods)) {
       t_period <- t_periods[t_idx]
-      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
-      # res_byt[[t_idx]] <- data.frame(t = t_period, risk = res$riskP1, surv = 1 - res$riskP1, ALLsuccessTMLE = res$ALLsuccessTMLE, nFailedUpdates = res$nFailedUpdates)
+      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, lower_bound_zero_Q, TMLE, params_Q, verbose)
       res_byt[[t_idx]] <- res
     }
   }
@@ -322,6 +323,7 @@ fitSeqGcomp_onet <- function(OData,
                             t_period,
                             Qforms,
                             stratifyQ_by_rule,
+                            lower_bound_zero_Q,
                             TMLE,
                             params_Q,
                             verbose = getOption("stremr.verbose")) {
@@ -369,8 +371,8 @@ fitSeqGcomp_onet <- function(OData,
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
-    reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i], stratifyQ_by_rule = stratifyQ_by_rule,
-                                     TMLE = TMLE,
+    reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i], TMLE = TMLE,
+                                     stratifyQ_by_rule = stratifyQ_by_rule, lower_bound_zero_Q = lower_bound_zero_Q,
                                      outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
                                      subset_vars = list("Q.kplus1"), subset_exprs = stratify_Q[i], model_contrl = params_Q,
                                      censoring = FALSE)
@@ -411,62 +413,53 @@ fitSeqGcomp_onet <- function(OData,
   #   subset_exprs <- lastQ.fit$subset_exprs
   #   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
   #   mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+
   if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
   if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
 
-  onestepTMLE <- function(TMLE_one_step_DT, t_period, max_iter = 10, tol.eps = 0.001) {
-    # max_iter <- 50
-    for (iter in 1:max_iter) {
-      print("running one step TMLE iter:" %+% iter)
-      TMLE_one_step_DT[, "off_TMLE" := qlogis(eval(as.name("Q.kplus1")))]
-      m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=nrow(TMLE_one_step_DT)),
-                                            y = TMLE_one_step_DT[["prev_Q.kplus1"]],
-                                            weights = TMLE_one_step_DT[["cum.IPAW"]],
-                                            offset = TMLE_one_step_DT[["off_TMLE"]],
-                                            # method=c('eigen','Cholesky','qr'),
-                                            family = quasibinomial(), trace = FALSE, maxit = 1000)
-      # print("finished running one step TMLE")
-      TMLE_one_step_DT[, "Q.star" := plogis(qlogis(Q.kplus1) + m.Qstar$coef)]
-      risk_TMLEoneStep <- TMLE_one_step_DT[t == 0, mean(Q.star)]
-      print("Universal TMLE epsilon: " %+% m.Qstar$coef)
-      print(1 - TMLE_one_step_DT[t==0, mean(Q.star)])
-
-      for (t.idx in (t_period:0)) {
-        if (t.idx > 0) {
-          TMLE_one_step_DT[which(t == eval(t.idx)) - 1, prev_Q.kplus1 := TMLE_one_step_DT[t == eval(t.idx), Q.star]]
-        }
-      }
-      TMLE_one_step_DT[, Q.kplus1 := Q.star]
-      # quit loop if the error tolerance level has been reached
-      if (!is.null(tol.eps) & (abs(m.Qstar$coef) <= tol.eps)) break
-    }
-    return(TMLE_one_step_DT)
-  }
-
-# Qlearn.fit$getPsAsW.models()[[1]]$getPsAsW.models()
-# OData$dat.sVar[, prev_Q.kplus1]
-# OData$dat.sVar[1:100, ]
-# OData$dat.sVar[, ]
-TMLE_one_step_DT <- OData$dat.sVar[t <= t_period, c("ID", "t","TI", "C", "N", "Y.tplus1", "prev_Q.kplus1", "Q.kplus1"), with = FALSE]
-# TMLE_one_step_DT[1:100, ]
-# off_TMLE <- qlogis(init_Q_fitted_only)
-setkeyv(TMLE_one_step_DT, cols = c("ID", "t"))
-TMLE_one_step_DT <- merge(TMLE_one_step_DT, OData$IPwts_by_regimen[, c("ID", "t", "cum.IPAW"), with = FALSE])
-# wts_TMLE <- OData$IPwts_by_regimen[t <= t_period, "cum.IPAW", with = FALSE][[1]]
-# length(wts_TMLE)
-
-  print("GCOMP survival result for t: " %+% t_period)
-  print(1 - TMLE_one_step_DT[t==0, mean(Q.kplus1)])
-
-  # browser()
-  TMLE_one_step_DT <- onestepTMLE(TMLE_one_step_DT, t_period, max_iter = 50, tol.eps = 0.001)
-  risk_TMLEoneStep <-  TMLE_one_step_DT[t==0, mean(Q.star)]
-  # 1-risk_TMLEoneStep
+  # onestepTMLE <- function(TMLE_one_step_DT, t_period, max_iter = 10, tol.eps = 0.001) {
+  #   for (iter in 1:max_iter) {
+  #     print("running one step TMLE iter:" %+% iter)
+  #     TMLE_one_step_DT[, "off_TMLE" := qlogis(eval(as.name("Q.kplus1")))]
+  #     m.Qstar <- speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=nrow(TMLE_one_step_DT)),
+  #                                           y = TMLE_one_step_DT[["prev_Q.kplus1"]],
+  #                                           weights = TMLE_one_step_DT[["cum.IPAW"]],
+  #                                           offset = TMLE_one_step_DT[["off_TMLE"]],
+  #                                           # method=c('eigen','Cholesky','qr'),
+  #                                           family = quasibinomial(), trace = FALSE, maxit = 1000)
+  #     TMLE_one_step_DT[, "Q.star" := plogis(qlogis(Q.kplus1) + m.Qstar$coef)]
+  #     risk_TMLEoneStep <- TMLE_one_step_DT[t == 0, mean(Q.star)]
+  #     print("Universal TMLE epsilon: " %+% m.Qstar$coef)
+  #     print(1 - TMLE_one_step_DT[t==0, mean(Q.star)])
+  #     for (t.idx in (t_period:0)) {
+  #       if (t.idx > 0) {
+  #         TMLE_one_step_DT[which(t == eval(t.idx)) - 1, prev_Q.kplus1 := TMLE_one_step_DT[t == eval(t.idx), Q.star]]
+  #       }
+  #     }
+  #     TMLE_one_step_DT[, Q.kplus1 := Q.star]
+  #     # quit loop if the error tolerance level has been reached
+  #     if (!is.null(tol.eps) & (abs(m.Qstar$coef) <= tol.eps)) break
+  #   }
+  #   return(TMLE_one_step_DT)
+  # }
+  # # Qlearn.fit$getPsAsW.models()[[1]]$getPsAsW.models()
+  # # OData$dat.sVar[, prev_Q.kplus1]
+  # TMLE_one_step_DT <- OData$dat.sVar[t <= t_period, c("ID", "t","TI", "C", "N", "Y.tplus1", "prev_Q.kplus1", "Q.kplus1"), with = FALSE]
+  # # TMLE_one_step_DT[1:100, ]
+  # # off_TMLE <- qlogis(init_Q_fitted_only)
+  # setkeyv(TMLE_one_step_DT, cols = c("ID", "t"))
+  # TMLE_one_step_DT <- merge(TMLE_one_step_DT, OData$IPwts_by_regimen[, c("ID", "t", "cum.IPAW"), with = FALSE])
+  # # wts_TMLE <- OData$IPwts_by_regimen[t <= t_period, "cum.IPAW", with = FALSE][[1]]
+  # # length(wts_TMLE)
+  # print("GCOMP survival result for t: " %+% t_period)
+  # print(1 - TMLE_one_step_DT[t==0, mean(Q.kplus1)])
+  # TMLE_one_step_DT <- onestepTMLE(TMLE_one_step_DT, t_period, max_iter = 50, tol.eps = 0.001)
+  # risk_TMLEoneStep <-  TMLE_one_step_DT[t==0, mean(Q.star)]
 
   resDF <- data.frame(t = t_period,
                       risk = mean_est_t,
                       surv = 1 - mean_est_t,
-                      TMLEoneStepSurv = 1 - risk_TMLEoneStep,
+                      # TMLEoneStepSurv = 1 - risk_TMLEoneStep,
                       ALLsuccessTMLE = ALLsuccessTMLE,
                       nFailedUpdates = nFailedUpdates,
                       type = ifelse(stratifyQ_by_rule, "stratified", "pooled")

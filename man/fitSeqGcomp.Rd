@@ -8,9 +8,9 @@ fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
   intervened_MONITOR = NULL, useonly_t_TRT = NULL,
   useonly_t_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
   intervened_MONITOR), collapse = ""), stratifyQ_by_rule = FALSE,
-  TMLE = FALSE, stabilize = FALSE, trunc_weights = 10^6,
-  IPWeights = NULL, params_Q = list(), weights = NULL, parallel = FALSE,
-  verbose = getOption("stremr.verbose"))
+  TMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
+  trunc_weights = 10^6, lower_bound_zero_Q = TRUE, params_Q = list(),
+  weights = NULL, parallel = FALSE, verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -38,11 +38,14 @@ Setting to \code{FALSE} will fit the outcome model (Q-learning) across all obser
 
 \item{TMLE}{Set to \code{TRUE} to run TMLE}
 
+\item{IPWeights}{(Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)}
+
 \item{stabilize}{Set to \code{TRUE} to use stabilized weights for the TMLE}
 
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 
-\item{IPWeights}{(Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)}
+\item{lower_bound_zero_Q}{Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
+Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.}
 
 \item{params_Q}{Optional parameters to be passed to the specific fitting algorithm for Q-learning}
 

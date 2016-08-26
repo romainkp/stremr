@@ -193,7 +193,7 @@ RegressionClass <- R6Class("RegressionClass",
     reg_hazard = FALSE,            # If TRUE, the joint P(outvar|predvars) is factorized as \prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard)
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
     fit.package = c("speedglm", "glm", "h2o"),
-    fit.algorithm = c("GLM", "GBM", "RF", "SL"),
+    fit.algorithm = c("glm", "gbm", "randomForest", "SL"),
     parfit = logical(),            # TRUE for fitting binary regressions in parallel
     # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
     initialize = function(ReplMisVal0 = TRUE,
@@ -241,13 +241,11 @@ RegressionClass <- R6Class("RegressionClass",
       if (!missing(newclass)) {
         # if (length(class(self)) > 2) stop("S3 dispatch class on RegressionClass has already been set")
         if (length(newclass) > 1) stop("cannot set S3 method dispatch to more than 1 class from: generic, contin, categor, stratify, binary or Qlearn")
-        # class(self) <- c(class(self), newclass)
         private$.S3class <- newclass
         return(invisible(NULL))
       } else {
         S3class <- private$.S3class
         class(S3class) <- S3class
-        # return(class(self))
         return(S3class)
       }
     }
