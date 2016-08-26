@@ -41,7 +41,7 @@ Odat_DT[1:100, ]
 # --------------------------------
 # options(stremr.verbose = FALSE)
 options(stremr.verbose = TRUE)
-stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
 
 # import data into stremr object:
 OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)

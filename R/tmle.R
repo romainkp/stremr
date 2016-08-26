@@ -171,8 +171,6 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
-#' @param lower_bound_zero_Q Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
-#' Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.
 #' @param params_Q Optional parameters to be passed to the specific fitting algorithm for Q-learning
 #' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
@@ -193,7 +191,7 @@ fitSeqGcomp <- function(OData,
                         IPWeights = NULL,
                         stabilize = FALSE,
                         trunc_weights = 10^6,
-                        lower_bound_zero_Q = TRUE,
+                        # lower_bound_zero_Q = TRUE,
                         params_Q = list(),
                         weights = NULL,
                         parallel = FALSE,
@@ -292,20 +290,27 @@ fitSeqGcomp <- function(OData,
   # RUN GCOMP OR TMLE FOR SEVERAL TIME-POINTS EITHER IN PARALLEL OR SEQUENTIALLY
   # ------------------------------------------------------------------------------------------------
   est_name <- ifelse(TMLE, "TMLE", "GCOMP")
-  if (parallel) {
-    mcoptions <- list(preschedule = FALSE)
-    res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
-      t_period <- t_periods[t_idx]
-      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, lower_bound_zero_Q, TMLE, params_Q, verbose)
-      return(res)
+  tmle.run.res <- try(
+    if (parallel) {
+      mcoptions <- list(preschedule = FALSE)
+      res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
+        t_period <- t_periods[t_idx]
+        res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
+        return(res)
+      }
+    } else {
+      res_byt <- vector(mode = "list", length = length(t_periods))
+      for (t_idx in seq_along(t_periods)) {
+        t_period <- t_periods[t_idx]
+        res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, params_Q, verbose)
+        res_byt[[t_idx]] <- res
+      }
     }
-  } else {
-    res_byt <- vector(mode = "list", length = length(t_periods))
-    for (t_idx in seq_along(t_periods)) {
-      t_period <- t_periods[t_idx]
-      res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, lower_bound_zero_Q, TMLE, params_Q, verbose)
-      res_byt[[t_idx]] <- res
-    }
+  )
+
+  if (inherits(tmle.run.res, "try-error")) { # TMLE update failed
+    message("attempt at running TMLE for one or several time-points has failed for undefined reason")
+    warning("attempt at running TMLE for one or several time-points has failed for undefined reason")
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -323,7 +328,7 @@ fitSeqGcomp_onet <- function(OData,
                             t_period,
                             Qforms,
                             stratifyQ_by_rule,
-                            lower_bound_zero_Q,
+                            # lower_bound_zero_Q,
                             TMLE,
                             params_Q,
                             verbose = getOption("stremr.verbose")) {
@@ -372,7 +377,8 @@ fitSeqGcomp_onet <- function(OData,
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i], TMLE = TMLE,
-                                     stratifyQ_by_rule = stratifyQ_by_rule, lower_bound_zero_Q = lower_bound_zero_Q,
+                                     stratifyQ_by_rule = stratifyQ_by_rule,
+                                     # , lower_bound_zero_Q = lower_bound_zero_Q,
                                      outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
                                      subset_vars = list("Q.kplus1"), subset_exprs = stratify_Q[i], model_contrl = params_Q,
                                      censoring = FALSE)

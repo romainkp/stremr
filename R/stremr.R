@@ -293,7 +293,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
 #'
 #' @section Additional parameters:
 #'
-#' Some of the parameters that control the estimation in \code{stremr} can be set by calling the function \code{\link{stremr_options}}.
+#' Some of the parameters that control the estimation in \code{stremr} can be set by calling the function \code{\link{set_all_stremr_options}}.
 #'
 #' Additional parameters can be also specified as a named list \code{optPars} argument of the \code{stremr} function.
 #' The items that can be specified in \code{optPars} are:

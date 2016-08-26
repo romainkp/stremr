@@ -13,6 +13,6 @@ Invisibly returns a list of \code{stremr} options.
 Print Current Option Settings for \code{stremr}
 }
 \seealso{
-\code{\link{stremr_options}}
+\code{\link{set_all_stremr_options}}
 }
 
