@@ -109,6 +109,7 @@ summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
       coef_out <- "---"; names(coef_out) <- coef_out
     }
     coef_out <- data.frame(Terms = names(coef_out), Coefficients = as.vector(coef_out))
+    # coef_out <- data.frame(Terms = model.fit$params$predvars, Coefficients = as.vector(coef_out))
     rownames(coef_out) <- NULL
   }
   pander::set.caption(makeModelCaption(model.fit))

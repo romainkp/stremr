@@ -234,6 +234,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
       init_Q_all_obs <- probA1[self$subset_idx]
 
+      # browser()
+      # sum(self$subset_idx)
+      # data$dat.sVar[]
+
       # ------------------------------------------------------------------------------------------------------------------------
       # Alternative to above:
       # ------------------------------------------------------------------------------------------------------------------------
@@ -382,7 +386,11 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
         private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
-        assert_that(!any(is.na(private$probA1[subset_idx]))) # check that predictions P(A=1 | dmat) exist for all obs.
+        if (any(is.na(private$probA1[subset_idx]) & !is.nan(private$probA1[subset_idx]))) {
+          stop("some of the predicted probabilities during seq Gcomp resulted in NAs, which indicates an error of a prediction routine")
+        }
+        # assert_that(!any(is.na(private$probA1[subset_idx]))) # check that predictions P(A=1 | dmat) exist for all obs.
+
         invisible(return(private$probA1))
       }
     },
@@ -395,11 +403,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # ------------------------------------------------------------------------------------------------------------------------
       # Predict based on counterfactual exposure settings
       # ------------------------------------------------------------------------------------------------------------------------
-      self$predict(data, subset_idx = subset_idx)
+      gcomp.pred.res <- try(self$predict(data, subset_idx = subset_idx))
       # ------------------------------------------------------------------------------------------------------------------------
       # Reset back the observed exposure to A[t] (swap back by renaming columns)
       # ------------------------------------------------------------------------------------------------------------------------
       data$swapNodes(current = gstar, target = g0)
+
+      if (inherits(gcomp.pred.res, "try-error")) { # prediction in seq-Gcomp has failed
+        stop("attempt at prediction during GCOMP/TMLE has failed")
+      }
       invisible(return(private$probA1))
     },
 

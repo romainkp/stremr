@@ -13,6 +13,7 @@ fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
     model.fit$coef = rep.int(NA_real_, ncol(Xmat))
+    names(model.fit$coef) <- colnames(Xmat)
   } else {
     ctrl <- glm.control(trace = FALSE)
     SuppressGivenWarnings({
@@ -42,6 +43,7 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
     model.fit$coef = rep.int(NA_real_, ncol(Xmat))
+    names(model.fit$coef) <- colnames(Xmat)
   } else {
     # method = c('eigen','Cholesky','qr')
     # row.chunk=NULL
@@ -83,9 +85,13 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
   pAout <- rep.int(gvars$misval, n)
-  if (sum(subset_idx > 0)) {
-    eta <- Xmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-    pAout[subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
+  if (sum(subset_idx) > 0) {
+    if (!all(is.na(m.fit$coef))) {
+      eta <- Xmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
+      pAout[subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
+    } else {
+      pAout[subset_idx] <- NaN
+    }
   }
   return(pAout)
 }
