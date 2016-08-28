@@ -176,10 +176,10 @@ Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 # ----------------------------------------------------------------
 require("stremr")
 options(stremr.verbose = TRUE)
-set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
-# set_all_stremr_options(fit.package = "h2o", fit.algorithm = "GLM")
-# set_all_stremr_options(fit.package = "h2o", fit.algorithm = "RF")
-# set_all_stremr_options(fit.package = "h2o", fit.algorithm = "GBM")
+set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
+# set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
+# set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
+# set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
 
 # require("h2o")
 # h2o::h2o.init(nthreads = -1)
@@ -247,7 +247,7 @@ MSM.IPAW
 # ---------------------------------------------------------------------------------------------------------
 t.surv <- c(9,10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params = list(fit.package = "speedglm", fit.algorithm = "GLM")
+params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 gcomp_est3
@@ -322,7 +322,7 @@ make_report_rmd(OData, MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2
 # ---------------------------------------------------------------------------------------------------------
 t.surv <- c(10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params = list(fit.package = "speedglm", fit.algorithm = "GLM")
+params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 
@@ -336,7 +336,7 @@ tmle_est4
 # ---------------------------------------------------------------------------------------------------------
 # TMLE w/ h2o random forest
 # ---------------------------------------------------------------------------------------------------------
-params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 t.surv <- c(10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)

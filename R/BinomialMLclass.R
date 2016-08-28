@@ -1,7 +1,7 @@
 # # Generic for fitting the logistic (binomial family) GLM model
 # h2ofit <- function(fit, ...) UseMethod("h2ofit")
 
-# take a list of args, take a function body and return only the args that belong to fun signature
+# take a list of args, take a function body and return only the args that belong to function signature
 keep_only_fun_args <- function(Args, fun) {
   keepArgs <- intersect(names(Args), names(formals(fun))) # captures optional arguments given by user
   if (length(keepArgs) > 0) {
@@ -13,7 +13,7 @@ keep_only_fun_args <- function(Args, fun) {
 }
 
 # 1. replace any arg in mainArgs if it also appears in userArgs
-# 2. add any arg from userArgs that also appears in formals(fun) of fun
+# 2. add any arg from userArgs that also appears in formals(fun) of function
 replace_add_user_args <- function(mainArgs, userArgs, fun) {
   replaceArgs <- intersect(names(mainArgs), names(userArgs)) # captures main arguments that were overridden by user
   if(length(replaceArgs) > 0) {
@@ -32,11 +32,11 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 # ---------------------------------------------------------------------------
 # S3 method for fitting h2o GLM with binomial() family (logistic regression):
 # use solver="L_BFGS" when doing classification and use "IRLSM" when not
-fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  mainArgs <- list(x = predvars,
-                  y = outvar,
+fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+# fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
+  h2o.no_progress()
+  mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
-                  training_frame = subsetH2Oframe,
                   family = "binomial",
                   standardize = TRUE,
                   # standardize = FALSE,
@@ -50,14 +50,7 @@ fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_su
                   missing_values_handling = "Skip")
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.glm)
-
-  # if (gvars$verbose) {
-    # print("running h2o.glm with args: "); print(mainArgs)
-  # }
-  h2o.no_progress()
-
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
-
   # assign the fitted coefficients in correct order (same as predictor order in predvars)
   out_coef <- vector(mode = "numeric", length = length(predvars)+1)
   out_coef[] <- NA
@@ -68,7 +61,7 @@ fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_su
 
   fit$fitfunname <- "h2o.glm";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
 
   if (gvars$verbose) {
@@ -82,25 +75,20 @@ fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_su
 }
 
 # S3 method for h2o randomForest fit (Random Forest):
-fit.h2orandomForest <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  mainArgs <- list(x = predvars, y = outvar,
-                   training_frame = subsetH2Oframe,
+fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+# fit.h2orandomForest <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
+  h2o.no_progress()
+  mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    ntrees = 100,
                    balance_classes = TRUE,
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.randomForest)
-  # if (gvars$verbose) {
-    # print("running h2o.randomForest with args: "); print(mainArgs)
-  # }
-  h2o.no_progress()
-
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
-
   fit$coef <- NULL;
   fit$fitfunname <- "h2o.randomForest";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
@@ -108,9 +96,10 @@ fit.h2orandomForest <- function(fit.class, fit, subsetH2Oframe, outvar, predvars
 
 # S3 method for h2o gbm fit, takes BinDat data object:
 # use "bernoulli" when doing classification and use "gaussian" when not
-fit.h2ogbm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  mainArgs <- list(x = predvars, y = outvar,
-                   training_frame = subsetH2Oframe,
+fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+# fit.h2ogbm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
+  h2o.no_progress()
+  mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
                    # distribution = "gaussian",
                    ntrees = 100,
@@ -118,17 +107,11 @@ fit.h2ogbm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_su
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
-  # if (gvars$verbose) {
-    # print("running h2o.gbm with args: "); print(mainArgs)
-  # }
-  h2o.no_progress()
-
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
-
   fit$coef <- NULL;
   fit$fitfunname <- "h2o.gbm";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
@@ -136,92 +119,21 @@ fit.h2ogbm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_su
 
 # S3 method for h2o deeplearning fit, takes BinDat data object:
 # use "bernoulli" when doing classification and use "gaussian" when doing regression
-fit.h2odeeplearning <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  mainArgs <- list(x = predvars, y = outvar,
-                   training_frame = subsetH2Oframe,
+fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+# fit.h2odeeplearning <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
+  h2o.no_progress()
+  mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
                    # distribution = "gaussian",
                    balance_classes = TRUE,
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
-  # if (gvars$verbose) {
-  #   print("running h2o.gbm with args: "); print(mainArgs)
-  # }
-  h2o.no_progress()
-
   model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
-
   fit$coef <- NULL;
   fit$fitfunname <- "h2o.deeplearning";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]; # fit$nobs <- length(rows_subset);
-  fit$H2O.model.object <- model.fit
-  class(fit) <- c(class(fit)[1], c("H2Omodel"))
-  return(fit)
-}
-
-# S3 method for h2o deeplearning fit, takes BinDat data object:
-# use "bernoulli" when doing classification and use "gaussian" when doing regression
-fit.h2ogrid <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, algorithm, model_contrl, ...) {
-  h2o.no_progress()
-  mainArgs <- list(x = predvars, y = outvar, training_frame = subsetH2Oframe,
-                  intercept = TRUE,
-                  nfolds = 5,
-                  seed = 1,
-                  fold_assignment = "Modulo",
-                  keep_cross_validation_predictions = TRUE,
-                  family = "binomial",
-                  standardize = TRUE,
-                  solver = "L_BFGS",
-                  lambda = 0L,
-                  max_iterations = 100,
-                  ignore_const_cols = FALSE,
-                  missing_values_handling = "Skip")
-
-  if (is.null(algorithm)) stop("must specify 'algorithm' name when running 'h2o.grid'")
-  if (!is.character(algorithm)) stop("'algorithm' must be a string naming the algorithm for 'h2o.grid'")
-  algo_fun_name <- "h2o."%+%algorithm
-  if (!exists(algo_fun_name)) stop("could not locate the function %+% " %+% algorithm)
-
-  algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)
-  mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)   # Keep only the relevant args in mainArgs list:
-
-  mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = algo_fun) # Add user args that pertain to this specific learner:
-  mainArgs$algorithm <- algorithm
-  mainArgs$search_criteria <- model_contrl[["search_criteria"]]
-  mainArgs$hyper_params <- model_contrl[[algorithm]]
-
-  if (!is.null(mainArgs$hyper_params[["search_criteria"]])) {
-    mainArgs$search_criteria <- mainArgs$hyper_params[["search_criteria"]]
-    mainArgs$hyper_params[["search_criteria"]] <- NULL
-  }
-  if (is.null(mainArgs$search_criteria)) stop("must specify 'search_criteria' when running 'h2o.grid' for algorithm " %+% algorithm)
-
-  # Remove any args from mainArgs that also appear in hyper_params:
-  common_hyper_args <- intersect(names(mainArgs), names(mainArgs$hyper_params))
-  if(length(common_hyper_args) > 0) mainArgs <- mainArgs[!(names(mainArgs) %in% common_hyper_args)]
-
-  if (gvars$verbose) {
-    print("running h2o.grid algorithm: "); print(algorithm)
-    # print("running h2o.grid with args: "); print(mainArgs)
-  }
-
-  # old way to extract hyper-parameters:
-  # hyper_params_idx <- lapply(mainArgs2, length) > 1
-  # hyper_params <- mainArgs2[hyper_params_idx]
-  # mainArgs2 <- mainArgs2[!hyper_params_idx]
-  # mainArgs2$hyper_params <- hyper_params
-  # mainArgs2 <- c(hyper_params, algorithm = "h2o.glm")
-
-  model.fit <- do.call(h2o::h2o.grid, mainArgs)
-  fit$fitfunname <- "h2o.h2ogrid";
-
-  if (gvars$verbose) {
-    print("grid search fitted models:"); print(model.fit)
-  }
-  # browser()
-
+  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
@@ -313,6 +225,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
     fit.class = c("glm", "randomForest", "gbm", "deeplearning", "SuperLearner"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA),
     outfactors = NA,
+    nfolds = 5,
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel
@@ -338,14 +251,18 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         self$emptyY
         return(self$model.fit)
       }
+
       self$model.fit$params <- self$params
       self$model.fit <- try(
                     fit(self$fit.class, self$model.fit,
-                           subsetH2Oframe = private$subsetH2Oframe,
-                           outvar = outvar,
-                           predvars = predvars,
-                           rows_subset = which(subset_idx),
-                           model_contrl = self$model_contrl, ...),
+                           training_frame = private$subsetH2Oframe,
+                           # subsetH2Oframe = private$subsetH2Oframe,
+                           y = outvar,
+                           # outvar = outvar,
+                           x = predvars,
+                           # predvars = predvars,
+                           # rows_subset = which(subset_idx),
+                           model_contrl = self$model_contrl, fold_column = data$fold_column, ...),
               silent = FALSE)
 
       if (inherits(self$model.fit, "try-error")) {
@@ -363,12 +280,20 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       # a penalty for being able to obtain predictions from predictAeqA() right after fitting: need to store Yvals
       if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
 
+      if (self$fit.class %in% "SuperLearner") {
+        if (!is.null(self$model_contrl$nfolds)) {
+          self$nfolds <- as.integer(self$model_contrl$nfolds)
+        } else {
+          self$model_contrl$nfolds <- self$nfolds
+        }
+        data$define_CVfolds(nfolds = self$nfolds, fold_column = "fold_id", seed = self$model_contrl$seed)
+      }
       # ---------------------------------------------------
       # ***!!!!NEED TO ALLOW USING BOTH VERSIONS BELOW!!!!***
       # ---------------------------------------------------
       # 1. works on single core but fails in parallel:
       load_subset_t <- system.time(
-        subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+        subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars, data$fold_column), with = FALSE],
                                                 saveH2O = FALSE,
                                                 destination_frame = "newH2Osubset")
       )

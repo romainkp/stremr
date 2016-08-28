@@ -195,6 +195,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     YnodeVals = NULL,       # Values of the binary outcome (Ynode) in observed data where det.Y = TRUE obs are set to NA
     det.Y = NULL,           # Logical vector, where YnodeVals[det.Y==TRUE] are deterministic (0 or 1)
     curr_data_A_g0 = TRUE,  # is the current data in OdataDT generated under observed (g0)? If FALSE, current data is under g.star (intervention)
+    fold_column = NULL,
+    nfolds = NULL,
 
     initialize = function(Odata, nodes, YnodeVals, det.Y, noCENScat,...) {
       assert_that(is.data.frame(Odata) | is.data.table(Odata))
@@ -568,7 +570,23 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       cast.vars <- c(nodes$Lnodes,nodes$Cnodes, nodes$Anodes, nodes$Nnodes, nodes$Ynode)
       if (!missing(bslcovars)) cast.vars <- setdiff(cast.vars, bslcovars)
       odata_wide <- dcast(self$dat.sVar, formula = nodes$ID %+% " ~ " %+% nodes$tnode, value.var = cast.vars)
-    return(odata_wide)
+      return(odata_wide)
+    },
+
+    define_CVfolds = function(nfolds = 5, fold_column = "fold_id", seed = 1) {
+      if (fold_column %in% names(self$dat.sVar)) {
+        self$dat.sVar[, (fold_column) := NULL]
+      }
+      nuniqueIDs <- self$nuniqueIDs
+      if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
+      fold_id <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]  # Cross-validation folds (stratified folds not yet supported)
+      foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
+      setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
+      setkeyv(foldsDT, cols = self$nodes$IDnode)
+      self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
+      self$fold_column <- fold_column
+      self$nfolds <- nfolds
+      return(invisible(self))
     },
 
     # -----------------------------------------------------------------------------
