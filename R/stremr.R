@@ -133,12 +133,17 @@ process_regform <- function(regform, sVar.map = NULL, factor.map = NULL) {
 # This uses S3 method dispatch on object ListOfRegressionForms
 stratify_by_uncensored <- function(regs) {
   for (Var_indx in seq_along(get_outvars(regs)[-1])) {
-    strat.C <- paste0(as.vector(get_outvars(regs)[1:Var_indx]) %+% " == " %+% gvars$noCENScat, collapse=" & ")
+    curr_outvar <- get_outvars(regs)[Var_indx+1]
     curr_exprs <- get_subset_exprs(regs)[[Var_indx+1]]
-    if (!is.null(curr_exprs)) {
-      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = stringr::str_c(curr_exprs, " & ", strat.C))
-    } else {
-      reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = strat.C)
+    prev_outvars <- as.vector(unique(get_outvars(regs)[1:Var_indx]))
+    prev_outvars_to_condition <- prev_outvars[!(prev_outvars %in% curr_outvar)]
+    if (length(prev_outvars_to_condition) > 0) {
+      strat.C <- paste0(prev_outvars_to_condition %+% " == " %+% gvars$noCENScat, collapse=" & ")
+      if (!is.null(curr_exprs)) {
+        reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = stringr::str_c(curr_exprs, " & ", strat.C))
+      } else {
+        reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = strat.C)
+      }
     }
   }
   return(regs)
@@ -175,15 +180,9 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
     regforms <- default.reg
   }
   if (!is.null(stratify.EXPRS)) assert_that(is.list(stratify.EXPRS))
-  # outvars <- vector(mode="list", length=length(regforms))
-  # predvars <- vector(mode="list", length=length(regforms))
   regs <- vector(mode="list", length=length(regforms))
-
   for (idx in seq_along(regforms)) {
     res <- process_regform(as.formula(regforms[[idx]]), sVar.map = sVar.map, factor.map = factor.map)
-    # outvars[[idx]] <- res$outvars
-    # if (!is.null(res$predvars)) predvars[[idx]] <- res$predvars
-    # names(outvars)[idx] <- names(predvars)[idx] <- paste0(outvars[[idx]], collapse="+")
     if (using.default && gvars$verbose)
       message("Using the default regression formula: " %+% paste0(res$outvars, collapse="+") %+% " ~ " %+% paste0(res$predvars, collapse="+"))
 
@@ -192,23 +191,17 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
         names(outvar.class) <- res$outvars
       } else {
         outvar.class <- OData$type.sVar[res$outvars]
+        names(outvar.class) <- res$outvars
       }
-
       subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
       regobj <- RegressionClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
-                                              subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
-                                              censoring = censoring)
-
-      # regobj <- SingleRegressionFormClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
-      #                                         subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
-      #                                         censoring = censoring)
-
+                                    subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
+                                    censoring = censoring)
       regs[[idx]] <- regobj
   }
   class(regs) <- c(class(regs), "ListOfRegressionForms")
   if (censoring) regs <- stratify_by_uncensored(regs)
   return(regs)
-  # return(list(outvars = outvars, predvars = predvars, regs = regs))
 }
 
 #---------------------------------------------------------------------------------

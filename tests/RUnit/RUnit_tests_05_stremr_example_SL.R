@@ -58,7 +58,8 @@ OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1
 # ------------------------------------------------------------------
 # Fit propensity scores for Treatment, Censoring & Monitoring
 # ------------------------------------------------------------------
-gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
+# gform_TRT <- c("TI ~ CVD + highA1c", "TI ~ CVD + highA1c", "TI ~ CVD + highA1c", "TI ~ 1")
+gform_TRT <- c("TI ~ CVD + highA1c")
 stratify_TRT <- list(
   TI=c("t == 0L",                                            # MODEL TI AT t=0
        "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
@@ -142,6 +143,9 @@ h2o.gbm.6 <- function(..., ntrees = 200, col_sample_rate = 0.7, seed = 1) h2o.gb
 # h2o.deeplearning.1 <- function(..., hidden = c(500,500), activation = "Rectifier", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
 # h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
 # h2o.deeplearning.3 <- function(..., hidden = c(500,500), activation = "RectifierWithDropout", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+# h2o.deeplearning.1 <- function(..., hidden = c(500,500), activation = "Rectifier", seed = 1) h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+# h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", seed = 1) h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+# learner <- c("h2o.randomForest.1", "h2o.deeplearning.1", "h2o.deeplearning.2")
 
 learner <- c("h2o.glm.1", "h2o.glm.2", "h2o.glm.3")
              # "h2o.randomForest.1", "h2o.randomForest.2", "h2o.randomForest.3",
@@ -164,8 +168,8 @@ SLparams = list( # search_criteria = list(strategy = "RandomDiscrete", max_runti
                  # deeplearning = DL_hyper_params
                  )
 
-params_CENS = SLparams
-params_TRT = SLparams
+params_CENS = c(SLparams, save.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-CENS")
+params_TRT = c(SLparams, save.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
 params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
@@ -195,12 +199,14 @@ make_report_rmd(OData,
 # ERROR CHECK: no hyper params for randomForest:
 # CURRENT ERROR IS UNRELATED
 # ---------------------------------------------------------------------------------------------------------
+options(stremr.verbose = TRUE)
+set_all_stremr_options(fit.package = "h2o", fit.algorithm = "SuperLearner")
 SLparams_testERROR = list(
-                 algorithm = c("glm", "randomForest"),
+                 grid.algorithm = c("glm", "randomForest"),
                  nfolds = 3,
                  glm = glm_hyper_params)
 params_CENS = SLparams_testERROR
-params_TRT = SLparams_testERROR
+params_TRT = list(fit.package = "speedglm", fit.algorithm = "glm")
 params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,

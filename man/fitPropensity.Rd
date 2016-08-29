@@ -7,7 +7,7 @@
 fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
   stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
   params_CENS = list(), params_TRT = list(), params_MONITOR = list(),
-  verbose = getOption("stremr.verbose"))
+  reg_CENS, reg_TRT, reg_MONITOR, verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -29,6 +29,12 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
 \item{params_TRT}{...}
 
 \item{params_MONITOR}{...}
+
+\item{reg_CENS}{...}
+
+\item{reg_TRT}{...}
+
+\item{reg_MONITOR}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 }

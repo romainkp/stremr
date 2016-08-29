@@ -256,14 +256,9 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       self$model.fit <- try(
                     fit(self$fit.class, self$model.fit,
                            training_frame = private$subsetH2Oframe,
-                           # subsetH2Oframe = private$subsetH2Oframe,
-                           y = outvar,
-                           # outvar = outvar,
-                           x = predvars,
-                           # predvars = predvars,
-                           # rows_subset = which(subset_idx),
+                           y = outvar, x = predvars,
                            model_contrl = self$model_contrl, fold_column = data$fold_column, ...),
-              silent = FALSE)
+                    silent = FALSE)
 
       if (inherits(self$model.fit, "try-error")) {
         self$emptydata

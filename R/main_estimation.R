@@ -67,6 +67,43 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   return(OData)
 }
 
+
+# ---------------------------------------------------------------------------------------
+#' Define regression models
+#'
+#' Alternative approach to manually define parts of the propsensity score model with formula/strata and model controls
+#' @param OData OData Input data object created by \code{importData} function.
+#' @param regforms Regression formula, only main terms are allowed.
+#' @param stratify Expression(s) for creating strata(s) (model will be fit separately on each strata)
+#' @param params Additional modeling controls (for downstream modeling algorithms)
+#' @export
+define_single_regression <- function(OData, regforms, stratify = NULL, params) {
+  nodes <- OData$nodes
+  new.factor.names <- OData$new.factor.names
+  return(process_regforms(regforms = regforms, stratify.EXPRS = stratify, model_contrl = params,
+                          OData = OData, sVar.map = nodes, factor.map = new.factor.names))
+}
+
+internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPRS, model_contrl, OData, sVar.map, factor.map, censoring) {
+  if (!missing(reg_object)) {
+    assert_that(is.list(reg_object))
+    if (!"ListOfRegressionForms" %in% class(reg_object)) {
+      class(reg_object) <- c(class(reg_object), "ListOfRegressionForms")
+    }
+    if (censoring) {
+      for (reg_idx in seq_along(reg_object)) {
+       reg_object[[reg_idx]]$censoring <- TRUE
+      }
+      reg_object <- stratify_by_uncensored(reg_object)
+    }
+  } else {
+    assert_that(is.list(model_contrl))
+    reg_object <- process_regforms(regforms = regforms, default.reg = default.reg, stratify.EXPRS = stratify.EXPRS, model_contrl = model_contrl,
+                                   OData = OData, sVar.map = sVar.map, factor.map = factor.map, censoring = censoring)
+  }
+  return(reg_object)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Define and fit propensity score models.
 #'
@@ -82,6 +119,9 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
 #' @param params_CENS ...
 #' @param params_TRT ...
 #' @param params_MONITOR ...
+#' @param reg_CENS ...
+#' @param reg_TRT ...
+#' @param reg_MONITOR ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
@@ -91,14 +131,17 @@ fitPropensity <- function(OData,
                           gform_CENS, gform_TRT, gform_MONITOR,
                           stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
                           params_CENS = list(), params_TRT = list(), params_MONITOR = list(),
+                          reg_CENS, reg_TRT, reg_MONITOR,
                           verbose = getOption("stremr.verbose")) {
+
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  assert_that(is.list(params_TRT))
-  assert_that(is.list(params_CENS))
-  assert_that(is.list(params_MONITOR))
+  # assert_that(is.list(params_TRT))
+  # assert_that(is.list(params_CENS))
+  # assert_that(is.list(params_MONITOR))
+
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
   # Define regression classes for g.C, g.A, g.N and put them in a single list of regressions.
@@ -110,12 +153,12 @@ fitPropensity <- function(OData,
   names(g_CAN_regs_list) <- c("gC", "gA", "gN")
   class(g_CAN_regs_list) <- c(class(g_CAN_regs_list), "ListOfRegressionForms")
 
-  g_CAN_regs_list[["gC"]] <- process_regforms(regforms = gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS, model_contrl = params_CENS,
-                                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
-  g_CAN_regs_list[["gA"]] <- process_regforms(regforms = gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT, model_contrl = params_TRT,
-                                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  g_CAN_regs_list[["gN"]] <- process_regforms(regforms = gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR, model_contrl = params_MONITOR,
-                                              OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
+  g_CAN_regs_list[["gC"]] <- internal_define_reg(reg_CENS, gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS, model_contrl = params_CENS,
+                                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
+  g_CAN_regs_list[["gA"]] <- internal_define_reg(reg_TRT, gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT, model_contrl = params_TRT,
+                                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
+  g_CAN_regs_list[["gN"]] <- internal_define_reg(reg_MONITOR, gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR, model_contrl = params_MONITOR,
+                                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
 
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
@@ -128,7 +171,6 @@ fitPropensity <- function(OData,
   # mainH2Oframe <- OData$fast.load.to.H2O(OData$dat.sVar,
   #                                       saveH2O = TRUE,
   #                                       destination_frame = "H2OMainDataTable")
-
   modelfits.g0$fit(data = OData, predict = TRUE)
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
