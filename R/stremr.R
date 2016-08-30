@@ -1,4 +1,3 @@
-
 #' @useDynLib stremr
 #' @import R6
 #' @importFrom Rcpp sourceCpp
@@ -381,15 +380,3 @@ stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
 
 return(list(IPW_estimates = IPW_estimates, dataDT = OData$dat.sVar, modelfits.g0.R6 = OData$modelfits.g0, OData.R6 = OData))
 }
-
-
-
-
-
-
-
-
-
-
-
-

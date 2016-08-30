@@ -8,9 +8,10 @@ fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
   intervened_MONITOR = NULL, useonly_t_TRT = NULL,
   useonly_t_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
   intervened_MONITOR), collapse = ""), stratifyQ_by_rule = FALSE,
-  TMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
+  TMLE = FALSE, iterTMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
   trunc_weights = 10^6, params_Q = list(), weights = NULL,
-  parallel = FALSE, verbose = getOption("stremr.verbose"))
+  max_iter = 50, tol.eps = 0.001, parallel = FALSE,
+  verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -36,7 +37,11 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 \item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
 Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).}
 
-\item{TMLE}{Set to \code{TRUE} to run TMLE}
+\item{TMLE}{Set to \code{TRUE} to run the usual longitudinal TMLE algorithm (with a separate TMLE update of Q for every sequential regression).}
+
+\item{iterTMLE}{Set to \code{TRUE} to run the iterative univariate TMLE instead of the usual longitudinal TMLE.
+When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.
+Must set \code{TMLE}=\code{FALSE} when setting this to \code{TRUE}.}
 
 \item{IPWeights}{(Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)}
 
@@ -48,6 +53,11 @@ Setting to \code{FALSE} will fit the outcome model (Q-learning) across all obser
 
 \item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
+
+\item{max_iter}{Maximum number of iterations for iterative TMLE algorithm}
+
+\item{tol.eps}{Numeric error tolerance for the iterative TMLE update.
+The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol.eps}}
 
 \item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)}
 

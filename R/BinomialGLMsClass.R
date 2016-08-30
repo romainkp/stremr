@@ -96,7 +96,6 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   return(pAout)
 }
 
-
 ## ---------------------------------------------------------------------
 #' R6 class for storing the design matrix and the binary outcome for a single GLM (logistic) regression
 #'

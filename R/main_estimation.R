@@ -138,10 +138,6 @@ fitPropensity <- function(OData,
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  # assert_that(is.list(params_TRT))
-  # assert_that(is.list(params_CENS))
-  # assert_that(is.list(params_MONITOR))
-
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
   # Define regression classes for g.C, g.A, g.N and put them in a single list of regressions.

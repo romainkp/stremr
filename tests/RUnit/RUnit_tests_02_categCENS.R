@@ -171,20 +171,3 @@ test.model.fits.categorCENSOR <- function() {
   # res$dataDT
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -333,15 +333,22 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
+      # self$wipe.alldat
       # **********************************************************************
+
       invisible(self)
     },
 
+    # **********************************************************************
     # THIS FUNCTION NEEDS TO BE OUTSIDE OF THE NESTED Q CLASSES.
     # I.E. NEEDS TO BE BASED ON THE METHOD THAT CONTROLS ITERATIVE TMLE FITS
+    # **********************************************************************
     # Iterate_TMLE_fit_only = function(overwrite = TRUE, data, ...) { # Move overwrite to a field? ... self$overwrite
     # },
+
+    # **********************************************************************
+    # Take a new TMLE fit and propagate it by first updating the Q(t) model and then updating the Q-model-based predictions for previous time-point
+    # **********************************************************************
     Propagate_TMLE_fit = function(overwrite = TRUE, data, new.TMLE.fit, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
@@ -354,7 +361,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
       rowidx_t <- which(self$subset_idx)
       # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-      Q.kplus1 <- data$dat.sVar[rowidx_t, "Q.kplus1", with = FALSE]
+      Q.kplus1 <- data$dat.sVar[rowidx_t, "Q.kplus1", with = FALSE][[1]]
       Q.kplus1.new <- plogis(qlogis(Q.kplus1) + update.Qstar.coef)
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
       data$dat.sVar[rowidx_t, "Q.kplus1" := Q.kplus1.new]
@@ -363,8 +370,13 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       if (self$Qreg_counter > 1) {
         rowidx_t.minus1 <- rowidx_t - 1
         data$dat.sVar[rowidx_t.minus1, "prev_Q.kplus1" := Q.kplus1.new]
-        # private$probA1 <- NULL
+        private$probA1 <- NULL
+      } else {
+        # save prediction P(Q.kplus=1) only for a subset in self$getsubset that was used for prediction
+        private$probAeqa <- Q.kplus1.new
+        private$probA1 <- NULL
       }
+
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # self$wipe.alldat
