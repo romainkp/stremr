@@ -309,10 +309,17 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
 
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
+        init_Q_fitted_only <- plogis(qlogis(init_Q_fitted_only) + update.Qstar.coef)
         init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
         # wts_TMLE_all_obs <- data$IPwts_by_regimen[self$subset_idx, "cum.IPAW", with = FALSE][[1]]
         # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + TMLE.cleverCov.coef * wts_TMLE_all_obs)
         # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))]
+
+        EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
+        data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
+
+        # print(mean(EIC_i_t_calc))
+        # browser()
       }
 
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
@@ -338,13 +345,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       invisible(self)
     },
-
-    # **********************************************************************
-    # THIS FUNCTION NEEDS TO BE OUTSIDE OF THE NESTED Q CLASSES.
-    # I.E. NEEDS TO BE BASED ON THE METHOD THAT CONTROLS ITERATIVE TMLE FITS
-    # **********************************************************************
-    # Iterate_TMLE_fit_only = function(overwrite = TRUE, data, ...) { # Move overwrite to a field? ... self$overwrite
-    # },
 
     # **********************************************************************
     # Take a new TMLE fit and propagate it by first updating the Q(t) model and then updating the Q-model-based predictions for previous time-point
