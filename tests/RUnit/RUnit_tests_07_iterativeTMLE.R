@@ -33,7 +33,6 @@ stratify_TRT <- list(
 
 gform_CENS <- c("C ~ highA1c + t")
 gform_MONITOR <- "N ~ 1"
-
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
 # ---------------------------------------------------------------------------------------------------------
@@ -45,7 +44,8 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 # params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100,
 #               learn_rate = 0.05, sample_rate = 0.8,
 #               col_sample_rate = 0.8, balance_classes = TRUE)
-
+# Qstratify <- c("TI == 0 & CVD == 0", "TI == 1 & CVD == 0", "TI == 0 & CVD == 1", "TI == 1 & CVD == 1")
+# Qstratify = Qstratify,
 iterTMLE_est1a <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 iterTMLE_est1a[]
 iterTMLE_est1b <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)

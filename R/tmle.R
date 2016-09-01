@@ -166,6 +166,8 @@ fitTMLE <- function(...) {
 #' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
 #' @param OData Input data object created by \code{importData} function.
 #' @param t_periods Specify the vector of time-points for which the survival function (and risk) should be estimated
+#' @param Qforms Regression formulas, one formula per Q. Only main-terms are allowed.
+#' @param Qstratify Placeholder for future user-defined model stratification for all Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR)
 #' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
 #' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
 #' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
@@ -198,7 +200,8 @@ fitTMLE <- function(...) {
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 # @example tests/examples/1_stremr_example.R
 #' @export
-fitSeqGcomp <- function(OData, t_periods, Qforms,
+fitSeqGcomp <- function(OData, t_periods,
+                        Qforms, Qstratify = NULL,
                         intervened_TRT = NULL, intervened_MONITOR = NULL,
                         useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
@@ -315,7 +318,7 @@ fitSeqGcomp <- function(OData, t_periods, Qforms,
       mcoptions <- list(preschedule = FALSE)
       res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
         t_period <- t_periods[t_idx]
-        res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
+        res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
                                 params_Q = params_Q, max_iter = max_iter, tol.eps = tol.eps, verbose = verbose)
         return(res)
       }
@@ -323,7 +326,7 @@ fitSeqGcomp <- function(OData, t_periods, Qforms,
       res_byt <- vector(mode = "list", length = length(t_periods))
       for (t_idx in seq_along(t_periods)) {
         t_period <- t_periods[t_idx]
-        res <- fitSeqGcomp_onet(OData, t_period, Qforms, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
+        res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
                                 params_Q = params_Q, max_iter = max_iter, tol.eps = tol.eps, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
@@ -392,7 +395,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 50, tol.eps = 
   return(invisible(Qlearn.fit))
 }
 
-fitSeqGcomp_onet <- function(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, iterTMLE, params_Q, max_iter = 50, tol.eps = 0.001,
+fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE, iterTMLE, params_Q, max_iter = 50, tol.eps = 0.001,
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -404,8 +407,17 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, i
   # ------------------------------------------------------------------------------------------------
   Qperiods <- rev(OData$min.t:t_period)
   Qreg_idx <- rev(seq_along(Qperiods))
-  stratify_Q <- as.list(nodes[['tnode']] %+% " == " %+% (Qperiods))
-  names(stratify_Q) <- rep.int("Q.kplus1", length(stratify_Q))
+  Qstratas_by_t <- as.list(nodes[['tnode']] %+% " == " %+% (Qperiods))
+  names(Qstratas_by_t) <- rep.int("Q.kplus1", length(Qstratas_by_t))
+  # Adding user-specified stratas to each t Q-regression:
+  all_Q_stratify <- Qstratas_by_t
+  if (!is.null(Qstratify)) {
+    assert_that(is.vector(Qstratify))
+    assert_that(is.character(Qstratify))
+    for (idx in seq_along(all_Q_stratify)) {
+      all_Q_stratify[[idx]] <- stringr::str_c(all_Q_stratify[[idx]], " & ", Qstratify)
+    }
+  }
 
   # ------------------------------------------------------------------------------------------------
   # **** Process the input formulas and stratification settings
@@ -435,15 +447,15 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, i
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
   # **** TO DO: This could also be done only once in the main routine, then just subset the appropriate Q_regs_list
   # ------------------------------------------------------------------------------------------------
-  Q_regs_list <- vector(mode = "list", length = length(stratify_Q))
-  names(Q_regs_list) <- unlist(stratify_Q)
+  Q_regs_list <- vector(mode = "list", length = length(Qstratas_by_t))
+  names(Q_regs_list) <- unlist(Qstratas_by_t)
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i],
                                      TMLE = TMLE, stratifyQ_by_rule = stratifyQ_by_rule,
                                      outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
-                                     subset_vars = list("Q.kplus1"), subset_exprs = stratify_Q[i], model_contrl = params_Q,
+                                     subset_vars = list("Q.kplus1"), subset_exprs = all_Q_stratify[i], model_contrl = params_Q,
                                      censoring = FALSE)
     Q_regs_list[[i]] <- reg
   }
@@ -453,9 +465,13 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, stratifyQ_by_rule, TMLE, i
   Qlearn.fit$fit(data = OData)
   OData$Qlearn.fit <- Qlearn.fit
 
+  # When the model is fit with user-defined stratas, need special functions to extract the final fit (current aproach will not work):
+  # allQmodels[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
+
   # get the individual TMLE updates and evaluate if any updates have failed
   allQmodels <- Qlearn.fit$getPsAsW.models()
   allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getPsAsW.models()[[1]]$getTMLEfit)
+
   TMLEfits <- unlist(allTMLEfits)
   successTMLEupdates <- !is.na(TMLEfits) & !is.nan(TMLEfits)
   ALLsuccessTMLE <- all(successTMLEupdates)

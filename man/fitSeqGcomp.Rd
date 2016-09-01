@@ -4,8 +4,8 @@
 \alias{fitSeqGcomp}
 \title{Fit sequential GCOMP and TMLE for survival}
 \usage{
-fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
-  intervened_MONITOR = NULL, useonly_t_TRT = NULL,
+fitSeqGcomp(OData, t_periods, Qforms, Qstratify = NULL,
+  intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL,
   useonly_t_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
   intervened_MONITOR), collapse = ""), stratifyQ_by_rule = FALSE,
   TMLE = FALSE, iterTMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
@@ -17,6 +17,10 @@ fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
 \item{OData}{Input data object created by \code{importData} function.}
 
 \item{t_periods}{Specify the vector of time-points for which the survival function (and risk) should be estimated}
+
+\item{Qforms}{...}
+
+\item{Qstratify}{...}
 
 \item{intervened_TRT}{Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
 Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).}
