@@ -18,9 +18,9 @@ fitSeqGcomp(OData, t_periods, Qforms, Qstratify = NULL,
 
 \item{t_periods}{Specify the vector of time-points for which the survival function (and risk) should be estimated}
 
-\item{Qforms}{...}
+\item{Qforms}{Regression formulas, one formula per Q. Only main-terms are allowed.}
 
-\item{Qstratify}{...}
+\item{Qstratify}{Placeholder for future user-defined model stratification for all Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR)}
 
 \item{intervened_TRT}{Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
 Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).}

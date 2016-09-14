@@ -176,8 +176,9 @@ Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 # ----------------------------------------------------------------
 require("stremr")
 options(stremr.verbose = TRUE)
-set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
-# set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
+# set_all_stremr_options(fit.package = "glm", fit.algorithm = "glm")
+# set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
+set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
 # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
 # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
 

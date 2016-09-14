@@ -51,10 +51,10 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.glm)
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
-  # assign the fitted coefficients in correct order (same as predictor order in predvars)
-  out_coef <- vector(mode = "numeric", length = length(predvars)+1)
+  # assign the fitted coefficients in correct order (same as predictor order in x (former predvars))
+  out_coef <- vector(mode = "numeric", length = length(x)+1)
   out_coef[] <- NA
-  names(out_coef) <- c("Intercept", predvars)
+  names(out_coef) <- c("Intercept", x)
   out_coef[names(model.fit@model$coefficients)] <- model.fit@model$coefficients
   fit$coef <- out_coef;
   fit$linkfun <- "logit_linkinv";
