@@ -25,6 +25,10 @@ os:
   - linux
   # - osx
 
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libicu-dev
+
 r_binary_packages:
   - assertthat
   - data.table
@@ -43,6 +47,7 @@ r_binary_packages:
 r_github_packages:
   - jimhester/covr
   - osofr/simcausal
+  - h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package
 
 # r_packages:
 #   - ltmle
