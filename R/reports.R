@@ -1,5 +1,3 @@
-#' @import ggplot2
-#' @import plyr
 # @import pander
 # @importFrom pander evalsOptions
 NULL
