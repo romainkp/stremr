@@ -1,7 +1,6 @@
-simulateDATA.fromDAG <- function(catC = FALSE, Nsize = 1000, rndseed = NULL){
-  library("simcausal")
+simulateDATA.fromDAG <- function(catC = FALSE, Nsize = 1000, rndseed = 124356){
+  require("simcausal")
   options(simcausal.verbose = FALSE)
-  rcategor.int.b0 <- function(n, probs) { rcategor.int(n, probs)-1 }
   # get the likelihood under N(t) Bernoulli with P(N(t)=1)=p:
   g.p <- function(p){
     function(O.data, Yname){
@@ -50,52 +49,88 @@ simulateDATA.fromDAG <- function(catC = FALSE, Nsize = 1000, rndseed = NULL){
   }
   DAGobj <- set.DAG(Drm, latent.v = c("highA1c.UN", "timelowA1c.UN"))
   O.data <- sim(DAG = DAGobj, n = Nsize, wide = FALSE, rndseed = rndseed)
-  return(O.data)
+  O.data <- O.data[,!names(O.data)%in%c("highA1c.UN", "timelowA1c.UN")]
+  # head(O.data)
+
+  # -------------------------------------------------------------------------------------------
+  # convert lastNat1 to integer
+  # -------------------------------------------------------------------------------------------
+  O.data <- data.table(O.data)
+  O.data[, "lastNat1" := as.integer(lastNat1)]
+  # -------------------------------------------------------------------------------------------
+  # Shift the outcome up by 1 and drop all observations that follow afterwards (all NA)
+  # -------------------------------------------------------------------------------------------
+  OUTCOME <- "Y"
+  shifted.OUTCOME <- "Y.tplus1"
+  O.data[, (shifted.OUTCOME) := shift(get(OUTCOME), n = 1L, type = "lead"), by = ID]
+  O.data <- O.data[!get(OUTCOME)%in%1,]
+  O.data <- O.data[,(OUTCOME) := NULL]
+  return(data.frame(O.data))
+}
+
+notrun.save.example.data.01 <- function() {
+  OdataNoCENS <- simulateDATA.fromDAG(Nsize = 1000, rndseed = 124356)
+  head(OdataNoCENS)
+  # --------------------------------
+  # save data as csv
+  # --------------------------------
+  # data.table::fwrite(OdataNoCENS, "./OdataNoCENS.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+  # --------------------------------
+  # save as compressed R file
+  # --------------------------------
+  require("tools")
+  save(OdataNoCENS, compress = TRUE, file = "./data/OdataNoCENS.rda", compression_level = 9)
+  resaveRdaFiles("./data/OdataNoCENS.rda", compress = "bzip2")
 }
 
 # --------------------------------
 # TEST HELPER FUNCTIONS FOR ID NAMES & calls "DT[,,by=ID]" (frequently does't work when ID="ID")
 # --------------------------------
 test.helperfuns <- function() {
-  library("data.table")
-  O.data <- simulateDATA.fromDAG(Nsize = 1000, rndseed = 124356)
-  O.data[O.data[,"t"]%in%16,"lastNat1"] <- NA
-  O.data <- O.data[,!names(O.data)%in%c("highA1c.UN", "timelowA1c.UN")]
-  # head(O.data)
-  O.data.DT <- as.data.table(O.data, key=c(ID, t))
+  require("data.table")
+  # O.data <- simulateDATA.fromDAG(Nsize = 1000, rndseed = 124356)
+  data(OdataNoCENS)
+  # head(OdataNoCENS)
 
-  addN.t1 <- convertdata(O.data, ID = "ID", t = "t", imp.I = "N",
+  OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA
+  OdataNoCENS <- OdataNoCENS[,!names(OdataNoCENS)%in%c("highA1c.UN", "timelowA1c.UN")]
+  # head(OdataNoCENS)
+  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c(ID, t))
+  addN.t1 <- defineMONITORvars(OdataNoCENS, ID = "ID", t = "t", imp.I = "N",
                         MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
+  # addN.t1[]
+  addN.t2 <- defineMONITORvars(OdataNoCENS.DT, ID = "ID", t = "t", imp.I = "N",
+                               MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
+  # addN.t2[]
+  OdataNoCENS_dhigh_dlow1 <- defineTRTrules(OdataNoCENS, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
+                                      CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", rule.names = c("dlow", "dhigh"))
+  # OdataNoCENS_dhigh_dlow1[]
 
-  addN.t2 <- convertdata(O.data.DT, ID = "ID", t = "t", imp.I = "N",
-                        MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
+  OdataNoCENS_dhigh_dlow2 <- defineTRTrules(OdataNoCENS.DT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
+                                        CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", rule.names = c("dlow", "dhigh"))
+  # OdataNoCENS_dhigh_dlow2[]
 
-  O.data_dhigh_dlow1 <- follow.rule.d.DT(O.data, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
-                                        CENS = "C", TRT = "TI", MONITOR = "N", rule.names = c("dlow", "dhigh"))
+  setnames(OdataNoCENS.DT,old = "ID",new = "ID.expression")
+  addN.t1 <- defineMONITORvars(OdataNoCENS.DT, ID = "ID.expression", t = "t", imp.I = "N", MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
+  # addN.t1[]
 
-  O.data_dhigh_dlow2 <- follow.rule.d.DT(O.data.DT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
-                                        CENS = "C", TRT = "TI", MONITOR = "N", rule.names = c("dlow", "dhigh"))
-
-  setnames(O.data.DT,old = "ID",new = "ID.expression")
-  addN.t1 <- convertdata(O.data.DT, ID = "ID.expression", t = "t", imp.I = "N",
-                        MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
-
-  O.data_dhigh_dlow1 <- follow.rule.d.DT(O.data.DT, theta = c(0,1), ID = "ID.expression", t = "t", I = "highA1c",
-                                        CENS = "C", TRT = "TI", MONITOR = "N", rule.names = c("dlow", "dhigh"))
+  OdataNoCENS_dhigh_dlow1 <- defineTRTrules(OdataNoCENS.DT, theta = c(0,1), ID = "ID.expression", t = "t", I = "highA1c",
+                                        CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", rule.names = c("dlow", "dhigh"))
+  # O.data_dhigh_dlow1[]
 }
 
-
 test.model.fits.stratify <- function() {
-  library("data.table")
+  require("data.table")
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
   # ------------------------------------------------------------------------------------------------------
-  Nsize <- 1000
-  O.data <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356)
-  O.data[O.data[,"t"]%in%16,"lastNat1"] <- NA
-  O.data <- O.data[,!names(O.data)%in%c("highA1c.UN", "timelowA1c.UN")]
-  # head(O.data)
-  O.data.DT <- as.data.table(O.data, key=c(ID, t))
+  # OdataNoCENS <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356)
+  data(OdataNoCENS)
+  OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA
+  # head(OdataNoCENS)
+  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c(ID, t))
+  # define lagged N, first value is always 1 (always monitored at the first time point):
+  OdataNoCENS.DT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
 
   # --------------------------------
   # EXAMPLE 1:
@@ -103,24 +138,24 @@ test.model.fits.stratify <- function() {
   gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
-  system.time(
-  res <-
-    stremr(O.data, ID = "ID", t = "t",
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
-          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
+          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
-          # noCENScat = 0L)
-    )
-  res$IPW_estimates
-
-  res$OData.R6$dat.sVar
-  res$dataDT
-  res$OData.R6
-  res$modelfits.g0.R6
+  # res$IPW_estimates
   # res$dataDT
+  # res$wts_data
+  # res$OData.R6
 
   # --------------------------------
   # EXAMPLE 2:
+  # *********************************************
+  # This needs closer look:
+  # * We are defining CENS as "C", but then gform_CENS has 3 covars (C, TI, N)
+  # * This should either give an error, or we should just drop CENS argument entirely and specify CENS vars based on outcomes of
+  # * gform_CENS
+  # * Same applies to TRT & MONITOR
+  # *********************************************
   # --------------------------------
   gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
   strat.str <- c("t == 0L", "t > 0")
@@ -128,42 +163,48 @@ test.model.fits.stratify <- function() {
   names(stratify_CENS) <- c("C", "TI", "N")
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
+  # options(stremr.verbose = TRUE)
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+                covars = c("highA1c", "lastNat1"),
+                CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
+                gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+                gform_TRT = gform_TRT,
+                gform_MONITOR = gform_MONITOR)
+                # noCENScat = 0L)
 
-  system.time(
-  res <-
-    stremr(O.data, ID = "ID", t = "t",
-          covars = c("highA1c", "lastNat1"),
-          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-          gform_TRT = gform_TRT,
-          gform_MONITOR = gform_MONITOR)
-          # noCENScat = 0L)
-    )
-  res$IPW_estimates
+  # res$IPW_estimates
   # res$dataDT
+  # res$wts_data
+  # res$OData.R6
 
   # --------------------------------
   # EXAMPLE 3:
   # --------------------------------
   gform_CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
+  strat.str <- c("t == 0L", "t > 0")
+  stratify_CENS <- rep(list(strat.str), 3)
+  names(stratify_CENS) <- c("C", "TI", "N")
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
-  system.time(
-  res <-
-    stremr(O.data, ID = "ID", t = "t",
-          covars = c("highA1c", "lastNat1"),
-          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-          gform_TRT = gform_TRT,
-          gform_MONITOR = gform_MONITOR)
-          # noCENScat = 0L)
-    )
-  res$IPW_estimates
+  # system.time(
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+                covars = c("highA1c", "lastNat1"),
+                CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
+                gform_CENS = gform_CENS,
+                stratify_CENS = stratify_CENS,
+                gform_TRT = gform_TRT,
+                gform_MONITOR = gform_MONITOR)
+  # res$IPW_estimates
   # res$dataDT
+  # res$wts_data
+  # res$OData.R6
 
   # --------------------------------
   # EXAMPLE 4:
   # --------------------------------
+  # define lagged TI, first value is always 1 (always monitored at the first time point):
+  OdataNoCENS.DT[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]
+
   gform_CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
   stratify_CENS <- list(C = NULL, TI = c("t == 0L", "t > 0"), N = c("t == 0L", "t > 0"))
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
@@ -173,29 +214,42 @@ test.model.fits.stratify <- function() {
   #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
   gform_MONITOR <- "N ~ 1"
 
-  system.time(
-  res <-
-    stremr(O.data, ID = "ID", t = "t",
-          covars = c("highA1c", "lastNat1"),
-          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
-          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-          gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
-          gform_MONITOR = gform_MONITOR)
-          # noCENScat = 0L)
-    )
-  res$IPW_estimates
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+                covars = c("highA1c", "lastNat1"),
+                CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
+                gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+                gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+                gform_MONITOR = gform_MONITOR)
+
+  # res$IPW_estimates
   # res$dataDT
+  # res$wts_data
+  # res$OData.R6
+}
+
+
+test.error.fits.stratify <- function() {
+  require("data.table")
+  data(OdataNoCENS)
+  OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA
+  # head(OdataNoCENS)
+  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c(ID, t))
+  # define lagged N, first value is always 1 (always monitored at the first time point):
+  OdataNoCENS.DT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
 
   # --------------------------------
   # EXAMPLE 5: Test for error when item names in stratification list do not match the outcome names in regression formula(s)
   # --------------------------------
   gform_CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
   stratify_CENS <- list(wrongC = NULL, TI = c("t == 0L", "t > 0"), N = c("t == 0L", "t > 0"))
+  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+  gform_MONITOR <- "N ~ 1"
   checkException(
-      stremr(O.data, ID = "ID", t = "t",
+      stremr(OdataNoCENS.DT, ID = "ID", t = "t",
             covars = c("highA1c", "lastNat1"),
-            CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y",
+            CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-            gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+            gform_TRT = gform_TRT,
             gform_MONITOR = gform_MONITOR))
+
 }

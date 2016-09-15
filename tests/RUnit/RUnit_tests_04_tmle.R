@@ -1,149 +1,150 @@
-`%+%` <- function(a, b) paste0(a, b)
-# --------------------------------
-# INSTALL CORRECT VERSIONS of data.table and stremr from github:
-# --------------------------------
-# devtools::install_github('Rdatatable/data.table')
-require("data.table")
-# devtools::install_github('osofr/stremr', build_vignettes = FALSE)
-require("stremr")
+test.GCOMP.TMLE.10Kdata <- function() {
+  `%+%` <- function(a, b) paste0(a, b)
+  # --------------------------------
+  # INSTALL CORRECT VERSIONS of data.table and stremr from github:
+  # --------------------------------
+  # devtools::install_github('Rdatatable/data.table')
+  require("data.table")
+  # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
+  # require("stremr")
 
-# --------------------------------
-# Test data set included in stremr:
-# --------------------------------
-data(O.data.simstudy.g05)
-O.data <- O.data.simstudy.g05
-head(O.data)
+  # # --------------------------------
+  # # Test data set included in stremr:
+  # # --------------------------------
+  # data(O.data.simstudy.g05)
+  # O.data <- O.data.simstudy.g05
+  # head(O.data)
+  data(OdatDT_10K)
 
-# --------------------------------
-# Test data with 1mil obs:
-# --------------------------------
-# data(Odatg05_1mil)
-ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y"; I <- "highA1c";
+  # --------------------------------
+  # Test data with 1mil obs:
+  # --------------------------------
+  # data(Odatg05_1mil)
+  ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y.tplus1"; I <- "highA1c";
 
-# ---------------------------------------------------------------------------
-# DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
-# Might expand this in the future to allow defining arbitrary summaries
-# ---------------------------------------------------------------------------
-# Odat_DT <- obsDTg05_1mil
-Odat_DT <- data.table(O.data)
+  # ---------------------------------------------------------------------------
+  # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
+  # Might expand this in the future to allow defining arbitrary summaries
+  # ---------------------------------------------------------------------------
+  # Odat_DT <- obsDTg05_1mil
+  Odat_DT <- OdatDT_10K
+  lagnodes <- c("C", "TI", "N")
+  newVarnames <- lagnodes %+% ".tminus1"
+  Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
+  # Indicator that the person has never been on treatment up to current t
+  Odat_DT[, "barTIm1eq0" := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
+  Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
+  # Odat_DT[1:100, ]
 
-lagnodes <- c("C", "TI", "N")
-newVarnames <- lagnodes %+% ".tminus1"
-Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
-# indicator that the person has never been on treatment up to current t
-Odat_DT[, "barTIm1eq0" := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
-Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
+  # --------------------------------
+  # Define global options for stremr (which R packages to use for model fitting)
+  # --------------------------------
+  # options(stremr.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
 
-Odat_DT[1:100, ]
+  # import data into stremr object:
+  OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
 
-# --------------------------------
-# Define global options for stremr (which R packages to use for model fitting)
-# --------------------------------
-# options(stremr.verbose = FALSE)
-options(stremr.verbose = TRUE)
-set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "GLM")
+  # --------------------------------
+  # Fitting the propensity scores for observed variables (A,C,N)
+  # --------------------------------
+  # + N.tminus1
+  gform_TRT <- "TI ~ CVD + highA1c"
+  stratify_TRT <- list(
+    TI=c("t == 0L",                                            # MODEL TI AT t=0
+         "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
+         "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
+         "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
+        ))
+  gform_CENS <- c("C ~ highA1c")
+  stratify_CENS <- list(C=c("t < 16", "t == 16"))
+  gform_MONITOR <- "N ~ 1"
 
-# import data into stremr object:
-OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
+  OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
+                                stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
-# --------------------------------
-# Fitting the propensity scores for observed variables (A,C,N)
-# --------------------------------
-# + N.tminus1
-gform_TRT <- "TI ~ CVD + highA1c"
-stratify_TRT <- list(
-  TI=c("t == 0L",                                            # MODEL TI AT t=0
-       "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
-       "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
-       "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
-      ))
-gform_CENS <- c("C ~ highA1c")
-stratify_CENS <- list(C=c("t < 16", "t == 16"))
-gform_MONITOR <- "N ~ 1"
+  # get IPW-adjusted and KM survival (with hazards over time)
+  wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+  St.dlow <- survNPMSM(wts.St.dlow, OData)
+  St.dlow
 
-OData <- fitPropensity(OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT,
-                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+  wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+  St.dhigh <- survNPMSM(wts.St.dhigh, OData)
+  St.dhigh
 
-# get IPW-adjusted and KM survival (with hazards over time)
-wts.St.dlow <- getIPWeights(OData, intervened_TRT = "TI.gstar.dlow")
-St.dlow <- survNPMSM(wts.St.dlow, OData)
-St.dlow
+  # ---------------------------------------------------------------------------------------------------------
+  # GCOMP AND TMLE w/ GLMs
+  # ---------------------------------------------------------------------------------------------------------
+  # t.surv <- c(0,1,2,3,4,5,6,7,8,9,10)
+  t.surv <- c(1,2,3,10)
+  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "TI.gstar.dhigh")
-St.dhigh <- survNPMSM(wts.St.dhigh, OData)
-St.dhigh
+  # stratified modeling by rule followers only:
+  gcomp_est1 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  tmle_est1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  gcomp_est1; tmle_est1
 
-# ---------------------------------------------------------------------------------------------------------
-# GCOMP AND TMLE w/ GLMs
-# ---------------------------------------------------------------------------------------------------------
-t.surv <- c(0,1,2,3,4,5,6,7,8,9,10)
-# t.surv <- c(1,2,3)
+  # pooling all observations (no stratification):
+  gcomp_est2 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  tmle_est2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est2; tmle_est2
 
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  # stratified modeling by rule followers only:
+  gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  gcomp_est3; tmle_est3
 
-# stratified modeling by rule followers only:
-gcomp_est1 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-gcomp_est1; tmle_est1
+  # pooling all observations (no stratification):
+  gcomp_est4 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est4; tmle_est4
 
-# pooling all observations (no stratification):
-gcomp_est2 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-gcomp_est2; tmle_est2
+  # ------------------------------------------------------------------------
+  # RUN PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)
+  # ------------------------------------------------------------------------
+  # require("doParallel")
+  # registerDoParallel(cores = 2)
+  # data.table::setthreads(1)
 
-# stratified modeling by rule followers only:
-gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-gcomp_est3; tmle_est3
+  # gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # gcomp_est; tmle_est
 
-# pooling all observations (no stratification):
-gcomp_est4 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-gcomp_est4; tmle_est4
+  # gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # gcomp_est; tmle_est
 
-# ------------------------------------------------------------------------
-# RUN PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)
-# ------------------------------------------------------------------------
-require("doParallel")
-registerDoParallel(cores = 4)
-data.table::setthreads(1)
+  # ---------------------------------------------------------------------------------------------------------
+  # GCOMP AND TMLE w/ h2o random forest
+  # ---------------------------------------------------------------------------------------------------------
+  # require("h2o")
+  # h2o::h2o.init(nthreads = 4)
+  # # h2o::h2o.init()
+  # params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-gcomp_est; tmle_est
+  # t.surv <- c(1,2,3,4,5,6,7,8,9,10)
+  # Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-gcomp_est; tmle_est
+  # gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  # gcomp_est; tmle_est
 
-# ---------------------------------------------------------------------------------------------------------
-# GCOMP AND TMLE w/ h2o random forest
-# ---------------------------------------------------------------------------------------------------------
-require("h2o")
-h2o::h2o.init(nthreads = 4)
-# h2o::h2o.init()
-params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+  # gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  # gcomp_est; tmle_est
 
-t.surv <- c(1,2,3,4,5,6,7,8,9,10)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  # ------------------------------------------------------------------------
+  # TEST FOR ERROR WITH > 1 REGRESSION AND > 1 STATA (SHOULD WORK)
+  # ------------------------------------------------------------------------
+  gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
+  stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
+  Odat_DT_test <- Odat_DT
+  Odat_DT_test[, "C1" := C]
+  Odat_DT_test[, "C2" := C]
 
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-gcomp_est; tmle_est
+  OData <- importData(Odat_DT_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+  OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
+                                stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
-gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.gstar.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-gcomp_est; tmle_est
-
-# ------------------------------------------------------------------------
-# TEST FOR ERROR WITH > 1 REGRESSION AND > 1 STATA
-# ------------------------------------------------------------------------
-gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
-stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
-Odat_DT_test <- Odat_DT
-Odat_DT_test[, "C1" := C]
-Odat_DT_test[, "C2" := C]
-OData <- importData(Odat_DT_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = shifted.OUTCOME)
-OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
-                              stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                              params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
+}

@@ -11,7 +11,7 @@ stremr(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C",
   noCENScat = 0L, verbose = getOption("stremr.verbose"), optPars = list())
 }
 \arguments{
-\item{data}{Input data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
+\item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns, containing the time-varying covariates (\code{covars}),
 the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
 and the survival OUTCOME variable (\code{OUTCOME}).}
 

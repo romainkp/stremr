@@ -301,7 +301,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           dfsel <- cbind(dfsel, self$dat.bin.sVar[rowsubset, sel.binsA, drop = FALSE])
         }
         found_vars <- covars %in% colnames(dfsel)
-        if (!all(found_vars)) stop("some covariates can't be found (perhaps not declared as summary measures (def_sW(...) or def_sW(...))): "%+%
+        if (!all(found_vars)) stop("some covariates can't be found: "%+%
                                     paste(covars[!found_vars], collapse=","))
         return(dfsel)
       } else {

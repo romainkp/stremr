@@ -172,7 +172,7 @@ create_subset_expr <- function(outvars, stratify.EXPRS) {
 
 # When several reg forms are specified (multivariate Anodes), process outvars into one vector and process predvars in a named list of vectors
 # stratify.EXPRS - Must be a named list. One item (characeter vectors) per one outcome in regforms.
-process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model_contrl = NULL, OData, sVar.map = NULL, factor.map = NULL, censoring = FALSE, outvar.class) {
+process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model_contrl = NULL, OData, sVar.map = NULL, factor.map = NULL, censoring = FALSE, outvar.class = NULL) {
   using.default <- FALSE
   if (missing(regforms)) {
     using.default <- TRUE
@@ -185,7 +185,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
     if (using.default && gvars$verbose)
       message("Using the default regression formula: " %+% paste0(res$outvars, collapse="+") %+% " ~ " %+% paste0(res$predvars, collapse="+"))
 
-      if (!missing(outvar.class)) {
+      if (!is.null(outvar.class)) {
         outvar.class <- as.list(rep.int(outvar.class, length(res$outvars)))
         names(outvar.class) <- res$outvars
       } else {
@@ -193,10 +193,12 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
         names(outvar.class) <- res$outvars
       }
       subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
+
       regobj <- RegressionClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
                                     subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
                                     censoring = censoring)
       regs[[idx]] <- regobj
+      outvar.class <- NULL
   }
   class(regs) <- c(class(regs), "ListOfRegressionForms")
   if (censoring) regs <- stratify_by_uncensored(regs)
@@ -210,7 +212,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
 #'
 #' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring process.
 #'  Implements the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimator of the discrete survival hazard function which is mapped into survival function.
-#' @param data Input data in long format. Should be a \code{data.frame} with named columns, containing the time-varying covariates (\code{covars}),
+#' @param data Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns, containing the time-varying covariates (\code{covars}),
 #'  the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
 #'  and the survival OUTCOME variable (\code{OUTCOME}).
 # @param estimators (NOT IMPLEMENTED) Character vector with estimator names.
@@ -351,15 +353,15 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
 # - look into g-force optimized functions for data.table: https://github.com/Rdatatable/data.table/issues/523
 # ------------------------------------------------------------------------------------------------------------------------------
 stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
-                              covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
-                              gform_CENS, gform_TRT, gform_MONITOR,
-                              stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
-                              gstar_TRT = NULL, gstar_MONITOR = NULL, noCENScat = 0L,
-                              verbose = getOption("stremr.verbose"), optPars = list()) {
+                  covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
+                  gform_CENS, gform_TRT, gform_MONITOR,
+                  stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
+                  gstar_TRT = NULL, gstar_MONITOR = NULL, noCENScat = 0L,
+                  verbose = getOption("stremr.verbose"), optPars = list()) {
   # ------------------------------------------------------------------
   # - BLOCK 1: Process inputs and define OData R6 object
   # ------------------------------------------------------------------
-  OData <- importData(data, ID, t.name, covars, CENS, TRT, MONITOR, OUTCOME, noCENScat, SHIFTUPoutcome, verbose)
+  OData <- importData(data, ID, t.name, covars, CENS, TRT, MONITOR, OUTCOME, noCENScat, verbose)
   # ------------------------------------------------------------------
   # - BLOCK 2: define regression models, define a single RegressionClass & fit the propensity score for observed data, summary.g0 g0 (C,A,N)
   # ------------------------------------------------------------------
@@ -372,11 +374,11 @@ stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
   # - BLOCK 4A: Non-parametric MSM for survival, with weight stabilization, input either single weights dataset or a list of weights datasets,
   # Each dataset containing weights non-zero weights for single regimen
   # ---------------------------------------------------------------------------------------
-  IPW_estimates <- survNPMSM(data.wts, OData)
+  IPW_estimates <- survNPMSM(wts.DT, OData)
   # ---------------------------------------------------------------------------------------
   # - BLOCK 5: Builds a report with weight distributions, survival estimates, etc.
   # ---------------------------------------------------------------------------------------
   # .... TO DO ....
 
-return(list(IPW_estimates = IPW_estimates, dataDT = OData$dat.sVar, modelfits.g0.R6 = OData$modelfits.g0, OData.R6 = OData))
+return(list(IPW_estimates = IPW_estimates$IPW_estimates, wts_data = IPW_estimates$wts_data, dataDT = OData$dat.sVar, modelfits.g0.R6 = OData$modelfits.g0, OData.R6 = OData))
 }

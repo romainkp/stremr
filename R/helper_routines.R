@@ -185,18 +185,18 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
 #' @param ID The name of the unique subject identifier (character, numeric or factor).
 #' @param t The name of the time/period variable in \code{data}.
 #' @param I The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.
-#' @param imp.I The name of the binary indicator of missingness or imputation for I at time point t and it is used for coding MONITOR(t-1):=1-imp.I(t).
+#' @param imp.I The name of the binary indicator of missingness or imputation for I at time point t. This is used for coding MONITOR(t-1):=1-imp.I(t).
 #'  When imp.I(t)=1 it means that the patient was not observed (no office visit) at time-point t and hence no biomarker was measured.
-#' @param MONITOR.name The name of the MONITORing variable which will be evaluated by this routine.
-#'  This new column MONITOR(t) is the indicator of being monitored (having a doctors visit) at time-point t+1 the indicator of the
-#'  imputation (having observed/measured biomarker) at time-point t+1.
+#' @param MONITOR.name The name of the new column that represents for each row t the indicator of being MONITORed (having a visit) at time points t+1.
+#' This variable is added as a new column to the output dataset.
+#' The column MONITOR(t) is set to 1 when the indicator imp.I (imputed biomarker) is 0 at time-point t+1 and vice versa.
 #' @param tsinceNis1 The name of the future column (created by this routine) that counts number of periods since last monitoring event at t-1. More precisely,
 #' it is a function of the past \code{bar{N}(t−1)}, where 0 means that N(t−1)=1; 1 means that N(t−2)=1 and N(t−1)=0; etc.
 #'
 #' @section Details:
 #'
 #' Convert the input long format data with the time ordering: (I(t), imp.I(t), C(t), A(t))
-#' into the data format required by the estmr() function: (I(t), C(t), A(t), N(t):=1-imp.I(t+1)).
+#' into the data format required by the stremr input functions: (I(t), C(t), A(t), N(t):=1-imp.I(t+1)).
 #' N(t) at time-point t is defined as the indicator of being observed (having an office visit) at time point t+1 (next timepoint after t)
 #' The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observed/measured (hence I.imp=0 for each first subject-time observation).
 #'

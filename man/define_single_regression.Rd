@@ -4,7 +4,7 @@
 \alias{define_single_regression}
 \title{Define regression models}
 \usage{
-define_single_regression(OData, regforms, stratify = NULL, params)
+define_single_regression(OData, regforms, stratify = NULL, params = list())
 }
 \arguments{
 \item{OData}{OData Input data object created by \code{importData} function.}
