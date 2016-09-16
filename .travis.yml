@@ -35,7 +35,6 @@ r_binary_packages:
   - assertthat
   - doParallel
   - foreach
-  - h2o
   - knitr
   - R6
   - Rcpp
@@ -51,8 +50,9 @@ r_github_packages:
   - Rdatatable/data.table
   - h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package
 
-# r_packages:
-#   - ltmle
+r_packages:
+  - h2o
+
 #   - bindata
 
 env:
