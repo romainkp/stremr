@@ -288,23 +288,26 @@ test.allestimators10Kdata <- function() {
   # report.path <- "/home/ubuntu/stremr_example"
   # file.path = report.path,
 
-  make_report_rmd(OData, MSM = MSM.IPAW, TMLE = tmle_est_par1,
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
+  # DO NOT RUN DURING REMOTE TESTS
+  if (FALSE) {
+    make_report_rmd(OData, MSM = MSM.IPAW, TMLE = tmle_est_par1,
+                    AddFUPtables = TRUE, openFile = FALSE,
+                    RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                    WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
-  make_report_rmd(OData, MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
+    make_report_rmd(OData, MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+                    AddFUPtables = TRUE, openFile = FALSE,
+                    RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                    WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
-  make_report_rmd(OData, MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
+    make_report_rmd(OData, MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+                    AddFUPtables = TRUE, openFile = FALSE,
+                    RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                    WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
+  }
 
   # # omit extra modeling stuff (only coefficients):
   # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
