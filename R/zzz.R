@@ -46,16 +46,12 @@ stremrOptions <- function (o, value)  {
     else {
       res[[o]] <- value
     }
-    # options(stremr = res)
     do.call("set_all_stremr_options", res)
   }
 }
 
 getopt <- function(optname) {
   return(stremrOptions(o = optname))
-  # opt <- gvars$opts
-  # if (!(optname %in% (names(opt)))) stop(optname %+% ": this options does not exist")
-  # return(opt[[optname]])
 }
 
 #' Print Current Option Settings for \code{stremr}

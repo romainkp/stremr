@@ -93,6 +93,39 @@ sample_checks <- function() {   # doesnt run, this is just to show what test fun
 as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
 allNA = function(x) all(is.na(x))
 
+test.options <- function() {
+  stremrOptions()
+  stremrOptions("fit.algorithm")
+
+  checkException(stremrOptions("blahblah"))
+  checkException(stremrOptions("blahblah", 5))
+
+  checkException(stremrOptions("fit.algorithm", NULL))
+  stremrOptions("fit.algorithm", "gbm")
+  checkException(stremrOptions("fit.algorithm", "blahblah"))
+  stremrOptions("fit.algorithm", "glm")
+
+  checkException(stremrOptions("fit.package", "blahblah"))
+  stremrOptions("fit.package", "speedglm")
+  checkException(stremrOptions("bin.method", "blah"))
+
+  print_stremr_opts()
+  stremr:::.onLoad()
+
+  stremr:::gvars$misval
+  stremr:::testmisfun()
+  stremr:::get.misval()
+  set.misval(stremr:::gvars, -999)
+  stremr:::testmisfun()
+  stremr:::get.misval()
+  set.misval(stremr:::gvars, "-999")
+  stremr:::testmisfun()
+  stremr:::get.misval()
+
+  set.misval(stremr:::gvars, NA)
+  stremr:::testmisfun()
+  stremr:::get.misval()
+}
 
 # test various regression / subsetting schemes and make sure it works as expected
 test.regressionCases <- function() {
