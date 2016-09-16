@@ -4,7 +4,7 @@ h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negati
 # Train a model using a single h2o learner (user-spec) with cross-validation & keep CV predictions
 SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial", fold_column, model_contrl, ...) {
   # if (is.numeric(seed)) set.seed(seed)  #If seed given, set seed prior to next step
-  h2o.no_progress()
+  h2o::h2o.no_progress()
 
   if (("x" %in% names(formals(learner))) && (as.character(formals(learner)$x)[1] != "")) {
     # Special case where we pass a subset of the colnames, x, in a custom learner function wrapper
@@ -27,7 +27,7 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
 # S3 method for h2o deeplearning fit, takes BinDat data object:
 # use "bernoulli" when doing classification and use "gaussian" when doing regression
 SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomial", fold_column, model_contrl, ...) {
-  h2o.no_progress()
+  h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
                   seed = 1,

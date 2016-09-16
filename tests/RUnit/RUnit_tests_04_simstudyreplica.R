@@ -264,7 +264,7 @@ test.allestimators10Kdata <- function() {
   # registerDoRedis("jobs", password = "JFEFlfki249fkjsk2~.<+JFEFl;")
   require("doParallel")
   registerDoParallel(cores = 2)
-  data.table::setthreads(1)
+  # data.table::setthreads(1)
 
   t.surv <- c(0:5)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
@@ -282,26 +282,26 @@ test.allestimators10Kdata <- function() {
   # ------------------------------------------------------------------
   # Make a report:
   # ------------------------------------------------------------------
-  make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe")
+  make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe", openFile = FALSE)
   is.list(tmle_est_par2)
 
   # report.path <- "/home/ubuntu/stremr_example"
   # file.path = report.path,
 
   make_report_rmd(OData, MSM = MSM.IPAW, TMLE = tmle_est_par1,
-                  AddFUPtables = TRUE,
+                  AddFUPtables = TRUE, openFile = FALSE,
                   RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
   make_report_rmd(OData, MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
-                  AddFUPtables = TRUE,
+                  AddFUPtables = TRUE, openFile = FALSE,
                   RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
   make_report_rmd(OData, MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
-                  AddFUPtables = TRUE,
+                  AddFUPtables = TRUE, openFile = FALSE,
                   RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")

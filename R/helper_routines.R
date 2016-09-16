@@ -137,14 +137,14 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 #'
 #' In output data.table, MONITOR(t-1)=1 indicates that the biomarker I(t) at t is observed and vice versa.
 #'
-#' In addition the output data.table will contain a column "tsinceNis1", where:
+#' In addition the output data.table will contain a column 'tsinceNis1', where:
 #' \itemize{
 #'   \item tsinceNis1(t) = 0 means that the person was monitored at time-point t-1.
 #'   \item tsinceNis1(t) > 0 is the count of the number of cycles since last monitoring event.
 #' }
 #' @return A data.table in long format with ordering (I, CENS, TRT, MONITOR)
 #' @export
-defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = "N", tsinceNis1 = "last.Nt"){
+defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = 'N', tsinceNis1 = 'last.Nt'){
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   if (is.data.table(data)) {
@@ -456,7 +456,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.per
       (pt <- round(RD,4))
       (CI <- round(RD+c(qnorm(0.025),-qnorm(0.025))*se.RDscale.Sdt.K[rule1,rule2],4))
       (ptCI <- paste(pt," [",CI[1],";",CI[2],"]",sep=""))
-      (pval <- paste("SE=",round(se.RDscale.Sdt.K[rule1,rule2],4),", p=", round(2*pnorm( abs((RD-H0val)/se.RDscale.Sdt.K[rule1, rule2]), lower=FALSE ),2) ,sep=""))
+      (pval <- paste("SE=",round(se.RDscale.Sdt.K[rule1,rule2],4),", p=", round(2*pnorm( abs((RD-H0val)/se.RDscale.Sdt.K[rule1, rule2]), lower.tail=FALSE ),2) ,sep=""))
       RDtable[ rownames(RDtable)%in%rule1,rule2] <- c(ptCI,pval)
     }
   }

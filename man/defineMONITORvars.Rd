@@ -54,7 +54,7 @@ The time ordering of the output data at each t is as follows: (I, CENS, TRT, MON
 
 In output data.table, MONITOR(t-1)=1 indicates that the biomarker I(t) at t is observed and vice versa.
 
-In addition the output data.table will contain a column "tsinceNis1", where:
+In addition the output data.table will contain a column 'tsinceNis1', where:
 \itemize{
   \item tsinceNis1(t) = 0 means that the person was monitored at time-point t-1.
   \item tsinceNis1(t) > 0 is the count of the number of cycles since last monitoring event.

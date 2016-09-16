@@ -34,7 +34,7 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 # use solver="L_BFGS" when doing classification and use "IRLSM" when not
 fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
 # fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  h2o.no_progress()
+  h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
                   family = "binomial",
@@ -77,7 +77,7 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
 # S3 method for h2o randomForest fit (Random Forest):
 fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
 # fit.h2orandomForest <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  h2o.no_progress()
+  h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    ntrees = 100,
                    balance_classes = TRUE,
@@ -98,7 +98,7 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
 # use "bernoulli" when doing classification and use "gaussian" when not
 fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
 # fit.h2ogbm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  h2o.no_progress()
+  h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
                    # distribution = "gaussian",
@@ -121,7 +121,7 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
 # use "bernoulli" when doing classification and use "gaussian" when doing regression
 fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
 # fit.h2odeeplearning <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
-  h2o.no_progress()
+  h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
                    # distribution = "gaussian",
