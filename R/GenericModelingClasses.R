@@ -283,8 +283,246 @@ GenericModel <- R6Class(classname = "GenericModel",
 )
 
 
+
+## ---------------------------------------------------------------------
+#' R6 class for fitting and predicting joint probability for a univariate categorical summary A[j]
+#'
+#' This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for a univariate
+#'  categorical summary measure \code{A[j]}. This class inherits from \code{\link{GenericModel}} class.
+#'  Defines the fitting algorithm for a regression model \code{A[j] ~ W + ...}.
+#'  Reconstructs the likelihood \code{P(A[j]=a[j]|W,...)} afterwards.
+#'  Categorical \code{A[j]} is first redefined into \code{length(levels)} bin indicator variables, where
+#'  \code{levels} is a numeric vector of all unique categories in \code{A[j]}.
+#'  The fitting algorithm estimates the binary regressions for hazard for each bin indicator, \code{Bin_A[j][i] ~ W},
+#'  i.e., the probability that categorical \code{A[j]} falls into bin \code{i}, \code{Bin_A[j]_i},
+#'  given that \code{A[j]} does not fall in any prior bins \code{Bin_A[j]_1, ..., Bin_A[j]_{i-1}}.
+#'  The dataset of bin indicators (\code{BinA[j]_1,...,BinA[j]_M}) is created
+#'  inside the passed \code{data} or \code{newdata} object when defining \code{length(levels)} bins for \code{A[j]}.
+#'
+#' @docType class
+#' @format An \code{\link{R6Class}} generator object
+#' @keywords R6 class
+#' @details
+#' \itemize{
+#' \item{\code{reg}} - .
+#' \item{\code{outvar}} - .
+#' \item{\code{levels}} - .
+#' \item{\code{nbins}} - .
+#' }
+#' @section Methods:
+#' \describe{
+#'   \item{\code{new(reg, DataStorageClass.g0, ...)}}{...}
+#'   \item{\code{fit(data)}}{...}
+#'   \item{\code{predict(newdata)}}{...}
+#'   \item{\code{predictAeqa(newdata)}}{...}
+#'   \item{\code{sampleA(newdata)}}{...}
+#' }
+#' @section Active Bindings:
+#' \describe{
+#'   \item{\code{cats}}{...}
+#' }
+#' @export
+CategorModel <- R6Class(classname = "CategorModel",
+  inherit = GenericModel,
+  portable = TRUE,
+  class = TRUE,
+  public = list(
+    reg = NULL,
+    outvar = character(),     # the name of the categorical outcome var (sA[j])
+    levels = numeric(),       # all unique values for sA[j] sorted in increasing order
+    nbins = integer(),
+    bin_nms = character(),
+    # Define settings for fitting cat sA and then call $new for super class (GenericModel)
+    initialize = function(reg, DataStorageClass.g0, ...) {
+      self$reg <- reg
+      self$outvar <- reg$outvar
+      # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
+      if (self$reg$get.reg$censoring & gvars$verbose) {
+        message("...fitting a model for categorical censoring...")
+      }
+      if (gvars$verbose) print("CategorModel outcome: "%+%self$outvar)
+
+      assert_that(is.DataStorageClass(DataStorageClass.g0))
+      self$levels <- DataStorageClass.g0$detect.cat.sVar.levels(reg$outvar)
+      self$nbins <- length(self$levels)
+      self$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$nbins)
+
+      # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
+      bin_regs <- self$reg$clone()
+      bin_regs$outvar.class <- as.list(rep_len(gvars$sVartypes$bin, self$nbins))
+      names(bin_regs$outvar.class) <- self$bin_nms
+      bin_regs$outvar <- self$bin_nms
+      bin_regs$predvars <- self$reg$predvars
+      # subsetting variable names (always subset by non-missing values for the current bin column)
+      bin_regs$subset_vars <- lapply(self$bin_nms, function(var) { c(var, self$reg$subset_vars)})
+      names(bin_regs$subset_vars) <- self$bin_nms
+      bin_regs$reg_hazard <- TRUE   # Don`t add degenerate bins as predictors in each binary regression
+
+      super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
+    },
+
+    # Transforms data for categorical outcome to bin indicators A[j] -> BinA[1], ..., BinA[M] and calls $super$fit on that transformed data
+    # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in A - names have changed though)
+    fit = function(data, ...) {
+      assert_that(is.DataStorageClass(data))
+      # Binirizes & saves binned matrix inside DataStorageClass for categorical sVar
+      data$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
+      if (gvars$verbose) {
+        print("performing fitting for categorical outcome: " %+% self$outvar)
+        print("freq counts by bin for categorical outcome: "); print(table(data$get.sVar(self$outvar)))
+        print("binned dataset: "); print(head(cbind(sA = data$get.sVar(self$outvar), data$dat.bin.sVar), 5))
+      }
+      super$fit(data, ...) # call the parent class fit method
+      if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
+      data$emptydat.bin.sVar # wiping out binirized mat in data object DataStorageClass...
+      # self$wipe.alldat # wiping out all data traces in ContinModel...
+      invisible(self)
+    },
+
+    # P(A=1|W=w): uses private$m.fit to generate predictions
+    predict = function(newdata, ...) {
+      # if (missing(newdata)) stop("must provide newdata")
+      if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+      if (!missing(newdata)) newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
+      super$predict(newdata, ...)
+      if (!missing(newdata)) newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DataStorageClass object...
+      invisible(self)
+    },
+
+    # Invisibly return cumm. prob P(A=a|W=w)
+    # P(A=a|W=w) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
+    predictAeqa = function(newdata, ...) {
+      if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+      if (!missing(newdata)) newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
+      cumprodAeqa <- super$predictAeqa(newdata, ...)
+      if (!missing(newdata)) newdata$emptydat.bin.sVar # wiping out binirized mat in newdata object...
+      # self$wipe.alldat # wiping out all data traces in CategorModel
+      private$cumprodAeqa <- cumprodAeqa
+      return(cumprodAeqa)
+    },
+
+    sampleA = function(newdata) {
+      assert_that(is.DataStorageClass(newdata))
+      sampleA <- self$levels[super$sampleA(newdata = newdata)] # bring the sampled variable back to its original scale / levels:
+      return(sampleA)
+    }
+  ),
+  active = list(
+    cats = function() {seq_len(self$reg$nbins)}
+  )
+)
+
+## ---------------------------------------------------------------------
+#' R6 class for fitting and predicting with several stratified models for a single outcome variable (conditional on some covariate values)
+#'
+#' This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for a summary \code{A[j]}.
+#' This class inherits from \code{\link{GenericModel}} class.
+#' The stratification criteria is determined by the \code{R} expression in the field \code{subset_exprs}.
+#'
+#' @docType class
+#' @format An \code{\link{R6Class}} generator object
+#' @keywords R6 class
+#' @details
+#' \itemize{
+#' \item{\code{reg}} - .
+#' \item{\code{outvar}} - .
+#' \item{\code{subset_exprs}} - .
+#' }
+#' @section Methods:
+#' \describe{
+#'   \item{\code{new(reg, DataStorageClass.g0, ...)}}{...}
+#'   \item{\code{fit(data)}}{...}
+#'   \item{\code{predict(newdata)}}{...}
+#'   \item{\code{predictAeqa(newdata)}}{...}
+#'   \item{\code{sampleA(newdata)}}{...}
+#' }
+#' @section Active Bindings:
+#' \describe{
+#'   \item{\code{cats}}{...}
+#' }
+#' @export
+StratifiedModel <- R6Class(classname = "StratifiedModel",
+  inherit = GenericModel,
+  portable = TRUE,
+  class = TRUE,
+  public = list(
+    reg = NULL,
+    outvar = character(),     # the name of the binary outcome var (sA[j])
+    # levels = numeric(),     # all unique values for sA[j] sorted in increasing order
+    # nbins = integer(),
+    subset_exprs = NULL,
+    # Define settings for fitting cat sA and then call $new for super class (GenericModel)
+    # We produce a regression class with 3 outvars (same) and 3 outvar.class (same)
+    # The daughter regression clases resulting from this need to be of class StratifiedRegressionModelClass
+    initialize = function(reg, DataStorageClass.g0, ...) {
+      self$reg <- reg
+      self$outvar <- reg$outvar
+      self$subset_exprs <- reg$subset_exprs
+      assert_that(length(self$reg$subset_exprs) > 1L)
+      assert_that(length(self$reg$outvar) == 1L)
+      if (gvars$verbose)  {
+        print("StratifiedModel outcome: "%+%self$outvar)
+        print("StratifiedModel expressions: ("%+% paste(self$subset_exprs, collapse=",") %+% ")")
+      }
+      # print("self$reg before stratification:"); self$reg$show()
+      stratify_regs <- self$reg$clone()  # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
+      stratify_regs$outvar <- rep_len(self$reg$outvar, length(self$reg$subset_exprs))
+      stratify_regs$outvar.class <- as.list(rep_len(self$reg$outvar.class, length(self$reg$subset_exprs)))
+      names(stratify_regs$outvar.class) <- stratify_regs$outvar
+      # by turning stratify_regs$subset_exprs into a list the subsetting will be performed on subset_exprs during next S3 dispatch on SummaryModel
+      stratify_regs$subset_exprs <- as.list(stratify_regs$subset_exprs)
+      names(stratify_regs$subset_exprs) <- stratify_regs$outvar
+      stratify_regs$reg_hazard <- TRUE
+      super$initialize(reg = stratify_regs, no_set_outvar = TRUE, DataStorageClass.g0 = DataStorageClass.g0, ...)
+    },
+    # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
+    # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
+    fit = function(data, ...) {
+      assert_that(is.DataStorageClass(data))
+      if (gvars$verbose) {
+        print("performing fitting for outcome based on stratified model for outcome: " %+% self$outvar)
+        # print("following subsets are defined: "); print(table(data$get.sVar(self$outvar)))
+      }
+      super$fit(data, ...) # call the parent class fit method
+      if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
+      invisible(self)
+    },
+    # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
+    predict = function(newdata, ...) {
+      # if (missing(newdata)) stop("must provide newdata")
+      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+      super$predict(newdata, ...)
+      invisible(self)
+    },
+    # Invisibly return cumm. prob P(sA=sa|sW=sw)
+    # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
+    predictAeqa = function(newdata, ...) {
+      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+      cumprodAeqa <- super$predictAeqa(newdata, ...)
+      private$cumprodAeqa <- cumprodAeqa
+      return(cumprodAeqa)
+    },
+    sampleA = function(newdata) {
+      assert_that(is.DataStorageClass(newdata))
+      # bring the sampled variable back to its original scale / levels:
+      sampleA <- super$sampleA(newdata = newdata)
+      return(sampleA)
+    }
+  ),
+  active = list(
+    # cats = function() {seq_len(self$reg$nbins)}
+  )
+)
+
+
+
+
 # -------------------------------------------------------------------------------------------
-# Same code called from ContinModel$new and CategorModel$new:
+# Called from ContinModel$new:
 # From a single categorical/continous outcome regression define a regression class for many binary dummy outcomes.
 # First makes a clone of the parent RegressionClass and the recents the previous outvar/outvar.class to new binary outcomes/classes.
 # Defines subset_var evaluation for new bins (for fitting the hazard of each new category/dummy)
@@ -295,36 +533,34 @@ GenericModel <- R6Class(classname = "GenericModel",
 def_regs_subset <- function(self) {
   bin_regs <- self$reg$clone()  # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
   bin_regs$reg_hazard <- TRUE   # Don`t add degenerate bins as predictors in each binary regression
-  if (!self$reg$pool_cont) {
-    add.oldsubset <- TRUE
-    new.subsets <- lapply(self$reg$bin_nms,
-                              function(var) {
-                                res <- var
-                                if (add.oldsubset) res <- c(res, self$reg$subset_vars)
-                                res
-                              })
-
-    new.sAclass <- as.list(rep_len(gvars$sVartypes$bin, self$reg$nbins))
-    names(new.sAclass) <- self$reg$bin_nms
-    bin_regs$outvar.class <- new.sAclass
-    bin_regs$outvar <- self$reg$bin_nms
-    bin_regs$predvars <- self$reg$predvars
-    bin_regs$subset_vars <- new.subsets
-  # Same but when pooling across bin indicators:
-  } else {
-    bin_regs$outvar.class <- gvars$sVartypes$bin
-    bin_regs$outvar <- self$outvar
-    bin_regs$outvars_to_pool <- self$reg$bin_nms
-    if (gvars$verbose)  {
-      print("pooled bin_regs$outvar: "); print(bin_regs$outvar)
-      print("bin_regs$outvars_to_pool: "); print(bin_regs$outvars_to_pool)
-      print("bin_regs$subset_vars: "); print(bin_regs$subset_vars)
-    }
-  }
-  bin_regs$resetS3class()
+  # if (!self$reg$pool_cont) {
+  add.oldsubset <- TRUE
+  new.subsets <- lapply(self$reg$bin_nms,
+                            function(var) {
+                              res <- var
+                              if (add.oldsubset) res <- c(res, self$reg$subset_vars)
+                              res
+                            })
+  new.sAclass <- as.list(rep_len(gvars$sVartypes$bin, self$reg$nbins))
+  names(new.sAclass) <- self$reg$bin_nms
+  bin_regs$outvar.class <- new.sAclass
+  bin_regs$outvar <- self$reg$bin_nms
+  bin_regs$predvars <- self$reg$predvars
+  bin_regs$subset_vars <- new.subsets
+  # # Same but when pooling across bin indicators:
+  # } else {
+  #   bin_regs$outvar.class <- gvars$sVartypes$bin
+  #   bin_regs$outvar <- self$outvar
+  #   bin_regs$outvars_to_pool <- self$reg$bin_nms
+  #   if (gvars$verbose)  {
+  #     print("pooled bin_regs$outvar: "); print(bin_regs$outvar)
+  #     print("bin_regs$outvars_to_pool: "); print(bin_regs$outvars_to_pool)
+  #     print("bin_regs$subset_vars: "); print(bin_regs$subset_vars)
+  #   }
+  # }
+  # bin_regs$resetS3class()
   return(bin_regs)
 }
-
 
 ## -------------------------------------------------------------------------------------------
 #' R6 class for fitting and predicting joint probability for a univariate continuous summary A[j]
@@ -376,6 +612,7 @@ ContinModel <- R6Class(classname = "ContinModel",
     bin_weights = NULL,
     # Define settings for fitting contin sA and then call $new for super class (GenericModel)
     initialize = function(reg, DataStorageClass.g0, DataStorageClass.gstar, ...) {
+      stop("...regressions with continuous outcomes are not implemented yet...")
       self$reg <- reg
       self$outvar <- reg$outvar
       if (is.null(reg$intrvls)) {
@@ -453,7 +690,7 @@ ContinModel <- R6Class(classname = "ContinModel",
     predictAeqa = function(newdata, ...) { # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a`s)
       assert_that(is.DataStorageClass(newdata))
       newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
-      if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
+      if (gvars$verbose) print("performing prediction for continuous outcome: " %+% self$outvar)
       bws <- newdata$get.sVar.bw(name.sVar = self$outvar, intervals = self$intrvls)
       self$bin_weights <- (1 / bws) # weight based on 1 / (sVar bin widths)
       # Option 1: ADJUST FINAL PROB by bw.j TO OBTAIN density at a point f(sa|sw) = P(A=a|W=w):
@@ -476,232 +713,5 @@ ContinModel <- R6Class(classname = "ContinModel",
   ),
   active = list(
     cats = function() {seq_len(self$reg$nbins)}
-  )
-)
-
-## ---------------------------------------------------------------------
-#' R6 class for fitting and predicting joint probability for a univariate categorical summary A[j]
-#'
-#' This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for a univariate
-#'  categorical summary measure \code{A[j]}. This class inherits from \code{\link{GenericModel}} class.
-#'  Defines the fitting algorithm for a regression model \code{A[j] ~ W + ...}.
-#'  Reconstructs the likelihood \code{P(A[j]=a[j]|W,...)} afterwards.
-#'  Categorical \code{A[j]} is first redefined into \code{length(levels)} bin indicator variables, where
-#'  \code{levels} is a numeric vector of all unique categories in \code{A[j]}.
-#'  The fitting algorithm estimates the binary regressions for hazard for each bin indicator, \code{Bin_A[j][i] ~ W},
-#'  i.e., the probability that categorical \code{A[j]} falls into bin \code{i}, \code{Bin_A[j]_i},
-#'  given that \code{A[j]} does not fall in any prior bins \code{Bin_A[j]_1, ..., Bin_A[j]_{i-1}}.
-#'  The dataset of bin indicators (\code{BinA[j]_1,...,BinA[j]_M}) is created
-#'  inside the passed \code{data} or \code{newdata} object when defining \code{length(levels)} bins for \code{A[j]}.
-#'
-#' @docType class
-#' @format An \code{\link{R6Class}} generator object
-#' @keywords R6 class
-#' @details
-#' \itemize{
-#' \item{\code{reg}} - .
-#' \item{\code{outvar}} - .
-#' \item{\code{levels}} - .
-#' \item{\code{nbins}} - .
-#' }
-#' @section Methods:
-#' \describe{
-#'   \item{\code{new(reg, DataStorageClass.g0, ...)}}{...}
-#'   \item{\code{fit(data)}}{...}
-#'   \item{\code{predict(newdata)}}{...}
-#'   \item{\code{predictAeqa(newdata)}}{...}
-#'   \item{\code{sampleA(newdata)}}{...}
-#' }
-#' @section Active Bindings:
-#' \describe{
-#'   \item{\code{cats}}{...}
-#' }
-#' @export
-CategorModel <- R6Class(classname = "CategorModel",
-  inherit = GenericModel,
-  portable = TRUE,
-  class = TRUE,
-  public = list(
-    reg = NULL,
-    outvar = character(),     # the name of the categorical outcome var (sA[j])
-    levels = numeric(),       # all unique values for sA[j] sorted in increasing order
-    nbins = integer(),
-    # Define settings for fitting cat sA and then call $new for super class (GenericModel)
-    initialize = function(reg, DataStorageClass.g0, ...) {
-      self$reg <- reg
-      self$outvar <- reg$outvar
-      # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
-      if (self$reg$get.reg$censoring & gvars$verbose) {
-        message("...fitting a model for categorical censoring...")
-      }
-      if (is.null(reg$levels)) {
-        assert_that(is.DataStorageClass(DataStorageClass.g0))
-        self$levels <- self$reg$levels <- DataStorageClass.g0$detect.cat.sVar.levels(reg$outvar)
-      } else {
-        self$levels <- self$reg$levels
-      }
-      self$nbins <- self$reg$nbins <- length(self$levels)
-      self$reg$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
-      if (gvars$verbose)  {
-        print("CategorModel outcome: "%+%self$outvar)
-      }
-      bin_regs <- def_regs_subset(self = self)
-      super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
-    },
-
-    # Transforms data for categorical outcome to bin indicators A[j] -> BinA[1], ..., BinA[M] and calls $super$fit on that transformed data
-    # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in A - names have changed though)
-    fit = function(data, ...) {
-      assert_that(is.DataStorageClass(data))
-      # Binirizes & saves binned matrix inside DataStorageClass for categorical sVar
-      data$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
-      if (gvars$verbose) {
-        print("performing fitting for categorical outcome: " %+% self$outvar)
-        print("freq counts by bin for categorical outcome: "); print(table(data$get.sVar(self$outvar)))
-        print("binned dataset: "); print(head(cbind(sA = data$get.sVar(self$outvar), data$dat.bin.sVar), 5))
-      }
-      super$fit(data) # call the parent class fit method
-      if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
-      data$emptydat.bin.sVar # wiping out binirized mat in data DataStorageClass object...
-      self$wipe.alldat # wiping out all data traces in ContinModel...
-      invisible(self)
-    },
-    # P(A=1|W=w): uses private$m.fit to generate predictions
-    predict = function(newdata, ...) {
-      if (missing(newdata)) stop("must provide newdata")
-      assert_that(is.DataStorageClass(newdata))
-      if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
-      newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
-      super$predict(newdata)
-      newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DataStorageClass object...
-      invisible(self)
-    },
-    # Invisibly return cumm. prob P(A=a|W=w)
-    # P(A=a|W=w) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
-    predictAeqa = function(newdata, ...) {
-      assert_that(is.DataStorageClass(newdata))
-      if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
-      newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
-      cumprodAeqa <- super$predictAeqa(newdata = newdata)
-      newdata$emptydat.bin.sVar # wiping out binirized mat in newdata object...
-      self$wipe.alldat # wiping out all data traces in ContinModel...
-      private$cumprodAeqa <- cumprodAeqa
-      return(cumprodAeqa)
-    },
-    sampleA = function(newdata) {
-      assert_that(is.DataStorageClass(newdata))
-      sampleA <- self$levels[super$sampleA(newdata = newdata)] # bring the sampled variable back to its original scale / levels:
-      return(sampleA)
-    }
-  ),
-  active = list(
-    cats = function() {seq_len(self$reg$nbins)}
-  )
-)
-
-## ---------------------------------------------------------------------
-#' R6 class for fitting and predicting with several stratified models for a single outcome variable (conditional on some covariate values)
-#'
-#' This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for a summary \code{A[j]}.
-#' This class inherits from \code{\link{GenericModel}} class.
-#' The stratification criteria is determined by the \code{R} expression in the field \code{subset_exprs}.
-#'
-#' @docType class
-#' @format An \code{\link{R6Class}} generator object
-#' @keywords R6 class
-#' @details
-#' \itemize{
-#' \item{\code{reg}} - .
-#' \item{\code{outvar}} - .
-#' \item{\code{subset_exprs}} - .
-#' }
-#' @section Methods:
-#' \describe{
-#'   \item{\code{new(reg, DataStorageClass.g0, ...)}}{...}
-#'   \item{\code{fit(data)}}{...}
-#'   \item{\code{predict(newdata)}}{...}
-#'   \item{\code{predictAeqa(newdata)}}{...}
-#'   \item{\code{sampleA(newdata)}}{...}
-#' }
-#' @section Active Bindings:
-#' \describe{
-#'   \item{\code{cats}}{...}
-#' }
-#' @export
-StratifiedModel <- R6Class(classname = "StratifiedModel",
-  inherit = GenericModel,
-  portable = TRUE,
-  class = TRUE,
-  public = list(
-    reg = NULL,
-    outvar = character(),     # the name of the categorical outcome var (sA[j])
-    # levels = numeric(),       # all unique values for sA[j] sorted in increasing order
-    # nbins = integer(),
-    subset_exprs = NULL,
-    # Define settings for fitting cat sA and then call $new for super class (GenericModel)
-    # We produce a regression class with 3 outvars (same) and 3 outvar.class (same)
-    # The daughter regression clases resulting from this need to be of class StratifiedRegressionModelClass
-    initialize = function(reg, DataStorageClass.g0, ...) {
-      self$reg <- reg
-      self$outvar <- reg$outvar
-      self$subset_exprs <- reg$subset_exprs
-      assert_that(length(self$reg$subset_exprs) > 1L)
-      assert_that(length(self$reg$outvar) == 1L)
-      if (gvars$verbose)  {
-        print("StratifiedModel outcome: "%+%self$outvar)
-        print("StratifiedModel expressions: ("%+% paste(self$subset_exprs, collapse=",") %+% ")")
-      }
-      # print("self$reg before stratification:"); self$reg$show()
-      stratify_regs <- self$reg$clone()  # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
-      stratify_regs$outvar <- rep_len(self$reg$outvar, length(self$reg$subset_exprs))
-      stratify_regs$outvar.class <- as.list(rep_len(self$reg$outvar.class, length(self$reg$subset_exprs)))
-      names(stratify_regs$outvar.class) <- stratify_regs$outvar
-      # by turning stratify_regs$subset_exprs into a list the subsetting will be performed on subset_exprs during next S3 dispatch on SummaryModel
-      stratify_regs$subset_exprs <- as.list(stratify_regs$subset_exprs)
-      names(stratify_regs$subset_exprs) <- stratify_regs$outvar
-      stratify_regs$reg_hazard <- TRUE
-      # print("stratify_regs class:"); stratify_regs$show()
-      super$initialize(reg = stratify_regs, no_set_outvar = TRUE, DataStorageClass.g0 = DataStorageClass.g0, ...)
-    },
-    # Transforms data for categorical outcome to bin indicators sA[j] -> BinsA[1], ..., BinsA[M] and calls $super$fit on that transformed data
-    # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
-    fit = function(data, ...) {
-      assert_that(is.DataStorageClass(data))
-      if (gvars$verbose) {
-        print("performing fitting for outcome based on stratified model for outcome: " %+% self$outvar)
-        # print("following subsets are defined: "); print(table(data$get.sVar(self$outvar)))
-      }
-      super$fit(data, ...) # call the parent class fit method
-      if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
-      invisible(self)
-    },
-    # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
-    predict = function(newdata, ...) {
-      # if (missing(newdata)) stop("must provide newdata")
-      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
-
-      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
-      super$predict(newdata, ...)
-      invisible(self)
-    },
-    # Invisibly return cumm. prob P(sA=sa|sW=sw)
-    # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
-    predictAeqa = function(newdata, ...) {
-      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
-
-      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
-      cumprodAeqa <- super$predictAeqa(newdata = newdata, ...)
-      private$cumprodAeqa <- cumprodAeqa
-      return(cumprodAeqa)
-    },
-    sampleA = function(newdata) {
-      assert_that(is.DataStorageClass(newdata))
-      # bring the sampled variable back to its original scale / levels:
-      sampleA <- super$sampleA(newdata = newdata)
-      return(sampleA)
-    }
-  ),
-  active = list(
-    # cats = function() {seq_len(self$reg$nbins)}
   )
 )

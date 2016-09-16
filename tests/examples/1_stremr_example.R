@@ -1,12 +1,14 @@
 #-------------------------------------------------------------------
 # EXAMPLE WITH CATEGORICAL CENSORING (3 levels)
 #-------------------------------------------------------------------
-library("data.table")
-library("magrittr")
+require("data.table")
+require("magrittr")
 data(OdataCatCENS)
 OdataDT <- as.data.table(OdataCatCENS, key=c(ID, t))
 # Indicator that the person has never been treated in the past:
 OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) %in% 0), by = ID]
+# Define lagged N, first value is always 1 (always monitored at the first time point):
+OdataDT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
 
 #-------------------------------------------------------------------
 # Regressions for modeling the exposure (TRT)
@@ -41,22 +43,22 @@ gform_MONITOR <- "N ~ 1"
 #-------------------------------------------------------------------
 # Define the counterfactual monitoring regimen of interest
 #-------------------------------------------------------------------
-p <- 0.1 # probability of being monitored at each t is 0.1
-OdataDT[, "gstar.N" := ifelse(N == 1L, eval(p), 1-eval(p))]
+# probability of being monitored at each t is 0.1
+OdataDT[, "gstar.N" := 0.1]
 
-# Define rule followers/non-followers for two rules: dlow & dhigh
-res <- follow.rule.d.DT(OdataDT,
-        theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
-        CENS = "CatC", TRT = "TI", MONITOR = "N",
-        rule.names = c("dlow", "dhigh")) %>%
-# Merge rule definitions into main dataset:
-  merge(OdataDT, ., by=c("ID", "t")) %>%
-# Estimate hazard and survival for a rule "dhigh":
-  stremr(gstar_TRT = "dhigh", gstar_MONITOR = "gstar.N",
-        ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
-        CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-        TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
-        MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y")
+# Define two dynamic rules: dlow & dhigh
+OdataDT <- defineIntervedTRT(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
+                            CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1",
+                            new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
 
-res$IPW_estimates
-res$dataDT
+# Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
+IPW_KM_res <- stremr(OdataDT, intervened_TRT = "dhigh", intervened_MONITOR = "gstar.N",
+              ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
+              CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+              TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+              MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")
+
+# Survival estimates by time:
+IPW_KM_res$IPW_estimates
+# Input data:
+IPW_KM_res$dataDT

@@ -7,8 +7,9 @@
 stremr(data, ID = "Subj_ID", t.name = "time_period", covars, CENS = "C",
   TRT = "A", MONITOR = "N", OUTCOME = "Y", gform_CENS, gform_TRT,
   gform_MONITOR, stratify_CENS = NULL, stratify_TRT = NULL,
-  stratify_MONITOR = NULL, gstar_TRT = NULL, gstar_MONITOR = NULL,
-  noCENScat = 0L, verbose = getOption("stremr.verbose"), optPars = list())
+  stratify_MONITOR = NULL, intervened_TRT = NULL,
+  intervened_MONITOR = NULL, noCENScat = 0L,
+  verbose = getOption("stremr.verbose"), optPars = list())
 }
 \arguments{
 \item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns, containing the time-varying covariates (\code{covars}),
@@ -53,9 +54,9 @@ Each list item is a character vector of stratification subsets for the correspon
 \item{stratify_MONITOR}{A named list with one item per variable in \code{MONITOR}.
 Each list item is a character vector of stratification subsets for the corresponding variable in \code{MONITOR}.}
 
-\item{gstar_TRT}{Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.}
+\item{intervened_TRT}{Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.}
 
-\item{gstar_MONITOR}{Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.}
+\item{intervened_MONITOR}{Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.}
 
 \item{noCENScat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 Use this to modify the default reference category (no CENSoring / continuation of follow-up)
@@ -129,12 +130,14 @@ The functions \code{f_gstar1} and \code{f_gstar2} can only depend on variables s
 #-------------------------------------------------------------------
 # EXAMPLE WITH CATEGORICAL CENSORING (3 levels)
 #-------------------------------------------------------------------
-library("data.table")
-library("magrittr")
+require("data.table")
+require("magrittr")
 data(OdataCatCENS)
 OdataDT <- as.data.table(OdataCatCENS, key=c(ID, t))
 # Indicator that the person has never been treated in the past:
 OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) \%in\% 0), by = ID]
+# Define lagged N, first value is always 1 (always monitored at the first time point):
+OdataDT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
 
 #-------------------------------------------------------------------
 # Regressions for modeling the exposure (TRT)
@@ -169,25 +172,25 @@ gform_MONITOR <- "N ~ 1"
 #-------------------------------------------------------------------
 # Define the counterfactual monitoring regimen of interest
 #-------------------------------------------------------------------
-p <- 0.1 # probability of being monitored at each t is 0.1
-OdataDT[, "gstar.N" := ifelse(N == 1L, eval(p), 1-eval(p))]
+# probability of being monitored at each t is 0.1
+OdataDT[, "gstar.N" := 0.1]
 
-# Define rule followers/non-followers for two rules: dlow & dhigh
-res <- follow.rule.d.DT(OdataDT,
-        theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
-        CENS = "CatC", TRT = "TI", MONITOR = "N",
-        rule.names = c("dlow", "dhigh")) \%>\%
-# Merge rule definitions into main dataset:
-  merge(OdataDT, ., by=c("ID", "t")) \%>\%
-# Estimate hazard and survival for a rule "dhigh":
-  stremr(gstar_TRT = "dhigh", gstar_MONITOR = "gstar.N",
-        ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
-        CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-        TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
-        MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y")
+# Define two dynamic rules: dlow & dhigh
+OdataDT <- defineIntervedTRT(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
+                            CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1",
+                            new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
 
-res$IPW_estimates
-res$dataDT
+# Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
+IPW_KM_res <- stremr(OdataDT, intervened_TRT = "dhigh", intervened_MONITOR = "gstar.N",
+              ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
+              CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+              TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+              MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")
+
+# Survival estimates by time:
+IPW_KM_res$IPW_estimates
+# Input data:
+IPW_KM_res$dataDT
 }
 \seealso{
 \code{\link{stremr-package}} for the general overview of the package,

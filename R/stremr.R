@@ -246,8 +246,8 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
 #' Each list item is a character vector of stratification subsets for the corresponding variable in \code{TRT}.
 #' @param stratify_MONITOR A named list with one item per variable in \code{MONITOR}.
 #' Each list item is a character vector of stratification subsets for the corresponding variable in \code{MONITOR}.
-#' @param gstar_TRT Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.
-#' @param gstar_MONITOR Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.
+#' @param intervened_TRT Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.
+#' @param intervened_MONITOR Column name in \code{data} containing the counterfactual probabilities of following a specific monitoring regimen.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @param optPars A named list of additional optional parameters to be passed to \code{stremr}, such as
 #'  \code{alpha}, \code{lbound}, \code{family}, \code{YnodeDET},
@@ -356,7 +356,7 @@ stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
                   covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                   gform_CENS, gform_TRT, gform_MONITOR,
                   stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
-                  gstar_TRT = NULL, gstar_MONITOR = NULL, noCENScat = 0L,
+                  intervened_TRT = NULL, intervened_MONITOR = NULL, noCENScat = 0L,
                   verbose = getOption("stremr.verbose"), optPars = list()) {
   # ------------------------------------------------------------------
   # - BLOCK 1: Process inputs and define OData R6 object
@@ -369,7 +369,7 @@ stremr <- function(data, ID = "Subj_ID", t.name = "time_period",
   # ---------------------------------------------------------------------------------------
   # - BLOCK 3: evaluate weights based gstar_TRT, gstar_MONITOR and observed propensity scores g0, the input is modelfits.g0 and OData object
   # ---------------------------------------------------------------------------------------
-  wts.DT <- getIPWeights(OData, gstar_TRT, gstar_MONITOR)
+  wts.DT <- getIPWeights(OData, intervened_TRT, intervened_MONITOR)
   # ---------------------------------------------------------------------------------------
   # - BLOCK 4A: Non-parametric MSM for survival, with weight stabilization, input either single weights dataset or a list of weights datasets,
   # Each dataset containing weights non-zero weights for single regimen

@@ -227,7 +227,6 @@ test.model.fits.stratify <- function() {
   # res$OData.R6
 }
 
-
 test.error.fits.stratify <- function() {
   require("data.table")
   data(OdataNoCENS)

@@ -1,27 +1,13 @@
 # ---------------------------------------------------------------------------------------------
 # (OLD) Helper routine to obtain the follow-up time -> Needs to be re-written
-# ---------------------------------------------------------------------------------------------
-#' @export
-OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
-  T.tilde <- unlist(as.list(by(data,data[,IDname],function(x){
-    return( min( x[x[,Yname]==1 & x[,tname]>0, tname]-1, x[x[,Cname]==1,tname] ,na.rm=TRUE) )
-  })))
-  return(T.tilde)
-}
-
-# ----------------------------------------------------------------
-#### SUMMARY STATISTICS
-# ----------------------------------------------------------------
-makeFreqTable <- function(rawFreq){
-  ntot <- sum(rawFreq)
-  rawFreqPercent <- rawFreq / ntot * 100
-  fineFreq <- cbind("Frequency"=rawFreq,"\\%"=round(rawFreqPercent,2),"Cumulative Frequency"=cumsum(rawFreq),"Cumulative \\%"=round(cumsum(rawFreqPercent),2))
-  fineFreq <- as.data.frame(fineFreq)
-  eval(parse(text=paste('fineFreq <- cbind(',deparse(substitute(rawFreq)),'=factor(c("',paste(names(rawFreq),collapse='","'),'")),fineFreq)',sep="")))
-  rownames(fineFreq) <- 1:nrow(fineFreq)
-  fineFreq <- as.matrix(fineFreq)
-  return(fineFreq)
-}
+# # ---------------------------------------------------------------------------------------------
+# @export
+# OLD_get.T.tilde <- function(data,IDname,Yname,Cname,tname){
+#   T.tilde <- unlist(as.list(by(data,data[,IDname],function(x){
+#     return( min( x[x[,Yname]==1 & x[,tname]>0, tname]-1, x[x[,Cname]==1,tname] ,na.rm=TRUE) )
+#   })))
+#   return(T.tilde)
+# }
 # ----------------------------------------------------------------
 #### SUMMARY STATISTICS
 # ----------------------------------------------------------------
@@ -114,67 +100,6 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   }
   # setkeyv(wts_data, cols = old.keys)
   return(list(summary.table = x.freq.counts.tab, summary.DT = x.freq.counts.DT, summary.DT.byrule = x.freq.counts.byrule.DT))
-}
-
-
-make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.period, se.RDscale.Sdt.K){
-  if (missing(se.RDscale.Sdt.K)) {
-    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S.IPAW), ncol = length(S.IPAW))
-    colnames(se.RDscale.Sdt.K) <- names(S.IPAW)
-    rownames(se.RDscale.Sdt.K) <- names(S.IPAW)
-  }
-  dtheta <- names(S.IPAW)
-  RDtable <- matrix(NA, nrow = (length(dtheta)-1)*2, ncol = length(dtheta)-1)
-  # RDtable <- matrix(NA,nrow=2*3,ncol=3)
-
-  ContrastScale <- ifelse(RDscale,"-","/")
-
-  H0val <- ifelse(RDscale,0,1)
-  ## Compare mean bootstrap to point estimates - should be similar
-  PYK1.IPAW <- allRDtable <- vector("list",length(S.IPAW))
-  names(PYK1.IPAW) <- names(allRDtable) <- names(S.IPAW)
-  PYK1.IPAW <- lapply(S.IPAW,function(x,y)return(1-x[y]),y=t.period)
-
-  rownames(RDtable) <- rep(rev(dtheta)[-length(dtheta)],each=2)
-  colnames(RDtable) <- dtheta[-length(dtheta)]
-
-  for(rule1 in rev(dtheta)[-length(dtheta)]) {
-    for(rule2 in dtheta[ 1:(which(dtheta==rule1)-1) ]){
-      RD <- mapply(ContrastScale,PYK1.IPAW[[rule1]],PYK1.IPAW[[rule2]])
-      (pt <- round(RD,4))
-      (CI <- round(RD+c(qnorm(0.025),-qnorm(0.025))*se.RDscale.Sdt.K[rule1,rule2],4))
-      (ptCI <- paste(pt," [",CI[1],";",CI[2],"]",sep=""))
-      (pval <- paste("SE=",round(se.RDscale.Sdt.K[rule1,rule2],4),", p=", round(2*pnorm( abs((RD-H0val)/se.RDscale.Sdt.K[rule1, rule2]), lower=FALSE ),2) ,sep=""))
-      RDtable[ rownames(RDtable)%in%rule1,rule2] <- c(ptCI,pval)
-    }
-  }
-  RDtable[is.na(RDtable)] <- ""
-  RDtable <- cbind("d1 (row) | d2 (col)"=rep(rev(dtheta)[-length(dtheta)],each=2) , RDtable)
-  fileText <- paste(esti,ifelse(RDscale,"RD","RR"),sep="")
-  captionText2 <- ifelse(RDscale,"differences","ratios")
-  captionText3 <- ifelse(RDscale,"$-$","$/$")
-
-  if (esti %in% c("IPAW", "IPW")) {
-    estimates <- "Stabilized inverse weighting"
-  } else if(esti %in% c("IPAWtrunc","IPWtrunc")){
-    estimates <- "Stabilized, truncated inverse weighting"
-  } else if (esti %in% "crude") {
-    estimates <- "Crude"
-  } else {
-    estimates <- ""
-  }
-
-  model <- "MSM"
-  if(esti %in% "crude") model <- "model"
-
-  caption <- paste(estimates,
-      " estimates of the (cumulative) risk ",
-      captionText2,", $d_1$",
-      captionText3,"$d_2$, over ", t.period," periods. The risk contrasts are derived from a logistic ", model,
-      " for the discrete-time hazards fitted based on ", nobs,
-      " observations. Variance estimates are derived based on the influence curve of the estimator.",sep="")
-  rownames(RDtable) <- NULL
-  return(list(RDtable = RDtable, caption = caption))
 }
 
 
@@ -289,6 +214,102 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
 }
 
 # ---------------------------------------------------------------------------------------------
+#' Define counterfactual dynamic treatment
+#'
+#' Defines a new column that contains the counterfactual dynamic treatment values.
+#' Subject is switched to treatment when the biomarker \code{I} crosses the threshold \code{theta} while being monitored \code{MONITOR(t-1)=1}.
+#' @param data Input data.frame or data.table in long format, see below for the description of the assumed format.
+#' @param theta The vector of continuous cutoff values that index each dynamic treatment rule
+#' @param ID The name of the unique subject identifier
+#' @param t The name of the variable indicating time-period
+#' @param I Continuous biomarker variable used for determining the treatmet decision rule
+#' @param CENS Binary indicator of being censored at t;
+#' @param TRT Binary indicator of the treatment (exposure) at t;
+#' @param MONITOR The indicator of having a visit and having measured or observed biomarker I(t+1) (the biomarker value at THE NEXT TIME CYCLE).
+#'  In other words the value of MONITOR(t-1) (at t-1) being 1 indicates that I(t) at time point t was observed/measured.
+#'  The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observed/measured.
+#' @param tsinceNis1 Character vector for the column in data, same meaning as described in convertdata(), must be already defined
+#' @param new.TRT.names Vector with names which will be assigned to new columns generated by this routine(must be the same dimension as theta).
+#'  When not supplied the following convention is adopted for naming these columns: \code{paste0(TRT,".gstar.","d",theta)}.
+#' @param return.allcolumns Set to \code{TRUE} to return the original data columns along with new columns that define each rule
+#' (can be useful when employing piping/sequencing operators).
+#'
+#' @section Details:
+#'
+#' * This function takes an input \code{data.frame} or \code{data.table}
+#'   and produces an output data.table with counterfactual treatment assignment based on a rule defined by values of input column \code{I} and an input scalar \code{theta}.
+#'
+#' * Evaluates which observations should have received (switched to) treatment based on dynamic-decision rule defined by the measured biomarker \code{I}
+#'   and pre-defined cutoffs supplied in the vector \code{theta}.
+#'
+#' * Produces a separate column for each value in \code{theta}:
+#'\itemize{
+#' \item (1) By default no one is treated (TRT assigned to 0)
+#' \item (2) Subject may switch to treatment the first time \code{I} goes over the threshold \code{theta} (while having been monitored, i.e, MONITOR(t-1)==1)
+#' \item (3) Once the subject switches to treatment he or she has to continue receiving treatment until the end of the follow-up
+#'}
+#'
+#' * The format (time-ordering) of data is the same as required by the stremr() function: (I(t), CENS(t), TRT(t), MONITOR(t)).
+#'   MONITOR(t) at time-point t is defined as the indicator of being observed (having an office visit) at time point t+1 (next timepoint after t)
+#'   It is assumed that MONITOR(t) is always 0 for the very first time-point.
+#'
+#' @examples
+#'
+#' \dontrun{
+#' theta <- seq(7,8.5,by=0.5)
+#' FOLLOW.D.DT <- defineIntervedTRT(data = data, theta = theta,
+#'                  ID = "StudyID", t = "X_intnum", I = "X_a1c",
+#'                  TRT = "X_exposure", CENS = "X_censor", MONITOR = "N.t",
+#'                  new.TRT.names = paste0("gstar",theta))
+#' }
+#' @example tests/examples/0_defineIntervention.R
+#' @return A data.table with a separate column for each value in \code{theta}. Each column consists of indicators of following/not-following
+#'  each rule indexed by a value form \code{theta}. In addition, the returned data.table contains \code{ID} and \code{t} columns for easy merging
+#'  with the original data.
+#' @export
+defineIntervedTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, new.TRT.names = NULL, return.allcolumns = FALSE){
+  ID.expression <- as.name(ID)
+  chgTRT <- as.name("chgTRT")
+  if (return.allcolumns) {
+    DT <- data.table(data, key=c(ID,t))
+  } else if (is.data.table(data)) {
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1), with = FALSE], key=c(ID,t))
+  } else if (is.data.frame(data)) {
+    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1)], key=c(ID,t))
+  } else {
+    stop("input data must be either a data.table or a data.frame")
+  }
+  CheckVarNameExists(DT, ID)
+  CheckVarNameExists(DT, t)
+  CheckVarNameExists(DT, I)
+  CheckVarNameExists(DT, TRT)
+  CheckVarNameExists(DT, MONITOR)
+  CheckVarNameExists(DT, tsinceNis1)
+  if (!is.null(new.TRT.names)) {
+    stopifnot(length(new.TRT.names)==length(theta))
+  } else {
+    new.TRT.names <- paste0(TRT,".gstar.","d",theta)
+  }
+  for (dtheta.i in seq_along(theta)) {
+    dtheta <- theta[dtheta.i]
+    # 1. By default, nobody is treated
+    DT[, "new.TRT.gstar" :=  NA_integer_]
+    # 2. The person can switch to treatment the earliest time 'I' goes over the threshold (while being monitored)
+    # NOTE: ****** (tsinceNis1 > 0) is equivalent to (N(t-1)==0) ******
+    DT[(get(tsinceNis1) == 0L) & (get(I) >= eval(dtheta)), "new.TRT.gstar" :=  1L]
+    # 3. Once the person goes on treatment he/she has to stay on it until the end of the follow-up (using carry-forward)
+    DT[, new.TRT.gstar := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
+    # 4. all remaining NA's must be the ones that occurred prior to treatment switch -> all must be 0 (not-treated)
+    DT[is.na(new.TRT.gstar), new.TRT.gstar := 0]
+    setnames(DT, old = "new.TRT.gstar", new = new.TRT.names[dtheta.i])
+  }
+  if (!return.allcolumns) {
+    DT <- DT[, c(ID, t, new.TRT.names), with = FALSE]
+  }
+  return(DT)
+}
+
+# ---------------------------------------------------------------------------------------------
 #' Define the indicators of following/not-following specific dynamic treatment rules indexed by theta.
 #'
 #' @param data Input data.frame or data.table in long format, see below for the description of the assumed format.
@@ -340,13 +361,10 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
 #' @return A data.table with a separate column for each value in \code{theta}. Each column consists of indicators of following/not-following
 #'  each rule indexed by a value form \code{theta}. In addition, the returned data.table contains \code{ID} and \code{t} columns for easy merging
 #'  with the original data.
-#' @export
+# @export
 defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, rule.names = NULL, return.allcolumns = FALSE){
   ID.expression <- as.name(ID)
   chgTRT <- as.name("chgTRT")
-  # indx <- as.name("indx")
-  # lastN.t <- as.name("lastN.t")
-
   if (return.allcolumns) {
     DT <- data.table(data, key=c(ID,t))
   } else if (is.data.table(data)) {
@@ -356,7 +374,6 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
   } else {
     stop("input data must be either a data.table or a data.frame")
   }
-
   CheckVarNameExists(DT, ID)
   CheckVarNameExists(DT, t)
   CheckVarNameExists(DT, I)
@@ -364,46 +381,26 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
   CheckVarNameExists(DT, TRT)
   CheckVarNameExists(DT, MONITOR)
   CheckVarNameExists(DT, tsinceNis1)
-
-  # Create "indx" vector that goes up by 1 every time MONITOR(t-1) shifts from 1 to 0 or from 0 to 1
-  # DT[, "indx" := cumsum(c(FALSE, get(MONITOR)!=0L))[-.N], by = eval(ID.expression)]
-  # Intermediate variable lastN.t to count number of cycles since last visit at t-1. Reset lastN.t(t)=0 when MONITOR(t-1)=1.
-  # DT[, "lastN.t" := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
-  # DT[is.na(DT[["indx"]]), "lastN.t" := NA]
-  # DT[, "indx" := NULL]
-
   # Define chgTRT=TRT(t)-TRT(t-1), switching to treatment (+1), not changing treatment (0), going off treatment (-1). Assume people were off treatment prior to t=0.
   DT[, "chgTRT" := diff(c(0L, .SD[[1]])), by = eval(ID.expression), .SDcols=(TRT)]
-  # The observation is not censored at time-point t
-  # DT[, notC := (get(CENS)==0L), by = eval(ID.expression)]
-
   # (1) Follow rule at t if uncensored and remaining on treatment (TRT(t-1)=TRT(t)=1):
   # rule1: (C[t] == 0L) & (A[t-1] == 1L) & (A[t] == 1)
   DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L)]
-  # DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
-
   # (2) Follow rule at t if uncensored, haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
   # rule2: (C[t] == 0L) & (N[t-1] == 0) & (A[t-1] == A[t])
   # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
   DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L)]
-  # DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L), by = eval(ID.expression), with = FALSE]
-
   # (3) Follow rule at t if uncensored, was monitored (MONITOR(t-1)=0) and either:
   # (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
   for (dtheta in theta) {
     # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
     # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
     DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L)))]
-    # DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L))), by = eval(ID.expression), with = FALSE]
     # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
     DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3]
-    # DT[, "d.follow_allr" := eval(parse(text="d.follow_r1 | d.follow_r2 | d.follow_r3")), by = eval(ID.expression)]
-    # DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3, by = eval(ID.expression)]
     # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:
-    # DT[, paste0("d",dtheta) := eval(parse(text="as.logical(cumprod(d.follow_allr))")), by = eval(ID.expression)]
     DT[, paste0("d",dtheta) := as.logical(cumprod(d.follow_allr)), by = eval(ID.expression)]
   }
-
   DT[, "chgTRT" := NULL]; DT[, "d.follow_r1" := NULL]; DT[, "d.follow_r2" := NULL]; DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]
   if (!is.null(rule.names)) {
     stopifnot(length(rule.names)==length(theta))
@@ -411,7 +408,6 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
   } else {
     rule.names <- paste0("d",theta)
   }
-
   if (!return.allcolumns) {
     DT <- DT[, c(ID, t, rule.names), with=FALSE]
   }
@@ -419,53 +415,76 @@ defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1
 }
 
 
-#' @export
-defineIntervedTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, new.TRT.names = NULL, return.allcolumns = FALSE){
-  ID.expression <- as.name(ID)
-  chgTRT <- as.name("chgTRT")
+# ----------------------------------------------------------------
+#### SUMMARY STATISTICS
+# ----------------------------------------------------------------
+makeFreqTable <- function(rawFreq){
+  ntot <- sum(rawFreq)
+  rawFreqPercent <- rawFreq / ntot * 100
+  fineFreq <- cbind("Frequency"=rawFreq,"\\%"=round(rawFreqPercent,2),"Cumulative Frequency"=cumsum(rawFreq),"Cumulative \\%"=round(cumsum(rawFreqPercent),2))
+  fineFreq <- as.data.frame(fineFreq)
+  eval(parse(text=paste('fineFreq <- cbind(',deparse(substitute(rawFreq)),'=factor(c("',paste(names(rawFreq),collapse='","'),'")),fineFreq)',sep="")))
+  rownames(fineFreq) <- 1:nrow(fineFreq)
+  fineFreq <- as.matrix(fineFreq)
+  return(fineFreq)
+}
 
-  if (return.allcolumns) {
-    DT <- data.table(data, key=c(ID,t))
-  } else if (is.data.table(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1), with = FALSE], key=c(ID,t))
-  } else if (is.data.frame(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1)], key=c(ID,t))
+make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPAW", t.period, se.RDscale.Sdt.K){
+  if (missing(se.RDscale.Sdt.K)) {
+    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S.IPAW), ncol = length(S.IPAW))
+    colnames(se.RDscale.Sdt.K) <- names(S.IPAW)
+    rownames(se.RDscale.Sdt.K) <- names(S.IPAW)
+  }
+  dtheta <- names(S.IPAW)
+  RDtable <- matrix(NA, nrow = (length(dtheta)-1)*2, ncol = length(dtheta)-1)
+  # RDtable <- matrix(NA,nrow=2*3,ncol=3)
+
+  ContrastScale <- ifelse(RDscale,"-","/")
+
+  H0val <- ifelse(RDscale,0,1)
+  ## Compare mean bootstrap to point estimates - should be similar
+  PYK1.IPAW <- allRDtable <- vector("list",length(S.IPAW))
+  names(PYK1.IPAW) <- names(allRDtable) <- names(S.IPAW)
+  PYK1.IPAW <- lapply(S.IPAW,function(x,y)return(1-x[y]),y=t.period)
+
+  rownames(RDtable) <- rep(rev(dtheta)[-length(dtheta)],each=2)
+  colnames(RDtable) <- dtheta[-length(dtheta)]
+
+  for(rule1 in rev(dtheta)[-length(dtheta)]) {
+    for(rule2 in dtheta[ 1:(which(dtheta==rule1)-1) ]){
+      RD <- mapply(ContrastScale,PYK1.IPAW[[rule1]],PYK1.IPAW[[rule2]])
+      (pt <- round(RD,4))
+      (CI <- round(RD+c(qnorm(0.025),-qnorm(0.025))*se.RDscale.Sdt.K[rule1,rule2],4))
+      (ptCI <- paste(pt," [",CI[1],";",CI[2],"]",sep=""))
+      (pval <- paste("SE=",round(se.RDscale.Sdt.K[rule1,rule2],4),", p=", round(2*pnorm( abs((RD-H0val)/se.RDscale.Sdt.K[rule1, rule2]), lower=FALSE ),2) ,sep=""))
+      RDtable[ rownames(RDtable)%in%rule1,rule2] <- c(ptCI,pval)
+    }
+  }
+  RDtable[is.na(RDtable)] <- ""
+  RDtable <- cbind("d1 (row) | d2 (col)"=rep(rev(dtheta)[-length(dtheta)],each=2) , RDtable)
+  fileText <- paste(esti,ifelse(RDscale,"RD","RR"),sep="")
+  captionText2 <- ifelse(RDscale,"differences","ratios")
+  captionText3 <- ifelse(RDscale,"$-$","$/$")
+
+  if (esti %in% c("IPAW", "IPW")) {
+    estimates <- "Stabilized inverse weighting"
+  } else if(esti %in% c("IPAWtrunc","IPWtrunc")){
+    estimates <- "Stabilized, truncated inverse weighting"
+  } else if (esti %in% "crude") {
+    estimates <- "Crude"
   } else {
-    stop("input data must be either a data.table or a data.frame")
+    estimates <- ""
   }
 
-  CheckVarNameExists(DT, ID)
-  CheckVarNameExists(DT, t)
-  CheckVarNameExists(DT, I)
-  CheckVarNameExists(DT, TRT)
-  CheckVarNameExists(DT, MONITOR)
-  CheckVarNameExists(DT, tsinceNis1)
+  model <- "MSM"
+  if(esti %in% "crude") model <- "model"
 
-  if (!is.null(new.TRT.names)) {
-    stopifnot(length(new.TRT.names)==length(theta))
-  } else {
-    new.TRT.names <- paste0(TRT,".gstar.","d",theta)
-  }
-
-  for (dtheta.i in seq_along(theta)) {
-    dtheta <- theta[dtheta.i]
-    # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
-    # 1. by default, nobody is treated
-    DT[, "new.TRT.gstar" :=  NA_integer_]
-    # 2. the person can switch to treatment the earliest time 'I' goes over the threshold (while being monitored)
-    # NOTE: ****** (tsinceNis1 > 0) is equivalent to (N(t-1)==0) ******
-    DT[(get(tsinceNis1) == 0L) & (get(I) >= eval(dtheta)), "new.TRT.gstar" :=  1L]
-    # 3. once the person goes on treatment he/she has to stay on it until the end of the follow-up (using carry-forward)
-    DT[, new.TRT.gstar := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
-    # 4. all remaining NA's must be the ones that occurred prior to treatment switch -> all must be 0 (not-treated)
-    DT[is.na(new.TRT.gstar), new.TRT.gstar := 0]
-
-    setnames(DT, old = "new.TRT.gstar", new = new.TRT.names[dtheta.i])
-  }
-
-  if (!return.allcolumns) {
-    DT <- DT[, c(ID, t, new.TRT.names), with = FALSE]
-  }
-
-  return(DT)
+  caption <- paste(estimates,
+      " estimates of the (cumulative) risk ",
+      captionText2,", $d_1$",
+      captionText3,"$d_2$, over ", t.period," periods. The risk contrasts are derived from a logistic ", model,
+      " for the discrete-time hazards fitted based on ", nobs,
+      " observations. Variance estimates are derived based on the influence curve of the estimator.",sep="")
+  rownames(RDtable) <- NULL
+  return(list(RDtable = RDtable, caption = caption))
 }
