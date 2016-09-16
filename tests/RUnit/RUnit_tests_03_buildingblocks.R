@@ -13,7 +13,6 @@ test.buildingblocks <- function() {
   OdataNoCENS[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
   OdataNoCENS[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]
 
-
   # --------------------------------
   # EXAMPLE 1:
   # --------------------------------

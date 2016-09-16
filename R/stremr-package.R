@@ -67,20 +67,24 @@ NULL
 #' @format A data frame with 10,000 observations and variables:
 #' \describe{
 #'   \item{ID}{Unique subject identifier}
-#'   \item{CVD}{Baseline confounder (time invariant)}
 #'   \item{t}{Interger for current time period, range 0-16}
-#'   \item{Y}{Binary outcome}
+#'   \item{CVD}{Baseline confounder (time invariant)}
 #'   \item{lastNat1}{Time since last monitoring event, set to 0 when N[t-1]=0 and then added one for each new period where N[t] is 0.}
 #'   \item{highA1c}{Time-varying confounder}
 #'   \item{TI}{Binary exposure variable}
-#'   \item{C}{Degenerate censoring variable, always set to 0}
-#'   \item{C}{Binary censoring indicator derived from CatC. 0 if CatC is 0 and 1 if CatC is 1 or 2.}
+#'   \item{C}{Administrative censoring indicator, always set to 0 unless the end of study is reached (t==16)}
 #'   \item{N}{The random indicator of being monitored (having a visit), simulated as a Bernoulli RV with P(N(t)=1)=0.5}
+#'   \item{Y.tplus1}{Indicator of the survival event at t}
+#'   \item{gTI.dlow}{Counterfactual exposure under static intervention - always treat}
+#'   \item{gTI.dhigh}{Counterfactual exposure under dynamic intervention - treat only when highA1c is above 1 and the subject is being monitored}
+#'   \item{gPois3.yrly}{Poisson probability of counterfactual monitoring indicator being equal to 1}
+#'   \item{gPois3.biyrly}{Poisson probability of counterfactual monitoring indicator being equal to 1}
+#'   \item{gp05}{Bernoulli probability of counterfactual monitoring indicator being equal to 1}
 #' }
 #' @docType data
 #' @keywords datasets
-#' @name O.data.simstudy.g05
-#' @usage data(O.data.simstudy.g05)
+#' @name OdatDT_10K
+#' @usage data(OdatDT_10K)
 NULL
 
 

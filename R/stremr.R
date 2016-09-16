@@ -4,8 +4,8 @@
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is
 #' @importFrom stats approx binomial coef glm.control glm.fit plogis predict qlogis qnorm quantile rnorm terms var predict glm.control
-#' @importFrom utils data head str
-#' @importFrom stats as.formula glm na.exclude rbinom terms.formula
+#' @importFrom utils data head str capture.output
+#' @importFrom stats as.formula glm na.exclude rbinom terms.formula pnorm quasibinomial
 NULL
 
 #-----------------------------------------------------------------------------

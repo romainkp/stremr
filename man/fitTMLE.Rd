@@ -6,8 +6,11 @@
 \usage{
 fitTMLE(...)
 }
+\arguments{
+\item{...}{Arguments that will be passed down to the underlying function \code{fitSeqGcomp}}
+}
 \value{
-...
+\code{data.table} with TMLE survival by time
 }
 \description{
 Calls \code{fitSeqGcomp} with argument \code{TMLE = TRUE}.

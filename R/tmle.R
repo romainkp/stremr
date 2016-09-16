@@ -139,7 +139,8 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' Iterative TMLE wrapper for \code{fitSeqGcomp}
 #'
 #' Calls \code{fitSeqGcomp} with argument \code{iterTMLE = TRUE}.
-#' @return ...
+#' @param ... Arguments that will be passed down to the underlying function \code{fitSeqGcomp}
+#' @return \code{data.table} with survival by time for sequential GCOMP and iterative TMLE
 #' @seealso \code{\link{fitSeqGcomp}}
 #' @export
 fitIterTMLE <- function(...) {
@@ -150,7 +151,8 @@ fitIterTMLE <- function(...) {
 #' TMLE wrapper for \code{fitSeqGcomp}
 #'
 #' Calls \code{fitSeqGcomp} with argument \code{TMLE = TRUE}.
-#' @return ...
+#' @param ... Arguments that will be passed down to the underlying function \code{fitSeqGcomp}
+#' @return \code{data.table} with TMLE survival by time
 #' @seealso \code{\link{fitSeqGcomp}}
 #' @export
 fitTMLE <- function(...) {

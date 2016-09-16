@@ -6,8 +6,11 @@
 \usage{
 fitIterTMLE(...)
 }
+\arguments{
+\item{...}{Arguments that will be passed down to the underlying function \code{fitSeqGcomp}}
+}
 \value{
-...
+\code{data.table} with survival by time for sequential GCOMP and iterative TMLE
 }
 \description{
 Calls \code{fitSeqGcomp} with argument \code{iterTMLE = TRUE}.

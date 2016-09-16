@@ -31,9 +31,8 @@ before_install:
 
 r_binary_packages:
   - assertthat
+  - doParallel
   - foreach
-  - ggplot2
-  - igraph
   - knitr
   - R6
   - Rcpp
