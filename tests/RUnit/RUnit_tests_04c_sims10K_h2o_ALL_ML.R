@@ -34,6 +34,8 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
+  # select only the first 1,000 IDs
+  Odat_DT <- Odat_DT[ID %in% (1:1000), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   # ---------------------------------------------------------------------------
@@ -121,4 +123,6 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
                   WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
+
+  h2o::h2o.shutdown(prompt = FALSE)
 }

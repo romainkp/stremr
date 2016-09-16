@@ -207,10 +207,10 @@ test.speedglm.allestimators10Kdata <- function() {
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
   wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-  survNPMSM(wts.St.dlow, OData)
+  surv1 <- survNPMSM(wts.St.dlow, OData)
 
   wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-  survNPMSM(wts.St.dhigh, OData)
+  surv2 <- survNPMSM(wts.St.dhigh, OData)
 
   # ------------------------------------------------------------------
   # Piping the workflow
@@ -239,7 +239,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # ---------------------------------------------------------------------------------------------------------
   # TMLE / GCOMP
   # ---------------------------------------------------------------------------------------------------------
-  t.surv <- c(9,10)
+  t.surv <- c(4,5)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
@@ -261,7 +261,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # registerDoParallel(cores = 2)
   if (exists("setthreads")) data.table::setthreads(1)
 
-  t.surv <- c(0:5)
+  t.surv <- c(0:3)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   # tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
@@ -281,31 +281,29 @@ test.speedglm.allestimators10Kdata <- function() {
   # ------------------------------------------------------------------
   # Make a report:
   # ------------------------------------------------------------------
-  # DO NOT RUN DURING REMOTE TESTS
-  # if (FALSE) {
-    # report.path <- "/home/ubuntu/stremr_example"
-    # file.path = report.path,
-    make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe", openFile = FALSE)
-    is.list(tmle_est_par2)
+  # report.path <- "/home/ubuntu/stremr_example"
+  # file.path = report.path,
+  # test for opening file in local OS
+  make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe", openFile = TRUE)
+  is.list(tmle_est_par2)
 
-    make_report_rmd(OData, MSM = MSM.IPAW, TMLE = tmle_est_par1,
-                    AddFUPtables = TRUE, openFile = FALSE,
-                    RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                    WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
+  make_report_rmd(OData, MSM = MSM.IPAW, TMLE = tmle_est_par1,
+                  AddFUPtables = TRUE, openFile = FALSE,
+                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
-    make_report_rmd(OData, MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
-                    AddFUPtables = TRUE, openFile = FALSE,
-                    RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                    WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
+  make_report_rmd(OData, MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+                  AddFUPtables = TRUE, openFile = FALSE,
+                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
-    make_report_rmd(OData, MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
-                    AddFUPtables = TRUE, openFile = FALSE,
-                    RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                    WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
-  # }
+  make_report_rmd(OData, MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+                  AddFUPtables = TRUE, openFile = FALSE,
+                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
 
   # # omit extra modeling stuff (only coefficients):
   # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
@@ -317,7 +315,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # ---------------------------------------------------------------------------------------------------------
   # TMLE / GCOMP with intervention on MONITOR
   # ---------------------------------------------------------------------------------------------------------
-  t.surv <- c(10)
+  t.surv <- c(4)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
@@ -330,13 +328,17 @@ test.speedglm.allestimators10Kdata <- function() {
   # pooling all observations (no stratification):
   tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
   tmle_est4
+
   # ---------------------------------------------------------------------------------------------------------
   # TMLE w/ h2o random forest
   # ---------------------------------------------------------------------------------------------------------
+  h2o::h2o.init(nthreads = 1)
+  params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 4, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
   # params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
-  # t.surv <- c(10)
-  # Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  # tmle_est
+  t.surv <- c(3)
+  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  tmle_est[]
+  h2o::h2o.shutdown(prompt = FALSE)
 
 }
