@@ -70,9 +70,10 @@ define.intervals <- function(x, nbins, bin_bymass, bin_bydhist, max_nperbin) {
     intvec[1] <- intvec[1] - 0.01
     intvec[length(intvec)] <- intvec[length(intvec)] + 0.01
   } else if (bin_bydhist) {
-    intvec <- dhist(x, plot = FALSE, nbins = nbins)$xbr
-    intvec[1] <- intvec[1] - 0.01
-    intvec[length(intvec)] <- intvec[length(intvec)] + 0.01
+    stop("... binning continuous variable: dhist bin definitions are no longer available...")
+    # intvec <- dhist(x, plot = FALSE, nbins = nbins)$xbr
+    # intvec[1] <- intvec[1] - 0.01
+    # intvec[length(intvec)] <- intvec[length(intvec)] + 0.01
   }
   # adding -Inf & +Inf as leftmost & rightmost cutoff points to make sure all future data points end up in one of the intervals:
   intvec <- c(min(intvec)-1000L, intvec, max(intvec)+1000L)
