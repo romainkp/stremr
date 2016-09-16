@@ -63,7 +63,8 @@ notest.savedSL.10Kdata <- function() {
   set_all_stremr_options(fit.package = "h2o", fit.algorithm = "SuperLearner")
   require("h2o")
   require('h2oEnsemble')
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
+  # h2o::h2o.init(nthreads = -1)
   # h2o::h2o.init(nthreads = -1, startH2O = FALSE)
 
   data(OdatDT_10K)

@@ -1,25 +1,17 @@
 test.GCOMP.TMLE.10Kdata <- function() {
   `%+%` <- function(a, b) paste0(a, b)
-  # --------------------------------
+  # ---------------------------------------------------------------------------
   # INSTALL CORRECT VERSIONS of data.table and stremr from github:
-  # --------------------------------
+  # ---------------------------------------------------------------------------
   # devtools::install_github('Rdatatable/data.table')
-  require("data.table")
   # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
-  # require("stremr")
+  require("data.table")
 
-  # # --------------------------------
+  # # ---------------------------------------------------------------------------
   # # Test data set included in stremr:
-  # # --------------------------------
-  # data(O.data.simstudy.g05)
-  # O.data <- O.data.simstudy.g05
+  # # ---------------------------------------------------------------------------
   # head(O.data)
   data(OdatDT_10K)
-
-  # --------------------------------
-  # Test data with 1mil obs:
-  # --------------------------------
-  # data(Odatg05_1mil)
   ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y.tplus1"; I <- "highA1c";
 
   # ---------------------------------------------------------------------------
@@ -135,7 +127,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # gcomp_est; tmle_est
 
   # ------------------------------------------------------------------------
-  # TEST FOR ERROR WITH > 1 REGRESSION AND > 1 STATA (SHOULD WORK)
+  # TEST FOR PROBLEMS WITH > 1 REGRESSION AND > 1 STATA (SHOULD WORK)
   # ------------------------------------------------------------------------
   gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
   stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))

@@ -1,6 +1,3 @@
-options(width = 100)
-`%+%` <- function(a, b) paste0(a, b)
-require("data.table")
 # --------------------------------------------------------------------------------------------------------
 # Install h2o (most recent version)
 # --------------------------------------------------------------------------------------------------------
@@ -149,6 +146,10 @@ notrun.save.example.data.04 <- function() {
 }
 
 test.allestimators10Kdata <- function() {
+  options(width = 100)
+  `%+%` <- function(a, b) paste0(a, b)
+  require("data.table")
+
   # obsDTg05_500K <- data.table::fread(input = "./obsDTg05_500K.csv", header = TRUE, na.strings = "NA_h2o")
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
@@ -171,19 +172,13 @@ test.allestimators10Kdata <- function() {
   # IMPORT DATA
   # ----------------------------------------------------------------
   # require("stremr")
-  options(stremr.verbose = TRUE)
+  # options(stremr.verbose = TRUE)
   # set_all_stremr_options(fit.package = "glm", fit.algorithm = "glm")
   set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
-  # require("h2o")
-  # h2o::h2o.init(nthreads = -1)
-  # h2o::h2o.shutdown(prompt = FALSE)
-
   OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
-  # to see the input data.table:
-  OData$dat.sVar
+
+  # To inspect the input data.table:
+  # OData$dat.sVar
 
   # ------------------------------------------------------------------
   # Fit propensity scores for Treatment, Censoring & Monitoring
@@ -201,7 +196,6 @@ test.allestimators10Kdata <- function() {
   # stratify_CENS <- list()
 
   gform_MONITOR <- "N ~ 1"
-
   # **** really want to define it like this ****
   # gform_TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
   #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
@@ -235,7 +229,7 @@ test.allestimators10Kdata <- function() {
   MSM.IPAW <- survMSM(OData,
                       wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
                       t_breaks = c(1:8,12,16)-1,
-                      est_name = "IPAW", getSEs = FALSE)
+                      est_name = "IPAW", getSEs = TRUE)
   names(MSM.IPAW)
   MSM.IPAW$St
 
@@ -260,11 +254,9 @@ test.allestimators10Kdata <- function() {
   # ------------------------------------------------------------------------
   # RUN in PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)
   # ------------------------------------------------------------------------
-  # require("doRedis")
-  # registerDoRedis("jobs", password = "JFEFlfki249fkjsk2~.<+JFEFl;")
   # require("doParallel")
   # registerDoParallel(cores = 2)
-  data.table::setthreads(1)
+  if (exists("setthreads")) data.table::setthreads(1)
 
   t.surv <- c(0:5)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
