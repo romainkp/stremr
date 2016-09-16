@@ -19,16 +19,22 @@ is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(Da
 `%+%` <- function(a, b) paste0(a, b)
 is.integerish <- function (x) is.integer(x) || (is.numeric(x) && all(x == as.integer(x)))
 
-# Return the left hand side variable of formula f as a character
-LhsVars <- function(f) {
-  f <- as.formula(f)
-  return(as.character(f[[2]]))
-}
-# Return the right hand side variables of formula f as a character vector
-RhsVars <- function(f) {
-  f <- as.formula(f)
-  return(all.vars(f[[3]]))
-}
+# # Return the left hand side variable of formula f as a character
+# LhsVars <- function(f) {
+#   f <- as.formula(f)
+#   return(as.character(f[[2]]))
+# }
+# # Return the right hand side variables of formula f as a character vector
+# RhsVars <- function(f) {
+#   f <- as.formula(f)
+#   return(all.vars(f[[3]]))
+# }
+# # Bound g(A|W) probability within supplied bounds
+# bound <- function(x, bounds){
+#   x[x<min(bounds)] <- min(bounds)
+#   x[x>max(bounds)] <- max(bounds)
+#   return(x)
+# }
 
 checkpkgs <- function(pkgs) {
   for (pkg in pkgs) {
@@ -36,32 +42,6 @@ checkpkgs <- function(pkgs) {
       stop(pkg %+% " package needed for this function to work. Please install it.", call. = FALSE)
     }
   }
-}
-
-# Bound g(A|W) probability within supplied bounds
-bound <- function(x, bounds){
-  x[x<min(bounds)] <- min(bounds)
-  x[x>max(bounds)] <- max(bounds)
-  return(x)
-}
-
-#if warning is in ignoreWarningList, ignore it; otherwise post it as usual
-SuppressGivenWarnings <- function(expr, warningsToIgnore) {
-  h <- function (w) {
-    if (w$message %in% warningsToIgnore) invokeRestart( "muffleWarning" )
-  }
-  withCallingHandlers(expr, warning = h )
-}
-
-GetWarningsToSuppress <- function(update.step=FALSE) {
-  warnings.to.suppress <- c("glm.fit: fitted probabilities numerically 0 or 1 occurred",
-                            "prediction from a rank-deficient fit may be misleading",
-                            "non-integer #successes in a binomial glm!",
-                            "the matrix is either rank-deficient or indefinite")
-  if (update.step) {
-    warnings.to.suppress <- c(warnings.to.suppress, "glm.fit: algorithm did not converge")
-  }
-  return(warnings.to.suppress)
 }
 
 # returns NULL if no factors exist, otherwise return the name of the factor variable(s)
@@ -84,16 +64,23 @@ CheckVarNameExists <- function(data, varname) {
   return(invisible(NULL))
 }
 
-# Return the left hand side variable of formula f as a character
-LhsVars <- function(f) {
-  f <- as.formula(f)
-  return(as.character(f[[2]]))
+#if warning is in ignoreWarningList, ignore it; otherwise post it as usual
+SuppressGivenWarnings <- function(expr, warningsToIgnore) {
+  h <- function (w) {
+    if (w$message %in% warningsToIgnore) invokeRestart( "muffleWarning" )
+  }
+  withCallingHandlers(expr, warning = h )
 }
 
-# Return the right hand side variables of formula f as a character vector
-RhsVars <- function(f) {
-  f <- as.formula(f)
-  return(all.vars(f[[3]]))
+GetWarningsToSuppress <- function(update.step=FALSE) {
+  warnings.to.suppress <- c("glm.fit: fitted probabilities numerically 0 or 1 occurred",
+                            "prediction from a rank-deficient fit may be misleading",
+                            "non-integer #successes in a binomial glm!",
+                            "the matrix is either rank-deficient or indefinite")
+  if (update.step) {
+    warnings.to.suppress <- c(warnings.to.suppress, "glm.fit: algorithm did not converge")
+  }
+  return(warnings.to.suppress)
 }
 
 #---------------------------------------------------------------------------------

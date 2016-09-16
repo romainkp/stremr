@@ -84,6 +84,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
 }
 
 fit.h2oSuperLearner <- function(fit.class, fit, training_frame, y, x, model_contrl, fold_column, ...) {
+  val <- checkpkgs(pkgs=c("h2oEnsemble"))
   if (is.null(fold_column)) stop("must define the column of CV fold IDs using data$define_CVfolds()")
 
   if (!is.null(model_contrl$load.ensemble) && model_contrl$load.ensemble) {
