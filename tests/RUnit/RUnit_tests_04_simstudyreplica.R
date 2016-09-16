@@ -262,34 +262,37 @@ test.allestimators10Kdata <- function() {
   # ------------------------------------------------------------------------
   # require("doRedis")
   # registerDoRedis("jobs", password = "JFEFlfki249fkjsk2~.<+JFEFl;")
-  require("doParallel")
-  registerDoParallel(cores = 2)
+  # require("doParallel")
+  # registerDoParallel(cores = 2)
   # data.table::setthreads(1)
 
   t.surv <- c(0:5)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
   tmle_est_par1
-  tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pool.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pool.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pool.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
   tmle_est_par2
 
-  tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "strat.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+  # tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "strat.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+  tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "strat.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
   tmle_est_par3
-  tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "strat.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+  # tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "strat.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+  tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "strat.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
   tmle_est_par4
 
   # ------------------------------------------------------------------
   # Make a report:
   # ------------------------------------------------------------------
-  make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe", openFile = FALSE)
-  is.list(tmle_est_par2)
-
-  # report.path <- "/home/ubuntu/stremr_example"
-  # file.path = report.path,
-
   # DO NOT RUN DURING REMOTE TESTS
   if (FALSE) {
+    # report.path <- "/home/ubuntu/stremr_example"
+    # file.path = report.path,
+    make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe", openFile = FALSE)
+    is.list(tmle_est_par2)
+
     make_report_rmd(OData, MSM = MSM.IPAW, TMLE = tmle_est_par1,
                     AddFUPtables = TRUE, openFile = FALSE,
                     RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
