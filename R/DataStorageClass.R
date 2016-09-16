@@ -155,7 +155,7 @@ is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 #'   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
 #'   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
 #'   \item{\code{bin.nms.sVar(name.sVar, nbins)}}{...}
-#'   \item{\code{pooled.bin.nm.sVar(name.sVar)}}{...}
+#   \item{\code{pooled.bin.nm.sVar(name.sVar)}}{...}
 #'   \item{\code{detect.sVar.intrvls(name.sVar, nbins, bin_bymass, bin_bydhist, max_nperbin)}}{...}
 #'   \item{\code{detect.cat.sVar.levels(name.sVar)}}{...}
 #'   \item{\code{binirize.sVar(name.sVar, ...)}}{...}
@@ -352,7 +352,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # Binning methods for categorical/continuous sVar
     # ------------------------------------------------------------------------------------------------------------
     bin.nms.sVar = function(name.sVar, nbins) { name.sVar%+%"_"%+%"B."%+%(1L:nbins) }, # Return names of bin indicators for sVar:
-    pooled.bin.nm.sVar = function(name.sVar) { name.sVar %+% "_allB.j" },
+    # pooled.bin.nm.sVar = function(name.sVar) { name.sVar %+% "_allB.j" },
     detect.sVar.intrvls = function(name.sVar, nbins, bin_bymass, bin_bydhist, max_nperbin) {
       tol.int <- 0.001
       int <- define.intervals(x = self$get.sVar(name.sVar), nbins = nbins, bin_bymass = bin_bymass, bin_bydhist = bin_bydhist, max_nperbin = max_nperbin)

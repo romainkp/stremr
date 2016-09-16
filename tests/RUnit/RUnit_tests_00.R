@@ -129,6 +129,7 @@ test.options <- function() {
 
 # test various regression / subsetting schemes and make sure it works as expected
 test.DataStorageClass <- function() {
+  options(stremr.verbose = TRUE)
   require("data.table")
   data(OdataNoCENS)
   OdataNoCENS <- as.data.table(OdataNoCENS, key=c(ID, t))
@@ -143,7 +144,6 @@ test.DataStorageClass <- function() {
   gform_TRT = "continA ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
 
-  # OData$
   checkException(OData <- fitPropensity(OData = OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR))
 
   # testing various methods of DataStorageClass:
@@ -209,6 +209,44 @@ test.DataStorageClass <- function() {
   # ------------------------------------------------------------------------------
   wideDT <- OData$convert.to.wide(bslcovars = "CVD")
 
+  # ------------------------------------------------------------------------------
+  # Active bindings
+  # ------------------------------------------------------------------------------
+  OData$min.t
+  OData$max.t
+  OData$nobs
+  OData$nuniqueIDs
+  OData$nuniquets
+  OData$names.sVar
+  OData$ncols.sVar
+  OData$dat.sVar
+
+  OData$H2O.dat.sVar
+  # H2O.dat.sVar = function(dat.sVar) {
+  #   if (missing(dat.sVar)) {
+  #     return(private$.H2O.mat.sVar)
+  #   } else {
+  #     assert_that(is.H2OFrame(dat.sVar))
+  #     private$.H2O.mat.sVar <- dat.sVar
+  #   }
+  # },
+
+  head(OData$dat.bin.sVar)
+  OData$dat.bin.sVar <- OData$dat.bin.sVar
+
+  OData$backup.savedGstarsDT
+  head(OData$noNA.Ynodevals)
+
+  checkTrue(OData$active.bin.sVar %in% "continA")
+  head(OData$ord.sVar)
+
+  # wipe out binirized .mat.sVar:
+  OData$emptydat.bin.sVar
+  checkTrue(is.null(OData$dat.bin.sVar))
+  # wipe out input data:
+  OData$emptydat.sVar
+  checkTrue(is.null(OData$dat.sVar))
+  options(stremr.verbose = FALSE)
 }
 
 # test various regression / subsetting schemes and make sure it works as expected
