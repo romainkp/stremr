@@ -264,7 +264,7 @@ test.allestimators10Kdata <- function() {
   # registerDoRedis("jobs", password = "JFEFlfki249fkjsk2~.<+JFEFl;")
   # require("doParallel")
   # registerDoParallel(cores = 2)
-  # data.table::setthreads(1)
+  data.table::setthreads(1)
 
   t.surv <- c(0:5)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
