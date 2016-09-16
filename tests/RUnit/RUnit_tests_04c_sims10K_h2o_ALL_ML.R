@@ -36,6 +36,7 @@
 test.h2o.ALL.ML.allestimators10Kdata <- function() {
   `%+%` <- function(a, b) paste0(a, b)
   # options(stremr.verbose = TRUE)
+  options(stremr.verbose = FALSE)
   require("data.table")
   require("h2o")
 

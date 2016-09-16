@@ -27,6 +27,7 @@
 # Test speedglm
 # ---------------------------------------------------------------------------
 test.speedglm.allestimators10Kdata <- function() {
+  options(stremr.verbose = FALSE)
   options(width = 100)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
@@ -211,6 +212,7 @@ test.speedglm.allestimators10Kdata <- function() {
 # Test speedglm
 # ---------------------------------------------------------------------------
 test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
+  options(stremr.verbose = FALSE)
   options(width = 100)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")

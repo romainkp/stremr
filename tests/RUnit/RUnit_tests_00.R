@@ -115,14 +115,14 @@ test.options <- function() {
   stremr:::gvars$misval
   stremr:::testmisfun()
   stremr:::get.misval()
-  set.misval(stremr:::gvars, -999)
+  stremr:::set.misval(stremr:::gvars, -999)
   stremr:::testmisfun()
   stremr:::get.misval()
-  set.misval(stremr:::gvars, "-999")
+  stremr:::set.misval(stremr:::gvars, "-999")
   stremr:::testmisfun()
   stremr:::get.misval()
 
-  set.misval(stremr:::gvars, NA)
+  stremr:::set.misval(stremr:::gvars, NA)
   stremr:::testmisfun()
   stremr:::get.misval()
 }

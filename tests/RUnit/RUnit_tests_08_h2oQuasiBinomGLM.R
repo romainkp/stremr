@@ -1,4 +1,5 @@
 notest.h2oQuasiBinomGLM.Ensemble <- function() {
+    options(stremr.verbose = FALSE)
     `%+%` <- function(a, b) paste0(a, b)
     require("h2o")
     h2o::h2o.init(nthreads = 1)

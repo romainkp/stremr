@@ -1,4 +1,5 @@
 test.iterTMLE.10Kdata <- function() {
+  options(stremr.verbose = FALSE)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
   data(OdatDT_10K)

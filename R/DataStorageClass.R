@@ -590,16 +590,16 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     # -----------------------------------------------------------------------------
-    # Create an H2OFrame and save a pointer to it as a private field
+    # (NOT USED) Create an H2OFrame and save a pointer to it as a private field
     # -----------------------------------------------------------------------------
-    load.to.H2O = function() {
-      # if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
-      dat.sVar <- self$dat.sVar
-      # assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))
-      H2O.dat.sVar <- h2o::as.h2o(dat.sVar, destination_frame = "H2O.dat.sVar")
-      self$H2O.dat.sVar <- H2O.dat.sVar
-      return(invisible(self))
-    },
+    # load.to.H2O = function() {
+    #   # if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
+    #   dat.sVar <- self$dat.sVar
+    #   # assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))
+    #   H2O.dat.sVar <- h2o::as.h2o(dat.sVar, destination_frame = "H2O.dat.sVar")
+    #   self$H2O.dat.sVar <- H2O.dat.sVar
+    #   return(invisible(self))
+    # },
     # -----------------------------------------------------------------------------
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------
