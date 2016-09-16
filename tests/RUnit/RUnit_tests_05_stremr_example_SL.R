@@ -43,7 +43,7 @@ test.h2oEnsemble <- function() {
     # ----------------------------------------------------------------
     # IMPORT DATA / INIT h2o
     # ----------------------------------------------------------------
-    # options(stremr.verbose = TRUE)
+    options(stremr.verbose = TRUE)
     set_all_stremr_options(fit.package = "h2o", fit.algorithm = "SuperLearner")
     # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "RF")
     # h2o::h2o.init(nthreads = -1)
@@ -173,6 +173,8 @@ test.h2oEnsemble <- function() {
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                             params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
+
+    stop("SL end")
 
     require("magrittr")
     St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%

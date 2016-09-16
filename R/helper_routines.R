@@ -116,7 +116,7 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 #' This variable is added as a new column to the output dataset.
 #' The column MONITOR(t) is set to 1 when the indicator imp.I (imputed biomarker) is 0 at time-point t+1 and vice versa.
 #' @param tsinceNis1 The name of the future column (created by this routine) that counts number of periods since last monitoring event at t-1. More precisely,
-#' it is a function of the past \code{bar{N}(t−1)}, where 0 means that N(t−1)=1; 1 means that N(t−2)=1 and N(t−1)=0; etc.
+#' it is a function of the past \code{N(t−1)}, where 0 means that N(t−1)=1; 1 means that N(t−2)=1 and N(t−1)=0; etc.
 #'
 #' @section Details:
 #'
@@ -125,7 +125,7 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 #' N(t) at time-point t is defined as the indicator of being observed (having an office visit) at time point t+1 (next timepoint after t)
 #' The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observed/measured (hence I.imp=0 for each first subject-time observation).
 #'
-#' @section The format of the input and output datasets:
+#' @section Data Format:
 #'
 #' The input data.frame data needs to be in long format.
 #'
