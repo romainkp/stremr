@@ -37,11 +37,14 @@ openFileInOS <- function(f) {
 #'
 #' @param OData Input data object returned by the function \code{importData}.
 #' @param MSM The MSM object fits returned by the function \code{survMSM}.
-#' @param TMLE ...
-#' @param GCOMP ...
+#' @param NPMSM Optional list of a resulting calls to \code{survNPMSM} or a result of a single call to \code{survNPMSM}.
+#' @param TMLE Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{fitTMLE}.
+#' @param GCOMP Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{fitSeqGcomp}.
+#' @param wts_data Optional list of data.tables or a single data.table with weights by regimen.
 #' @param SurvByRegimen ... Not implemented ...
 #' @param WTtables Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}
-#' @param AddFUPtables Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times by rule (monitoring and treatment).
+#' @param AddFUPtables Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
+#' by rule (monitoring and treatment).
 #' @param RDtables List of tables with risk differences returned by the function \code{get_MSM_RDs}.
 #' @param format Choose the Pandoc output format for the report file (html, pdf or word).
 #' Note that the html report file is always produced in addition to any other selected format.
@@ -53,12 +56,16 @@ openFileInOS <- function(f) {
 #' @param keep_tex Keep the source .tex files for pdf output?
 #' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
 #' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
-#' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
+#' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}:
+#' \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"), skip.modelfits = FALSE, file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'), openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
+make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
+                            WTtables = NULL, AddFUPtables = FALSE, RDtables,
+                            format = c("html", "pdf", "word"), skip.modelfits = FALSE,
+                            file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'),
+                            openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)
-
   if ("author" %in% names(optArgReport)) {
     author <- optArgReport[['author']]
     assert_that(is.character(author))

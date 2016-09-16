@@ -23,9 +23,12 @@
 # --------------------------------------------------------------------------------------------------------
 # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 
-test.h2oglm.allestimators10Kdata <- function() {
-  options(width = 100)
+# ---------------------------------------------------------------------------
+# Test h2o randomForest, GBM and deeplearning
+# ---------------------------------------------------------------------------
+test.h2o.ALL.ML.allestimators10Kdata <- function() {
   `%+%` <- function(a, b) paste0(a, b)
+  options(stremr.verbose = TRUE)
   require("data.table")
   require("h2o")
 
@@ -44,26 +47,8 @@ test.h2oglm.allestimators10Kdata <- function() {
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
   Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 
-  # ----------------------------------------------------------------
-  # IMPORT DATA
-  # ----------------------------------------------------------------
-  # require("stremr")
-  # options(stremr.verbose = TRUE)
-  # set_all_stremr_options(fit.package = "glm", fit.algorithm = "glm")
-  # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
-  set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
-  h2o::h2o.init(nthreads = 1)
-  # h2o::h2o.init(nthreads = -1)
-  # h2o::h2o.shutdown(prompt = FALSE)
-
-  OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
-  # to see the input data.table:
-  OData$dat.sVar
-
   # ------------------------------------------------------------------
-  # Fit propensity scores for Treatment, Censoring & Monitoring
+  # Propensity score models for Treatment, Censoring & Monitoring
   # ------------------------------------------------------------------
   gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
   stratify_TRT <- list(
@@ -74,63 +59,66 @@ test.h2oglm.allestimators10Kdata <- function() {
         ))
 
   gform_CENS <- c("C ~ highA1c + t")
-  # stratify_CENS <- list(C=c("t < 16", "t == 16"))
-  # stratify_CENS <- list()
-
   gform_MONITOR <- "N ~ 1"
-  # **** really want to define it like this ****
-  # gform_TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
-  #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
 
+  # ----------------------------------------------------------------
+  # SET UP h2o cluster & IMPORT DATA
+  # ----------------------------------------------------------------
+  h2o::h2o.init(nthreads = 1)
+  OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+
+  # ----------------------------------------------------------------
+  # FIT PROPENSITY SCORES WITH randomForest
+  # ----------------------------------------------------------------
+  set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
   OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
   wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-  survNPMSM(wts.St.dlow, OData)
-
+  surv1 <- survNPMSM(wts.St.dlow, OData)
   wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-  survNPMSM(wts.St.dhigh, OData)
+  surv2 <- survNPMSM(wts.St.dhigh, OData)
 
-  # ------------------------------------------------------------------
-  # Piping the workflow
-  # ------------------------------------------------------------------
-  require("magrittr")
-  St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
-             survNPMSM(OData)  %$%
-             IPW_estimates
-  St.dlow
-
-  St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
-              survNPMSM(OData) %$%
-              IPW_estimates
-  St.dhigh
-
-  # ------------------------------------------------------------------
-  # Running IPW-adjusted MSM for the hazard
-  # ------------------------------------------------------------------
-  MSM.IPAW <- survMSM(OData,
-                      wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
-                      t_breaks = c(1:8,12,16)-1,
-                      est_name = "IPAW", getSEs = TRUE)
-  # names(MSM.IPAW)
-  # MSM.IPAW$St
-
-  make_report_rmd(OData, MSM = MSM.IPAW,
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+  make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                  AddFUPtables = TRUE,
+                  openFile = FALSE,
+                  WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
-  make_report_rmd(OData, MSM = MSM.IPAW,
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+  # ----------------------------------------------------------------
+  # FIT PROPENSITY SCORES WITH gbm
+  # ----------------------------------------------------------------
+  set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
+  OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                          stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+
+  wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+  surv1 <- survNPMSM(wts.St.dlow, OData)
+  wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+  surv2 <- survNPMSM(wts.St.dhigh, OData)
+
+  make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                  AddFUPtables = TRUE,
+                  openFile = FALSE,
+                  WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
-  make_report_rmd(OData, MSM = MSM.IPAW,
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
+  # ----------------------------------------------------------------
+  # FIT PROPENSITY SCORES WITH deeplearning
+  # ----------------------------------------------------------------
+  set_all_stremr_options(fit.package = "h2o", fit.algorithm = "deeplearning")
+  OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                          stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+
+  wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+  surv1 <- survNPMSM(wts.St.dlow, OData)
+  wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+  surv2 <- survNPMSM(wts.St.dhigh, OData)
+
+  make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                  AddFUPtables = TRUE,
+                  # openFile = FALSE,
+                  WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
 }

@@ -4,9 +4,10 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats and survival estimates using pandoc.}
 \usage{
-make_report_rmd(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL,
-  AddFUPtables = FALSE, RDtables, format = c("html", "pdf", "word"),
-  skip.modelfits = FALSE, file.name = getOption("stremr.file.name"),
+make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
+  WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html",
+  "pdf", "word"), skip.modelfits = FALSE,
+  file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), openFile = TRUE,
   keep_md = FALSE, keep_tex = FALSE, ...)
 }
@@ -15,15 +16,20 @@ make_report_rmd(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL,
 
 \item{MSM}{The MSM object fits returned by the function \code{survMSM}.}
 
-\item{TMLE}{...}
+\item{NPMSM}{Optional list of a resulting calls to \code{survNPMSM} or a result of a single call to \code{survNPMSM}.}
 
-\item{GCOMP}{...}
+\item{TMLE}{Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{fitTMLE}.}
+
+\item{GCOMP}{Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{fitSeqGcomp}.}
+
+\item{wts_data}{Optional list of data.tables or a single data.table with weights by regimen.}
 
 \item{SurvByRegimen}{... Not implemented ...}
 
 \item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}}
 
-\item{AddFUPtables}{Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times by rule (monitoring and treatment).}
+\item{AddFUPtables}{Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
+by rule (monitoring and treatment).}
 
 \item{RDtables}{List of tables with risk differences returned by the function \code{get_MSM_RDs}.}
 
@@ -44,7 +50,8 @@ Note that the html report file is always produced in addition to any other selec
 
 \item{...}{Additional arguments may specify the report title (\code{author}), author (\code{title}).
 Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
-Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}: \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.}
+Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}:
+\code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.}
 }
 \value{
 String specifying the path to the main report file.

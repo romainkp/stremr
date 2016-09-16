@@ -465,6 +465,19 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   return(list(wts_data = wts_data_used, trunc_weights = trunc_weights, IPW_estimates = data.frame(St_ht_IPAW)))
 }
 
+format_wts_data <- function(wts_data) {
+  # Stack the weighted data sets, if those came in a list:
+  if (is.data.table(wts_data)) {
+    # ...do nothing...
+  } else if (is.list(wts_data)) {
+    assert_that(all(sapply(wts_data, is.data.table)))
+    wts_data <- rbindlist(wts_data)
+  } else {
+    stop("...wts_data arg must be either a list of rule-specific weight data.tables or one combined weight data.table...")
+  }
+return(wts_data)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Estimate Survival with a particular MSM for the survival-hazard function using previously fitted weights.
 #'
@@ -526,16 +539,7 @@ survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = T
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
 
-  # Stack the weighted data sets, if those came in a list:
-  if (is.data.table(wts_data)) {
-    # ...do nothing...
-  } else if (is.list(wts_data)) {
-    assert_that(all(sapply(wts_data, is.data.table)))
-    wts_data <- rbindlist(wts_data)
-  } else {
-    stop("...wts_data arg must be either a list of rule-specific weight data.tables or one combined weight data.table...")
-  }
-
+  wts_data <- format_wts_data(wts_data)
   rules_TRT <- sort(unique(wts_data[["rule.name"]]))
 
   if (verbose) print("performing estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
@@ -550,7 +554,7 @@ survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = T
   # If trunc_weights < Inf, do truncation of the weights
   if (trunc_weights < Inf) wts_data_used[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
 
-  # Add additional observation-specific weights to the cumulative weights:
+  # Add additional (user-supplied) observation-specific weights to the cumulative weights:
   wts_data_used <- process_opt_wts(wts_data_used, weights, nodes, adjust_outcome = FALSE)
 
   # When !use_weights run a crude estimator by setting all non-zero weights to 1

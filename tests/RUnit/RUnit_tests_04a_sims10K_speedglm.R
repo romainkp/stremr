@@ -145,7 +145,10 @@ notrun.save.example.data.04 <- function() {
   resaveRdaFiles("./data/OdatDT_10K.rda", compress = "bzip2")
 }
 
-test.allestimators10Kdata <- function() {
+# ---------------------------------------------------------------------------
+# Test speedglm
+# ---------------------------------------------------------------------------
+test.speedglm.allestimators10Kdata <- function() {
   options(width = 100)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")

@@ -91,13 +91,15 @@ if (!is.null(WTtables) & !is.null(WTtables$summary.DT.byrule)) {
 #' `r ifelse(AddFUPtables,'# Distribution of the follow-up times','')`
 
 #+ echo=FALSE
-if (AddFUPtables) {
+if (AddFUPtables && (!missing(MSM) || !missing(wts_data))) {
+  if (!missing(MSM)) wts_data <- MSM$wts_data
+  wts_data <- format_wts_data(wts_data)
   t.name.col <- OData$nodes$tnode
   ID.name.col <- OData$nodes$IDnode
-  follow_up_rule_ID <- MSM$wts_data[cum.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name"))]
+  follow_up_rule_ID <- wts_data[cum.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name"))]
   data.table::setnames(follow_up_rule_ID, c(OData$nodes$IDnode, "rule.name", "max.t"))
   data.table::setkeyv(follow_up_rule_ID, cols = OData$nodes$IDnode)
-  rules <- unique(MSM$wts_data[["rule.name"]])
+  rules <- unique(wts_data[["rule.name"]])
   for (T.rule in rules) {
     one_ruleID <- follow_up_rule_ID[(rule.name %in% eval(T.rule)), max.t]
     hist(one_ruleID, main = "Maximum follow-up period for TRT/MONITOR rule: " %+% T.rule)
@@ -105,7 +107,7 @@ if (AddFUPtables) {
 }
 
 #+ echo=FALSE, results='asis'
-if (AddFUPtables) {
+if (AddFUPtables && (!missing(MSM) || !missing(wts_data))) {
   for (T.rule in rules) {
     one_ruleID <- follow_up_rule_ID[(rule.name %in% eval(T.rule)), max.t]
     panderOptions('knitr.auto.asis', FALSE)
@@ -116,6 +118,34 @@ if (AddFUPtables) {
     panderOptions('knitr.auto.asis', TRUE)
   }
 }
+
+#'\pagebreak
+#'
+#' `r ifelse(!missing(NPMSM),'# Survival with IPW-Adjusted Kaplan-Meier (Non-Parametric MSM) and Standard KM','')`
+
+#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "IPW-Adjusted KM and KM Survival.\\label{fig:survPlotGCOMP}"
+if (!missing(NPMSM)) {
+  sysArg <- list()
+  if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
+  surv_tables <- lapply(NPMSM, '[[', 'IPW_estimates')
+  sysArg$surv_list <- c(lapply(surv_tables, '[[', 'St.IPTW'), lapply(surv_tables, '[[', 'St.KM'))
+  rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
+  names(sysArg$surv_list) <- c(paste0("IPW.KM: ", rule.names), paste0("KM: ", rule.names))
+  sysArg$t <- NPMSM[[1]][["t"]]
+  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
+  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  do.call(f_plot_survest, sysArg)
+}
+
+#+ echo=FALSE, results='asis'
+panderOptions('knitr.auto.asis', FALSE)
+if (!missing(NPMSM)) {
+  for (NPMSMtab in surv_tables) {
+    pander::set.caption("NPMSM results for rule '" %+% NPMSMtab[["rule.name"]][1] %+% "'")
+    pander::pander(data.frame(NPMSMtab))
+  }
+}
+
 
 #'\pagebreak
 #'
@@ -134,9 +164,9 @@ if (!missing(MSM)) {
 
 #'\pagebreak
 #'
-#' `r ifelse(!missing(MSM),'# IPW-based MSM survival estimates','')`
+#' `r ifelse(!missing(MSM),'# Survival with IPW-based Marginal Structural Model (MSM)','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "IPW-MSM Survival Estimates.\\label{fig:survPlotIPW}"
+#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "IPW-MSM Survival.\\label{fig:survPlotIPW}"
 if (!missing(MSM)) {
   sysArg <- list()
   sysArg$surv_list <- MSM$St
@@ -148,7 +178,7 @@ if (!missing(MSM)) {
 
 #'\pagebreak
 #'
-#' `r ifelse(!missing(RDtables),'# IPW-based RD tables','')`
+#' `r ifelse(!missing(RDtables),'# IPW-MSM RD tables','')`
 
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
@@ -159,9 +189,9 @@ if (!missing(RDtables)) {
   }
 }
 
-#' `r ifelse(!missing(GCOMP),'# G-Computation-based survival estimates','')`
+#' `r ifelse(!missing(GCOMP),'# Survival with Sequential G-Computation','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "TMLE Survival Estimates.\\label{fig:survPlotGCOMP}"
+#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "G-Computation Survival.\\label{fig:survPlotGCOMP}"
 if (!missing(GCOMP)) {
   sysArg <- list()
   if (is.data.table(GCOMP)) GCOMP <- list(GCOMP_res = GCOMP)
@@ -183,9 +213,9 @@ if (!missing(GCOMP)) {
   }
 }
 
-#' `r ifelse(!missing(TMLE),'# TMLE-based survival estimates','')`
+#' `r ifelse(!missing(TMLE),'# Survival with Targeted Maximum Likelihood (TMLE)','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "TMLE Survival Estimates.\\label{fig:survPlotTMLE}"
+#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "TMLE Survival.\\label{fig:survPlotTMLE}"
 if (!missing(TMLE)) {
   sysArg <- list()
   if (is.data.table(TMLE)) TMLE <- list(TMLE_res = TMLE)

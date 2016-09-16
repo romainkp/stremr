@@ -175,7 +175,7 @@ test.h2oEnsemble <- function() {
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                             params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
 
-    stop("SL end")
+    # stop("SL end")
 
     require("magrittr")
     St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
@@ -191,7 +191,6 @@ test.h2oEnsemble <- function() {
     # report.path <- "/set/your/report/path/"
     # file.path = report.path
     make_report_rmd(OData, openFile = FALSE,
-                    # MSM = MSM.IPAW,
                     # AddFUPtables = TRUE,
                     # RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
                     # WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),

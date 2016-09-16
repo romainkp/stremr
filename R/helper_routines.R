@@ -50,7 +50,7 @@
 get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE) {
   # quant99 <- quantile(wts_data[["cum.IPAW"]], p = 0.99, na.rm = TRUE)
   # quant999 <- quantile(wts_data[["cum.IPAW"]], p = 0.999, na.rm = TRUE)
-
+  wts_data <- format_wts_data(wts_data)
   # get the counts for each category (bin) + missing count:
   na.count <- sum(is.na(wts_data[["cum.IPAW"]]))
   na.yes <- (na.count > 0L)
