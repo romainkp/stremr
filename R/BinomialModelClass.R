@@ -220,26 +220,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       return(probAeqa)
     },
 
-    sampleA = function(newdata, bw.j.sA_diff) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
-      assert_that(self$is.fitted)
-      assert_that(!missing(newdata))
-      # Don't want to subset by the outvar, since binarized mat for cat outcome is not re-created when just sampling
-      # But need to reset it back when done
-      temp_subset_vars <- self$subset_vars
-      self$subset_vars <- self$subset_vars[!self$subset_vars %in% self$outvar]
-
-      self$predict(newdata)
-
-      sampleA <- rep.int(0L, n)
-      sampleA[self$getsubset] <- rbinom(n = n, size = 1, prob = probA1)
-      # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
-      self$wipe.alldat
-      self$subset_vars <- temp_subset_vars
-      # **********************************************************************
-      return(sampleA)
-    },
-
     define.subset.idx = function(data) {
       if (is.logical(self$subset_vars)) {
         subset_idx <- self$subset_vars

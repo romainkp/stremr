@@ -27,7 +27,6 @@ The stratification criteria is determined by the \code{R} expression in the fiel
   \item{\code{fit(data)}}{...}
   \item{\code{predict(newdata)}}{...}
   \item{\code{predictAeqa(newdata)}}{...}
-  \item{\code{sampleA(newdata)}}{...}
 }
 }
 

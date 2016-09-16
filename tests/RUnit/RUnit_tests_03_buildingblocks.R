@@ -1,7 +1,13 @@
 # require("R6")
 
+# ------------------------------------------------------------------------------------------------------
+# Testing stremr building blocks with standard glm.fit
+# ------------------------------------------------------------------------------------------------------
 test.buildingblocks <- function() {
   require("data.table")
+  set_all_stremr_options(fit.package = "glm", fit.algorithm = "glm")
+  # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
+
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
   # ------------------------------------------------------------------------------------------------------

@@ -23,6 +23,7 @@
 # devtools::install_github("h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package")
 
 test.h2oEnsemble <- function() {
+    options(stremr.verbose = TRUE)
     `%+%` <- function(a, b) paste0(a, b)
     require("h2o")
     require('h2oEnsemble')
@@ -43,7 +44,6 @@ test.h2oEnsemble <- function() {
     # ----------------------------------------------------------------
     # IMPORT DATA / INIT h2o
     # ----------------------------------------------------------------
-    options(stremr.verbose = TRUE)
     set_all_stremr_options(fit.package = "h2o", fit.algorithm = "SuperLearner")
     # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "RF")
     # h2o::h2o.init(nthreads = -1)
@@ -154,7 +154,8 @@ test.h2oEnsemble <- function() {
     SLparams = list( # search_criteria = list(strategy = "RandomDiscrete", max_runtime_secs = 20),
                      grid.algorithm = c("glm"),
                      # grid.algorithm = c("glm", "randomForest"),
-                     learner = c("h2o.glm.2"),
+                     # learner = c("h2o.glm.2"),
+                     learner = c("h2o.glm.wrapper"),
                      # algorithm = c("glm", "randomForest", "gbm", "deeplearning"),
                      metalearner = "h2o.glm_nn",
                      nfolds = 2,

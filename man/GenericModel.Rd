@@ -43,7 +43,6 @@ This R6 class Class for defining, fitting and predicting the probability model
   \item{\code{fit(data)}}{...}
   \item{\code{predict(newdata)}}{...}
   \item{\code{predictAeqa(newdata, ...)}}{...}
-  \item{\code{sampleA(newdata)}}{...}
 }
 }
 

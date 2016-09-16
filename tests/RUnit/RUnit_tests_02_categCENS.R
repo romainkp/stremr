@@ -115,7 +115,7 @@ test.model.fits.categorCENSOR <- function() {
 }
 
 test.model.fits.categorCENSOR2 <- function() {
-  options(stremr.verbose = TRUE)
+  # options(stremr.verbose = TRUE)
   #-------------------------------------------------------------------
   # EXAMPLE WITH CATEGORICAL CENSORING (3 levels)
   #-------------------------------------------------------------------

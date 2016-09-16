@@ -36,7 +36,6 @@ This R6 class defines and fits a conditional probability model \code{P(A[j]|W,..
   \item{\code{fit(data)}}{...}
   \item{\code{predict(newdata)}}{...}
   \item{\code{predictAeqa(newdata)}}{...}
-  \item{\code{sampleA(newdata)}}{...}
 }
 }
 
