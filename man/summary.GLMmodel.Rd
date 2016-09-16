@@ -4,10 +4,10 @@
 \alias{summary.GLMmodel}
 \title{S3 methods for getting model fit summary for glmfit class object}
 \usage{
-\method{summary}{GLMmodel}(model.fit, format_table = TRUE, ...)
+\method{summary}{GLMmodel}(object, format_table = TRUE, ...)
 }
 \arguments{
-\item{model.fit}{The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm}
+\item{object}{The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm}
 
 \item{format_table}{Format the coefficients into a data.frame table?}
 

@@ -1,4 +1,4 @@
-test.savedSL.directRegressionDefn.10Kdata <- function() {
+notest.savedSL.directRegressionDefn.10Kdata <- function() {
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
   # options(stremr.verbose = TRUE)

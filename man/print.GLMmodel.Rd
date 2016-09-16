@@ -4,10 +4,10 @@
 \alias{print.GLMmodel}
 \title{S3 methods for printing model fit summary for glmfit class object}
 \usage{
-\method{print}{GLMmodel}(model.fit, ...)
+\method{print}{GLMmodel}(x, ...)
 }
 \arguments{
-\item{model.fit}{The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm}
+\item{x}{The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm}
 
 \item{...}{Additional options passed on to \code{summary.GLMmodel}.}
 }

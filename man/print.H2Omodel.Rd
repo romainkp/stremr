@@ -4,10 +4,10 @@
 \alias{print.H2Omodel}
 \title{S3 methods for printing model fit summary for H2Omodel class object}
 \usage{
-\method{print}{H2Omodel}(model.fit, only.coefs = FALSE, ...)
+\method{print}{H2Omodel}(x, only.coefs = FALSE, ...)
 }
 \arguments{
-\item{model.fit}{The model fit object produced by any stremr S3 function starting with \code{stremr:::H2Omodel.}}
+\item{x}{The model fit object produced by any stremr S3 function starting with \code{stremr:::H2Omodel.}}
 
 \item{only.coefs}{Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "GLM"}).}
 

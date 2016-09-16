@@ -104,9 +104,9 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 
 
 # ---------------------------------------------------------------------------------------------
-#' Helper routine to convert the data into the format data.table required by estmr() function.
+#' Helper routine to define the monitoring indicator and time since last visit
 #'
-#' @param data Input data.table or data.frame.
+#' @param data Input \code{data.table} or \code{data.frame}
 #' @param ID The name of the unique subject identifier (character, numeric or factor).
 #' @param t The name of the time/period variable in \code{data}.
 #' @param I The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.
@@ -142,25 +142,21 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
 #'   \item tsinceNis1(t) = 0 means that the person was monitored at time-point t-1.
 #'   \item tsinceNis1(t) > 0 is the count of the number of cycles since last monitoring event.
 #' }
-#' @return A data.table in long format with ordering (I, CENS, TRT, MONITOR)
+#' @return A \code{data.table} in long format with ordering (I, CENS, TRT, MONITOR)
 #' @export
 defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = 'N', tsinceNis1 = 'last.Nt'){
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   if (is.data.table(data)) {
     DT <- data.table(data, key=c(ID, t))
-    # DT <- data.table(data[,c(ID, t, imp.I), with = FALSE], key=c(ID, t))
   } else if (is.data.frame(data)) {
     DT <- data.table(data, key=c(ID, t))
-    # DT <- data.table(data[,c(ID, t, imp.I)], key=c(ID, t))
   } else {
     stop("input data must be either a data.table or a data.frame")
   }
-
   CheckVarNameExists(DT, ID)
   CheckVarNameExists(DT, t)
   CheckVarNameExists(DT, imp.I)
-
   # "Leading" (shifting up) and inverting indicator of observing I, renaming it to MONITOR value;
   # N(t-1)=1 indicates that I(t) is observed. Note that the very first I(t) is assumed to be always observed.
   DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID.expression), .SDcols = (imp.I)]

@@ -2,13 +2,13 @@
 % Please edit documentation in R/helper_routines.R
 \name{defineMONITORvars}
 \alias{defineMONITORvars}
-\title{Helper routine to convert the data into the format data.table required by estmr() function.}
+\title{Helper routine to define the monitoring indicator and time since last visit}
 \usage{
 defineMONITORvars(data, ID, t, imp.I, MONITOR.name = "N",
   tsinceNis1 = "last.Nt")
 }
 \arguments{
-\item{data}{Input data.table or data.frame.}
+\item{data}{Input \code{data.table} or \code{data.frame}}
 
 \item{ID}{The name of the unique subject identifier (character, numeric or factor).}
 
@@ -27,10 +27,10 @@ it is a function of the past \code{bar{N}(t−1)}, where 0 means that N(t−1)=1
 \item{I}{The name of the numeric biomarker value which determines the dynamic treatment rule at each time point t.}
 }
 \value{
-A data.table in long format with ordering (I, CENS, TRT, MONITOR)
+A \code{data.table} in long format with ordering (I, CENS, TRT, MONITOR)
 }
 \description{
-Helper routine to convert the data into the format data.table required by estmr() function.
+Helper routine to define the monitoring indicator and time since last visit
 }
 \section{Details}{
 
