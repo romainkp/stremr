@@ -1,5 +1,11 @@
-# default metalearner (NN least squares)
-h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negative = non_negative)
+#' h2o glm wrapper for non-negative least squares
+#'
+#' This wrapper is used as a default metalearner for SuperLearner / h2oEnsemble.
+#' @param ... All arguments which will be passed down to \code{h2oEnsemble::h2o.glm.wrapper(...)}
+#' @param non_negative Flag enabling non-negative least squares
+#' @return ...
+#' @export
+h2o.glm_nn <- function(..., non_negative = TRUE) h2oEnsemble::h2o.glm.wrapper(..., non_negative = non_negative)
 
 # Train a model using a single h2o learner (user-spec) with cross-validation & keep CV predictions
 SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial", fold_column, model_contrl, ...) {
@@ -84,7 +90,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
 }
 
 fit.h2oSuperLearner <- function(fit.class, fit, training_frame, y, x, model_contrl, fold_column, ...) {
-  val <- checkpkgs(pkgs=c("h2oEnsemble"))
+  val <- checkpkgs(pkgs = c("h2oEnsemble"))
   if (is.null(fold_column)) stop("must define the column of CV fold IDs using data$define_CVfolds()")
 
   if (!is.null(model_contrl$load.ensemble) && model_contrl$load.ensemble) {

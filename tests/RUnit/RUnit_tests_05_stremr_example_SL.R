@@ -22,7 +22,7 @@
 #   Install h2oEnsemble (dev version):
 # devtools::install_github("h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package")
 
-notest.h2oEnsemble <- function() {
+test.h2oEnsemble <- function() {
     `%+%` <- function(a, b) paste0(a, b)
     require("h2o")
     require('h2oEnsemble')
@@ -83,10 +83,6 @@ notest.h2oEnsemble <- function() {
     # search_criteria <- list(strategy = "RandomDiscrete", stopping_metric = "misclassification", stopping_tolerance = 0.00001, stopping_rounds = 5)
     # nfolds <- 5
     # nfolds <- 10
-    alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
-    lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
-    glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
-                             alpha = alpha_opt, lambda = lambda_opt)
 
     ntrees_opt <- c(100, 200, 300, 500)
     mtries_opt <- 8:20
@@ -124,11 +120,6 @@ notest.h2oEnsemble <- function() {
     #                               hidden = hidden_opt,
     #                               l1 = l1_opt,
     #                               l2 = l2_opt)
-    # h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negative = non_negative)
-
-    h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
-    h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
-    h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
 
     h2o.randomForest.1 <- function(..., ntrees = 200, nbins = 50, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, nbins = nbins, seed = seed)
     h2o.randomForest.2 <- function(..., ntrees = 200, sample_rate = 0.75, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, sample_rate = sample_rate, seed = seed)
@@ -146,23 +137,31 @@ notest.h2oEnsemble <- function() {
     # h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", seed = 1) h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
     # learner <- c("h2o.randomForest.1", "h2o.deeplearning.1", "h2o.deeplearning.2")
 
-    learner <- c("h2o.glm.1", "h2o.glm.2", "h2o.glm.3")
+    h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
+    h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
+    h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
+    # learner <- c("h2o.glm.1", "h2o.glm.2", "h2o.glm.3")
                  # "h2o.randomForest.1", "h2o.randomForest.2", "h2o.randomForest.3",
                  # "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5", "h2o.gbm.6")
                 # "h2o.deeplearning.1", "h2o.deeplearning.2", "h2o.deeplearning.3"
     # metalearner <- "h2o.glm_nn"
     # family <- "binomial"
+    # h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negative = non_negative)
+
+    glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
+                             alpha = c(0,1,seq(0.1,0.9,0.1)), lambda = c(0,1e-7,1e-5,1e-3,1e-1))
 
     SLparams = list( # search_criteria = list(strategy = "RandomDiscrete", max_runtime_secs = 20),
                      grid.algorithm = c("glm"),
                      # grid.algorithm = c("glm", "randomForest"),
-                     learner = learner,
+                     learner = c("h2o.glm.2"),
                      # algorithm = c("glm", "randomForest", "gbm", "deeplearning"),
-                     # metalearner = "h2o.glm_nn",
-                     nfolds = 5,
+                     metalearner = "h2o.glm_nn",
+                     nfolds = 2,
+                     # nfolds = 5,
                      seed = 23,
-                     glm = glm_hyper_params,
-                     randomForest = RF_hyper_params
+                     glm = glm_hyper_params
+                     # randomForest = RF_hyper_params
                      # gbm = GBM_hyper_params,
                      # deeplearning = DL_hyper_params
                      )
@@ -187,7 +186,7 @@ notest.h2oEnsemble <- function() {
     St.dhigh
 
     report.path <- "/Users/olegsofrygin/Dropbox/KP/monitoring_simstudy/stremr_examples"
-    make_report_rmd(OData,
+    make_report_rmd(OData, openFile = FALSE,
                     # MSM = MSM.IPAW,
                     # AddFUPtables = TRUE,
                     # RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
@@ -196,7 +195,6 @@ notest.h2oEnsemble <- function() {
 
     # ---------------------------------------------------------------------------------------------------------
     # ERROR CHECK: no hyper params for randomForest:
-    # CURRENT ERROR IS UNRELATED
     # ---------------------------------------------------------------------------------------------------------
     # options(stremr.verbose = TRUE)
     set_all_stremr_options(fit.package = "h2o", fit.algorithm = "SuperLearner")
@@ -214,95 +212,15 @@ notest.h2oEnsemble <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # TMLE / GCOMP
     # ---------------------------------------------------------------------------------------------------------
-    t.surv <- c(10)
+    t.surv <- c(5)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     params = list(fit.package = "speedglm", fit.algorithm = "glm")
     # params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100,
     #               learn_rate = 0.05, sample_rate = 0.8,
     #               col_sample_rate = 0.8, balance_classes = TRUE)
-    t.surv <- c(10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
     tmle_est[]
 
     h2o::h2o.shutdown(prompt = FALSE)
 }
-
-notest.h2oQuasiBinomGLM.Ensemble <- function() {
-    `%+%` <- function(a, b) paste0(a, b)
-    require("h2o")
-    h2o::h2o.init(nthreads = 1)
-    # h2o::h2o.init(nthreads = -1)
-    require('h2oEnsemble')
-    require("data.table")
-    # require("stremr")
-    data(OdatDT_10K)
-    Odat_DT <- OdatDT_10K
-
-    # ---------------------------------------------------------------------------
-    # Define some summaries (lags C[t-1], A[t-1], N[t-1])
-    # ---------------------------------------------------------------------------
-    ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
-    lagnodes <- c("C", "TI", "N")
-    newVarnames <- lagnodes %+% ".tminus1"
-    Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
-    # indicator that the person has never been on treatment up to current t
-    Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
-    Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
-
-
-    OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
-    # OData$define_CVfolds(nfolds = 10, seed = 23)
-
-    # ---------------------------------------------------------------------------------------------------------
-    # VALIDATING QUASIBINOMIAL (cont Y) LOGISTIC REG in H2O glm WITH TMLE
-    # ---------------------------------------------------------------------------------------------------------
-    t.surv <- c(10)
-    Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    # h2o::h2o.init(nthreads = -1, startH2O = FALSE)
-    # h2o::h2o.shutdown()
-    # options(stremr.verbose = TRUE)
-
-    # speedglm:
-    params = list(fit.package = "speedglm", fit.algorithm = "glm")
-    gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-    gcomp_est[]
-    #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates rule.name
-    # 1:    GCOMP 10 0.2723941 0.7276059          FALSE             11 gTI.dhigh
-
-    # H2O glm w/ L_BFGS:
-    params = list(fit.package = "h2o", fit.algorithm = "glm", solver = "L_BFGS")
-    gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-    gcomp_est[]
-    #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates rule.name
-    # 1:    GCOMP 10 0.2723858 0.7276142          FALSE             11 gTI.dhigh
-
-    # H2O glm w/ IRLSM:
-    params = list(fit.package = "h2o", fit.algorithm = "glm", solver = "IRLSM")
-    gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-    gcomp_est[]
-    #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates rule.name
-    # 1:    GCOMP 10 0.2723941 0.7276059          FALSE             11 gTI.dhigh
-
-    # H2O SL:
-    h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
-    h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
-    glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
-                             alpha = c(0,1,seq(0.1,0.9,0.1)), lambda = c(0,1e-7,1e-5,1e-3,1e-1))
-    SLparams <- list( fit.package = "h2o",
-                     fit.algorithm = "SuperLearner",
-                     grid.algorithm = c("glm"),
-                     learner = c("h2o.glm.2"),
-                     nfolds = 5,
-                     seed = 23,
-                     glm = glm_hyper_params)
-
-    gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = SLparams, stratifyQ_by_rule = FALSE)
-    gcomp_est[]
-    #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates   type rule.name
-    # 1:    GCOMP 10 0.2495067 0.7504933          FALSE             11 pooled gTI.dhigh
-
-    h2o::h2o.shutdown(prompt = FALSE)
-}
-
-

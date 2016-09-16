@@ -305,110 +305,110 @@ defineIntervedTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceN
   return(DT)
 }
 
-# ---------------------------------------------------------------------------------------------
-#' Define the indicators of following/not-following specific dynamic treatment rules indexed by theta.
-#'
-#' @param data Input data.frame or data.table in long format, see below for the description of the assumed format.
-#' @param theta The vector of continuous cutoff values that index each dynamic treatment rule
-#' @param ID The name of the unique subject identifier
-#' @param t The name of the variable indicating time-period
-#' @param I Continuous biomarker variable used for determining the treatmet decision rule
-#' @param CENS Binary indicator of being censored at t;
-#' @param TRT Binary indicator of the treatment (exposure) at t;
-#' @param MONITOR The indicator of having a visit and having measured or observed biomarker I(t+1) (the biomarker value at THE NEXT TIME CYCLE).
-#'  In other words the value of MONITOR(t-1) (at t-1) being 1 indicates that I(t) at time point t was observed/measured.
-#'  The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observed/measured.
-#' @param tsinceNis1 Character vector for the column in data, same meaning as described in convertdata(), must be already defined
-#' @param rule.names Vector of column names for indicators of following/not following each rule (must be the same dimension as theta).
-#'  When not supplied the following convention is adopted for naming these columns: paste0("d",theta).
-#' @param return.allcolumns Set to \code{TRUE} to return the original data columns along with new columns that define each rule
-#' (can be useful when employing piping/sequencing operators).
-#'
-#' @section Details:
-#'
-#' * This function takes an input data.frame or data.table data
-#'   and produces an output data.table with indicators/probabilities of following not following a specific treatment rule.
-#'   The resulting data.table is used internally by the stremr() function to determine which observation is following each specific rule at each time point t.
-#'
-#' * Evaluates which observations were following the dynamic-decision treatment rule defined by the measured biomarker I
-#'   and pre-defined cutoffs of the input vector theta.
-#'
-#' * Produces a separate rule indicator column for each value in the input vector theta based on the following dynamic rule at t:
-#'\itemize{
-#' \item (1) Follow rule at t if uncensored (C(t)=0) and remaining on treatment (A(t-1)=A(t)=1)
-#' \item (2) Follow rule at t if uncensored (C(t)=0), haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
-#' \item (3) Follow rule at t if uncensored (C(t)=0), was monitored (MONITOR(t-1)=0) and either of the two:
-#'     (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
-#'}
-#'
-#' * The format (time-ordering) of data is the same as required by the stremr() function: (I(t), CENS(t), TRT(t), MONITOR(t)).
-#'   MONITOR(t) at time-point t is defined as the indicator of being observed (having an office visit) at time point t+1 (next timepoint after t)
-#'   It is assumed that imp.I(t) is always 0 for the very first time-point.
-#'
-#' @examples
-#'
-#' \dontrun{
-#' theta <- seq(7,8.5,by=0.5)
-#' FOLLOW.D.DT <- defineTRTrules(data = data, theta = theta,
-#'                  ID = "StudyID", t = "X_intnum", I = "X_a1c",
-#'                  TRT = "X_exposure", CENS = "X_censor", MONITOR = "N.t",
-#'                  rule.names = paste0("new.d",theta))
-#' }
-#' @return A data.table with a separate column for each value in \code{theta}. Each column consists of indicators of following/not-following
-#'  each rule indexed by a value form \code{theta}. In addition, the returned data.table contains \code{ID} and \code{t} columns for easy merging
-#'  with the original data.
-# @export
-defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, rule.names = NULL, return.allcolumns = FALSE){
-  ID.expression <- as.name(ID)
-  chgTRT <- as.name("chgTRT")
-  if (return.allcolumns) {
-    DT <- data.table(data, key=c(ID,t))
-  } else if (is.data.table(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1), with = FALSE], key=c(ID,t))
-  } else if (is.data.frame(data)) {
-    DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1)], key=c(ID,t))
-  } else {
-    stop("input data must be either a data.table or a data.frame")
-  }
-  CheckVarNameExists(DT, ID)
-  CheckVarNameExists(DT, t)
-  CheckVarNameExists(DT, I)
-  CheckVarNameExists(DT, CENS)
-  CheckVarNameExists(DT, TRT)
-  CheckVarNameExists(DT, MONITOR)
-  CheckVarNameExists(DT, tsinceNis1)
-  # Define chgTRT=TRT(t)-TRT(t-1), switching to treatment (+1), not changing treatment (0), going off treatment (-1). Assume people were off treatment prior to t=0.
-  DT[, "chgTRT" := diff(c(0L, .SD[[1]])), by = eval(ID.expression), .SDcols=(TRT)]
-  # (1) Follow rule at t if uncensored and remaining on treatment (TRT(t-1)=TRT(t)=1):
-  # rule1: (C[t] == 0L) & (A[t-1] == 1L) & (A[t] == 1)
-  DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L)]
-  # (2) Follow rule at t if uncensored, haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
-  # rule2: (C[t] == 0L) & (N[t-1] == 0) & (A[t-1] == A[t])
-  # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
-  DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L)]
-  # (3) Follow rule at t if uncensored, was monitored (MONITOR(t-1)=0) and either:
-  # (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
-  for (dtheta in theta) {
-    # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
-    # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
-    DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L)))]
-    # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
-    DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3]
-    # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:
-    DT[, paste0("d",dtheta) := as.logical(cumprod(d.follow_allr)), by = eval(ID.expression)]
-  }
-  DT[, "chgTRT" := NULL]; DT[, "d.follow_r1" := NULL]; DT[, "d.follow_r2" := NULL]; DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]
-  if (!is.null(rule.names)) {
-    stopifnot(length(rule.names)==length(theta))
-    setnames(DT, old = paste0("d",theta), new = rule.names)
-  } else {
-    rule.names <- paste0("d",theta)
-  }
-  if (!return.allcolumns) {
-    DT <- DT[, c(ID, t, rule.names), with=FALSE]
-  }
-  return(DT)
-}
+# # ---------------------------------------------------------------------------------------------
+# #' Define the indicators of following/not-following specific dynamic treatment rules indexed by theta.
+# #'
+# #' @param data Input data.frame or data.table in long format, see below for the description of the assumed format.
+# #' @param theta The vector of continuous cutoff values that index each dynamic treatment rule
+# #' @param ID The name of the unique subject identifier
+# #' @param t The name of the variable indicating time-period
+# #' @param I Continuous biomarker variable used for determining the treatmet decision rule
+# #' @param CENS Binary indicator of being censored at t;
+# #' @param TRT Binary indicator of the treatment (exposure) at t;
+# #' @param MONITOR The indicator of having a visit and having measured or observed biomarker I(t+1) (the biomarker value at THE NEXT TIME CYCLE).
+# #'  In other words the value of MONITOR(t-1) (at t-1) being 1 indicates that I(t) at time point t was observed/measured.
+# #'  The very first value of I(t) (at the first time-cycle) is ALWAYS ASSUMED observed/measured.
+# #' @param tsinceNis1 Character vector for the column in data, same meaning as described in convertdata(), must be already defined
+# #' @param rule.names Vector of column names for indicators of following/not following each rule (must be the same dimension as theta).
+# #'  When not supplied the following convention is adopted for naming these columns: paste0("d",theta).
+# #' @param return.allcolumns Set to \code{TRUE} to return the original data columns along with new columns that define each rule
+# #' (can be useful when employing piping/sequencing operators).
+# #'
+# #' @section Details:
+# #'
+# #' * This function takes an input data.frame or data.table data
+# #'   and produces an output data.table with indicators/probabilities of following not following a specific treatment rule.
+# #'   The resulting data.table is used internally by the stremr() function to determine which observation is following each specific rule at each time point t.
+# #'
+# #' * Evaluates which observations were following the dynamic-decision treatment rule defined by the measured biomarker I
+# #'   and pre-defined cutoffs of the input vector theta.
+# #'
+# #' * Produces a separate rule indicator column for each value in the input vector theta based on the following dynamic rule at t:
+# #'\itemize{
+# #' \item (1) Follow rule at t if uncensored (C(t)=0) and remaining on treatment (A(t-1)=A(t)=1)
+# #' \item (2) Follow rule at t if uncensored (C(t)=0), haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
+# #' \item (3) Follow rule at t if uncensored (C(t)=0), was monitored (MONITOR(t-1)=0) and either of the two:
+# #'     (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
+# #'}
+# #'
+# #' * The format (time-ordering) of data is the same as required by the stremr() function: (I(t), CENS(t), TRT(t), MONITOR(t)).
+# #'   MONITOR(t) at time-point t is defined as the indicator of being observed (having an office visit) at time point t+1 (next timepoint after t)
+# #'   It is assumed that imp.I(t) is always 0 for the very first time-point.
+# #'
+# #' @examples
+# #'
+# #' \dontrun{
+# #' theta <- seq(7,8.5,by=0.5)
+# #' FOLLOW.D.DT <- defineTRTrules(data = data, theta = theta,
+# #'                  ID = "StudyID", t = "X_intnum", I = "X_a1c",
+# #'                  TRT = "X_exposure", CENS = "X_censor", MONITOR = "N.t",
+# #'                  rule.names = paste0("new.d",theta))
+# #' }
+# #' @return A data.table with a separate column for each value in \code{theta}. Each column consists of indicators of following/not-following
+# #'  each rule indexed by a value form \code{theta}. In addition, the returned data.table contains \code{ID} and \code{t} columns for easy merging
+# #'  with the original data.
+# # @export
+# defineTRTrules <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1, rule.names = NULL, return.allcolumns = FALSE){
+#   ID.expression <- as.name(ID)
+#   chgTRT <- as.name("chgTRT")
+#   if (return.allcolumns) {
+#     DT <- data.table(data, key=c(ID,t))
+#   } else if (is.data.table(data)) {
+#     DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1), with = FALSE], key=c(ID,t))
+#   } else if (is.data.frame(data)) {
+#     DT <- data.table(data[,c(ID, t, TRT, CENS, I, MONITOR, tsinceNis1)], key=c(ID,t))
+#   } else {
+#     stop("input data must be either a data.table or a data.frame")
+#   }
+#   CheckVarNameExists(DT, ID)
+#   CheckVarNameExists(DT, t)
+#   CheckVarNameExists(DT, I)
+#   CheckVarNameExists(DT, CENS)
+#   CheckVarNameExists(DT, TRT)
+#   CheckVarNameExists(DT, MONITOR)
+#   CheckVarNameExists(DT, tsinceNis1)
+#   # Define chgTRT=TRT(t)-TRT(t-1), switching to treatment (+1), not changing treatment (0), going off treatment (-1). Assume people were off treatment prior to t=0.
+#   DT[, "chgTRT" := diff(c(0L, .SD[[1]])), by = eval(ID.expression), .SDcols=(TRT)]
+#   # (1) Follow rule at t if uncensored and remaining on treatment (TRT(t-1)=TRT(t)=1):
+#   # rule1: (C[t] == 0L) & (A[t-1] == 1L) & (A[t] == 1)
+#   DT[, "d.follow_r1" := (get(CENS)==0L) & (get(TRT)==1L) & (eval(chgTRT)==0L)]
+#   # (2) Follow rule at t if uncensored, haven't changed treatment and wasn't monitored (MONITOR(t-1)=0)
+#   # rule2: (C[t] == 0L) & (N[t-1] == 0) & (A[t-1] == A[t])
+#   # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
+#   DT[, "d.follow_r2" := (get(CENS)==0L) & (get(tsinceNis1) > 0L) & (eval(chgTRT)==0L)]
+#   # (3) Follow rule at t if uncensored, was monitored (MONITOR(t-1)=0) and either:
+#   # (A) (I(t) >= d.theta) and switched to treatment at t; or (B) (I(t) < d.theta) and haven't changed treatment
+#   for (dtheta in theta) {
+#     # rule3: (C[t] == 0L) & (N[t-1] == 1) & ((I[t] >= d.theta & A[t] == 1L & A[t-1] == 0L) | (I[t] < d.theta & A[t] == 0L & A[t-1] == 0L))
+#     # NOTE: ****** testing tsinceNis1 > 0 is equivalent to testing N(t-1)==0 ******
+#     DT[, "d.follow_r3" := (get(CENS)==0L) & (get(tsinceNis1) == 0L) & (((get(I) >= eval(dtheta)) & (eval(chgTRT)==1L)) | ((get(I) < eval(dtheta)) & (eval(chgTRT)==0L)))]
+#     # ONE INDICATOR IF FOLLOWING ANY OF THE 3 ABOVE RULES AT each t:
+#     DT[, "d.follow_allr" := d.follow_r1 | d.follow_r2 | d.follow_r3]
+#     # INDICATOR OF CONTINUOUS (UNINTERRUPTED) RULE FOLLOWING from t=0 to EOF:
+#     DT[, paste0("d",dtheta) := as.logical(cumprod(d.follow_allr)), by = eval(ID.expression)]
+#   }
+#   DT[, "chgTRT" := NULL]; DT[, "d.follow_r1" := NULL]; DT[, "d.follow_r2" := NULL]; DT[, "d.follow_r3" := NULL]; DT[, "d.follow_allr" := NULL]
+#   if (!is.null(rule.names)) {
+#     stopifnot(length(rule.names)==length(theta))
+#     setnames(DT, old = paste0("d",theta), new = rule.names)
+#   } else {
+#     rule.names <- paste0("d",theta)
+#   }
+#   if (!return.allcolumns) {
+#     DT <- DT[, c(ID, t, rule.names), with=FALSE]
+#   }
+#   return(DT)
+# }
 
 
 # ----------------------------------------------------------------

@@ -232,7 +232,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       self$classify <- ParentModel$classify
       self$model_contrl <- ParentModel$model_contrl
       assert_that("h2o" %in% fit.package)
-      val <- checkpkgs(pkgs=c("h2o"))
+      val <- checkpkgs(pkgs = c("h2o"))
 
       if (fit.algorithm %in% "SL") {
         if (!"package:h2oEnsemble" %in% search()) stop("must load 'h2oEnsemble' package prior to using the SuperLearner: require('h2oEnsemble') or library('h2oEnsemble')")
