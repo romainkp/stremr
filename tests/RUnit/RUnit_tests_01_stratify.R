@@ -70,7 +70,7 @@ simulateDATA.fromDAG <- function(catC = FALSE, Nsize = 1000, rndseed = 124356){
 
 notrun.save.example.data.01 <- function() {
   OdataNoCENS <- simulateDATA.fromDAG(Nsize = 1000, rndseed = 124356)
-  head(OdataNoCENS)
+  OdataNoCENS <- OdataNoCENS[, !names(OdataNoCENS) %in% "CatC"]
   # --------------------------------
   # save data as csv
   # --------------------------------

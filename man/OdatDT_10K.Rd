@@ -26,7 +26,7 @@ data(OdatDT_10K)
 }
 \description{
 Simulated dataset containing 10,000 i.i.d. observations organized in long format as person-time rows.
-The binary exposure is \code{TI} and binary outcome is \code{Y}. See /tests/RUnit_tests_04_simstudyreplica.R
+The binary exposure is \code{TI} and binary outcome is \code{Y.tplus1}. See /tests/
 for R code that generated this data as well as R code that uses stremr to analyze this data.
 }
 \keyword{datasets}
