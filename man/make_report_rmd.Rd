@@ -19,6 +19,8 @@ make_report_rmd(OData, MSM, TMLE, GCOMP, SurvByRegimen, WTtables = NULL,
 
 \item{GCOMP}{...}
 
+\item{SurvByRegimen}{... Not implemented ...}
+
 \item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}}
 
 \item{AddFUPtables}{Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times by rule (monitoring and treatment).}

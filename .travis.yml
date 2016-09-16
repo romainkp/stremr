@@ -31,7 +31,6 @@ before_install:
 
 r_binary_packages:
   - assertthat
-  - data.table
   - foreach
   - ggplot2
   - igraph
@@ -47,6 +46,7 @@ r_binary_packages:
 r_github_packages:
   - jimhester/covr
   - osofr/simcausal
+  - Rdatatable/data.table
   - h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package
 
 # r_packages:

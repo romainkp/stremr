@@ -102,20 +102,20 @@ test.helperfuns <- function() {
   addN.t2 <- defineMONITORvars(OdataNoCENS.DT, ID = "ID", t = "t", imp.I = "N",
                                MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
   # addN.t2[]
-  OdataNoCENS_dhigh_dlow1 <- defineTRTrules(OdataNoCENS, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
-                                      CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", rule.names = c("dlow", "dhigh"))
+  OdataNoCENS_dhigh_dlow1 <- defineIntervedTRT(OdataNoCENS, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
+                                      CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", new.TRT.names = c("dlow", "dhigh"))
   # OdataNoCENS_dhigh_dlow1[]
 
-  OdataNoCENS_dhigh_dlow2 <- defineTRTrules(OdataNoCENS.DT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
-                                        CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", rule.names = c("dlow", "dhigh"))
+  OdataNoCENS_dhigh_dlow2 <- defineIntervedTRT(OdataNoCENS.DT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
+                                        CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", new.TRT.names = c("dlow", "dhigh"))
   # OdataNoCENS_dhigh_dlow2[]
 
   setnames(OdataNoCENS.DT,old = "ID",new = "ID.expression")
   addN.t1 <- defineMONITORvars(OdataNoCENS.DT, ID = "ID.expression", t = "t", imp.I = "N", MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
   # addN.t1[]
 
-  OdataNoCENS_dhigh_dlow1 <- defineTRTrules(OdataNoCENS.DT, theta = c(0,1), ID = "ID.expression", t = "t", I = "highA1c",
-                                        CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", rule.names = c("dlow", "dhigh"))
+  OdataNoCENS_dhigh_dlow1 <- defineIntervedTRT(OdataNoCENS.DT, theta = c(0,1), ID = "ID.expression", t = "t", I = "highA1c",
+                                        CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1", new.TRT.names = c("dlow", "dhigh"))
   # O.data_dhigh_dlow1[]
 }
 

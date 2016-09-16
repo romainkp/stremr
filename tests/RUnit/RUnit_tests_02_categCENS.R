@@ -165,9 +165,9 @@ test.model.fits.categorCENSOR2 <- function() {
   OdataDT[, "gstar.N" := 0.1]
 
   # Define two dynamic rules: dlow & dhigh
-  OdataDT <- defineTRTrules(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
+  OdataDT <- defineIntervedTRT(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
                             CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1",
-                            rule.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
+                            new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
 
   # Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
   res <- stremr(OdataDT, intervened_TRT = "dhigh", intervened_MONITOR = "gstar.N",
