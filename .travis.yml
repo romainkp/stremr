@@ -13,6 +13,7 @@
 #----------------------------------------------------------------
 
 language: r
+cache: packages
 warnings_are_errors: false
 # r_build_args: "--compact-vignettes"
 # r_check_args: "--as-cran"
@@ -42,10 +43,10 @@ r_binary_packages:
   - stringr
   - rmarkdown
   - magrittr
+  - pander
 
 r_github_packages:
   - jimhester/covr
-  - osofr/simcausal
   - Rdatatable/data.table
   - h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package
 

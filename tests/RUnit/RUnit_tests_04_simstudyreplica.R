@@ -287,7 +287,7 @@ test.allestimators10Kdata <- function() {
   # Make a report:
   # ------------------------------------------------------------------
   # DO NOT RUN DURING REMOTE TESTS
-  if (FALSE) {
+  # if (FALSE) {
     # report.path <- "/home/ubuntu/stremr_example"
     # file.path = report.path,
     make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe", openFile = FALSE)
@@ -310,7 +310,7 @@ test.allestimators10Kdata <- function() {
                     RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
                     WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
-  }
+  # }
 
   # # omit extra modeling stuff (only coefficients):
   # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
