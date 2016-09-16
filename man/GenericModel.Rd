@@ -29,7 +29,6 @@ This R6 class Class for defining, fitting and predicting the probability model
 \details{
 \itemize{
 \item{\code{n_regs}} - .
-\item{\code{parfit_allowed}} - .
 }
 }
 \section{Methods}{

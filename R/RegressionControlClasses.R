@@ -143,7 +143,6 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
 #' \item{\code{bin_nms}} - Character vector of column names for bin indicators.
 #' \item{\code{useglm}} - Logical, if TRUE then fit the logistic regression model using \code{\link{glm.fit}},
 #'    if FALSE use \code{\link{speedglm.wfit}}..
-#' \item{\code{parfit}} - Logical, if TRUE then use parallel \code{foreach::foreach} loop to fit and predict binary logistic
 #'    regressions (requires registering back-end cluster prior to calling the fit/predict functions)..
 #' \item{\code{bin_bymass}} - Logical, for continuous outvar, create bin cutoffs based on equal mass distribution.
 #' \item{\code{bin_bydhist}} - Logical, if TRUE, use dhist approach for bin definitions.  See Denby and Mallows "Variations on the
@@ -167,7 +166,6 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
 #'                   outvar, predvars, subset_vars, subset_exprs, intrvls,
 #'                   ReplMisVal0 = TRUE,
 #'                   useglm = getopt("useglm"),
-#'                   parfit = getopt("parfit"),
 #'                   nbins = getopt("nbins"),
 #'                   bin_bymass = getopt("bin.method")%in%"equal.mass",
 #'                   bin_bydhist = getopt("bin.method")%in%"dhist",
@@ -194,16 +192,13 @@ RegressionClass <- R6Class("RegressionClass",
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
     fit.package = c("speedglm", "glm", "h2o"),
     fit.algorithm = c("glm", "gbm", "randomForest", "SL"),
-    parfit = logical(),            # TRUE for fitting binary regressions in parallel
     # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
     initialize = function(ReplMisVal0 = TRUE,
                           fit.package = getopt("fit.package"),
-                          fit.algorithm = getopt("fit.algorithm"),
-                          parfit = getopt("parfit"), ...) {
+                          fit.algorithm = getopt("fit.algorithm"), ...) {
       self$ReplMisVal0 <- ReplMisVal0
       self$fit.package <- fit.package
       self$fit.algorithm <- fit.algorithm
-      self$parfit <- parfit
       super$initialize(...)
     },
 

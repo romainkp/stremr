@@ -45,8 +45,7 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   # --------------------------------------------------------------------------------------------------------
   # Create dummies for factors
   # --------------------------------------------------------------------------------------------------------
-  factor.Ls <- unlist(lapply(OData$dat.sVar, is.factor))
-  factor.Ls <- names(factor.Ls)[factor.Ls]
+  factor.Ls <- as.character(CheckExistFactors(OData$dat.sVar))
   new.factor.names <- vector(mode="list", length=length(factor.Ls))
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0 && verbose)

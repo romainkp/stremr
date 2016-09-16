@@ -41,7 +41,6 @@ prettyprint_GenericModel <- function(self, reg, all.outvar.bin) {
   }
   print("No. of regressions: " %+% self$n_regs)
   print("All outcomes binary? " %+% all.outvar.bin)
-  if (self$parfit_allowed) print("Performing parallel fits: " %+% self$parfit_allowed)
   print("#----------------------------------------------------------------------------------")
 }
 
@@ -71,7 +70,6 @@ prettyprint_GenericModel <- function(self, reg, all.outvar.bin) {
 #' @details
 #' \itemize{
 #' \item{\code{n_regs}} - .
-#' \item{\code{parfit_allowed}} - .
 #' }
 #' @section Methods:
 #' \describe{
@@ -97,7 +95,6 @@ GenericModel <- R6Class(classname = "GenericModel",
     outvar = character(),      # outcome name(s)
     predvars = character(),    # names of predictor vars
     n_regs = integer(),        # total no. of reg. models (logistic regressions)
-    parfit_allowed = FALSE,    # allow parallel fit of multivar outvar when 1) reg$parfit = TRUE & 2) all.outvar.bin = TRUE
     initialize = function(reg, no_set_outvar = FALSE, ...) {
       self$reg <- reg
       if (!no_set_outvar) self$outvar <- reg$outvar
@@ -106,7 +103,6 @@ GenericModel <- R6Class(classname = "GenericModel",
       self$n_regs <- get_n_regs(reg)
       all.outvar.bin <- FALSE
       if (!("ListOfRegressionForms" %in% class(reg))) {
-        if (reg$parfit & all.outvar.bin & (self$n_regs > 1)) self$parfit_allowed <- TRUE
         all.outvar.bin <-  all(reg$outvar.class %in% gvars$sVartypes$bin)
       }
       if (gvars$verbose) prettyprint_GenericModel(self, reg, all.outvar.bin)
@@ -137,23 +133,8 @@ GenericModel <- R6Class(classname = "GenericModel",
     fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       # serial loop over all regressions in PsAsW.models:
-      if (!self$parfit_allowed) {
-        for (k_i in seq_along(private$PsAsW.models)) {
-          private$PsAsW.models[[k_i]]$fit(data = data, ...)
-        }
-      # parallel loop over all regressions in PsAsW.models:
-      } else if (self$parfit_allowed) {
-        val <- checkpkgs(pkgs=c("foreach", "doParallel", "matrixStats"))
-        mcoptions <- list(preschedule = FALSE)
-        # NOTE: Each fitRes[[k_i]] will contain a copy of every single R6 object that was passed by reference ->
-        # *** the size of fitRes is 100x the size of private$PsAsW.models ***
-        fitRes <- foreach::foreach(k_i = seq_along(private$PsAsW.models), .options.multicore = mcoptions) %dopar% {
-          private$PsAsW.models[[k_i]]$fit(data = data, ...)
-        }
-        # copy the fits one by one from BinaryOutcomeModels above into private field for BinaryOutcomeModels
-        for (k_i in seq_along(private$PsAsW.models)) {
-          private$PsAsW.models[[k_i]]$copy.fit(fitRes[[k_i]])
-        }
+      for (k_i in seq_along(private$PsAsW.models)) {
+        private$PsAsW.models[[k_i]]$fit(data = data, ...)
       }
       invisible(self)
     },
@@ -161,25 +142,9 @@ GenericModel <- R6Class(classname = "GenericModel",
     predict = function(newdata) {
       # if (missing(newdata)) stop("must provide newdata")
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
-
       # serial loop over all regressions in PsAsW.models:
-      if (!self$parfit_allowed) {
-        for (k_i in seq_along(private$PsAsW.models)) {
-          private$PsAsW.models[[k_i]]$predict(newdata = newdata)
-        }
-      # parallel loop over all regressions in PsAsW.models:
-      } else if (self$parfit_allowed) {
-        val <- checkpkgs(pkgs=c("foreach", "doParallel", "matrixStats"))
-        mcoptions <- list(preschedule = FALSE)
-        # NOTE: Each predRes[[k_i]] will contain a copy of every single R6 object that was passed by reference ->
-        # *** the size of fitRes is 100x the size of private$PsAsW.models ***
-        predRes <- foreach::foreach(k_i = seq_along(private$PsAsW.models), .options.multicore = mcoptions) %dopar% {
-          private$PsAsW.models[[k_i]]$predict(newdata = newdata)
-        }
-        # copy the predictions one by one from BinaryOutcomeModels above into private field for BinaryOutcomeModels
-        for (k_i in seq_along(private$PsAsW.models)) {
-          private$PsAsW.models[[k_i]]$copy.predict(predRes[[k_i]])
-        }
+      for (k_i in seq_along(private$PsAsW.models)) {
+        private$PsAsW.models[[k_i]]$predict(newdata = newdata)
       }
       invisible(self)
     },
@@ -193,21 +158,12 @@ GenericModel <- R6Class(classname = "GenericModel",
         n <- newdata$nobs
       }
 
-      if (!self$parfit_allowed) {
-        cumprodAeqa <- rep.int(1L, n)
-        # loop over all regressions in PsAsW.models:
-        for (k_i in seq_along(private$PsAsW.models)) {
-          cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
-        }
-      } else if (self$parfit_allowed) {
-        val <- checkpkgs(pkgs=c("foreach", "doParallel", "matrixStats"))
-        mcoptions <- list(preschedule = TRUE)
-        probAeqa_list <- foreach::foreach(k_i = seq_along(private$PsAsW.models), .options.multicore = mcoptions) %dopar% {
-          private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
-        }
-        probAeqa_mat <- do.call('cbind', probAeqa_list)
-        cumprodAeqa <- matrixStats::rowProds(probAeqa_mat)
+      cumprodAeqa <- rep.int(1L, n)
+      # loop over all regressions in PsAsW.models:
+      for (k_i in seq_along(private$PsAsW.models)) {
+        cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
       }
+
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     },

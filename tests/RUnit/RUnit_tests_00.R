@@ -129,6 +129,7 @@ test.options <- function() {
 
 # test various regression / subsetting schemes and make sure it works as expected
 test.DataStorageClass <- function() {
+  require("data.table")
   data(OdataNoCENS)
   OdataNoCENS <- as.data.table(OdataNoCENS, key=c(ID, t))
   # define lagged N, first value is always 1 (always monitored at the first time point):
