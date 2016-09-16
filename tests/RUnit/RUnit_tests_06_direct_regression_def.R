@@ -1,11 +1,8 @@
-notest.savedSL.directRegressionDefn.10Kdata <- function() {
+test.directRegressionDefn.10Kdata <- function() {
   options(stremr.verbose = FALSE)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
-  # options(stremr.verbose = TRUE)
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "SuperLearner")
   set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
-
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
 
@@ -48,13 +45,12 @@ notest.savedSL.directRegressionDefn.10Kdata <- function() {
   St.dlow2 <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
              survNPMSM(OData)  %$%
              IPW_estimates
-  St.dlow2
+  # St.dlow2
 
   St.dhigh2 <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
               survNPMSM(OData) %$%
               IPW_estimates
-  St.dhigh2
-
+  # St.dhigh2
 }
 
 notest.savedSL.10Kdata <- function() {

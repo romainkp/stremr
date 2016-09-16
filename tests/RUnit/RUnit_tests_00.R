@@ -128,6 +128,25 @@ test.options <- function() {
 }
 
 # test various regression / subsetting schemes and make sure it works as expected
+test.DataStorageClass <- function() {
+  data(OdataNoCENS)
+  OdataNoCENS <- as.data.table(OdataNoCENS, key=c(ID, t))
+  # define lagged N, first value is always 1 (always monitored at the first time point):
+  OdataNoCENS[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
+  OdataNoCENS[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]
+  OdataNoCENS[, "continA" := rnorm(nrow(OdataNoCENS))]
+
+  OData <- importData(OdataNoCENS, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "continA", MONITOR = "N", OUTCOME = "Y.tplus1")
+  gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
+  gform_TRT = "continA ~ CVD + highA1c + N.tminus1"
+  gform_MONITOR <- "N ~ 1"
+
+  # OData$
+  checkException(OData <- fitPropensity(OData = OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR))
+
+}
+
+# test various regression / subsetting schemes and make sure it works as expected
 test.regressionCases <- function() {
   # ------------------------------------------------------------------------------------------------------------------
   # 1A) No stratification, TRT=c("A1","A2"), CENS=c("C1","C2","C3"), MONITOR="N":
