@@ -23,7 +23,7 @@
 # --------------------------------------------------------------------------------------------------------
 # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 
-test.h2oglm.allestimators10Kdata <- function() {
+test.h2oglm.IPW.MSM.10Kdata <- function() {
   options(width = 100)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
@@ -47,20 +47,13 @@ test.h2oglm.allestimators10Kdata <- function() {
   # ----------------------------------------------------------------
   # IMPORT DATA
   # ----------------------------------------------------------------
-  # require("stremr")
   # options(stremr.verbose = TRUE)
-  # set_all_stremr_options(fit.package = "glm", fit.algorithm = "glm")
-  # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
   set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
-  # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
   h2o::h2o.init(nthreads = 1)
-  # h2o::h2o.init(nthreads = -1)
-  # h2o::h2o.shutdown(prompt = FALSE)
 
   OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   # to see the input data.table:
-  OData$dat.sVar
+  # OData$dat.sVar
 
   # ------------------------------------------------------------------
   # Fit propensity scores for Treatment, Censoring & Monitoring
@@ -72,38 +65,12 @@ test.h2oglm.allestimators10Kdata <- function() {
          "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
          "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
         ))
-
   gform_CENS <- c("C ~ highA1c + t")
-  # stratify_CENS <- list(C=c("t < 16", "t == 16"))
-  # stratify_CENS <- list()
-
   gform_MONITOR <- "N ~ 1"
-  # **** really want to define it like this ****
-  # gform_TRT = c(list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t==0),
-  #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
-
   OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
-
   wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-  survNPMSM(wts.St.dlow, OData)
-
   wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-  survNPMSM(wts.St.dhigh, OData)
-
-  # ------------------------------------------------------------------
-  # Piping the workflow
-  # ------------------------------------------------------------------
-  require("magrittr")
-  St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
-             survNPMSM(OData)  %$%
-             IPW_estimates
-  St.dlow
-
-  St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
-              survNPMSM(OData) %$%
-              IPW_estimates
-  St.dhigh
 
   # ------------------------------------------------------------------
   # Running IPW-adjusted MSM for the hazard
@@ -114,23 +81,9 @@ test.h2oglm.allestimators10Kdata <- function() {
                       est_name = "IPAW", getSEs = TRUE)
   # names(MSM.IPAW)
   # MSM.IPAW$St
-
   make_report_rmd(OData, MSM = MSM.IPAW,
                   AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
-
-  make_report_rmd(OData, MSM = MSM.IPAW,
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
-
-  make_report_rmd(OData, MSM = MSM.IPAW,
-                  AddFUPtables = TRUE, openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
-
 }

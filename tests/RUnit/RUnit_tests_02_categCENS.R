@@ -1,22 +1,3 @@
-# ------------------------------------------------------------------------------------------------------
-# SIMULATE, SAVE AND COMPRESS THE DATASET FROM THE EXAMPLE
-# ------------------------------------------------------------------------------------------------------
-notrun.save.example.data.02 <- function() {
-  require("simcausal")
-  # Nsize <- 50000
-  Nsize <- 1000
-  OdataCatCENS <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356, catC=TRUE)
-  OdataCatCENS[OdataCatCENS[,"t"]%in%16,"lastNat1"] <- NA
-  save(OdataCatCENS, compress = TRUE, file = "./data/OdataCatCENS.rda", compression_level = 9)
-  require("tools")
-  resaveRdaFiles("./data/OdataCatCENS.rda", compress = "bzip2")
-
-  # --------------------------------
-  # save data as csv
-  # --------------------------------
-  # data.table::fwrite(OdataCatCENS, "./OdataCatCENS.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
-}
-
 test.model.fits.categorCENSOR <- function() {
   require("data.table")
   # ------------------------------------------------------------------------------------------------------
