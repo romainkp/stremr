@@ -34,9 +34,9 @@ Allowing various **multiple time-point** interventions on treatment (exposure) a
  - Separate models are fit for the observed censoring, exposure and monitoring mechanisms 
  - Each model can be stratified (separate model is fit) by time or any other user-specified stratification criteria. Stratification is defined with a logical expression that selected specific observations/rows in observed data
  -  By default, all models are fit using `GLM` with `binomial` family (logistic regression). 
- -  Model fitting can be also performed with any machine learning algorithm implemented in H2O-3 (faster distributed penalized GLM, Random Forest, Gradient Boosting Machines and Deep Neural Network).
- -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (h2o.grid) allows fast specification of multiple parameter spaces with pre-specified search parameter search criteria (random, discrete).
- -  The ensemble of many models can be combined into a single (more powerful) prediction via SuperLearning (h2oEmsemble). 
+ -  Alternatively, model fitting can be also performed with any machine learning algorithm implemented in `H2O-3` (faster distributed penalized `GLM`, `Random Forest`, `Gradient Boosting Machines` and `Deep Neural Network`).
+ -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (`h2o.grid`) allows fast specification of multiple parameter spaces with pre-specified search parameter search criteria (random, discrete).
+ -  The ensemble of many models can be combined into a single (more powerful) prediction via **SuperLearner** (`h2oEmsemble`). 
 
 * [Installing stremr](#Installation)
 * [Documentation](#Documentation)
