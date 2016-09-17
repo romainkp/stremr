@@ -60,7 +60,7 @@ For optimal performance, we also recommend installing the development version of
 devtools::install_github("Rdatatable/data.table")
 ```
 
-For modeling with `H2O-3` machine learning libraries we recommend directly installing the latest version of the `h2o` R package ([can also find the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r#installation-from-within-r):
+For modeling with `H2O-3` machine learning libraries we recommend directly installing the latest version of the `h2o` R package ([can also see the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r#installation-from-within-r)):
 ```R
 if ("package:h2o" %in% search()) detach("package:h2o", unload=TRUE)
 if ("h2o" %in% rownames(installed.packages())) remove.packages("h2o")
@@ -72,7 +72,7 @@ if (length(new.pkgs)) install.packages(new.pkgs)
 install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-turchin/9/R")))
 ```
 
-For ensemble learning with SuperLearner we recommend installing the latest development version of the `h2oEnsemble` R package ([can also find the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble#install-development-version):
+For ensemble learning with SuperLearner we recommend installing the latest development version of the `h2oEnsemble` R package ([can also see the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble#install-development-version)):
 ```R
 devtools::install_github("h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package")
 ```
