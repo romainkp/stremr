@@ -6,7 +6,7 @@ stremr
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg?branch=master)](https://coveralls.io/github/osofr/stremr?branch=master)
 
-Streamlined analysis of survival data and other longitudinal time-to-failure data. Allowing multiple (multivariate) exposures over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or `H2O-3` machine learning libraries, including Ensemble Learning (SuperLearner).
+Streamlined analysis of survival data and other longitudinal time-to-failure data. Allowing multiple (multivariate) exposures over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or `H2O-3` machine learning libraries, including Ensemble Learning (**SuperLearner**).
 
 Currently Implemented Estimators:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
