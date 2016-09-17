@@ -277,7 +277,7 @@ GLM_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max
                          lambda = c(0,1e-7,1e-5,1e-3,1e-1))
 ```
 
-Another example with grid search for Random Forest (will be combined with above in a single SuperLearner ensemble):
+Another example with grid search for Random Forest (`h2o.randomForest`) (will be combined with above in a single SuperLearner ensemble):
 ```R
 search_criteria <- list(strategy = "RandomDiscrete", max_models = 5, max_runtime_secs = 60*60)
 RF_hyper_params <- list(search_criteria = search_criteria,
@@ -289,7 +289,7 @@ RF_hyper_params <- list(search_criteria = search_criteria,
                         balance_classes = c(TRUE, FALSE))
 ```
 
-Final example with grid search for Gradient Boosting Machines (gbm) (will be also combined with above grid searches):
+Final example with grid search for Gradient Boosting Machines (`h2o.gbm`) (will be also combined with above grid searches):
 ```R
 GBM_hyper_params <- list(search_criteria = search_criteria,
                          ntrees = c(100, 200, 300, 500),
@@ -300,7 +300,7 @@ GBM_hyper_params <- list(search_criteria = search_criteria,
                          balance_classes = c(TRUE, FALSE))
 ```
 
-In addition, we can specify individual learners that we may want to include in the SuperLearner library (in addition to the above grid searches):
+In addition, we can specify individual learners that we may want to include in the SuperLearner library:
 ```R
 h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
 h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
