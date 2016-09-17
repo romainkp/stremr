@@ -261,22 +261,23 @@ Easy specification of large ensembles with grid search:
 
 1. Define a learning algorithm (e.g., `glm`)
 2. Define the search criteria (e.g., 120 second maximum). Increase parameters `max_runtime_secs` or `max_models` to cover larger number of models from tuning parameter space.
-3. Define the space of tuning parameters (hyper-parameters) by specifying their learner-specific names and values for grid search (e..g, `alpha` and `lambda` for glm).
+3. Define the space of tuning parameters (hyper-parameters) by specifying their learner-specific names and values for grid search (e.g., `alpha` and `lambda` for glm).
 
 
 When running the SuperLearner with grid search, `stremr` calls the following outside functions:
 
 1. Runs `h2o.grid` in the background for each individual learner and saves cross-validated risks.
-2. Calls `h2o.stack` from `h2oEnsemble` package to evaluate the final SuperLearner.
+2. Calls `h2o.stack` from `h2oEnsemble` package to evaluate the final SuperLearner fit on a combination of all learners returned by different grid searches and individually specified learners.
 
-Here are some examples of defining the grid search criteria and search space for glm tuning parameters:
+
+Here is an example defining the grid search criteria and search space of tuning parameters for h2o glm (`h2o.glm`):
 ```R
 GLM_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
                          alpha = c(0,1,seq(0.1,0.9,0.1)),
                          lambda = c(0,1e-7,1e-5,1e-3,1e-1))
 ```
 
-Additional example for grid search with Random Forest:
+Another example with grid search for Random Forest (will be combined with above in a single SuperLearner ensemble):
 ```R
 search_criteria <- list(strategy = "RandomDiscrete", max_models = 5, max_runtime_secs = 60*60)
 RF_hyper_params <- list(search_criteria = search_criteria,
@@ -288,7 +289,7 @@ RF_hyper_params <- list(search_criteria = search_criteria,
                         balance_classes = c(TRUE, FALSE))
 ```
 
-Final example for grid search with Gradient Boosting Machines (gbm):
+Final example with grid search for Gradient Boosting Machines (gbm) (will be also combined with above grid searches):
 ```R
 GBM_hyper_params <- list(search_criteria = search_criteria,
                          ntrees = c(100, 200, 300, 500),
@@ -299,14 +300,14 @@ GBM_hyper_params <- list(search_criteria = search_criteria,
                          balance_classes = c(TRUE, FALSE))
 ```
 
-In addition, we can specify individual learners that we may want to include in the final SuperLearner library (in addition to all of the above grid search models):
+In addition, we can specify individual learners that we may want to include in the SuperLearner library (in addition to the above grid searches):
 ```R
 h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
 h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
 h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
 ```
 
-The SuperLearner is then defined with a single list of parameters that combines all of the above lists.  One can define some additional parameters (e.g., `nfolds` - number of folds for CV).
+The SuperLearner ensemble is now defined with a single list of parameters that includes the above models.  We also define additional SuperLearner-specific parameters here (such as, `nfolds` - number of folds for cross-validation, `metalearner` and `seed`):
 ```R
 SLparams = list(fit.package = "h2o", fit.algorithm = "SuperLearner",
                  grid.algorithm = c("glm", "randomForest", "gbm"),
@@ -320,7 +321,7 @@ SLparams = list(fit.package = "h2o", fit.algorithm = "SuperLearner",
 ```
 
 
-Add additional arguments `save.ensemble` and `ensemble.dir.path` to save the final SuperLearner fits. In addition, this will also save all the individual model fits that were used in constructing the SuperLearner. Separate directories are required for different SuperLearner models (for example a separate directory for censoring model and a separate directory for treatment model). These pre-saved fits can be loaded later at a later time to avoid lengthy refitting (`load.ensemble = TRUE`).
+We can also save the SuperLearner fits in a separate directly by specifying the parameters `save.ensemble` and `ensemble.dir.path`. This will save the entire ensemble of models that were used by the SuperLearner. Separate directories are required for different SuperLearner models (for example a separate directory for censoring model and a separate directory for treatment model). These pre-saved fits can be loaded at a later time to avoid the lengthy refitting process by using the argument `load.ensemble = TRUE`.
 
 ```R
 params_TRT = c(SLparams, save.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
@@ -328,7 +329,7 @@ params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
 params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
 ```
 
-Modeling the propensity score, where the exposure mechanism is modeled with the above SuperLearner:
+The following example fits the propensity score using above SuperLearner to model the exposure mechanism and using `speedglm` logistic regressions for censoring and monitoring:
 ```R
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
@@ -336,7 +337,7 @@ OData <- fitPropensity(OData,
             gform_MONITOR = gform_MONITOR, params_MONITOR = params_MONITOR)
 ```
 
-Re-using previously saved SuperLearner fit for exposure mechanism:
+The following example loads the previously saved fits of the SuperLearner for the exposure and re-uses these fits for predictions:
 ```R
 params_TRT = c(SLparams, load.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
