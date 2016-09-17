@@ -38,6 +38,7 @@ Allowing various **multiple time-point** interventions on treatment (exposure) a
  -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (`h2o.grid`) allows for user-friendly model specification and fitting over multi-dimensional parameter space with various stopping criteria (random, discrete, max number of models, max time allocated, etc).
  -  The ensemble of many models can be combined into a single (more powerful) model with **SuperLearner** (`h2oEmsemble`). 
 
+**Overview**:
 * [Installing stremr](#Installation)
 * [Documentation](#Documentation)
     * [Issue Tracking and Feature Requests](#IssueTracking) 
