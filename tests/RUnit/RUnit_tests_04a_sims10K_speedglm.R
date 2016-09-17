@@ -1,23 +1,24 @@
 # --------------------------------------------------------------------------------------------------------
-# Install h2o (most recent version)
-# --------------------------------------------------------------------------------------------------------
-# if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
-# if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-# # Next, we download packages that H2O depends on.
-# if (! ("methods" %in% rownames(installed.packages()))) { install.packages("methods") }
-# if (! ("statmod" %in% rownames(installed.packages()))) { install.packages("statmod") }
-# if (! ("stats" %in% rownames(installed.packages()))) { install.packages("stats") }
-# if (! ("graphics" %in% rownames(installed.packages()))) { install.packages("graphics") }
-# if (! ("RCurl" %in% rownames(installed.packages()))) { install.packages("RCurl") }
-# if (! ("jsonlite" %in% rownames(installed.packages()))) { install.packages("jsonlite") }
-# if (! ("tools" %in% rownames(installed.packages()))) { install.packages("tools") }
-# if (! ("utils" %in% rownames(installed.packages()))) { install.packages("utils") }
-# # Now we download, install and initialize the H2O package for R.
-# install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-turchin/9/R")))
-# --------------------------------------------------------------------------------------------------------
 # Install data.table (most recent version)
 # --------------------------------------------------------------------------------------------------------
 # devtools::install_github('Rdatatable/data.table')
+# --------------------------------------------------------------------------------------------------------
+# Install h2o (most recent version)
+# --------------------------------------------------------------------------------------------------------
+# if ("package:h2o" %in% search()) detach("package:h2o", unload=TRUE)
+# if ("h2o" %in% rownames(installed.packages())) remove.packages("h2o")
+# # Next, download H2O package dependencies:
+# pkgs <- c("methods","statmod","stats","graphics","RCurl","jsonlite","tools","utils")
+# new.pkgs <- setdiff(pkgs, rownames(installed.packages()))
+# if (length(new.pkgs)) install.packages(new.pkgs)
+# # Download and install the H2O package for R:
+# install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-turchin/9/R
+# --------------------------------------------------------------------------------------------------------
+# Install h2oEnsemble (most recent stable version 1.8)
+# --------------------------------------------------------------------------------------------------------
+# install.packages("https://h2o-release.s3.amazonaws.com/h2o-ensemble/R/h2oEnsemble_0.1.8.tar.gz", repos = NULL)
+#   Install h2oEnsemble (dev version):
+# devtools::install_github("h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package")
 # --------------------------------------------------------------------------------------------------------
 # Install stremr
 # --------------------------------------------------------------------------------------------------------
