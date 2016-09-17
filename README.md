@@ -21,13 +21,14 @@ Allowing various **multiple time-point** interventions on treatment (exposure) a
 - Static,
 - Dynamic and
 - Stochastic.
- 
+
+
 **Input data**: 
  - Long format time-to-event (possibly) right-censored.
  - Must contain specific **fixed** temporal ordering of the variables.
  - Exposure and right-censoring variables can be binary, categorical or continuous (for exposure only) 
  - Categorical exposure can be useful for representing all of the censoring events with a single column (variable). 
- - More than one column can be used for coding each exposure and monitoring event and each of these can be binary, categorical or continuous. 
+ - More than one column can be used for coding each exposure and monitoring event and each of these can be binary, categorical or continuous.
 
 **Model fitting:**
  - Separate models are fit for the observed censoring, exposure and monitoring mechanisms 
