@@ -11,8 +11,8 @@ Streamlined analysis of survival data and general longitudinal time-to-event or 
 Currently Implemented Estimators:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
  - **Inverse Probability Weighted (IPW) Kaplan-Meier**. Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. Based on the exposure/censoring model fits (propensity scores).
- - **Bounded Inverse Probability Weighted (IPW) Estimator of Survival**. Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
- - **Inverse Probability Weighted Marginal Structural Model (IPW-MSM)** for the hazard function, mapped into survival. Currently only logistic regression is allowed with time-points and regimens indicators as the only covariates.  model that  (no baseline covariates are allowed). Based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points with optional weight stabilization.
+ - **Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival**. Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
+ - **Inverse Probability Weighted Marginal Structural Model (IPW-MSM)** for the hazard function, mapped into survival. Currently only logistic regression is allowed where covariates are either time-points and regime/rule indicators.  model that  (no baseline covariates are allowed). Based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points with optional weight stabilization.
  - **Sequential G-Computation (GCOMP)**. Also known as the recursive G-Computation formula or Q-learning. Directly estimates the outcome model while adjusting for time-varying confounding. Estimation can be stratified by rule/regime followed or pooled across all rules/regimes.
  - **Targeted Maximum Likelihood Estimator (TMLE)** for longitudinal data. Also known as the Targeted Minimum Loss-based Estimator. Doubly robust and semi-parametrically efficient estimator that targets the initial outcome model fits (GCOMP) with IPW.
  - **Iterative Targeted Maximum Likelihood Estimator (I-TMLE)** for longitudinal data. Fits sequential G-Computation and then iteratively performs targeting for all pooled Q's until convergence. 
@@ -22,7 +22,7 @@ Allowing various **multiple time-point** interventions on treatment (exposure) a
 - Dynamic and
 - Stochastic.
  
- **Input data**:
+**Input data**: 
  - Long format time-to-event (possibly) right-censored.
  - Must contain specific **fixed** temporal ordering of the variables.
  - Exposure and right-censoring variables can be binary, categorical or continuous (for exposure only) 
