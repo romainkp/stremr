@@ -348,6 +348,8 @@ OData <- fitPropensity(OData,
             gform_MONITOR = gform_MONITOR, params_MONITOR = params_MONITOR)
 ```
 
+Running the SuperLearner with TMLE and GCOMP is identical, and is accomplished by specifying the ensemble as part of the `params_Q` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
+
 ### Citation
 
 ...
