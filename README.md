@@ -6,7 +6,33 @@ stremr
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg?branch=master)](https://coveralls.io/github/osofr/stremr?branch=master)
 
-The `stremr` R package implements the tools for streamlined analysis of  survival for treatment and monitoring events. In particular, it implements the Inverse Probability Weighted Estimator (IPW) of the hazard function in time-to-failure data. The user can specify static, dynamic or stochastic interventions on time-varying treatment, time-varying monitoring events. The input data needs to be in long format, with a specific **fixed** temporal ordering of the variables. The package supports modeling of right-censored data, where right-censoring variables can be coded as either binary or categorical (to represent all of the censoring events with one variable). Either representation allows for separate modeling of different right-censoring events. More than one variable can be used for coding each exposure and monitoring event and each of these can be binary, categorical or continuous. Separate models are fit for the observed censoring, exposure and monitoring mechanisms and each of these models can be fit by either pooling all subject-time data or by stratifying the model fitting according to some arbitrary user-specified criteria. For example, the user may request that the exposure mechanism is modeled separately for each of the observed time-points (stratified by time). The output includes the estimates of the discrete hazard function at each time-point along with the estimates of the discrete survival curve, obtained as a mapping from this hazard. When several interventions for exposure/monitoring are specified, the package will produce one survival estimate for each intervention.
+Streamlined analysis of survival data and other longitudinal time-to-failure data. Allowing multiple (multivariate) exposures over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or `H2O-3` machine learning libraries, including Ensemble Learning (SuperLearner).
+
+Currently Implemented Estimators:
+ - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
+ - **The Inverse Probability Weighted (IPW) Kaplan-Meier**. Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. 
+ - **Sequential G-Computation**. Also known as the recursive G-Computation formula or Q-learning.
+ - **Targeted Maximum Likelihood Estimator (TMLE)** for longitudinal data. Also known as the Targeted Minimum Loss-based Estimator.
+
+Allowing various **multiple time-point** interventions on treatment (exposure) and monitoring indicator:
+- Static,
+- Dynamic and
+- Stochastic.
+ 
+ **Input data**:
+ - Long format time-to-event (possibly) right-censored.
+ - Must contain specific **fixed** temporal ordering of the variables.
+ - Exposure and right-censoring variables can be binary, categorical or continuous (for exposure only) 
+ - Categorical exposure can be useful for representing all of the censoring events with a single column (variable). 
+ - More than one column can be used for coding each exposure and monitoring event and each of these can be binary, categorical or continuous. 
+
+**Model fitting:**
+ - Separate models are fit for the observed censoring, exposure and monitoring mechanisms 
+ - Each model can be stratified (separate model is fit) by time or any other user-specified stratification criteria. Stratification is defined with a logical expression that selected specific observations/rows in observed data
+ -  By default, all models are fit using `GLM` with `binomial` family (logistic regression). 
+ -  Model fitting can be also performed with any machine learning algorithm implemented in H2O-3 (faster distributed penalized GLM, Random Forest, Gradient Boosting Machines and Deep Neural Network).
+ -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (h2o.grid) allows fast specification of multiple parameter spaces with pre-specified search parameter search criteria (random, discrete).
+ -  The ensemble of many models can be combined into a single (more powerful) prediction via SuperLearning (h2oEmsemble). 
 
 * [Installing stremr](#Installation)
 * [Documentation](#Documentation)
@@ -103,37 +129,35 @@ library("data.table")
 library("magrittr")
 data(OdataCatCENS)
 OdataDT <- as.data.table(OdataCatCENS, key=c(ID, t))
-# Indicator that the person has never been treated in the past:
-# ---------------------------------------------------------------------------
-# Define some summaries (lags C[t-1], A[t-1], N[t-1])
-# ---------------------------------------------------------------------------
+```
+
+
+Define some summaries (lags C[t-1], A[t-1], N[t-1]):
+```R
 ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
 lagnodes <- c("C", "TI", "N")
 newVarnames <- lagnodes %+% ".tminus1"
 Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
 # indicator that the person has never been on treatment up to current t
 Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
-Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 ```
 
-Define two dynamic regimes (counterfactual treatment assignment under two rules (`dlow` & `dhigh`)):
+Define two counterfactual (dynamic) exposures based on two rules (`dlow` & `dhigh`)):
 
 ```R
 # Counterfactual TRT assignment for rule dlow (equivalent to always treated):
-rule_name1 <- "dlow"
 OdatDT[,"gTI." %+% rule_name1 := 1L]
 # Counterfactual TRT assignment for dynamic rule dhigh -> start TRT only when I=1 (highA1c = 1)
-rule_name2 <- "dhigh"
-OdatDT_TIdhigh <- stremr::defineIntervedTRT(OdatDT, theta = 1, ID = ID,
+OdatDT_TIdhigh <- stremr::defineIntervedTRT(OdatDT, theta = c(0,1), ID = ID,
                                           t = t, I = I, CENS = CENS, TRT = TRT, MONITOR = MONITOR,
                                           tsinceNis1 = "lastNat1",
-                                          new.TRT.names = "gTI." %+% rule_name2)
+                                          new.TRT.names = "gTI." %+% c("dlow","dhigh"), 
+                                          return.allcolumns = TRUE)
 OdatDT <- merge(OdatDT, OdatDT_TIdhigh, by=c(ID, t))
 ```
 
 
 Define counterfactual monitoring probabilit(ies):
-
 ```R
 # N^*(t) Bernoulli with P(N^*(t)=1)=p
 g.p <- function(Odat, p) return(rep(p, nrow(Odat)))
@@ -147,7 +171,6 @@ OdatDT <- OdatDT[, c("gPois3.yrly", "gPois3.biyrly", "gp05") := list(g.Pois(Odat
 ```
 
 Regressions for modeling the exposure (TRT). Fit a separate model for TRT (stratify) for each of the following subsets:
-
 ```R
 gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
 stratify_TRT <- list(
@@ -164,21 +187,18 @@ stratify_TRT <- list(
 ```
 
 Regressions for modeling the categorical censoring (CENS). Stratify the model fits by time-points (separate model for all `t<16` and `t=16`):
-
 ```R
 gform_CENS <- c("CatC ~ highA1c")
 stratify_CENS <- list(CatC=c("t < 16", "t == 16"))
 ```
 
 Regressions for modeling the monitoring regimen (MONITOR) and no stratification (pooling all observations over time):
-
 ```R
 # Intercept only model, pooling across all time points t
 gform_MONITOR <- "N ~ 1"
 ```
 
 Define the probability of following a specific counterfactual monitoring regimen (the counterfactual probability of coming in for a visit is 0.1 at each time point):
-
 ```R
 p <- 0.1 # probability of being monitored at each t is 0.1
 OdataDT[, "gstar.N" := ifelse(N == 1L, eval(p), 1-eval(p))]
@@ -186,7 +206,6 @@ OdataDT[, "gstar.N" := ifelse(N == 1L, eval(p), 1-eval(p))]
 ```
 
 Define the indicator of counterfactual treatment (dynamic treatment rule): 
-
 ```R
 # Define rule followers/non-followers for two rules: dlow & dhigh
 res <- follow.rule.d.DT(OdataDT,
@@ -197,7 +216,7 @@ res <- follow.rule.d.DT(OdataDT,
   merge(OdataDT, ., by=c("ID", "t")) %>%
 ```
 
-### Fit the propensity score models for censoring, exposure and monitoring:
+#### Fit the propensity score models for censoring, exposure and monitoring:
 
 ```R
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
@@ -206,7 +225,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
 
 
 
-### Fit survival with non-parametric MSM  (IPTW-ADJUSTED KM):
+#### Fit survival with non-parametric MSM  (IPTW-ADJUSTED KM):
 
 ```R
 wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
@@ -216,7 +235,8 @@ wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
 survNPMSM(wts.St.dhigh, OData)
 ```
 
-### Turning the workflow into pipes:
+#### Turning the workflow into pipes:
+
 ```R
 require("magrittr")
 St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
@@ -225,7 +245,7 @@ St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR
 St.dhigh
 ```
 
-### Fitting IPW-adjusted MSM for hazard of the survival function
+#### Fitting IPW-adjusted MSM for hazard of the survival function
 
 ```R
 MSM.IPAW <- survMSM(OData,
@@ -271,10 +291,14 @@ tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh"
 tmle_est_par1
 ```
 
+
+### Machine Learning
+
 TMLE w/ h2o random forest:
 
 ```R
-params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100,
+params = list(fit.package = "h2o", fit.algorithm = "randomForest", 
+              ntrees = 100,
               learn_rate = 0.05, sample_rate = 0.8,
               col_sample_rate = 0.8, balance_classes = TRUE)
 t.surv <- c(10)
