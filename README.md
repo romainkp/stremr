@@ -210,54 +210,32 @@ OdataDT[, "gstar.N" := ifelse(N == 1L, eval(p), 1-eval(p))]
 
 ```
 
-Define the indicator of counterfactual treatment (dynamic treatment rule): 
-```R
-# Define rule followers/non-followers for two rules: dlow & dhigh
-res <- follow.rule.d.DT(OdataDT,
-        theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
-        CENS = "CatC", TRT = "TI", MONITOR = "N",
-        rule.names = c("dlow", "dhigh")) %>%
-# Merge rule definitions into main dataset:
-  merge(OdataDT, ., by=c("ID", "t")) %>%
-```
-
-#### Fit the propensity score models for censoring, exposure and monitoring:
+Fit propensity score models for censoring, exposure and monitoring:
 
 ```R
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 ```
 
-
-
-#### Fit survival with non-parametric MSM  (IPTW-ADJUSTED KM):
-
-```R
-wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-survNPMSM(wts.St.dlow, OData)
-
-wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-survNPMSM(wts.St.dhigh, OData)
-```
-
-#### Turning the workflow into pipes:
+Get survival for non-parametric MSM  (IPTW-ADJUSTED KM):
 
 ```R
 require("magrittr")
-St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
+St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh") %>%
             survNPMSM(OData) %$%
             IPW_estimates
 St.dhigh
 ```
 
-#### Fitting IPW-adjusted MSM for hazard of the survival function
+Fit IPW-MSM for two regimens and smoothing over two intervals of time-points:
 
 ```R
+wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
 MSM.IPAW <- survMSM(OData,
                     wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
                     t_breaks = c(1:8,12,16)-1,
                     est_name = "IPAW", getSEs = FALSE)
-MSM.IPAW
 ```
 
 <a name="TMLE"></a>
@@ -266,24 +244,23 @@ MSM.IPAW
 ```R
 t.surv <- c(10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params = list(fit.package = "speedglm", fit.algorithm = "GLM")
 ```
 
 Stratified modeling by rule followers only:
 
 ```R
-tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
 tmle_est3
 ```
 
 Pooling all observations (no stratification):
 
 ```R
-tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
 tmle_est4
 ```
 
-RUN in PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER):
+Run parallel seq-GCOMP & TMLE over `t.surv`:
 
 ```R
 require("doParallel")
@@ -292,12 +269,12 @@ data.table::setthreads(1)
 t.surv <- c(1,2,3,4,5,6,7,8,9,10)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
 tmle_est_par1
 ```
 
-
-### Machine Learning
+<a name="H2OML"></a>
+### Using Machine Learning
 
 TMLE w/ h2o random forest:
 
@@ -311,6 +288,12 @@ Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
 tmle_est
 ```
+
+<a name="SuperLearner"></a>
+###Using Ensemble Learning (SuperLearner) based on H2O-3
+
+Forthcoming...
+
 
 ### Citation
 
