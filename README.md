@@ -10,7 +10,7 @@ Streamlined analysis of longitudinal time-to-event or time-to-failure data. Esti
 
 Currently implemented **estimators** include:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
- - [**Inverse Probability Weighted (IPW) Kaplan-Meier**](#survNPMSM). Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. Based on the exposure/censoring model fits (propensity scores).
+ - [**Inverse Probability Weighted (IPW) Kaplan-Meier**](#survNPMSM). Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. This estimator inverse weights each observation based on the exposure/censoring model fits (propensity scores).
  - [**Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival**](#survDirectIPW). Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
  - [**Inverse Probability Weighted Marginal Structural Model (IPW-MSM)**](#survMSM) for the hazard function, mapped into survival. Currently only logistic regression is allowed where covariates are time-points and regime/rule indicators. This estimator is also based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points and includes optional weight stabilization.
  - [**Sequential G-Computation (GCOMP)**](#GCOMPTMLE). Also known as the recursive G-Computation formula or Q-learning. Directly estimates the outcome model while adjusting for time-varying confounding. Estimation can be stratified by rule/regime followed or pooled across all rules/regimes.
