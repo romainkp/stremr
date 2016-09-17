@@ -321,27 +321,26 @@ SLparams = list(fit.package = "h2o", fit.algorithm = "SuperLearner",
 ```
 
 
-We can also save the SuperLearner fits in a separate directly by specifying the parameters `save.ensemble` and `ensemble.dir.path`. This will save the entire ensemble of models that were used by the SuperLearner. Separate directories are required for different SuperLearner models (for example a separate directory for censoring model and a separate directory for treatment model). These pre-saved fits can be loaded at a later time to avoid the lengthy refitting process by using the argument `load.ensemble = TRUE`.
+We can also save the SuperLearner fits by adding parameters `save.ensemble` and `ensemble.dir.path`. This will save the entire ensemble of models that were used by the SuperLearner. Separate directories are required for different SuperLearner models (for example a separate directory for censoring model and a separate directory for treatment model). These pre-saved fits can be loaded at a later time to avoid the lengthy refitting process by using the argument `load.ensemble = TRUE`.
 
 ```R
 params_TRT = c(SLparams, save.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
-params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
-params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
 ```
 
 The following example fits the propensity score using above SuperLearner to model the exposure mechanism and using `speedglm` logistic regressions for censoring and monitoring:
 ```R
+params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
+params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
+
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,
             gform_MONITOR = gform_MONITOR, params_MONITOR = params_MONITOR)
 ```
 
-The following example loads the previously saved fits of the SuperLearner for the exposure and re-uses these fits for predictions:
+The following example loads the previously saved fits of the SuperLearner for the exposure. The only models fit during this call to `fitPropensity` are for the monitoring and censoring.
 ```R
 params_TRT = c(SLparams, load.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
-params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
-params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
