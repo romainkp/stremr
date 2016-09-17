@@ -70,93 +70,74 @@ test.h2oEnsemble <- function() {
     gform_MONITOR <- "N ~ 1"
 
     # Random Grid Search (e.g. 120 second maximum)
-    # This is set to run fairly quickly, increase max_runtime_secs
-    # or max_models to cover more of the hyperparameter space.
-    # Also, you can expand the hyperparameter space of each of the
-    # algorithms by modifying the hyper param code below.
-
+    # This is set to run fairly quickly, increase max_runtime_secs or max_models to cover more of the hyperparameter space.
+    # You can expand the hyperparameter space of each of the algorithms by modifying the hyper param code below.
     # search_criteria <- list(strategy = "RandomDiscrete", max_runtime_secs = 20)
     # search_criteria <- list(strategy = "RandomDiscrete", max_runtime_secs = 120)
     # search_criteria <- list(strategy = "RandomDiscrete", max_runtime_secs = 5*120)
     # search_criteria <- list(strategy = "RandomDiscrete", max_models = 42, max_runtime_secs = 28800)
     # search_criteria <- list(strategy = "RandomDiscrete", stopping_metric = "AUTO", stopping_tolerance = 0.001, stopping_rounds = 10)
     # search_criteria <- list(strategy = "RandomDiscrete", stopping_metric = "misclassification", stopping_tolerance = 0.00001, stopping_rounds = 5)
-    # nfolds <- 5
-    # nfolds <- 10
 
-    ntrees_opt <- c(100, 200, 300, 500)
-    mtries_opt <- 8:20
-    max_depth_opt <- c(5, 10, 15, 20, 25)
-    sample_rate_opt <- c(0.7, 0.8, 0.9, 1.0)
-    col_sample_rate_per_tree_opt <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
-    balance_classes_opt <- c(TRUE, FALSE)
+    glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
+                             alpha = c(0,1,seq(0.1,0.9,0.1)),
+                             lambda = c(0,1e-7,1e-5,1e-3,1e-1))
+
     RF_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_runtime_secs = 20),
-                            ntrees = ntrees_opt,
-                            # mtries = mtries_opt,
-                            max_depth = max_depth_opt,
-                            sample_rate = sample_rate_opt,
-                            col_sample_rate_per_tree = col_sample_rate_per_tree_opt,
-                            balance_classes = balance_classes_opt)
+                            ntrees = c(100, 200, 300, 500),
+                            mtries = 8:20,
+                            max_depth = c(5, 10, 15, 20, 25),
+                            sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                            col_sample_rate_per_tree = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                            balance_classes = c(TRUE, FALSE))
 
-    ntrees_opt <- c(100, 200, 300, 500)
-    learn_rate_opt <- c(0.005, 0.01, 0.03, 0.06)
-    max_depth_opt <- c(3, 4, 5, 6, 9)
-    sample_rate_opt <- c(0.7, 0.8, 0.9, 1.0)
-    col_sample_rate_opt <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
-    balance_classes_opt <- c(TRUE, FALSE)
     GBM_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_runtime_secs = 20),
-                             ntrees = ntrees_opt,
-                             learn_rate = learn_rate_opt,
-                             max_depth = max_depth_opt,
-                             sample_rate = sample_rate_opt,
-                             col_sample_rate = col_sample_rate_opt,
-                             balance_classes = balance_classes_opt)
+                             ntrees = c(100, 200, 300, 500),
+                             learn_rate = c(0.005, 0.01, 0.03, 0.06),
+                             max_depth = c(3, 4, 5, 6, 9),
+                             sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                             col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                             balance_classes = c(TRUE, FALSE))
 
-    # activation_opt <- c("Rectifier", "RectifierWithDropout", "Maxout", "MaxoutWithDropout")
-    # hidden_opt <- list(c(10,10), c(20,15), c(50,50,50))
-    # l1_opt <- c(0, 1e-3, 1e-5)
-    # l2_opt <- c(0, 1e-3, 1e-5)
-    # DL_hyper_params <- list(activation = activation_opt,
-    #                               hidden = hidden_opt,
-    #                               l1 = l1_opt,
-    #                               l2 = l2_opt)
+    DL_hyper_params <- list(activation = c("Rectifier", "RectifierWithDropout", "Maxout", "MaxoutWithDropout"),
+                            hidden = list(c(10,10), c(20,15), c(50,50,50)),
+                            l1 = c(0, 1e-3, 1e-5),
+                            l2 = c(0, 1e-3, 1e-5))
+
+    h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
+    h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
+    h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
 
     h2o.randomForest.1 <- function(..., ntrees = 200, nbins = 50, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, nbins = nbins, seed = seed)
     h2o.randomForest.2 <- function(..., ntrees = 200, sample_rate = 0.75, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, sample_rate = sample_rate, seed = seed)
     h2o.randomForest.3 <- function(..., ntrees = 200, sample_rate = 0.85, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, sample_rate = sample_rate, seed = seed)
+
     h2o.gbm.1 <- function(..., ntrees = 100, nbins = 100, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, nbins = nbins, seed = seed)
     h2o.gbm.2 <- function(..., ntrees = 200, nbins = 50, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, nbins = nbins, seed = seed)
     h2o.gbm.3 <- function(..., ntrees = 100, max_depth = 10, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, max_depth = max_depth, seed = seed)
     h2o.gbm.4 <- function(..., ntrees = 100, col_sample_rate = 0.8, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, col_sample_rate = col_sample_rate, seed = seed)
     h2o.gbm.5 <- function(..., ntrees = 200, col_sample_rate = 0.8, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, col_sample_rate = col_sample_rate, seed = seed)
     h2o.gbm.6 <- function(..., ntrees = 200, col_sample_rate = 0.7, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, col_sample_rate = col_sample_rate, seed = seed)
-    # h2o.deeplearning.1 <- function(..., hidden = c(500,500), activation = "Rectifier", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-    # h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-    # h2o.deeplearning.3 <- function(..., hidden = c(500,500), activation = "RectifierWithDropout", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-    # h2o.deeplearning.1 <- function(..., hidden = c(500,500), activation = "Rectifier", seed = 1) h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-    # h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", seed = 1) h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-    # learner <- c("h2o.randomForest.1", "h2o.deeplearning.1", "h2o.deeplearning.2")
 
-    h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
-    h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
-    h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
-    # learner <- c("h2o.glm.1", "h2o.glm.2", "h2o.glm.3")
-                 # "h2o.randomForest.1", "h2o.randomForest.2", "h2o.randomForest.3",
-                 # "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5", "h2o.gbm.6")
-                # "h2o.deeplearning.1", "h2o.deeplearning.2", "h2o.deeplearning.3"
+    h2o.deeplearning.1 <- function(..., hidden = c(500,500), activation = "Rectifier", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+    h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+    h2o.deeplearning.3 <- function(..., hidden = c(500,500), activation = "RectifierWithDropout", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+
+    # learner <- c("h2o.glm.1", "h2o.randomForest.1", "h2o.gbm.1", "h2o.deeplearning.1")
+    # learner <- c("h2o.glm.1", "h2o.glm.2", "h2o.glm.3",
+    #              "h2o.randomForest.1", "h2o.randomForest.2", "h2o.randomForest.3",
+    #              "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5", "h2o.gbm.6",
+    #              "h2o.deeplearning.1", "h2o.deeplearning.2", "h2o.deeplearning.3")
+
     # metalearner <- "h2o.glm_nn"
     # family <- "binomial"
     # h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negative = non_negative)
-
-    glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
-                             alpha = c(0,1,seq(0.1,0.9,0.1)), lambda = c(0,1e-7,1e-5,1e-3,1e-1))
 
     SLparams = list( # search_criteria = list(strategy = "RandomDiscrete", max_runtime_secs = 20),
                      grid.algorithm = c("glm"),
                      # grid.algorithm = c("glm", "randomForest"),
                      # learner = c("h2o.glm.2"),
                      learner = c("h2o.glm.wrapper"),
-                     # algorithm = c("glm", "randomForest", "gbm", "deeplearning"),
                      metalearner = "h2o.glm_nn",
                      nfolds = 2,
                      # nfolds = 5,

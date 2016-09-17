@@ -142,6 +142,7 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 #' @param ... Arguments that will be passed down to the underlying function \code{fitSeqGcomp}
 #' @return \code{data.table} with survival by time for sequential GCOMP and iterative TMLE
 #' @seealso \code{\link{fitSeqGcomp}}
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 fitIterTMLE <- function(...) {
   fitSeqGcomp(TMLE = FALSE, iterTMLE = TRUE, ...)
@@ -154,6 +155,7 @@ fitIterTMLE <- function(...) {
 #' @param ... Arguments that will be passed down to the underlying function \code{fitSeqGcomp}
 #' @return \code{data.table} with TMLE survival by time
 #' @seealso \code{\link{fitSeqGcomp}}
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 fitTMLE <- function(...) {
   fitSeqGcomp(TMLE = TRUE, ...)
@@ -200,7 +202,7 @@ fitTMLE <- function(...) {
 #' @param verbose ...
 #' @return ...
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
-# @example tests/examples/1_stremr_example.R
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 fitSeqGcomp <- function(OData, t_periods,
                         Qforms, Qstratify = NULL,

@@ -25,7 +25,7 @@
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
-# @example tests/examples/1_stremr_example.R
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y", noCENScat = 0L, verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
@@ -136,7 +136,7 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
-# @example tests/examples/1_stremr_example.R
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 fitPropensity <- function(OData,
                           gform_CENS, gform_TRT, gform_MONITOR,
@@ -179,11 +179,10 @@ fitPropensity <- function(OData,
   #                                       saveH2O = TRUE,
   #                                       destination_frame = "H2OMainDataTable")
   modelfits.g0$fit(data = OData, predict = TRUE)
-  # browser()
+
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
-  # h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs))
   h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs), silent = TRUE)
   if (inherits(h_gN, "try-error")) { # if failed, it means that prediction cannot be done with newdata
     h_gN <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs)
@@ -265,7 +264,7 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
-# @example tests/examples/1_stremr_example.R
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
                          rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = "")
@@ -284,6 +283,10 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   # (2) gstar.TRT: prob of following one treatment rule; and
   # (3) gstar.MONITOR prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
+  if (is.null(OData$modelfits.g0)) stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
+  if (any(!(c("g0.A", "g0.C", "g0.N", "g0.CAN") %in% names(OData$dat.sVar)))) stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")
+
+
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
   # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
@@ -372,6 +375,7 @@ process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param trunc_weights (NOT IMPLEMENTED) Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @return A data.table with bounded IPW estimates of risk and survival by time.
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   nodes <- OData$nodes
@@ -418,6 +422,7 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @return A data.table with hazard and survival function estimates by time. Also include the unadjusted Kaplan-Maier estimates.
+#' @example tests/examples/2_building_blocks_example.R
 #' @export
 survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   nodes <- OData$nodes
@@ -728,14 +733,6 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
                                                   destination_frame = "MSM.designmat.H2O")
     )
     if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
-
-    # OData$fast.load.to.H2O(wts_data, )
-    # temp.csv.path <- file.path(tempdir(), "wts_data.csv~")
-    # data.table::fwrite(wts_data, temp.csv.path, turbo = TRUE)
-    # MSM.designmat.H2O <- h2o::h2o.uploadFile(path = temp.csv.path, parse_type = "CSV", destination_frame = "MSM.designmat.H2O")
-    # na.wts.idx <- which(as.logical(is.na(MSM.designmat.H2O[, "cum.IPAW"])))
-    # MSM.designmat.H2O[na.wts.idx, ]
-    # wts_data[na.wts.idx, ]
 
     m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
                                   x = all_dummies,

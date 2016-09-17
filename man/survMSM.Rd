@@ -76,7 +76,7 @@ If omitted, the default is to define a saturated (non-parametric) MSM with a sep
 }
 \examples{
 #-------------------------------------------------------------------
-# EXAMPLE BASED ON SIMULATED DATA
+# Simulated data with informative right-censoring
 #-------------------------------------------------------------------
 require("data.table")
 require("magrittr")
@@ -166,7 +166,7 @@ IPW_MSM_res$MSM.fit
 # ------------------------------------------------------------------
 # Generate automatic html report with results of the analysis
 # ------------------------------------------------------------------
-#' \dontrun{
+\dontrun{
 make_report_rmd(OData, MSM = IPW_MSM_res,
   AddFUPtables = TRUE,
   RDtables = get_MSM_RDs(IPW_MSM_res, t.periods.RDs = c(12, 15), getSEs = FALSE),
@@ -176,7 +176,7 @@ make_report_rmd(OData, MSM = IPW_MSM_res,
   title = "Custom Report Title",
   author = "Jane Doe",
   y_legend = 0.95)
-#'}
+}
 }
 \seealso{
 \code{\link{stremr-package}} for the general overview of the package,
