@@ -212,8 +212,6 @@ GenericModel <- R6Class(classname = "GenericModel",
   )
 )
 
-
-
 ## ---------------------------------------------------------------------
 #' R6 class for fitting and predicting joint probability for a univariate categorical summary A[j]
 #'
@@ -446,37 +444,37 @@ StratifiedModel <- R6Class(classname = "StratifiedModel",
 # The code in DataStorageClass$binirize.sVar() will automatically set the indicator Bin_K[i] to NA when Bin_K-1[i] is 1 for the first time.
 # Thus, by excluding all observations such that !is.na(Bin_K) we end up fitting the hazard for Bin_K=1.
 # -------------------------------------------------------------------------------------------
-def_regs_subset <- function(self) {
-  bin_regs <- self$reg$clone()  # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
-  bin_regs$reg_hazard <- TRUE   # Don`t add degenerate bins as predictors in each binary regression
-  # if (!self$reg$pool_cont) {
-  add.oldsubset <- TRUE
-  new.subsets <- lapply(self$reg$bin_nms,
-                            function(var) {
-                              res <- var
-                              if (add.oldsubset) res <- c(res, self$reg$subset_vars)
-                              res
-                            })
-  new.sAclass <- as.list(rep_len(gvars$sVartypes$bin, self$reg$nbins))
-  names(new.sAclass) <- self$reg$bin_nms
-  bin_regs$outvar.class <- new.sAclass
-  bin_regs$outvar <- self$reg$bin_nms
-  bin_regs$predvars <- self$reg$predvars
-  bin_regs$subset_vars <- new.subsets
-  # # Same but when pooling across bin indicators:
-  # } else {
-  #   bin_regs$outvar.class <- gvars$sVartypes$bin
-  #   bin_regs$outvar <- self$outvar
-  #   bin_regs$outvars_to_pool <- self$reg$bin_nms
-  #   if (gvars$verbose)  {
-  #     print("pooled bin_regs$outvar: "); print(bin_regs$outvar)
-  #     print("bin_regs$outvars_to_pool: "); print(bin_regs$outvars_to_pool)
-  #     print("bin_regs$subset_vars: "); print(bin_regs$subset_vars)
-  #   }
-  # }
-  # bin_regs$resetS3class()
-  return(bin_regs)
-}
+# def_regs_subset <- function(self) {
+#   bin_regs <- self$reg$clone()  # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
+#   bin_regs$reg_hazard <- TRUE   # Don`t add degenerate bins as predictors in each binary regression
+#   # if (!self$reg$pool_cont) {
+#   add.oldsubset <- TRUE
+#   new.subsets <- lapply(self$reg$bin_nms,
+#                             function(var) {
+#                               res <- var
+#                               if (add.oldsubset) res <- c(res, self$reg$subset_vars)
+#                               res
+#                             })
+#   new.sAclass <- as.list(rep_len(gvars$sVartypes$bin, self$reg$nbins))
+#   names(new.sAclass) <- self$reg$bin_nms
+#   bin_regs$outvar.class <- new.sAclass
+#   bin_regs$outvar <- self$reg$bin_nms
+#   bin_regs$predvars <- self$reg$predvars
+#   bin_regs$subset_vars <- new.subsets
+#   # # Same but when pooling across bin indicators:
+#   # } else {
+#   #   bin_regs$outvar.class <- gvars$sVartypes$bin
+#   #   bin_regs$outvar <- self$outvar
+#   #   bin_regs$outvars_to_pool <- self$reg$bin_nms
+#   #   if (gvars$verbose)  {
+#   #     print("pooled bin_regs$outvar: "); print(bin_regs$outvar)
+#   #     print("bin_regs$outvars_to_pool: "); print(bin_regs$outvars_to_pool)
+#   #     print("bin_regs$subset_vars: "); print(bin_regs$subset_vars)
+#   #   }
+#   # }
+#   # bin_regs$resetS3class()
+#   return(bin_regs)
+# }
 
 ## -------------------------------------------------------------------------------------------
 #' R6 class for fitting and predicting joint probability for a univariate continuous summary A[j]
@@ -523,47 +521,90 @@ ContinModel <- R6Class(classname = "ContinModel",
   public = list(
     reg = NULL,
     outvar = character(),     # the name of the continous outcome var (sA[j])
+    nbins = NULL,
+    bin_nms = character(),
     intrvls = NULL,
     intrvls.width = NULL,
     bin_weights = NULL,
     # Define settings for fitting contin sA and then call $new for super class (GenericModel)
-    initialize = function(reg, DataStorageClass.g0, DataStorageClass.gstar, ...) {
+    initialize = function(reg, DataStorageClass.g0, DataStorageClass.gstar,...) {
+    # initialize = function(reg, DataStorageClass.g0, DataStorageClass.gstar, ...) {
       stop("...regressions with continuous outcomes are not implemented yet...")
       self$reg <- reg
       self$outvar <- reg$outvar
       if (is.null(reg$intrvls)) {
         assert_that(is.DataStorageClass(DataStorageClass.g0))
         self$intrvls <- DataStorageClass.g0$detect.sVar.intrvls(reg$outvar,
-                                                      nbins = self$reg$nbins,
-                                                      bin_bymass = self$reg$bin_bymass,
-                                                      bin_bydhist = self$reg$bin_bydhist,
-                                                      max_nperbin = self$reg$max_nperbin)
-        if (!missing(DataStorageClass.gstar)) {
-          assert_that(is.DataStorageClass(DataStorageClass.gstar))
-          gstar.intrvls <- DataStorageClass.gstar$detect.sVar.intrvls(reg$outvar,
-                                                      nbins = self$reg$nbins,
-                                                      bin_bymass = self$reg$bin_bymass,
-                                                      bin_bydhist = self$reg$bin_bydhist,
-                                                      max_nperbin = self$reg$max_nperbin)
-          self$intrvls <- unique(sort(union(self$intrvls, gstar.intrvls)))
-        }
+                                                      # nbins = self$reg$nbins,
+                                                      nbins = 10,
+                                                      # bin_bymass = self$reg$bin_bymass,
+                                                      bin_bymass = TRUE,
+                                                      # bin_bydhist = self$reg$bin_bydhist,
+                                                      bin_bydhist = FALSE,
+                                                      # max_nperbin = self$reg$max_nperbin
+                                                      max_nperbin = 100
+                                                      )
+        # if (!missing(DataStorageClass.gstar)) {
+        #   assert_that(is.DataStorageClass(DataStorageClass.gstar))
+        #   gstar.intrvls <- DataStorageClass.gstar$detect.sVar.intrvls(reg$outvar,
+        #                                               nbins = self$reg$nbins,
+        #                                               bin_bymass = self$reg$bin_bymass,
+        #                                               bin_bydhist = self$reg$bin_bydhist,
+        #                                               max_nperbin = self$reg$max_nperbin)
+        #   self$intrvls <- unique(sort(union(self$intrvls, gstar.intrvls)))
+        # }
         # Define the number of bins (no. of binary regressions to run),
         # new outvar var names (bin names); all predvars remain unchanged;
-        self$reg$intrvls <- self$intrvls
+        # self$reg$intrvls <- self$intrvls
       } else {
         self$intrvls <- self$reg$intrvls
       }
-      self$reg$nbins <- length(self$intrvls) - 1
-      self$reg$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
+
+
+      # self$reg$nbins <- length(self$intrvls) - 1
+      self$nbins <- length(self$intrvls) - 1
+
+
+      # self$reg$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$reg$nbins)
+      self$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$nbins)
+
+
       # Save bin widths in reg class (naming the vector entries by bin names):
       self$intrvls.width <- diff(self$intrvls)
       self$intrvls.width[self$intrvls.width <= gvars$tolerr] <- 1
-      self$reg$intrvls.width <- self$intrvls.width
-      names(self$reg$intrvls.width) <- names(self$intrvls.width) <- self$reg$bin_nms
+
+
+      # self$reg$intrvls.width <- self$intrvls.width
+      # names(self$reg$intrvls.width) <- names(self$intrvls.width) <- self$reg$bin_nms
+      names(self$intrvls.width) <- self$bin_nms
+
+
       if (gvars$verbose)  {
         print("ContinModel outcome: "%+%self$outvar)
       }
-      bin_regs <- def_regs_subset(self = self)
+
+
+      # ----------------------------------------------------------------------------------------------------------------
+      # Former function call: def_regs_subset(self = self)
+      # First makes a clone of the parent RegressionClass and the recents the previous outvar/outvar.class to new binary outcomes/classes.
+      # Defines subset_var evaluation for new bins (for fitting the hazard of each new category/dummy)
+      # NOTE: This subsetting is performed by var name only (which automatically evaluates as !gvars$misval(var)) for speed & memory efficiency
+      # The code in DataStorageClass$binirize.sVar() will automatically set the indicator Bin_K[i] to NA when Bin_K-1[i] is 1 for the first time.
+      # Thus, by excluding all observations such that !is.na(Bin_K) we end up fitting the hazard for Bin_K=1.
+      # ----------------------------------------------------------------------------------------------------------------
+      # bin_regs <- def_regs_subset(self = self)
+      # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
+      bin_regs <- self$reg$clone()
+      bin_regs$outvar.class <- as.list(rep_len(gvars$sVartypes$bin, self$nbins))
+      names(bin_regs$outvar.class) <- self$bin_nms
+      bin_regs$outvar <- self$bin_nms
+      bin_regs$predvars <- self$reg$predvars
+      # subsetting variable names (always subset by non-missing values for the current bin column)
+      bin_regs$subset_vars <- lapply(self$bin_nms, function(var) { c(var, self$reg$subset_vars)})
+      names(bin_regs$subset_vars) <- self$bin_nms
+      bin_regs$reg_hazard <- TRUE   # Don`t add degenerate bins as predictors in each binary regression
+
+
       super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
     },
     # Transforms data for continous outcome to discretized bins A[j] -> BinA[1], ..., BinA[M] and calls $super$fit on that transformed data
@@ -571,7 +612,8 @@ ContinModel <- R6Class(classname = "ContinModel",
     fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       # Binirizes & saves binned matrix inside DataStorageClass
-      data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
+      # data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
+      data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$nbins, bin.nms = self$bin_nms)
       if (gvars$verbose) {
         print("performing fitting for continuous outcome: " %+% self$outvar)
         print("freq counts by bin for continuous outcome: "); print(table(data$ord.sVar))
@@ -580,7 +622,7 @@ ContinModel <- R6Class(classname = "ContinModel",
       super$fit(data, ...) # call the parent class fit method
       if (gvars$verbose) message("fit for outcome " %+% self$outvar %+% " succeeded...")
       data$emptydat.bin.sVar # wiping out binirized mat in data DataStorageClass object...
-      self$wipe.alldat # wiping out all data traces in ContinModel...
+      # self$wipe.alldat # wiping out all data traces in ContinModel...
       invisible(self)
     },
     # P(A=1|W=w): uses private$m.fit to generate predictions
@@ -592,7 +634,7 @@ ContinModel <- R6Class(classname = "ContinModel",
       # mat_bin doesn't need to be saved (even though its invisibly returned); mat_bin is automatically saved in datnet.sW.sA - a potentially dangerous side-effect!!!
 
       if (!missing(newdata)) {
-        newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
+        newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$nbins, bin.nms = self$bin_nms)
       }
       super$predict(newdata, ...)
       if (!missing(newdata)) {
@@ -605,7 +647,7 @@ ContinModel <- R6Class(classname = "ContinModel",
     # Invisibly return cumm. prob P(A=a|W=w)
     predictAeqa = function(newdata, ...) { # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a`s)
       assert_that(is.DataStorageClass(newdata))
-      newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
+      newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$nbins, bin.nms = self$bin_nms)
       if (gvars$verbose) print("performing prediction for continuous outcome: " %+% self$outvar)
       bws <- newdata$get.sVar.bw(name.sVar = self$outvar, intervals = self$intrvls)
       self$bin_weights <- (1 / bws) # weight based on 1 / (sVar bin widths)
@@ -619,12 +661,12 @@ ContinModel <- R6Class(classname = "ContinModel",
       # cumprodAeqa <- super$predictAeqa(newdata = newdata, bw.j.sA_diff = bw.j.sA_diff) * self$bin_weights
       newdata$emptydat.bin.sVar # wiping out binirized mat in newdata object...
       self$bin_weights <- NULL # wiping out self$bin_weights...
-      self$wipe.alldat # wiping out all data traces in ContinModel...
+      # self$wipe.alldat # wiping out all data traces in ContinModel...
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     }
   ),
   active = list(
-    cats = function() {seq_len(self$reg$nbins)}
+    cats = function() {seq_len(self$nbins)}
   )
 )

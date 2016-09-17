@@ -41,7 +41,6 @@ The class \code{DataStorageClass} is the only way the package uses to access the
   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
   \item{\code{bin.nms.sVar(name.sVar, nbins)}}{...}
-  \item{\code{pooled.bin.nm.sVar(name.sVar)}}{...}
   \item{\code{detect.sVar.intrvls(name.sVar, nbins, bin_bymass, bin_bydhist, max_nperbin)}}{...}
   \item{\code{detect.cat.sVar.levels(name.sVar)}}{...}
   \item{\code{binirize.sVar(name.sVar, ...)}}{...}
