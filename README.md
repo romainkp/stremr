@@ -10,9 +10,11 @@ Streamlined analysis of survival data and other longitudinal time-to-failure dat
 
 Currently Implemented Estimators:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
- - **The Inverse Probability Weighted (IPW) Kaplan-Meier**. Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. 
+ - **Inverse Probability Weighted (IPW) Kaplan-Meier**. Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard.
+ - **Inverse Probability Weighted Marginal Structural Model (IPW-MSM)** for the hazard function, mapped into survival. Currently only implements the logistic regression model that can smooth over several time-points (no baseline covariates are allowed).
  - **Sequential G-Computation**. Also known as the recursive G-Computation formula or Q-learning.
- - **Targeted Maximum Likelihood Estimator (TMLE)** for longitudinal data. Also known as the Targeted Minimum Loss-based Estimator.
+ - **Targeted Maximum Likelihood Estimator (TMLE)** for longitudinal data. Also known as the Targeted Minimum Loss-based Estimator. Can be stratified by rule/regime followed or pooled across all regimens.
+ - **Iterative Targeted Maximum Likelihood Estimator (I-TMLE)** for longitudinal data. Fits sequential G-Computation and then iteratively performs targeting for all pooled Q's until convergence. 
 
 Allowing various **multiple time-point** interventions on treatment (exposure) and monitoring indicator:
 - Static,
