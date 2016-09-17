@@ -239,7 +239,7 @@ SLparams = list(fit.package = "h2o", fit.algorithm = "SuperLearner",
 # Use save.ensemble and ensemble.dir.path arguments to save the final SuperLearner fit
 # ----------------------------------------------------------------------
 # This will also save the individual learner fits in the same directory.
-# Only one directory per single SuperLearner fit is allowed.
+# Only one directory per single SuperLearner fit is allowed.
 # Can be loaded later on to save time and avoid refitting SuperLearner (load.ensemble = TRUE).
 
 params_TRT = c(SLparams, save.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
