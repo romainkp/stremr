@@ -13,7 +13,7 @@ The `stremr` R package implements the tools for streamlined analysis of  surviva
     * [Issue Tracking and Feature Requests](#IssueTracking) 
     * [List of Open Source Resources](#OpenSourceResources)
 * [Example1](#Example1)
-* [Creating Automatic Reports](#Reports)
+* [Automated Reports](#Reports)
 * [Fitting Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data](#TMLE)
 * [Using H2O-3 Machine Learning Libraries](#H2OML)
 * [Using Ensemble Learning (SuperLearner) based on H2O-3](#SuperLearner)
@@ -69,6 +69,29 @@ help(package = 'stremr')
 news(package = "stremr")
 ```
  -->
+
+<a name="Reports"></a>
+### Automated Reports:
+
+![gif](https://cloud.githubusercontent.com/assets/6721358/18605322/a757d984-7c43-11e6-9a6d-2cf28afe49f1.gif)
+
+html report:
+
+```R
+make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example")
+```
+
+pdf report:
+
+```R
+make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
+                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                file.name = "sim.data.example", format = "pdf")
+```
 
 <a name="Example1"></a>
 ### Example with categorical censoring (3 levels)
@@ -212,37 +235,8 @@ MSM.IPAW <- survMSM(OData,
 MSM.IPAW
 ```
 
-
-<a name="Reports"></a>
-### Creating automatic reports:
-
-html report:
-
-```R
-make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
-                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                file.name = "sim.data.example")
-```
-
-pdf report:
-
-```R
-make_report_rmd(OData, MSM = MSM.IPAW, AddFUPtables = TRUE,
-                RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
-                WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                file.name = "sim.data.example", format = "pdf")
-
-# omit extra modeling stuff (only coefficients):
-make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# skip modeling stuff alltogether:
-make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-# skip RD tables by simply not including them:
-make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-```
-
 <a name="TMLE"></a>
-### Fitting Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data.
+### Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data.
 
 ```R
 t.surv <- c(10)
