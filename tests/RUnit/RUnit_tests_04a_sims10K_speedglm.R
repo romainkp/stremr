@@ -180,6 +180,7 @@ test.speedglm.allestimators10Kdata <- function() {
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.99, x_legend = 9.5)
 
   make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2),
+                  format = "pdf",
                   AddFUPtables = TRUE,
                   openFile = FALSE,
                   RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
