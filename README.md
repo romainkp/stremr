@@ -8,6 +8,17 @@ stremr
 
 The `stremr` R package implements the tools for streamlined analysis of  survival for treatment and monitoring events. In particular, it implements the Inverse Probability Weighted Estimator (IPW) of the hazard function in time-to-failure data. The user can specify static, dynamic or stochastic interventions on time-varying treatment, time-varying monitoring events. The input data needs to be in long format, with a specific **fixed** temporal ordering of the variables. The package supports modeling of right-censored data, where right-censoring variables can be coded as either binary or categorical (to represent all of the censoring events with one variable). Either representation allows for separate modeling of different right-censoring events. More than one variable can be used for coding each exposure and monitoring event and each of these can be binary, categorical or continuous. Separate models are fit for the observed censoring, exposure and monitoring mechanisms and each of these models can be fit by either pooling all subject-time data or by stratifying the model fitting according to some arbitrary user-specified criteria. For example, the user may request that the exposure mechanism is modeled separately for each of the observed time-points (stratified by time). The output includes the estimates of the discrete hazard function at each time-point along with the estimates of the discrete survival curve, obtained as a mapping from this hazard. When several interventions for exposure/monitoring are specified, the package will produce one survival estimate for each intervention.
 
+* [Installing stremr](#Installation)
+* [Documentation](#Documentation)
+    * [Issue Tracking and Feature Requests](#IssueTracking) 
+    * [List of Open Source Resources](#OpenSourceResources)
+* [Example1](#Example1)
+* [Creating Automatic Reports](#Reports)
+* [Fitting Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data](#TMLE)
+* [Using H2O-3 Machine Learning Libraries](#H2OML)
+* [Using Ensemble Learning (SuperLearner) based on H2O-3](#SuperLearner)
+
+<a name="Installation"></a>
 ### Installation
 
 <!-- To install the CRAN release version of `stremr`: 
@@ -23,6 +34,7 @@ To install the development version (requires the `devtools` package):
 devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 ```
 
+<a name="Documentation"></a>
 ### Documentation
 
  For the general overview of the package:
@@ -58,6 +70,7 @@ news(package = "stremr")
 ```
  -->
 
+<a name="Example1"></a>
 ### Example with categorical censoring (3 levels)
 
 Load the data:
@@ -200,6 +213,7 @@ MSM.IPAW
 ```
 
 
+<a name="Reports"></a>
 ### Creating automatic reports:
 
 html report:
@@ -227,6 +241,7 @@ make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.p
 make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 ```
 
+<a name="TMLE"></a>
 ### Fitting Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data.
 
 ```R

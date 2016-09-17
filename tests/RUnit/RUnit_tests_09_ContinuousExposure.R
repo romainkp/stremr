@@ -19,5 +19,7 @@ test.ContinModel <- function() {
   OData <- fitPropensity(OData = OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
   OData$dat.sVar[]
 
+  OData$modelfit.gA$predict(OData)
+
   options(stremr.verbose = FALSE)
 }

@@ -132,6 +132,49 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_ze
   # return(list(update.Qstar.coef = update.Qstar.coef, QY.star = QY.star))
 }
 
+## ---------------------------------------------------------------------
+#' R6 Class for Q-Learning
+#'
+#'  R6 class for controlling the internal implementation of Q-learning functionality.
+#'  Supports sequential (recursive) G-computation and longitudinal TMLE.
+#'  Inherits from \code{BinaryOutcomeModel} R6 Class.
+#'
+#' @docType class
+#' @format An \code{\link{R6Class}} generator object
+#' @keywords R6 class
+#' @details
+#' \itemize{
+#'    \item{\code{regimen_names}} - \code{character}. Note used. For future pooling across regimens.
+#'    \item{\code{classify}} - ... \code{logical}
+#'    \item{\code{TMLE}} - ... \code{logical}
+#'    \item{\code{nIDs}} - ... \code{integer}
+#'    \item{\code{stratifyQ_by_rule}} - ... \code{logical}
+#'    \item{\code{lower_bound_zero_Q}} - ... \code{logical}
+#'    \item{\code{skip_update_zero_Q}} - ... \code{logical}
+#'    \item{\code{Qreg_counter}} - ... \code{integer}
+#'    \item{\code{t_period}} - ... \code{integer}
+#'    \item{\code{idx_used_to_fit_initQ}} - ... \code{integer}
+#' }
+#' @section Methods:
+#' \describe{
+#'   \item{\code{new(reg, ...)}}{...}
+#'   \item{\code{define.subset.idx(data, subset_vars, subset_exprs)}}{...}
+#'   \item{\code{define_idx_to_fit_initQ(data)}}{...}
+#'   \item{\code{define_idx_to_predictQ(data)}}{...}
+#'   \item{\code{fit(overwrite = FALSE, data, ...)}}{...}
+#'   \item{\code{Propagate_TMLE_fit(overwrite = TRUE, data, new.TMLE.fit, ...)}}{...}
+#'   \item{\code{predict(newdata, subset_idx, ...)}}{...}
+#'   \item{\code{predictStatic(data, g0, gstar, subset_idx)}}{...}
+#'   \item{\code{predictStochastic(data, g0, gstar, subset_idx, stoch_indicator)}}{...}
+#'   \item{\code{predictAeqa(newdata, ...)}}{...}
+#'   \item{\code{get.fits()}}{...}
+#' }
+#' @section Active Bindings:
+#' \describe{
+#'    \item{\code{wipe.alldat}}{...}
+#'    \item{\code{getfit}}{...}
+#'    \item{\code{getTMLEfit}}{...}
+#' }
 #' @export
 QlearnModel  <- R6Class(classname = "QlearnModel",
   inherit = BinaryOutcomeModel,
@@ -195,7 +238,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
-      # browser()
 
       # **********************************************************************
       # FITTING STEP OF Q-LEARNING
@@ -234,10 +276,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
       init_Q_all_obs <- probA1[self$subset_idx]
 
-      # browser()
-      # sum(self$subset_idx)
-      # data$dat.sVar[]
-
       # ------------------------------------------------------------------------------------------------------------------------
       # Alternative to above:
       # ------------------------------------------------------------------------------------------------------------------------
@@ -275,22 +313,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Cumulative IPWeights for current t:
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
 
-        # browser()
-        # datDTtest <- data.table(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, off_TMLE = qlogis(init_Q_fitted_only), wts_TMLE = wts_TMLE)
-        # print(datDTtest[wts_TMLE>0, ])
-        # # prev_Q.kplus1[prev_Q.kplus1<10^(-5)] <- 0
-        # res <- glm(data = datDTtest, formula = "prev_Q.kplus1 ~ 1", offset = off_TMLE, weights = wts_TMLE, family = quasibinomial())
-        # print("coefs from glm: "); print(coef(res))
-        # datDTtest2 <- copy(datDTtest)
-        # datDTtest2[prev_Q.kplus1 < 10^(-4), prev_Q.kplus1:= 10^(-4)]
-        # datDTtest2[init_Q_fitted_only < 10^(-4), init_Q_fitted_only:= 10^(-4)]
-        # datDTtest2[prev_Q.kplus1 > 1 - 10^(-5), prev_Q.kplus1:= prev_Q.kplus1-10^(-4)]
-        # datDTtest2[, off_TMLE := qlogis(init_Q_fitted_only)]
-        # datDTtest2[wts_TMLE > 400, wts_TMLE := 400]
-        # datDTtest2[, wts_TMLE := wts_TMLE/10]
-        # res <- glm(data = datDTtest2, formula = "prev_Q.kplus1 ~ 1", offset = off_TMLE, weights = wts_TMLE, family = quasibinomial())
-        # coef(res)
-
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1,
                                         init_Q_fitted_only = init_Q_fitted_only,
@@ -318,8 +340,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
 
-        # print(mean(EIC_i_t_calc))
-        # browser()
       }
 
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
@@ -342,7 +362,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # self$wipe.alldat
       # **********************************************************************
-
       invisible(self)
     },
 

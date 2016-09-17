@@ -46,28 +46,32 @@
 #   return(x.freq.sum)
 # }
 
+#' IP-Weights Summary Tables
+#'
+#' Produces various table summaries of IP-Weights.
+#' @param wts_data Either a list of data.table containing weights (one for each separate regimen/intervention) or a single data.table with
+#' weights for one regimen / intervention.
+#' @param cutoffs Weight cut off points for summary tables.
+#' @param varname Character string describing the type of the weights
+#' @param by.rule Can optionally evaluate the same summary tables separately for each regimen / rule.
+#' @return A list with various IP-weights summary tables.
+#' @seealso \code{\link{getIPWeights}} for evaluation of IP-weights.
 #' @export
 get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE) {
-  # quant99 <- quantile(wts_data[["cum.IPAW"]], p = 0.99, na.rm = TRUE)
-  # quant999 <- quantile(wts_data[["cum.IPAW"]], p = 0.999, na.rm = TRUE)
   wts_data <- format_wts_data(wts_data)
   # get the counts for each category (bin) + missing count:
   na.count <- sum(is.na(wts_data[["cum.IPAW"]]))
   na.yes <- (na.count > 0L)
-
   # define a list of intervals:
   cutoffs2 <- c(-Inf, cutoffs, Inf)
   idx <- seq_along(cutoffs2); idx <- idx[-length(idx)]
   intervals_list <- lapply(idx, function(i) c(cutoffs2[i], cutoffs2[i+1]))
-
-  # summary <- wts_data[, summary(cum.IPAW)]
   x.freq.counts.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE))]
   x.freq.counts <- as.integer(x.freq.counts.DT[1,])
   if (na.yes) {
     x.freq.counts <- c(x.freq.counts, na.count)
     x.freq.counts.DT <- cbind(x.freq.counts.DT, wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE)])
   }
-
   # create labels:
   catNames <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
   catNames[1] <- paste("<", cutoffs[1], sep="")
@@ -78,30 +82,72 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   if (na.yes) catNames[length(cutoffs) + 2] <- "Missing"
   names(x.freq.counts) <- catNames
   colnames(x.freq.counts.DT) <- catNames
-
   # make a table:
   x.freq.counts.tab <- makeFreqTable(x.freq.counts)
   colnames(x.freq.counts.tab)[1] <- varname
   x.freq.counts.tab[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
-
   # do the same by separately for each rule:
   if (by.rule) {
-    # setkeyv(wts_data, cols = "rule.name")
     x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE)), by = rule.name]
-    # x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE)), by = list(rule.name, rule.name.MONITOR)]
     if (na.yes) {
       x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE), by = rule.name], on = c("rule.name")]
-      # x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE), by = list(rule.name, rule.name.MONITOR)], on = c("rule.name", "rule.name.MONITOR")]
     }
     colnames(x.freq.counts.byrule.DT)[-1] <- catNames
-    # colnames(x.freq.counts.byrule.DT)[-(1:2)] <- catNames
   } else {
     x.freq.counts.byrule.DT <- NULL
   }
-  # setkeyv(wts_data, cols = old.keys)
   return(list(summary.table = x.freq.counts.tab, summary.DT = x.freq.counts.DT, summary.DT.byrule = x.freq.counts.byrule.DT))
 }
 
+
+#' Risk Difference Estimates and SEs for IPW-MSM
+#'
+#' Produces table(s) with pair-wise risk differences for all regimens that were used for fitting IPW-MSM.
+#' The corresponding SEs can be calculated as well.
+#' @param MSM Object returned by \code{\link{survMSM}}.
+#' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
+#' @param getSEs Evaluate the influence curve based RD estimates of standard errors (SEs) along with point estimates?
+#' @return A list with RD tables. One table for each time-point in \code{t.periods.RDs}.
+#' @seealso \code{\link{survMSM}} for estimation with MSM.
+#' @export
+get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
+  ## RD:
+  getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx) {
+    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
+    colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+    rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+    for (d1.idx in seq_along(names(S2.IPAW))) {
+      for (d2.idx in seq_along(names(S2.IPAW))) {
+        #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
+        if (getSEs) {
+          se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
+                                                                   IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
+                                                                   IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
+
+        }
+      }
+    }
+    return(se.RDscale.Sdt.K)
+  }
+
+  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
+  periods_idx <- seq_along(MSM$periods)
+  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
+  for (t.idx in seq(t.periods.RDs)) {
+
+    t.period.val.idx <- periods_idx[MSM$periods %in% t.periods.RDs[t.idx]]
+
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx)
+
+    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
+                                                RDscale = TRUE,
+                                                t.period = t.period.val.idx,
+                                                nobs = nrow(MSM$wts_data),
+                                                esti = MSM$est_name,
+                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K)
+  }
+  return(RDs.IPAW.tperiods)
+}
 
 # ---------------------------------------------------------------------------------------------
 #' Helper routine to define the monitoring indicator and time since last visit
@@ -167,54 +213,6 @@ defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = 'N', tsinceNis1
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
   DT[, ("indx") := NULL]
   return(DT)
-}
-
-#' Risk Difference Estimates and SEs for IPW-MSM
-#'
-#' Returns a table with pair-wise evaluation of risk differences and the corresponding SEs for IPW-MSM output.
-#' @param MSM Object returned by \code{\link{survMSM}}.
-#' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
-#' @param getSEs Evaluate the influence curve based RD estimates of standard errors (SEs) along with point estimates?
-#' @return ...
-#' @seealso \code{\link{survMSM}} for estimation with MSM.
-#' @export
-get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
-  ## RD:
-  getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx) {
-    se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
-    colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
-    rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
-    for (d1.idx in seq_along(names(S2.IPAW))) {
-      for (d2.idx in seq_along(names(S2.IPAW))) {
-        #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
-        if (getSEs) {
-          se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
-                                                                   IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
-                                                                   IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
-
-        }
-      }
-    }
-    return(se.RDscale.Sdt.K)
-  }
-
-  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
-  periods_idx <- seq_along(MSM$periods)
-  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
-  for (t.idx in seq(t.periods.RDs)) {
-
-    t.period.val.idx <- periods_idx[MSM$periods %in% t.periods.RDs[t.idx]]
-
-    se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx)
-
-    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
-                                                RDscale = TRUE,
-                                                t.period = t.period.val.idx,
-                                                nobs = nrow(MSM$wts_data),
-                                                esti = MSM$est_name,
-                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K)
-  }
-  return(RDs.IPAW.tperiods)
 }
 
 # ---------------------------------------------------------------------------------------------

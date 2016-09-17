@@ -14,10 +14,11 @@ get_MSM_RDs(MSM, t.periods.RDs, getSEs = TRUE)
 \item{getSEs}{Evaluate the influence curve based RD estimates of standard errors (SEs) along with point estimates?}
 }
 \value{
-...
+A list with RD tables. One table for each time-point in \code{t.periods.RDs}.
 }
 \description{
-Returns a table with pair-wise evaluation of risk differences and the corresponding SEs for IPW-MSM output.
+Produces table(s) with pair-wise risk differences for all regimens that were used for fitting IPW-MSM.
+The corresponding SEs can be calculated as well.
 }
 \seealso{
 \code{\link{survMSM}} for estimation with MSM.
