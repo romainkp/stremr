@@ -528,22 +528,22 @@ ContinModel <- R6Class(classname = "ContinModel",
     bin_weights = NULL,
     # Define settings for fitting contin sA and then call $new for super class (GenericModel)
     initialize = function(reg, DataStorageClass.g0, DataStorageClass.gstar,...) {
-    # initialize = function(reg, DataStorageClass.g0, DataStorageClass.gstar, ...) {
-      stop("...regressions with continuous outcomes are not implemented yet...")
+      # stop("...regressions with continuous outcomes are not implemented yet...")
       self$reg <- reg
       self$outvar <- reg$outvar
       if (is.null(reg$intrvls)) {
         assert_that(is.DataStorageClass(DataStorageClass.g0))
         self$intrvls <- DataStorageClass.g0$detect.sVar.intrvls(reg$outvar,
                                                       # nbins = self$reg$nbins,
-                                                      nbins = 10,
+                                                      nbins = getopt("nbins"),
                                                       # bin_bymass = self$reg$bin_bymass,
-                                                      bin_bymass = TRUE,
+                                                      bin_bymass = (getopt("bin.method") %in% "equal.mass"),
                                                       # bin_bydhist = self$reg$bin_bydhist,
-                                                      bin_bydhist = FALSE,
+                                                      bin_bydhist = (getopt("bin.method") %in% "dhist"),
                                                       # max_nperbin = self$reg$max_nperbin
-                                                      max_nperbin = 100
+                                                      max_nperbin = as.integer(getopt("maxNperBin"))
                                                       )
+
         # if (!missing(DataStorageClass.gstar)) {
         #   assert_that(is.DataStorageClass(DataStorageClass.gstar))
         #   gstar.intrvls <- DataStorageClass.gstar$detect.sVar.intrvls(reg$outvar,

@@ -179,17 +179,21 @@ fitPropensity <- function(OData,
   #                                       saveH2O = TRUE,
   #                                       destination_frame = "H2OMainDataTable")
   modelfits.g0$fit(data = OData, predict = TRUE)
+  # browser()
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
-  h_gN <- modelfits.g0$predictAeqa(n = OData$nobs)
+  # h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs))
+  h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs), silent = TRUE)
+  if (inherits(h_gN, "try-error")) { # if failed, it means that prediction cannot be done with newdata
+    h_gN <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs)
+  }
 
   # ------------------------------------------------------------------------------------------
   # Observed likelihood of (A,C,N) at each t, based on fitted object models in object modelfits.g0
   # ------------------------------------------------------------------------------------------
   # get back g_CAN_regs_list:
   OData$modelfits.g0 <- modelfits.g0
-
   ALL_g_regs <- modelfits.g0$reg
 
   OData$modelfit.gC <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gC")]]

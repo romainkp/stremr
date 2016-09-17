@@ -6,8 +6,8 @@
 \usage{
 set_all_stremr_options(fit.package = c("speedglm", "glm", "h2o"),
   fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning",
-  "SuperLearner"), bin.method = c("equal.len", "equal.mass", "dhist"),
-  nbins = NA, maxncats = 20, poolContinVar = FALSE, maxNperBin = 1000,
+  "SuperLearner"), bin.method = c("equal.mass", "equal.len", "dhist"),
+  nbins = 10, maxncats = 20, maxNperBin = 500,
   lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE)
 }
 \arguments{
@@ -30,10 +30,6 @@ If left as \code{NA} the total number of equal intervals (bins) is determined by
 
 \item{maxncats}{Max number of unique categories a categorical variable \code{sA[j]} can have.
 If \code{sA[j]} has more it is automatically considered continuous.}
-
-\item{poolContinVar}{Set to \code{TRUE} for fitting a pooled regression which pools bin indicators across all bins.
-When fitting a model for binirized continuous outcome, set to \code{TRUE}
-for pooling bin indicators across several bins into one outcome regression?}
 
 \item{maxNperBin}{Max number of observations per 1 bin for a continuous outcome (applies directly when
 \code{bin.method="equal.mass"} and indirectly when \code{bin.method="equal.len"}, but \code{nbins = NA}).}
