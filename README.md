@@ -73,7 +73,7 @@ news(package = "stremr")
 <a name="Reports"></a>
 ### Automated Reports:
 
-![gif](https://cloud.githubusercontent.com/assets/6721358/18605322/a757d984-7c43-11e6-9a6d-2cf28afe49f1.gif)
+![gif](https://cloud.githubusercontent.com/assets/6721358/18605405/9b3c0faa-7c46-11e6-9e0f-e1660ffad38a.gif)
 
 html report:
 

@@ -135,22 +135,27 @@ test.speedglm.allestimators10Kdata <- function() {
   # registerDoParallel(cores = 2)
   if (exists("setthreads")) data.table::setthreads(1)
 
-  t.surv <- c(0:3)
+  t.surv <- c(0,1,4)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
+  gcomp_est1 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledGCOMP.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  gcomp_est1[]
+  gcomp_est2 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pooledGCOMP.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  gcomp_est2[]
+
   # tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
-  tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
-  tmle_est_par1
+  tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledTMLE.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
+  tmle_est_par1[]
   # tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pool.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
-  tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pool.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
-  tmle_est_par2
+  tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pooledTMLE.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
+  tmle_est_par2[]
 
   # tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "strat.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
-  tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "strat.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
-  tmle_est_par3
+  tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "stratTMLE.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
+  tmle_est_par3[]
   # tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "strat.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
-  tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "strat.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
-  tmle_est_par4
+  tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "stratTMLE.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
+  tmle_est_par4[]
 
   # ------------------------------------------------------------------
   # Make a report:
@@ -167,26 +172,19 @@ test.speedglm.allestimators10Kdata <- function() {
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
 
-  make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+  make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(gcomp_est1, gcomp_est2), TMLE = list(tmle_est_par1, tmle_est_par2),
                   AddFUPtables = TRUE,
                   openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
+                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95)
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.99, x_legend = 9.5)
 
-  make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
+  # make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(tmle_est_par1, tmle_est_par2, tmle_est_par3, tmle_est_par4),
                   AddFUPtables = TRUE,
                   openFile = FALSE,
                   RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe", y_legend = 0.95, format = "pdf")
-
-  # # omit extra modeling stuff (only coefficients):
-  # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, only.coefs = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-  # # skip modeling stuff alltogether:
-  # make_report_rmd(OData, MSM = MSM.IPAW, RDtables = RDtables, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
-  # # skip RD tables by simply not including them:
-  # make_report_rmd(OData, MSM = MSM.IPAW, file.path = report.path, skip.modelfits = TRUE, title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
 
   # ---------------------------------------------------------------------------------------------------------
   # TMLE / GCOMP with a stochastic intervention on MONITOR
