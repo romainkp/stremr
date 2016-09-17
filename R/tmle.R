@@ -98,7 +98,7 @@
 # Do it separately for gstar_TRT & gstar_MONITOR
 # Loop over each node in gstar_TRT / gstar_MONITOR
 # Do it only once for all observations inside main tmle call
-# Back-up a copy of all gstar nodes first, the original copy is then restored when finished running
+# Back-up a copy of all gstar nodes first, the original copy is then restored when finished running
 # The observations which get swapped with g0 values are defined by:
 # subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
 # probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)

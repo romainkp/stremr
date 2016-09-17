@@ -42,8 +42,6 @@ test.DataStorageClass <- function() {
   var.bw2 <- OData$get.sVar.bw("continA", intervals = intrvls2)
   get.sVar.bwdiff2 <- OData$get.sVar.bwdiff("continA", intervals = intrvls2)
 
-  checkException(OData$detect.sVar.intrvls("continA", nbins = 10, bin_bymass = FALSE, bin_bydhist = TRUE, max_nperbin = 100))
-
   # ------------------------------------------------------------------------------
   # replace all NAs with 0:
   # ------------------------------------------------------------------------------
