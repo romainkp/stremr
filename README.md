@@ -234,12 +234,16 @@ tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qform
 require('h2oEnsemble')
 ```
 
+
 Easy specification of large ensembles with grid search:
+
 1. Define a learning algorithm (e.g., `glm`)
 2. Define the search criteria (e.g., 120 second maximum). Increase parameters `max_runtime_secs` or `max_models` to cover larger number of models from tuning parameter space.
 3. Define the space of tuning parameters (hyper-parameters) by specifying their learner-specific names and values for grid search (e..g, `alpha` and `lambda` for glm).
 
+
 When running the SuperLearner with grid search, `stremr` calls the following outside functions:
+
 1. Runs `h2o.grid` in the background for each individual learner and saves cross-validated risks.
 2. Calls `h2o.stack` from `h2oEnsemble` package to evaluate the final SuperLearner.
 
