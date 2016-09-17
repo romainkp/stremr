@@ -168,11 +168,14 @@ IPW_MSM_res$MSM.fit
 # ------------------------------------------------------------------
 #' \dontrun{
 make_report_rmd(OData, MSM = IPW_MSM_res,
-          AddFUPtables = TRUE,
-          RDtables = get_MSM_RDs(IPW_MSM_res, t.periods.RDs = c(12, 15), getSEs = FALSE),
-          WTtables = get_wtsummary(IPW_MSM_res$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-          file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Jane Doe",
-          y_legend = 0.95)
+  AddFUPtables = TRUE,
+  RDtables = get_MSM_RDs(IPW_MSM_res, t.periods.RDs = c(12, 15), getSEs = FALSE),
+  WTtables = get_wtsummary(IPW_MSM_res$wts_data,
+    cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+  file.name = "sim.data.example.fup",
+  title = "Custom Report Title",
+  author = "Jane Doe",
+  y_legend = 0.95)
 #'}
 }
 \seealso{

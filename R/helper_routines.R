@@ -169,6 +169,14 @@ defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = 'N', tsinceNis1
   return(DT)
 }
 
+#' Risk Difference Estimates and SEs for IPW-MSM
+#'
+#' Returns a table with pair-wise evaluation of risk differences and the corresponding SEs for IPW-MSM output.
+#' @param MSM Object returned by \code{\link{survMSM}}.
+#' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
+#' @param getSEs Evaluate the influence curve based RD estimates of standard errors (SEs) along with point estimates?
+#' @return ...
+#' @seealso \code{\link{survMSM}} for estimation with MSM.
 #' @export
 get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
   ## RD:
