@@ -10,9 +10,9 @@ Streamlined analysis of longitudinal time-to-event or time-to-failure data. Allo
 
 Currently Implemented Estimators:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
- - **Inverse Probability Weighted (IPW) Kaplan-Meier**. Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. Based on the exposure/censoring model fits (propensity scores).
- - **Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival**. Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
- - **Inverse Probability Weighted Marginal Structural Model (IPW-MSM)** for the hazard function, mapped into survival. Currently only logistic regression is allowed where covariates are either time-points and regime/rule indicators.  model that  (no baseline covariates are allowed). Based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points with optional weight stabilization.
+ - [**Inverse Probability Weighted (IPW) Kaplan-Meier**](#survNPMSM). Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. Based on the exposure/censoring model fits (propensity scores).
+ - [**Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival**](#survDirectIPW). Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
+ - [**Inverse Probability Weighted Marginal Structural Model (IPW-MSM)**](#survMSM) for the hazard function, mapped into survival. Currently only logistic regression is allowed where covariates are either time-points and regime/rule indicators.  model that  (no baseline covariates are allowed). Based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points with optional weight stabilization.
  - [**Sequential G-Computation (GCOMP)**](#GCOMPTMLE). Also known as the recursive G-Computation formula or Q-learning. Directly estimates the outcome model while adjusting for time-varying confounding. Estimation can be stratified by rule/regime followed or pooled across all rules/regimes.
  - [**Targeted Maximum Likelihood Estimator (TMLE)**](#GCOMPTMLE) for longitudinal data. Also known as the Targeted Minimum Loss-based Estimator. Doubly robust and semi-parametrically efficient estimator that targets the initial outcome model fits (GCOMP) with IPW.
  - **Iterative Targeted Maximum Likelihood Estimator (I-TMLE)** for longitudinal data. Fits sequential G-Computation and then iteratively performs targeting for all pooled Q's until convergence. 
@@ -43,8 +43,8 @@ Allowing various **multiple time-point** interventions on treatment (exposure) a
 * [Automated Reports](#Reports)
 * [Example with Simulated Data](#Example1)
 * [Sequential G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data](#GCOMPTMLE)
-* [Using H2O-3 Machine Learning Libraries](#H2OML)
-* [Using Ensemble Learning (SuperLearner) based on H2O-3](#SuperLearner)
+* [Machine Learning Algorithms](#H2OML)
+* [Ensemble Learning with SuperLearner (based on `h2oEnsemble` R package)](#SuperLearner)
 
 <a name="Installation"></a>
 ### Installation and Documentation
@@ -66,10 +66,11 @@ devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 ?stremr-package
 ```
 
-For specific documentation on how to run `stremr()` function:
+<!-- For specific documentation on how to run `stremr()` function:
 ```R
 ?stremr
 ```
+ -->
 
 The list of relevant functions for `stremr` package:
 ```R
@@ -132,7 +133,7 @@ OdataDT[, ("TI.set0") := 0L]
 Regressions for modeling the propensity scores for censoring (`CENS`), exposure (`TRT`) and monitoring (`MONITOR`). By default, each of these propensity scores is fit with a common model that pools across all available time points (smoothing over time).
 ```R
 gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
-gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
 gform_MONITOR <- "N ~ 1"
 ```
 
@@ -146,7 +147,7 @@ Fit the propensity scores for censoring, exposure and monitoring:
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR, stratify_CENS = stratify_CENS)
 ```
 
-Estimate survival based on non-parametric MSM (IPTW-ADJUSTED KM):
+<a name="survNPMSM"></a>Estimate survival based on non-parametric MSM (IPTW-ADJUSTED KM):
 ```R
 require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
@@ -155,14 +156,14 @@ AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
 AKME.St.1
 ```
 
-Estimate survival with bounded IPW:
+<a name="survDirectIPW"></a>Estimate survival with bounded IPW:
 ```R
 IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
             survDirectIPW(OData)
 IPW.St.1[]
 ```
 
-Estimate hazard with IPW-MSM then map into survival estimate. Using two regimens and smoothing over two intervals of time-points:
+<a name="survMSM"></a>Estimate hazard with IPW-MSM then map into survival estimate. Using two regimens and smoothing over two intervals of time-points:
 ```R
 wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "TI.set1", rule_name = "TI1")
 wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "TI.set0", rule_name = "TI0")
@@ -200,7 +201,7 @@ tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qform
 ```
 
 <a name="H2OML"></a>
-### Using Machine Learning
+### Machine Learning Algorithms
 
 To perform all modeling with `H2O-3` distributed Random Forest algorithm just set the global package options `fit.package = "h2o"` and `fit.algorithm = "randomForest"` prior to calling any fitting function:
 ```R
@@ -240,13 +241,13 @@ require('h2oEnsemble')
 ```
 
 Easy specification of large ensembles with grid search:
-1. Define a learning algorithm (e.g., `glm`)
-2. Define the search criteria (e.g., 120 second maximum). Increase parameters `max_runtime_secs` or `max_models` to cover larger number of models from tuning parameter space.
-3. Define the space of tuning parameters (hyper-parameters) by specifying their learner-specific names and values for grid search (e..g, `alpha` and `lambda` for glm).
+1.  Define a learning algorithm (e.g., `glm`)
+2.  Define the search criteria (e.g., 120 second maximum). Increase parameters `max_runtime_secs` or `max_models` to cover larger number of models from tuning parameter space.
+3.  Define the space of tuning parameters (hyper-parameters) by specifying their learner-specific names and values for grid search (e..g, `alpha` and `lambda` for glm).
 
 When running the SuperLearner with grid search, `stremr` calls the following outside functions:
-1. Runs `h2o.grid` in the background for each individual learner and saves cross-validated risks.
-2. Calls `h2o.stack` from `h2oEnsemble` package to evaluate the final SuperLearner.
+1.  Runs `h2o.grid` in the background for each individual learner and saves cross-validated risks.
+2.  Calls `h2o.stack` from `h2oEnsemble` package to evaluate the final SuperLearner.
 
 Here are some examples of defining the grid search criteria and search space for glm tuning parameters:
 ```R
