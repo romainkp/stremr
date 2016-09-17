@@ -1,6 +1,6 @@
 Package: stremr
 Title: Streamlined Estimation of Survival for Treatment and Monitoring Regimes
-Version: 0.0.2.9000
+Version: 0.0.3.9000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
