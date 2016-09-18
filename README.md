@@ -109,9 +109,7 @@ To obtain documentation for specific relevant functions in `stremr` package:
 <a name="Reports"></a>
 ### Automated Reports:
 
-![gif](https://cloud.githubusercontent.com/assets/6721358/18609476/d9b4db74-7cb7-11e6-9ca6-aacf0b70ca4c.gif)
-
-The function call that produced above `html` report is below. For a pdf report just set the argument `format = "pdf"`.
+The following is an example of a function call that produces an automated `html` report shown below. For a pdf report just set the argument `format = "pdf"`.
 ```R
   make_report_rmd(OData, NPMSM = list(surv1, surv2), 
                   MSM = MSM.IPAW, 
@@ -121,6 +119,9 @@ The function call that produced above `html` report is below. For a pdf report j
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Author Name", y_legend = 0.99, x_legend = 9.5)
 ```
+
+![gif](https://cloud.githubusercontent.com/assets/6721358/18609476/d9b4db74-7cb7-11e6-9ca6-aacf0b70ca4c.gif)
+
 
 <a name="Example1"></a>
 ### Example with Simulated Data
