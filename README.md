@@ -21,17 +21,17 @@ Currently implemented **estimators** include:
  - Time-to-event (possibly) right-censored data has to be in long format.
  - Each row must contain a subject identifier (`ID`) and the integer indicator of the current time (`t`), e.g., day, week, month, year.
  - The package assumes that the temporal ordering of covariates in each row is **fixed** according to (`ID`, `t`, `L`,`C`,`A`,`N`,`Y`), where 
-     * `L` -- time-varying and baseline covariates;
-     * `C` -- indicators of right censoring events at time `t`, this can be either a single categorical or several binary columns;
-     * `A` -- exposure (treatment) at time `t`, this can be multivariate (more than one column) and each column can be binary, categorical or continuous;
-     * `N` -- indicator of being monitored at time point `t+1` (binary);
-     * `Y` -- time-to-event outcome (binary).
+     * `L` -- Time-varying and baseline covariates.
+     * `C` -- Indicators of right censoring events at time `t`; this can be either a single categorical or several binary columns.
+     * `A` -- Exposure (treatment) at time `t`; this can be multivariate (more than one column) and each column can be binary, categorical or continuous.
+     * `N` -- Indicator of being monitored at time point `t+1` (binary).
+     * `Y` -- Time-to-event outcome (binary).
  - Note that the follow-up is assumed to end when either the outcome of interest (`Y[t]=1`) or right-censoring events are observed.
  - Categorical censoring can be useful for representing all of the censoring events with a single column (variable).
 
 **Model fitting:**
- - Separate models are fit for the observed censoring, exposure and monitoring mechanisms 
- - Each model can be stratified (separate model is fit) by time or any other user-specified stratification criteria. Stratification is defined with a logical expression that selected specific observations/rows in observed data
+ - Separate models are fit for the observed censoring, exposure and monitoring mechanisms.
+ - Each model can be stratified (separate model is fit) by time or any other user-specified stratification criteria. Each strata is defined with by a single logical expression that selects specific observations/rows in the observed data (strata).
  -  By default, all models are fit using `GLM` with `binomial` family (logistic regression). 
  -  Alternatively, model fitting can be also performed with any machine learning algorithm implemented in `H2O-3` (faster distributed penalized `GLM`, `Random Forest`, `Gradient Boosting Machines` and `Deep Neural Network`).
  -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (`h2o.grid`) allows for user-friendly model specification and fitting over multi-dimensional parameter space with various stopping criteria (random, discrete, max number of models, max time allocated, etc).
