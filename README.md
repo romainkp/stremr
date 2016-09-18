@@ -18,11 +18,16 @@ Currently implemented **estimators** include:
  - **Iterative Targeted Maximum Likelihood Estimator (I-TMLE)** for longitudinal data. Fits sequential G-Computation and then iteratively performs targeting for all pooled Q's until convergence. 
 
 **Input data**: 
- - Long format time-to-event (possibly) right-censored.
- - Must contain specific **fixed** temporal ordering of the variables.
- - Exposure and right-censoring variables can be binary, categorical or continuous (for exposure only) 
- - Categorical exposure can be useful for representing all of the censoring events with a single column (variable). 
- - More than one column can be used for coding each exposure and monitoring event and each of these can be binary, categorical or continuous.
+ - Time-to-event (possibly) right-censored data has to be in long format.
+ - Each row must contain a subject identifier (`ID`) and the integer indicator of the current time (`t`), e.g., day, week, month, year.
+ - The package assumes that the temporal ordering of covariates in each row is **fixed** according to (`ID`, `t`, `L`,`C`,`A`,`N`,`Y`), where 
+     * `L` -- time-varying and baseline covariates;
+     * `C` -- indicators of right censoring events at time `t`, this can be either a single categorical or several binary columns;
+     * `A` -- exposure (treatment) at time `t`, this can be multivariate (more than one column) and each column can be binary, categorical or continuous;
+     * `N` -- indicator of being monitored at time point `t+1` (binary);
+     * `Y` -- time-to-event outcome (binary).
+ - Note that the follow-up is assumed to end when either the outcome of interest (`Y[t]=1`) or right-censoring events are observed.
+ - Categorical censoring can be useful for representing all of the censoring events with a single column (variable).
 
 **Model fitting:**
  - Separate models are fit for the observed censoring, exposure and monitoring mechanisms 
