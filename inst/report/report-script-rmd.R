@@ -156,9 +156,10 @@ if (!missing(MSM)) {
   MSM.fit <- MSM$MSM.fit
   output.MSM <- round(MSM.fit$coef,2)
   output.MSM <- cbind("Terms" = names(MSM.fit$coef), output.MSM)
-  colnames(output.MSM) <- c("Terms",ifelse(MSM$trunc_weights == Inf && MSM$use_weights, "IPAW", ifelse(MSM$trunc_weights < Inf && MSM$use_weights, "truncated IPAW", "no weights")))
+  # colnames(output.MSM) <- c("Terms",ifelse(MSM$trunc_weights == Inf && MSM$use_weights, "IPAW", ifelse(MSM$trunc_weights < Inf && MSM$use_weights, "truncated IPAW", "no weights")))
+  colnames(output.MSM) <- c("Terms", "Estimates")
   rownames(output.MSM) <- NULL
-  pander::set.caption("Coefficients of MSM")
+  pander::set.caption("Coefficients of logistic regression model for hazards")
   pander::pander(output.MSM, justify = c('right', 'left'))
 }
 

@@ -143,6 +143,7 @@ test.h2oEnsemble <- function() {
                      metalearner = "h2o.glm_nn",
                      nfolds = 2,
                      # nfolds = 5,
+                     family = "binomial",
                      seed = 23,
                      glm = glm_hyper_params
                      # randomForest = RF_hyper_params
