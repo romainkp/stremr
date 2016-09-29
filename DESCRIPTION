@@ -1,13 +1,14 @@
 Package: stremr
-Title: Streamlined Estimation of Survival for Treatment and Monitoring Regimes
-Version: 0.0.3.9000
+Title: Streamlined Estimation of Survival for Static, Dynamic and Stochastic Treatment and Monitoring Regimes
+Version: 0.0.4.0000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
     person("Romain", "Neugebauer", role="aut", email="Romain.S.Neugebauer@kp.org"))
-Description: Implements the Inverse Probability Weighted Estimator (IPTW) of the
-    causal survival hazard function for longitudinal right-censored data. The user-
-    specified interventions on time-varying exposures and monitoring variables can
+Description: Inverse Probability Weighted Estimator (IPW) and 
+    Targeted Maximum Likelihood Estimator (TMLE) for survival in longitudinal data 
+    with time-varying confounding and right-censoring.
+    The user-specified interventions on time-varying exposures and monitoring variables can
     be either stochastic, dynamic or static. The exposure, monitoring and censoring
     can be binary, categorical or multivariate (e.g., can use more than one column
     of dummy indicators for different censoring events or can code such censoring
@@ -35,6 +36,7 @@ Imports:
     zoo
 LinkingTo: Rcpp
 Suggests:
+    devtools,
     h2o,
     h2oEnsemble,
     knitr,
@@ -42,6 +44,7 @@ Suggests:
     RUnit,
     foreach,
     doParallel
-License: GPL-2
+Additional_repositories: github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble
+License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1

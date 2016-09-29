@@ -228,11 +228,37 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       self$classify <- ParentModel$classify
       self$model_contrl <- ParentModel$model_contrl
       assert_that("h2o" %in% fit.package)
-      val <- checkpkgs(pkgs = c("h2o"))
 
-      if (fit.algorithm %in% "SL") {
-        if (!"package:h2oEnsemble" %in% search()) stop("must load 'h2oEnsemble' package prior to using the SuperLearner: require('h2oEnsemble') or library('h2oEnsemble')")
+      # val <- checkpkgs(pkgs = c("h2o"))
+      if (!requireNamespace("h2o", quietly = TRUE)) {
+        stop(
+"Package h2o is needed for machine learning. Please make sure to check that Java is also installed.
+To install the CRAN version of h2o package (might not be the latest), type this into R terminal:
+  install.packages(\"h2o\")
+................................
+For instructions on using h2o and installing its latest version for R go to:
+  https://s3.amazonaws.com/h2o-release/h2o/master/latest.html (click on 'INSTALL IN R')",
+        call. = FALSE)
       }
+
+      if (fit.algorithm %in% "SuperLearner") {
+        if (!requireNamespace("h2oEnsemble", quietly = TRUE)) {
+          stop(
+"Package h2oEnsemble is needed for modeling with SuperLearner.
+Please install it by typing this into R terminal:
+  library(devtools)
+  install_github(\"h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package\")",
+          call. = FALSE)
+        }
+
+        if (!"package:h2oEnsemble" %in% search())
+          stop(
+"must load 'h2oEnsemble' package prior to using the SuperLearner.
+Please type this into the R terminal:
+  library('h2oEnsemble')",
+          call. = FALSE)
+      }
+
       self$fit.class <- fit.algorithm
       class(self$fit.class) <- c(class(self$fit.class), "h2o" %+% self$fit.class)
       # class(self$model.fit) <- c(class(self$model.fit), "h2o" %+% self$fit.class)

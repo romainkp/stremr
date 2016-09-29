@@ -191,7 +191,11 @@ gvars$misfun <- testmisfun()
   	packageStartupMessage('stremr')
   	# packageStartupMessage('Version: ', utils::packageDescription('stremr')$Version)
   	packageStartupMessage('Version: ', utils::packageDescription('stremr')$Version, '\n')
-  	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/stremr.', '\n')
+  	packageStartupMessage(
+  "Note that stremr is still in early development state.
+Please check for updates and report bugs at: http://github.com/osofr/stremr.
+To install the latest development version of stremr, please type this in your terminal:
+  devtools::install_github('osofr/stremr')", '\n')
   	# packageStartupMessage('To see the vignette use vignette("stremr_vignette", package="stremr"). To see all available package documentation use help(package = "stremr") and ?stremr.', '\n')
   	# packageStartupMessage('To see the latest updates for this version, use news(package = "stremr").', '\n')
   }

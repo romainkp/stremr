@@ -20,6 +20,5 @@ test.ContinModel <- function() {
   OData$dat.sVar[]
 
   OData$modelfit.gA$predict(OData)
-
   options(stremr.verbose = FALSE)
 }

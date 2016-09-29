@@ -320,6 +320,7 @@ fitSeqGcomp <- function(OData, t_periods,
   tmle.run.res <- try(
     if (parallel) {
       mcoptions <- list(preschedule = FALSE)
+      '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
         t_period <- t_periods[t_idx]
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,

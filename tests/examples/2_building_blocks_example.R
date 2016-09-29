@@ -167,14 +167,12 @@ tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
 # ----------------------------------------------------------------------
 \dontrun{
 require('h2oEnsemble')
-
 # ----------------------------------------------------------------------
 # Define many learners at once via grid search over tuning parameter spaces (hyperparameters)
 # ----------------------------------------------------------------------
 # 1. Runs h2o.grid in the background for each individual learner and saves cross-validated risks.
 # 2. Calls h2o.stack from h2oEnsemble package to evaluate the final SuperLearner.
 # ----------------------------------------------------------------------
-
 # Search criteria and grid search space for glm tuning parameters:
 GLM_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
                          alpha = c(0,1,seq(0.1,0.9,0.1)),

@@ -395,7 +395,7 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   all.ID.t <- as.data.table(cbind(rep(UID,each=(tmax+1)), rep(0:tmax,length(UID)) ))
   names(all.ID.t) <- c(nodes$IDnode, t_name)
 
-  all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE)
+  all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE, by = c(nodes$IDnode, t_name))
   all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(eval(as.name("cum.IPAW"))), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
   ## Numerator of bounded IPW for survival:
@@ -408,7 +408,7 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   risk.t <- (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
   # S.t.n <- 1 - (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
 
-  resultDT <- data.table(est_name = "DirectBoundedIPW", merge(numIPW, denomIPW))
+  resultDT <- data.table(est_name = "DirectBoundedIPW", merge(numIPW, denomIPW, by = t_name))
   resultDT[, c("risk", "S.t.n") := list(risk.t[[1]], 1 - risk.t[[1]])]
   return(resultDT)
 }
@@ -443,7 +443,8 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   # ------------------------------------------------------------------------
   # CRUDE HAZARD AND KM ESTIMATE OF SURVIVAL:
   # ------------------------------------------------------------------------
-  ht.crude <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name("Wt.OUTCOME")), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
+  ht.crude <- wts_data_used[cum.IPAW > 0, {ht.KM = sum(eval(as.name("Wt.OUTCOME")), na.rm = TRUE) / .N; list(ht.KM = ht.KM)}, by = eval(t_name)][, St.KM := cumprod(1 - eval(as.name("ht.KM")))]
+  # ht.crude2 <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name("Wt.OUTCOME")), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   # ht.crude <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t_name)
 

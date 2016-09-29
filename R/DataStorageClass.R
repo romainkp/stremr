@@ -608,42 +608,53 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       if (missing(dat.sVar)) {
         dat.sVar <- self$dat.sVar
       }
-
-      tmpf <- tempfile(fileext = ".csv")
       assert_that(is.data.table(dat.sVar))
-      data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
 
-      types <- sapply(dat.sVar, class)
-      types <- gsub("integer64", "numeric", types)
-      types <- gsub("integer", "numeric", types)
-      types <- gsub("double", "numeric", types)
-      types <- gsub("complex", "numeric", types)
-      types <- gsub("logical", "enum", types)
-      types <- gsub("factor", "enum", types)
-      types <- gsub("character", "string", types)
-      types <- gsub("Date", "Time", types)
+      devDTvs <- exists("fwrite", where = "package:data.table")
 
-      # replace all irregular characters to conform with destination_frame regular exprs format:
-      tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
-      tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
-      tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+      if (!devDTvs) {
 
-      H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
-                                          header = TRUE,
-                                          col.types = types,
-                                          na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
-                                          destination_frame = destination_frame)
-                                          # destination_frame = tmpf.dest3)
+        message(
+"For optimal performance with h2o ML, please install the development version of data.table package.
+It can be done by typing this into R terminal:
+    library(devtools)
+    install_github(\"Rdatatable/data.table\")")
 
-      # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
+        H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
 
+      } else {
+
+        types <- sapply(dat.sVar, class)
+        types <- gsub("integer64", "numeric", types)
+        types <- gsub("integer", "numeric", types)
+        types <- gsub("double", "numeric", types)
+        types <- gsub("complex", "numeric", types)
+        types <- gsub("logical", "enum", types)
+        types <- gsub("factor", "enum", types)
+        types <- gsub("character", "string", types)
+        types <- gsub("Date", "Time", types)
+
+        # Temp file to write to:
+        tmpf <- tempfile(fileext = ".csv")
+        data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+        H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
+                                            header = TRUE,
+                                            col.types = types,
+                                            na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
+                                            destination_frame = destination_frame)
+        # replace all irregular characters to conform with destination_frame regular exprs format:
+        # tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
+        # tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
+        # tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+        # destination_frame = tmpf.dest3)
+        # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
+        file.remove(tmpf)
+
+      }
       if (saveH2O) self$H2O.dat.sVar <- H2O.dat.sVar
-
-      file.remove(tmpf)
-      # return(invisible(self))
       return(invisible(H2O.dat.sVar))
+      # return(invisible(self))
     }
-
   ),
 
   active = list(
