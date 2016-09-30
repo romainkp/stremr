@@ -5,33 +5,35 @@
 \title{Generate report(s) with modeling stats and survival estimates using pandoc.}
 \usage{
 make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
-  WTtables = NULL, AddFUPtables = FALSE, RDtables, format = c("html",
-  "pdf", "word"), skip.modelfits = FALSE,
+  WTtables = NULL, AddFUPtables = FALSE, MSM.RDtables, TMLE.RDtables,
+  format = c("html", "pdf", "word"), skip.modelfits = FALSE,
   file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), openFile = TRUE,
   keep_md = FALSE, keep_tex = FALSE, ...)
 }
 \arguments{
-\item{OData}{Input data object returned by the function \code{importData}.}
+\item{OData}{Input data object returned by the function \code{\link{importData}}.}
 
-\item{MSM}{The MSM object fits returned by the function \code{survMSM}.}
+\item{MSM}{The MSM object fits returned by the function \code{\link{survMSM}}.}
 
-\item{NPMSM}{Optional list of a resulting calls to \code{survNPMSM} or a result of a single call to \code{survNPMSM}.}
+\item{NPMSM}{Optional list of a resulting calls to \code{survNPMSM} or a result of a single call to \code{\link{survNPMSM}}.}
 
-\item{TMLE}{Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{fitTMLE}.}
+\item{TMLE}{Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{\link{fitTMLE}}.}
 
-\item{GCOMP}{Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{fitSeqGcomp}.}
+\item{GCOMP}{Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{\link{fitSeqGcomp}}.}
 
 \item{wts_data}{Optional list of data.tables or a single data.table with weights by regimen.}
 
 \item{SurvByRegimen}{... Not implemented ...}
 
-\item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{get_wtsummary}}
+\item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{\link{get_wtsummary}}}
 
 \item{AddFUPtables}{Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
 by rule (monitoring and treatment).}
 
-\item{RDtables}{List of tables with risk differences returned by the function \code{get_MSM_RDs}.}
+\item{MSM.RDtables}{List of tables with risk differences returned by the function \code{\link{get_MSM_RDs}}.}
+
+\item{TMLE.RDtables}{List of tables with risk differences returned by the function \code{\link{get_TMLE_RDs}}.}
 
 \item{format}{Choose the Pandoc output format for the report file (html, pdf or word).
 Note that the html report file is always produced in addition to any other selected format.}

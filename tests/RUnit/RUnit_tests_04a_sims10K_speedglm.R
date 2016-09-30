@@ -117,6 +117,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # ncol(t(MSM.IPAW$IC.Var.S.d$gTI.dlow$IC.S))
   # ncol(t(MSM.IPAW$IC.Var.S.d$gTI.dhigh$IC.S))
   # # MSM.IPAW$St
+  # names(MSM.IPAW$wts_data)
   # OData$nuniqueIDs
 
   # ---------------------------------------------------------------------------------------------------------
@@ -147,6 +148,7 @@ test.speedglm.allestimators10Kdata <- function() {
 
   gcomp_est1 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledGCOMP.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
   gcomp_est1$estimates[]
+
   gcomp_est2 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pooledGCOMP.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
   gcomp_est2$estimates[]
 
@@ -164,6 +166,7 @@ test.speedglm.allestimators10Kdata <- function() {
   tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "stratTMLE.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
   tmle_est_par4$estimates[]
 
+
   # ------------------------------------------------------------------
   # Make a report:
   # ------------------------------------------------------------------
@@ -176,7 +179,8 @@ test.speedglm.allestimators10Kdata <- function() {
                   format = "html",
                   AddFUPtables = TRUE,
                   openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                  MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                  TMLE.RDtables = get_TMLE_RDs(list(tmle_est_par1, tmle_est_par2), t.periods.RDs = c(1, 4)),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Author Name", y_legend = 0.99, x_legend = 9.5)
 
@@ -184,7 +188,8 @@ test.speedglm.allestimators10Kdata <- function() {
                   format = "pdf",
                   AddFUPtables = TRUE,
                   openFile = FALSE,
-                  RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                  MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                  TMLE.RDtables = get_TMLE_RDs(list(tmle_est_par1, tmle_est_par2), t.periods.RDs = c(1, 4)),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Author Name", y_legend = 0.99, x_legend = 9.5)
 

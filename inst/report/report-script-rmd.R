@@ -192,12 +192,12 @@ if (!missing(MSM)) {
 
 #'\pagebreak
 #'
-#' `r ifelse(!missing(RDtables),'# IPW-MSM RD tables','')`
+#' `r ifelse(!missing(MSM.RDtables),'# IPW-MSM RD Tables','')`
 
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
-if (!missing(RDtables)) {
-  for (RDtable in RDtables) {
+if (!missing(MSM.RDtables)) {
+  for (RDtable in MSM.RDtables) {
     pander::set.caption(RDtable$caption)
     pander::pander(RDtable$RDtable)
   }
@@ -231,6 +231,22 @@ if (!missing(TMLE)) {
   do.call(f_plot_survest, sysArg)
 }
 
+#'\pagebreak
+#'
+#' `r ifelse(!missing(TMLE.RDtables),'# TMLE RD Tables','')`
+
+#+ echo=FALSE, results='asis'
+panderOptions('knitr.auto.asis', FALSE)
+if (!missing(TMLE.RDtables)) {
+  for (RDtable in TMLE.RDtables) {
+    pander::set.caption(RDtable$caption)
+    pander::pander(RDtable$RDtable)
+  }
+}
+panderOptions('knitr.auto.asis', TRUE)
+
+#'\pagebreak
+#'
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
 if (!missing(TMLE)) {

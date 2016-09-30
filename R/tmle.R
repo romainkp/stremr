@@ -363,9 +363,10 @@ If this error cannot be fixed, consider creating a replicable example and filing
               estimates = resultDT,
               est_name = est_name,
               periods = t_periods,
-              IC.Var.S.d = IC.Var.S.d,
+              IC.Var.S.d = list(IC.S = IC.Var.S.d),
               nID = OData$nuniqueIDs,
               wts_data = { if (TMLE || iterTMLE) {IPWeights} else {NULL}},
+              rule_name = rule_name,
               trunc_weights = trunc_weights)
 
   return(res_out)
