@@ -8,7 +8,7 @@
 ## R CMD check results
 There were no ERRORs or WARNINGs. 
 
-There were 1 NOTE:
+There was 1 NOTE:
 
 * Package suggested but not available for checking: ‘h2oEnsemble’
 
