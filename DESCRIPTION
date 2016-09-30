@@ -42,7 +42,7 @@ Suggests:
     RUnit,
     foreach,
     doParallel
-Additional_repositories: github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble/h2oEnsemble-package
+Additional_repositories: https://h2o-release.s3.amazonaws.com/h2o-ensemble/R
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1
