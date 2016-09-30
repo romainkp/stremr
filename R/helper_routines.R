@@ -305,7 +305,7 @@ defineIntervedTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceN
     # DT[, new.TRT.gstar := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
 
     # 4. all remaining NA's must be the ones that occurred prior to treatment switch -> all must be 0 (not-treated)
-    DT[is.na(eval(as.name("new.TRT.gstar"))), eval(as.name("new.TRT.gstar")) := 0]
+    DT[is.na(eval(as.name("new.TRT.gstar"))), ("new.TRT.gstar") := 0]
 
     # DT[is.na(new.TRT.gstar), new.TRT.gstar := 0]
     setnames(DT, old = "new.TRT.gstar", new = new.TRT.names[dtheta.i])

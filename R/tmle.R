@@ -531,9 +531,9 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   # TMLE INFERENCE
   # ------------------------------------------------------------------------------------------------
   if (TMLE || iterTMLE) {
-    IC_dt <- OData$dat.sVar[, list("EIC_i_t1plus" = sum(EIC_i_t)), by = eval(nodes$IDnode)]
+    IC_dt <- OData$dat.sVar[, list("EIC_i_t1plus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
     IC_dt[, ("EIC_i_t0") := res_lastPredQ_Prob1 - mean_est_t]
-    IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_t1plus]
+    IC_dt[, ("EIC_i") := eval(as.name("EIC_i_t0")) + eval(as.name("EIC_i_t1plus"))]
     # asymptotic variance (var of the EIC):
     IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
     # variance of the TMLE estimate (scaled by n):

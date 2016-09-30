@@ -472,7 +472,9 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   # sum_Allwt <- wts_data_used[, .(sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
 
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
-  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
+  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, ("St.IPTW") := cumprod(1 - ht)]
+  # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
+
   St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all=TRUE)
   St_ht_IPAW[, "rule.name" := rule.name]
   return(list(wts_data = wts_data_used, trunc_weights = trunc_weights, IPW_estimates = data.frame(St_ht_IPAW)))
