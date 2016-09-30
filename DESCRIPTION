@@ -43,6 +43,7 @@ Suggests:
     foreach,
     doParallel
 Additional_repositories: github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble/h2oEnsemble-package
+Remotes: h2oai/h2o-3/tree/master/h2o-r/ensemble/h2oEnsemble-package, Rdatatable/data.table
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1

@@ -17,7 +17,7 @@
 ## Install h2oEnsemble (most recent stable version 1.8)
 ## --------------------------------------------------------------------------------------------------------
 # install.packages("https://h2o-release.s3.amazonaws.com/h2o-ensemble/R/h2oEnsemble_0.1.8.tar.gz", repos = NULL)
-## Install h2oEnsemble (dev version):
+# # Install h2oEnsemble (dev version):
 # devtools::install_github("h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package")
 ## --------------------------------------------------------------------------------------------------------
 ## Install stremr

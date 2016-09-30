@@ -8,7 +8,15 @@
 ## R CMD check results
 There were no ERRORs or WARNINGs. 
 
-There was 1 NOTE:
+There were 2 NOTEs:
+
+* Possibly mis-spelled words in DESCRIPTION:
+All of these words define specific estimators / terms that will be known to the intended user.
+
+* Additional repositories with no packages:
+https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble/h2oEnsemble-package
+
+This is a direct repository link that contains the needed package. Also see below.
 
 * Package suggested but not available for checking: ‘h2oEnsemble’
 
