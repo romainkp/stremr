@@ -434,7 +434,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Assign the values in all_vals_mat[i,] to stochastic nodes in newdata
         # modify data to assign a single value from the support of each stochastic node TO all observations
         # WARNING: THIS STEP IS IRREVERSIBLE, ERASES ALL CURRENT VALUES IN interventionNodes.g0[stoch_nodes_idx]:
-        data$dat.sVar[subset_idx, stoch_nodes_names := all_vals_mat[i,], with = FALSE]
+        data$dat.sVar[subset_idx, (stoch_nodes_names) := all_vals_mat[i,]]
 
         # Predict using newdata, obtain probAeqa_stoch
         # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
@@ -449,7 +449,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           stoch.prob <- (stoch.prob)^IndNodeVal * (1L-stoch.prob)^(1-IndNodeVal)
           jointProb <- jointProb * stoch.prob
           # put the probabilities back into input data:
-          data$dat.sVar[subset_idx, stoch.node.nm := stoch.probs[[stoch.node.nm]], with = FALSE]
+          data$dat.sVar[subset_idx, (stoch.node.nm) := stoch.probs[[stoch.node.nm]]]
         }
         # Weight the current prediction by its probability
         probA1[subset_idx] <- probA1[subset_idx] * jointProb

@@ -28,6 +28,18 @@ f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend
   }
   legend(x_legend, y_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = ptsize, pch = 1)
 }
+f_obtain_TMLE_St <- function(TMLE, optArgReport) {
+  sysArg <- list()
+  if (is.data.table(TMLE)) TMLE <- list(TMLE_res = TMLE)
+  TMLE <- lapply(TMLE, '[[', "estimates")
+  sysArg$surv_list <- lapply(TMLE, '[[', 'surv')
+  rule.names <- unlist(lapply(TMLE, function(tmle_res) tmle_res[['rule.name']][1]))
+  names(sysArg$surv_list) <- rule.names
+  sysArg$t <- TMLE[[1]][["t"]]
+  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
+  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  return(sysArg)
+}
 
 #'
 #' Number of unique independent units in the input data:
@@ -145,6 +157,7 @@ if (!missing(NPMSM)) {
     pander::pander(data.frame(NPMSMtab))
   }
 }
+panderOptions('knitr.auto.asis', TRUE)
 
 
 #'\pagebreak
@@ -189,54 +202,42 @@ if (!missing(RDtables)) {
     pander::pander(RDtable$RDtable)
   }
 }
+panderOptions('knitr.auto.asis', TRUE)
 
 #' `r ifelse(!missing(GCOMP),'# Survival with Sequential G-Computation','')`
 
 #+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "G-Computation Survival.\\label{fig:survPlotGCOMP}"
 if (!missing(GCOMP)) {
-  sysArg <- list()
-  if (is.data.table(GCOMP)) GCOMP <- list(GCOMP_res = GCOMP)
-  sysArg$surv_list <- lapply(GCOMP, '[[', 'surv')
-  rule.names <- unlist(lapply(GCOMP, function(GCOMP_res) GCOMP_res[['rule.name']][1]))
-  names(sysArg$surv_list) <- rule.names
-  sysArg$t <- GCOMP[[1]][["t"]]
-  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  sysArg <- f_obtain_TMLE_St(GCOMP, optArgReport)
   do.call(f_plot_survest, sysArg)
 }
 
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
 if (!missing(GCOMP)) {
-  for (GCOMPtab in GCOMP) {
+  GCOMP.St <- lapply(GCOMP, '[[', "estimates")
+  for (GCOMPtab in GCOMP.St) {
     pander::set.caption("GCOMP results for rule '" %+% GCOMPtab[["rule.name"]][1] %+% "'")
     pander::pander(data.frame(GCOMPtab))
   }
 }
+panderOptions('knitr.auto.asis', TRUE)
 
 #' `r ifelse(!missing(TMLE),'# Survival with Targeted Maximum Likelihood (TMLE)','')`
 
 #+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "TMLE Survival.\\label{fig:survPlotTMLE}"
 if (!missing(TMLE)) {
-  sysArg <- list()
-  if (is.data.table(TMLE)) TMLE <- list(TMLE_res = TMLE)
-  sysArg$surv_list <- lapply(TMLE, '[[', 'surv')
-  rule.names <- unlist(lapply(TMLE, function(tmle_res) tmle_res[['rule.name']][1]))
-  names(sysArg$surv_list) <- rule.names
-  sysArg$t <- TMLE[[1]][["t"]]
-  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  sysArg <- f_obtain_TMLE_St(TMLE, optArgReport)
   do.call(f_plot_survest, sysArg)
 }
 
 #+ echo=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
 if (!missing(TMLE)) {
-  for (TMLEtab in TMLE) {
+  TMLE.St <- lapply(TMLE, '[[', "estimates")
+  for (TMLEtab in TMLE.St) {
     pander::set.caption("TMLE results for rule '" %+% TMLEtab[["rule.name"]][1] %+% "'")
     pander::pander(data.frame(TMLEtab))
   }
 }
-
-#+ include=FALSE
 panderOptions('knitr.auto.asis', TRUE)

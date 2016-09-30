@@ -473,9 +473,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # Modify the values in node nodes_to_repl in self$dat.sVar with values from source_for_repl using only the IDs in subset_idx:
     replaceNodesVals = function(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames) {
       for (node_idx in seq_along(nodes_to_repl)) {
-        source_node <- self$dat.sVar[subset_idx, (source_for_repl[node_idx]), with = FALSE]
-        self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node]
-        # self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node, with = FALSE]
+        if (sum(subset_idx) > 0) {
+          source_node <- self$dat.sVar[subset_idx, (source_for_repl[node_idx]), with = FALSE][[source_for_repl[node_idx]]]
+          self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := as.numeric(source_node)]
+        }
       }
       invisible(return(self))
     },

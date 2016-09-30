@@ -141,7 +141,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     t.surv <- c(3)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-    tmle_est[]
+    tmle_est$estimates[]
 
     h2o::h2o.shutdown(prompt = FALSE)
   }

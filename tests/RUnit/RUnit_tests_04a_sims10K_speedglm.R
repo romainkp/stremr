@@ -127,13 +127,13 @@ test.speedglm.allestimators10Kdata <- function() {
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
   gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  gcomp_est3
+  gcomp_est3$estimates[]
   # stratified modeling by rule followers only:
   tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-  tmle_est3
+  tmle_est3$estimates[]
   # pooling all observations (no stratification):
   tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  tmle_est4
+  tmle_est4$estimates[]
 
   # ------------------------------------------------------------------------
   # RUN in PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)
@@ -146,23 +146,23 @@ test.speedglm.allestimators10Kdata <- function() {
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   gcomp_est1 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledGCOMP.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  gcomp_est1[]
+  gcomp_est1$estimates[]
   gcomp_est2 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pooledGCOMP.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  gcomp_est2[]
+  gcomp_est2$estimates[]
 
   # tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pool.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
   tmle_est_par1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledTMLE.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
-  tmle_est_par1[]
+  tmle_est_par1$estimates[]
   # tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pool.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
   tmle_est_par2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pooledTMLE.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
-  tmle_est_par2[]
+  tmle_est_par2$estimates[]
 
   # tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "strat.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
   tmle_est_par3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "stratTMLE.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
-  tmle_est_par3[]
+  tmle_est_par3$estimates[]
   # tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "strat.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
   tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "stratTMLE.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
-  tmle_est_par4[]
+  tmle_est_par4$estimates[]
 
   # ------------------------------------------------------------------
   # Make a report:
@@ -173,6 +173,7 @@ test.speedglm.allestimators10Kdata <- function() {
   make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Jane Doe", openFile = FALSE)
 
   make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(gcomp_est1, gcomp_est2), TMLE = list(tmle_est_par1, tmle_est_par2),
+                  format = "html",
                   AddFUPtables = TRUE,
                   openFile = FALSE,
                   RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
@@ -200,10 +201,10 @@ test.speedglm.allestimators10Kdata <- function() {
   gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
   # stratified modeling by rule followers only:
   tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-  tmle_est3[]
+  tmle_est3$estimates[]
   # pooling all observations (no stratification):
   tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  tmle_est4[]
+  tmle_est4$estimates[]
 }
 
 
@@ -286,10 +287,10 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
   # stratified modeling by rule followers only:
   tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-  tmle_est3[]
+  tmle_est3$estimates[]
   # pooling all observations (no stratification):
   tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  tmle_est4[]
+  tmle_est4$estimates[]
 
   # ---------------------------------------------------------------------------------------------------------
   # TMLE / GCOMP with a static intervention on MONITOR
@@ -298,13 +299,13 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
   gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  gcomp_est3[]
+  gcomp_est3$estimates[]
   # stratified modeling by rule followers only:
   tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-  tmle_est3[]
+  tmle_est3$estimates[]
   # pooling all observations (no stratification):
   tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  tmle_est4[]
+  tmle_est4$estimates[]
 
   # ---------------------------------------------------------------------------------------------------------
   # TMLE / GCOMP with a static intervention on MONITOR under NDE assumption
@@ -314,14 +315,13 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
   gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                             useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  gcomp_est3[]
+  gcomp_est3$estimates[]
   # stratified modeling by rule followers only:
   tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-  tmle_est3[]
+  tmle_est3$estimates[]
   # pooling all observations (no stratification):
   tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  tmle_est4[]
-
+  tmle_est4$estimates[]
 }
