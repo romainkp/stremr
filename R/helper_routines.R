@@ -300,9 +300,14 @@ defineIntervedTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceN
     # NOTE: ****** (tsinceNis1 > 0) is equivalent to (N(t-1)==0) ******
     DT[(get(tsinceNis1) == 0L) & (get(I) >= eval(dtheta)), "new.TRT.gstar" :=  1L]
     # 3. Once the person goes on treatment he/she has to stay on it until the end of the follow-up (using carry-forward)
-    DT[, new.TRT.gstar := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
+
+    DT[, ("new.TRT.gstar") := zoo::na.locf(eval(as.name("new.TRT.gstar")), na.rm = FALSE), by = eval(ID.expression)]
+    # DT[, new.TRT.gstar := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
+
     # 4. all remaining NA's must be the ones that occurred prior to treatment switch -> all must be 0 (not-treated)
-    DT[is.na(new.TRT.gstar), new.TRT.gstar := 0]
+    DT[is.na(eval(as.name("new.TRT.gstar"))), eval(as.name("new.TRT.gstar")) := 0]
+
+    # DT[is.na(new.TRT.gstar), new.TRT.gstar := 0]
     setnames(DT, old = "new.TRT.gstar", new = new.TRT.names[dtheta.i])
   }
   if (!return.allcolumns) {
