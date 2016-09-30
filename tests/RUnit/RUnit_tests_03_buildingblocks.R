@@ -102,6 +102,9 @@ test.buildingblocks <- function() {
   tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est[]
 
+  tmle_est3 <- fitTMLE(OData, t_periods = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, stabilize = TRUE)
+  tmle_est4 <- fitTMLE(OData, t_periods = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, trunc_weights = 2)
+
   # --------------------------------
   res <- stremr(OdataDT, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"), intervened_TRT = "TI.set1",

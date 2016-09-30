@@ -399,10 +399,12 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(eval(as.name("cum.IPAW"))), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
   ## Numerator of bounded IPW for survival:
-  numIPW <- all.ID.t[, .(sum_Y_IPAW = sum(get(Ynode)*eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
+  numIPW <- all.ID.t[, {sum_Y_IPAW = sum(get(Ynode)*eval(as.name("cum.IPAW")), na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
+  # numIPW <- all.ID.t[, .(sum_Y_IPAW = sum(get(Ynode)*eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
   ## Denominator of bounded IPW for survival:
-  denomIPW <- all.ID.t[, .(sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
+  denomIPW <- all.ID.t[, {sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE); list(sum_IPAW = sum_IPAW)}, by = eval(t_name)]
+  # denomIPW <- all.ID.t[, .(sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
   ## Bounded IPW of survival (direct):
   risk.t <- (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
@@ -462,10 +464,12 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   # wts_data_used[, "Wt.OUTCOME" := get(nodes$Ynode)*cum.IPAW]
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- wts_data_used[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Ywt, cols = t_name)
+  sum_Ywt <- wts_data_used[, {sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]; setkeyv(sum_Ywt, cols = t_name)
+  # sum_Ywt <- wts_data_used[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Ywt, cols = t_name)
 
   # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t (equivalent to summing cumulative weights cum.IPAW by t):
-  sum_Allwt <- wts_data_used[, .(sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
+  sum_Allwt <- wts_data_used[, {sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE); list(sum_all_IPAW = sum_all_IPAW)}, by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
+  # sum_Allwt <- wts_data_used[, .(sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
 
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
   St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
