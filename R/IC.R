@@ -2,8 +2,6 @@
 ## SE of IPW estimator of MSM coef
 ###################################
 getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW_MSMestimator = TRUE){
-  # browser()
-
   # head(MSMdata)
   cum.IPAW <- "cum.IPAW"
 

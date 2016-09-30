@@ -39,21 +39,21 @@ notest.h2oQuasiBinomGLM.Ensemble <- function() {
         # speedglm:
         params = list(fit.package = "speedglm", fit.algorithm = "glm")
         gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-        gcomp_est[]
+        gcomp_est$estimates[]
         #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates rule.name
         # 1:    GCOMP 10 0.2723941 0.7276059          FALSE             11 gTI.dhigh
 
         # H2O glm w/ L_BFGS:
         params = list(fit.package = "h2o", fit.algorithm = "glm", solver = "L_BFGS")
         gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-        gcomp_est[]
+        gcomp_est$estimates[]
         #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates rule.name
         # 1:    GCOMP 10 0.2723858 0.7276142          FALSE             11 gTI.dhigh
 
         # H2O glm w/ IRLSM:
         params = list(fit.package = "h2o", fit.algorithm = "glm", solver = "IRLSM")
         gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-        gcomp_est[]
+        gcomp_est$estimates[]
         #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates rule.name
         # 1:    GCOMP 10 0.2723941 0.7276059          FALSE             11 gTI.dhigh
 
@@ -71,7 +71,7 @@ notest.h2oQuasiBinomGLM.Ensemble <- function() {
                          glm = glm_hyper_params)
 
         gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = SLparams, stratifyQ_by_rule = FALSE)
-        gcomp_est[]
+        gcomp_est$estimates[]
         #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates   type rule.name
         # 1:    GCOMP 10 0.2495067 0.7504933          FALSE             11 pooled gTI.dhigh
 

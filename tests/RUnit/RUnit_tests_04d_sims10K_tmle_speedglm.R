@@ -76,22 +76,29 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # stratified modeling by rule followers only:
   gcomp_est1 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est1 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  gcomp_est1; tmle_est1
+  names(gcomp_est1)
+  gcomp_est1$estimates[]
+  gcomp_est1$est_name
+  gcomp_est1$IC.Var.S.d
+  names(tmle_est1)
+  tmle_est1$estimates[]
+  tmle_est1$est_name
+  tmle_est1$IC.Var.S.d
 
   # pooling all observations (no stratification):
   gcomp_est2 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   tmle_est2 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  gcomp_est2; tmle_est2
+  gcomp_est2$estimates[]; tmle_est2$estimates[]
 
   # stratified modeling by rule followers only:
   gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est3 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  gcomp_est3; tmle_est3
+  gcomp_est3$estimates[]; tmle_est3$estimates[]
 
   # pooling all observations (no stratification):
   gcomp_est4 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   tmle_est4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  gcomp_est4; tmle_est4
+  gcomp_est4$estimates[]; tmle_est4$estimates[]
 
   # ------------------------------------------------------------------------
   # RUN PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)

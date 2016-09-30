@@ -111,8 +111,13 @@ test.speedglm.allestimators10Kdata <- function() {
                       wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
                       t_breaks = c(1:8,12,16)-1,
                       est_name = "IPAW", getSEs = TRUE)
-  names(MSM.IPAW)
-  MSM.IPAW$St
+  # names(MSM.IPAW)
+  # nrow(t(MSM.IPAW$IC.Var.S.d$gTI.dlow$IC.S))
+  # nrow(t(MSM.IPAW$IC.Var.S.d$gTI.dhigh$IC.S))
+  # ncol(t(MSM.IPAW$IC.Var.S.d$gTI.dlow$IC.S))
+  # ncol(t(MSM.IPAW$IC.Var.S.d$gTI.dhigh$IC.S))
+  # # MSM.IPAW$St
+  # OData$nuniqueIDs
 
   # ---------------------------------------------------------------------------------------------------------
   # TMLE / GCOMP

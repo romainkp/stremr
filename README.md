@@ -1,10 +1,10 @@
 stremr
 ==========
 
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/stremr)](https://CRAN.R-project.org/package=stremr)
+<!-- [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/stremr)](https://CRAN.R-project.org/package=stremr)
 [![](https://cranlogs.r-pkg.org/badges/stremr)](https://cran.rstudio.com/web/packages/stremr/index.html)
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
-[![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg?branch=master)](https://coveralls.io/github/osofr/stremr?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg?branch=master)](https://coveralls.io/github/osofr/stremr?branch=master) -->
 
 Streamlined analysis of longitudinal time-to-event or time-to-failure data. Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or [`H2O-3`](https://github.com/h2oai/h2o-3)machine learning libraries, including Ensemble Learning ([**SuperLearner**](https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble)).
 
@@ -74,7 +74,7 @@ pkgs <- c("methods","statmod","stats","graphics","RCurl","jsonlite","tools","uti
 new.pkgs <- setdiff(pkgs, rownames(installed.packages()))
 if (length(new.pkgs)) install.packages(new.pkgs)
 # Download and install the H2O package for R:
-install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-turchin/9/R")))
+install.packages("h2o", type="source", repos=(c("https://s3.amazonaws.com/h2o-release/h2o/master/3636/R")))
 ```
 
 For ensemble learning with SuperLearner we recommend installing the latest development version of the `h2oEnsemble` R package ([can also see the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble#install-development-version)):

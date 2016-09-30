@@ -465,7 +465,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       nodes <- nodes[!is.null(nodes)]
       for (node in nodes) CheckVarNameExists(self$dat.sVar, node)
       if (is.null(private$.saveGstarsDT)) stop("Nodes in dat.sVar cannot be restored, private$.saveGstarsDT is null!")
-      self$dat.sVar[, (nodes) := private$.saveGstarsDT[, nodes, with = FALSE], with = FALSE]
+      self$dat.sVar[, (nodes) := private$.saveGstarsDT[, nodes, with = FALSE]]
+      # self$dat.sVar[, (nodes) := private$.saveGstarsDT[, nodes, with = FALSE], with = FALSE]
       invisible(return(self))
     },
 
@@ -473,7 +474,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     replaceNodesVals = function(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames) {
       for (node_idx in seq_along(nodes_to_repl)) {
         source_node <- self$dat.sVar[subset_idx, (source_for_repl[node_idx]), with = FALSE]
-        self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node, with = FALSE]
+        self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node]
+        # self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node, with = FALSE]
       }
       invisible(return(self))
     },

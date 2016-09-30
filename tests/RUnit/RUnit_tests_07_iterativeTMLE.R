@@ -49,13 +49,13 @@ test.iterTMLE.10Kdata <- function() {
   # Qstratify <- c("TI == 0 & CVD == 0", "TI == 1 & CVD == 0", "TI == 0 & CVD == 1", "TI == 1 & CVD == 1")
   # Qstratify = Qstratify,
   iterTMLE_est1a <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  # iterTMLE_est1a[]
+  # iterTMLE_est1a$estimates[]
   iterTMLE_est1b <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  # iterTMLE_est1b[]
+  # iterTMLE_est1b$estimates[]
 
   iterTMLE_est2a <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-  # iterTMLE_est2a[]
+  # iterTMLE_est2a$estimates[]
   iterTMLE_est2b <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
-  # iterTMLE_est2b[]
+  # iterTMLE_est2b$estimates[]
 }
 

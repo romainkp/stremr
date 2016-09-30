@@ -1,7 +1,7 @@
 # adding to appease CRAN check with non-standard eval in data.table:
-utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN",
+utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN", "new.TRT.gstar",
                           "N.risk", "N.follow.rule", "stab.P", "cum.stab.P", "cum.IPAW",
-                          "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht"))
+                          "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht", "ht.KM", "EIC_i_t0", "EIC_i_t1plus"))
 
 # ---------------------------------------------------------------------------------------
 #' Import data, define various nodes, define dummies for factor columns and define OData R6 object
@@ -363,9 +363,9 @@ process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
     wts_data <- merge(wts_data, weights, all.x = TRUE)
     # Multiply the outcome by additional user-supplied weights:
     if ("Wt.OUTCOME" %in% names(wts_data) && adjust_outcome) {
-      wts_data[, "Wt.OUTCOME" := eval(as.name("Wt.OUTCOME")) * get(wt_col_name)]
+      wts_data[, "Wt.OUTCOME" := Wt.OUTCOME * get(wt_col_name)]
     } else if (!adjust_outcome) {
-      wts_data[, "cum.IPAW" := eval(as.name("cum.IPAW")) * get(wt_col_name)]
+      wts_data[, "cum.IPAW" := cum.IPAW * get(wt_col_name)]
     }
   }
   return(wts_data)
@@ -401,14 +401,14 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   names(all.ID.t) <- c(nodes$IDnode, t_name)
 
   all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE, by = c(nodes$IDnode, t_name))
-  all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(eval(as.name("cum.IPAW"))), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
+  all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(cum.IPAW), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
   ## Numerator of bounded IPW for survival:
-  numIPW <- all.ID.t[, {sum_Y_IPAW = sum(get(Ynode)*eval(as.name("cum.IPAW")), na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
+  numIPW <- all.ID.t[, {sum_Y_IPAW = sum(get(Ynode)*cum.IPAW, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
   # numIPW <- all.ID.t[, .(sum_Y_IPAW = sum(get(Ynode)*eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
   ## Denominator of bounded IPW for survival:
-  denomIPW <- all.ID.t[, {sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE); list(sum_IPAW = sum_IPAW)}, by = eval(t_name)]
+  denomIPW <- all.ID.t[, {sum_IPAW = sum(cum.IPAW, na.rm = TRUE); list(sum_IPAW = sum_IPAW)}, by = eval(t_name)]
   # denomIPW <- all.ID.t[, .(sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
   ## Bounded IPW of survival (direct):
@@ -450,7 +450,7 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   # ------------------------------------------------------------------------
   # CRUDE HAZARD AND KM ESTIMATE OF SURVIVAL:
   # ------------------------------------------------------------------------
-  ht.crude <- wts_data_used[cum.IPAW > 0, {ht.KM = sum(eval(as.name("Wt.OUTCOME")), na.rm = TRUE) / .N; list(ht.KM = ht.KM)}, by = eval(t_name)][, St.KM := cumprod(1 - eval(as.name("ht.KM")))]
+  ht.crude <- wts_data_used[cum.IPAW > 0, {ht.KM = sum(Wt.OUTCOME, na.rm = TRUE) / .N; list(ht.KM = ht.KM)}, by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   # ht.crude2 <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name("Wt.OUTCOME")), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   # ht.crude <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t_name)
@@ -459,13 +459,13 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   # IPW-ADJUSTED KM (SATURATED MSM):
   # ------------------------------------------------------------------------
   # Multiply the weight by stabilization factor (numerator) (doesn't change the estimand in saturated MSMs, but makes weights smaller):
-  wts_data_used[, "cum.IPAW" := eval(as.name("cum.stab.P")) * eval(as.name("cum.IPAW"))]
+  wts_data_used[, "cum.IPAW" := cum.stab.P * cum.IPAW]
 
   # If trunc_weights < Inf then truncate the weights:
   if (trunc_weights < Inf) wts_data_used[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
 
   # Multiply the outcome by cumulative weights in cum.IPAW:
-  wts_data_used[, "Wt.OUTCOME" := eval(as.name("Wt.OUTCOME"))*eval(as.name("cum.IPAW"))]
+  wts_data_used[, "Wt.OUTCOME" := Wt.OUTCOME * cum.IPAW]
   # wts_data_used[, "Wt.OUTCOME" := get(nodes$Ynode)*cum.IPAW]
 
   # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
@@ -569,7 +569,7 @@ survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = T
   setkeyv(wts_data_used, cols = c(nodes$IDnode, nodes$tnode))
 
   # Multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since cum.stab.P cancels out):
-  if (stabilize) wts_data_used[, "cum.IPAW" := eval(as.name("cum.stab.P")) * eval(as.name("cum.IPAW"))]
+  if (stabilize) wts_data_used[, "cum.IPAW" := cum.stab.P * cum.IPAW]
 
   # If trunc_weights < Inf, do truncation of the weights
   if (trunc_weights < Inf) wts_data_used[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
@@ -626,11 +626,14 @@ survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = T
     if (t.idx == 2L) {
       dummy.j <- paste("Periods.", low.t, "to", high.t, sep="")
       MSM.intervals[t.idx - 1, ] <- c(low.t, high.t); t.per.inteval[[t.idx - 1]] <- unique(low.t:high.t)
-      wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= low.t & eval(as.name(t_name)) <= high.t)]
+      wts_data_used[, (dummy.j) := as.integer(get(t_name) >= low.t & get(t_name) <= high.t)]
+      # wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= low.t & eval(as.name(t_name)) <= high.t)]
     } else {
       dummy.j <- paste("Periods.", (low.t + 1), "to", high.t, sep="")
-      MSM.intervals[t.idx - 1, ] <- c(low.t + 1, high.t); t.per.inteval[[t.idx - 1]] <- unique((low.t+1):high.t)
-      wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= (low.t + 1) & eval(as.name(t_name)) <= high.t)]
+      MSM.intervals[t.idx - 1, ] <- c(low.t + 1, high.t)
+      t.per.inteval[[t.idx - 1]] <- unique((low.t+1):high.t)
+      wts_data_used[, (dummy.j) := as.integer(get(t_name) >= (low.t + 1) & get(t_name) <= high.t)]
+      # wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= (low.t + 1) & eval(as.name(t_name)) <= high.t)]
     }
     print("defined t.dummy: " %+% dummy.j)
     all.t.dummies <- c(all.t.dummies, dummy.j)

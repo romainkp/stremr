@@ -338,20 +338,37 @@ fitSeqGcomp <- function(OData, t_periods,
     }
   )
 
-  if (inherits(tmle.run.res, "try-error")) { # TMLE update failed
-    message("attempt at running TMLE for one or several time-points has failed for undefined reason")
-    warning("attempt at running TMLE for one or several time-points has failed for undefined reason")
-  }
-
   # ------------------------------------------------------------------------------------------------
-  # Restore backed up nodes
+  # Restore backed up nodes, even in the event of failure (otherwise the input data is corrupted for good)
   # ------------------------------------------------------------------------------------------------
   OData$restoreNodes(c(intervened_TRT,intervened_MONITOR))
 
-  resultDT <- data.table(est_name = est_name, rbindlist(res_byt))
+  if (inherits(tmle.run.res, "try-error")) { # TMLE update failed
+    stop(
+"...attempt at running TMLE for one or several time-points has failed for unknown reason;
+If this error cannot be fixed, consider creating a replicable example and filing a bug report at:
+  https://github.com/osofr/stremr/issues
+", call. = TRUE)
+  }
+
+  ICs_byt <- lapply(res_byt, '[[', "IC_i_onet")
+  IC.Var.S.d <- t(do.call("cbind", ICs_byt))
+  # IC.Var.S.d <- matrix(NA, nrow = length(ICs_byt), ncol = length(ICs_byt[[1]]))
+
+  ests_byt <- lapply(res_byt, '[[', "resDF_onet")
+  resultDT <- data.table(est_name = est_name, rbindlist(ests_byt))
   resultDT[, "rule.name" := eval(as.character(rule_name))]
 
-  return(resultDT)
+  res_out <- list(
+              estimates = resultDT,
+              est_name = est_name,
+              periods = t_periods,
+              IC.Var.S.d = IC.Var.S.d,
+              nID = OData$nuniqueIDs,
+              wts_data = { if (TMLE || iterTMLE) {IPWeights} else {NULL}},
+              trunc_weights = trunc_weights)
+
+  return(res_out)
 }
 
 # ------------------------------------------------------------------------------------------------
@@ -498,7 +515,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ_Prob1))
   if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
 
-  resDF <- data.frame(t = t_period,
+  resDF_onet <- data.frame(t = t_period,
                     risk = mean_est_t,
                     surv = 1 - mean_est_t,
                     ALLsuccessTMLE = ALLsuccessTMLE,
@@ -524,28 +541,30 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     # res_lastPredQ_Prob1 <- OData$dat.sVar[subset_idx, ][["Q.kplus1"]]
     # mean_est_t  <- mean(res_lastPredQ_Prob1)
     # print("TMLE surv estimate 2: " %+% (1 - mean_est_t))
-    resDF <- cbind(resDF, iterTMLErisk = mean_est_t, iterTMLEsurv = (1 - mean_est_t))
+    resDF_onet <- cbind(resDF_onet, iterTMLErisk = mean_est_t, iterTMLEsurv = (1 - mean_est_t))
   }
 
   # ------------------------------------------------------------------------------------------------
   # TMLE INFERENCE
   # ------------------------------------------------------------------------------------------------
+  IC_i_onet <- vector(mode = "numeric", length = OData$nuniqueIDs)
+  IC_i_onet[] <- NA
+
   if (TMLE || iterTMLE) {
     IC_dt <- OData$dat.sVar[, list("EIC_i_t1plus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
     IC_dt[, ("EIC_i_t0") := res_lastPredQ_Prob1 - mean_est_t]
-    IC_dt[, ("EIC_i") := eval(as.name("EIC_i_t0")) + eval(as.name("EIC_i_t1plus"))]
+    IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_t1plus]
+    IC_dt[, c("EIC_i_t0", "EIC_i_t1plus") :=  list(NULL, NULL)]
+    IC_i_onet <- IC_dt[["EIC_i"]]
     # asymptotic variance (var of the EIC):
     IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
     # variance of the TMLE estimate (scaled by n):
     TMLE_Var <- IC_Var / OData$nuniqueIDs
     # SE of the TMLE
     TMLE_SE <- sqrt(TMLE_Var)
-
     if (gvars$verbose) print("...empirical mean of the estimated EIC: " %+% mean(IC_dt[["EIC_i"]]))
     if (gvars$verbose) print("...estimated TMLE variance: " %+% TMLE_Var)
-
-    resDF <- cbind(resDF, TMLE_Var = TMLE_Var, TMLE_SE = TMLE_SE)
+    resDF_onet <- cbind(resDF_onet, TMLE_Var = TMLE_Var, TMLE_SE = TMLE_SE)
   }
-
-  return(resDF)
+  return(list(IC_i_onet = IC_i_onet, resDF_onet = resDF_onet))
 }

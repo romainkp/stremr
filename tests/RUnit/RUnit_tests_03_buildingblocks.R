@@ -41,14 +41,26 @@ test.buildingblocks <- function() {
   AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
                survNPMSM(OData) %$%
                IPW_estimates
-  AKME.St.1
 
+  res.test.AMKE.IPTW.1 <- c(0.9564462, 0.9403990, 0.9250282, 0.9250282, 0.9010454, 0.8873632, 0.8850073,
+                            0.8678221, 0.8488353, 0.8401469, 0.8401469, 0.8304123, 0.7930334, 0.7752481,
+                            0.7752481, 0.7340285, 0.7340285)
+  checkTrue(all(abs(res.test.AMKE.IPTW.1 - AKME.St.1[["St.IPTW"]]) < (10^-5)))
+
+  res.test.AMKE.KM.1 <- c(0.9526627, 0.9349112, 0.9230769, 0.9230769, 0.8994083, 0.8757396, 0.8639053,
+                          0.8520710, 0.8224852, 0.8165680, 0.8165680, 0.8047337, 0.7692308, 0.7573964,
+                          0.7573964, 0.7218935, 0.7218935)
+  checkTrue(all(abs(res.test.AMKE.KM.1 - AKME.St.1[["St.KM"]]) < (10^-5)))
   # ----------------------------------------------------------------------
   # Bounded IPW
   # ----------------------------------------------------------------------
   IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
                survDirectIPW(OData)
-  IPW.St.1[]
+  # IPW.St.1[]
+  res.test.IPW.St.1 <- c(0.9564462, 0.9519073, 0.9497037, 0.9643112, 0.9498030, 0.9502507, 0.9631751,
+                         0.9559085, 0.9487348, 0.9553832, 0.9698508, 0.9683569, 0.9347756, 0.9341488,
+                         0.9552954, 0.9183222)
+  checkTrue(all(abs(res.test.IPW.St.1 - IPW.St.1[["S.t.n"]]) < (10^-5)))
 
   # ----------------------------------------------------------------------
   # IPW-MSM for hazard
@@ -56,7 +68,17 @@ test.buildingblocks <- function() {
   wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "TI.set1", rule_name = "TI1")
   wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "TI.set0", rule_name = "TI0")
   survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, t_breaks = c(1:8,12,16)-1,)
-  survMSM_res$St
+  # survMSM_res$St
+  res.test <- list()
+  res.test$TI0 <- c(0.9957857, 0.9827720, 0.9653188, 0.9653188, 0.9653188, 0.9653188, 0.9641698,
+                    0.9625935, 0.9625935, 0.9625935, 0.9625935, 0.9625935, 0.9625935, 0.9625935,
+                    0.9625935, 0.9625935)
+  res.test$TI1 <- c(0.9564462, 0.9403990, 0.9250282, 0.9250277, 0.9010449, 0.8873627, 0.8850068,
+                    0.8678217, 0.8595666, 0.8513901, 0.8432913, 0.8352696, 0.8085728, 0.7827293,
+                    0.7577119, 0.7334940)
+  # res <- all.equal(res.test, survMSM_res$St)
+  checkTrue(all(abs(survMSM_res$St$TI0 - res.test$TI0) < (10^-5)))
+  checkTrue(all(abs(survMSM_res$St$TI1 - res.test$TI1) < (10^-5)))
 
   # --------------------------------
   # EXAMPLE 2:
