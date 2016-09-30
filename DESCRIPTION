@@ -5,7 +5,7 @@ Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
     person("Romain", "Neugebauer", role="aut", email="Romain.S.Neugebauer@kp.org"))
-Description: Streamlined analysis of longitudinal time-to-event or time-to-failure data. 
+Description: Analysis of longitudinal time-to-event or time-to-failure data. 
     Estimates the counterfactual discrete survival curve under static, dynamic and 
     stochastic interventions on treatment (exposure) and monitoring events over time. 
     Estimators (IPW, MSM-IPW, GCOMP, longitudinal TMLE) adjust for measured time-varying 

@@ -20,5 +20,3 @@ Please install it by typing this into R terminal:
   install_github(\"h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package\")"
 Finally, the maintainer of h2oEnsemble has promised to release the package to CRAN very soon.
 
-
-
