@@ -389,7 +389,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 50, tol.eps = 
     if (!is.null(tol.eps) & (abs(TMLE.fit$TMLE.intercept) <= tol.eps)) break
   }
 
-  print("iterative TMLE ran for N iter: " %+% iter)
+  if (gvars$verbose) print("iterative TMLE ran for N iter: " %+% iter)
 
   # EVALUTE THE t-specific and i-specific components of the EIC (estimates):
   prev_Q.kplus1 <- OData$dat.sVar[use_subset_idx, "prev_Q.kplus1", with = FALSE][[1]]
@@ -487,7 +487,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   lastQ_inx <- Qreg_idx[1] # the index for the last Q-fit
   res_lastPredQ_Prob1 <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
   mean_est_t <- mean(res_lastPredQ_Prob1)
-  print("Surv est: " %+% (1-mean_est_t))
+  if (gvars$verbose) print("Surv est: " %+% (1-mean_est_t))
   # [1] 0.7276059
   # # 1b. Grab it directly from the data, using the appropriate strata-subsetting expression
   #   subset_vars <- lastQ.fit$subset_vars
@@ -513,11 +513,11 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     iter.time <- system.time(
       res <- iterTMLE_onet(OData, Qlearn.fit, Qreg_idx, max_iter = max_iter, tol.eps = tol.eps)
     )
-    print("Time to run iterative TMLE: "); print(iter.time)
+    if (gvars$verbose) {print("Time to run iterative TMLE: "); print(iter.time)}
     # 1a. Grab the mean prediction from the very last regression (over all n observations);
     res_lastPredQ_Prob1 <- Qlearn.fit$predictRegK(Qreg_idx[1], OData$nuniqueIDs)
     mean_est_t <- mean(res_lastPredQ_Prob1)
-    print("Iterative TMLE surv estimate: " %+% (1 - mean_est_t))
+    if (gvars$verbose) print("Iterative TMLE surv estimate: " %+% (1 - mean_est_t))
     # # # 1b. Grab it directly from the data, using the appropriate strata-subsetting expression
     # lastQ.fit <- Qlearn.fit$getPsAsW.models()[[Qreg_idx[1]]]$getPsAsW.models()[[1]]
     # subset_idx <- OData$evalsubst(subset_vars = lastQ.fit$subset_vars, subset_exprs = lastQ.fit$subset_exprs)
@@ -541,8 +541,8 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     # SE of the TMLE
     TMLE_SE <- sqrt(TMLE_Var)
 
-    print("empirical mean of the estimated EIC: " %+% mean(IC_dt[["EIC_i"]]))
-    print("estimated TMLE variance: " %+% TMLE_Var)
+    if (gvars$verbose) print("...empirical mean of the estimated EIC: " %+% mean(IC_dt[["EIC_i"]]))
+    if (gvars$verbose) print("...estimated TMLE variance: " %+% TMLE_Var)
 
     resDF <- cbind(resDF, TMLE_Var = TMLE_Var, TMLE_SE = TMLE_SE)
   }
