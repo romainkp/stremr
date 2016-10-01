@@ -19,17 +19,16 @@ There were 2 NOTEs:
   oEnsemble (15:21)
 
 These are not mis-spelled. I manually checked all of these words. 
-They define specific estimators / terms that will be known to the intended user.
+They define specific estimators / terms that are known to the intended user.
 
-* Package suggested but not available for checking: ‘h2oEnsemble’
+* Package suggested but not available for checking: 'h2oEnsemble'
 
-This package provides an important added functionality for stremr and is available for easy installation from github. A reference to its github repository has been added to the field "Additional_repositories:". Appropriate error checks and messages have been implemented throughout the package. 
-Currently, the error message instructs the user on how to install it directly from github, i.e.,
+This package provides important additional functionality to stremr. Source code for h2oEnsemble is available from valid repo listed in "Additional_repositories". Appropriate error checks and messages have been implemented throughout the package whenever h2oEnsemble is not installed. Currently, the error message instructs the user on how to install it directly from github, i.e.,
 "Package h2oEnsemble is needed for modeling with SuperLearner.
 Please install it by typing this into R terminal:
   library(devtools)
   install_github(\"h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package\")"
-Finally, the maintainer of h2oEnsemble has promised to release the package to CRAN very soon.
+Finally, the maintainer of h2oEnsemble has promised to release it to CRAN very soon.
 
 Previous NOTEs:
 
