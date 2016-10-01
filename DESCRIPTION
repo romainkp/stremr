@@ -42,7 +42,7 @@ Suggests:
     RUnit,
     foreach,
     doParallel
-Additional_repositories: https://h2o-release.s3.amazonaws.com/h2o-ensemble/R
+Additional_repositories: https://osofr.github.io/drat/
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1
