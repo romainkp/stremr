@@ -11,6 +11,10 @@ gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$toler
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
+allowed.fit.package <- c("speedglm", "glm", "h2o")
+allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")
+allowed.bin.method = c("equal.mass", "equal.len", "dhist")
+
 #' Querying/setting a single \code{stremr} option
 #'
 #' To list all \code{stremr} options, just run this function without any parameters provided. To query only one value, pass the first parameter. To set that, use the \code{value} parameter too.
@@ -69,7 +73,7 @@ print_stremr_opts <- function() {
 #' The preferred way to set options for \code{stremr} is to use \code{\link{stremrOptions}}, which allows specifying individual options without having to reset all other options.
 #' To reset all options to their defaults simply run \code{set_all_stremr_options()} without any parameters/arguments.
 #' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
-#' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "SuperLearner")
+#' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")
 #' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
 #'  exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 #'  into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
@@ -113,17 +117,13 @@ set_all_stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
                             ) {
 
   old.opts <- gvars$opts
-  bin.method <- bin.method[1L]
 
   fit.package <- fit.package[1L]
-  assert_that(fit.package %in% c("speedglm", "glm", "h2o"))
-
   fit.algorithm <- fit.algorithm[1L]
-  if (!(fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"))) stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner'")
-
-  if (!(bin.method %in% c("equal.len", "equal.mass", "dhist"))) {
-    stop("bin.method argument must be either 'equal.len', 'equal.mass' or 'dhist'")
-  }
+  bin.method <- bin.method[1]
+  if (!(fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
+  if (!(fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
+  if (!(bin.method %in% allowed.bin.method)) stop("bin.method must be one of: " %+% paste0(allowed.bin.method, collapse=", "))
 
   opts <- list(
     fit.package = fit.package,

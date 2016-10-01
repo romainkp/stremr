@@ -218,7 +218,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
   portable = TRUE,
   class = TRUE,
   public = list(
-    fit.class = c("glm", "randomForest", "gbm", "deeplearning", "SuperLearner"),
+    fit.class = character(),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA),
     outfactors = NA,
     nfolds = 5,
@@ -261,7 +261,6 @@ Please type this into the R terminal:
 
       self$fit.class <- fit.algorithm
       class(self$fit.class) <- c(class(self$fit.class), "h2o" %+% self$fit.class)
-      # class(self$model.fit) <- c(class(self$model.fit), "h2o" %+% self$fit.class)
       invisible(self)
     },
 

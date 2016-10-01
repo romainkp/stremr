@@ -56,8 +56,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     is.fitted = FALSE,
 
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
-    fit.package = c("speedglm", "glm", "h2o"),
-    fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
+    fit.package = character(),
+    fit.algorithm = character(),
     model_contrl = list(),
 
     n = NA_integer_,        # number of rows in the input data
@@ -77,7 +77,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       } else {
         self$fit.package <- reg$fit.package[1]
       }
-      if (!(self$fit.package %in% c("speedglm", "glm", "h2o"))) stop("fit.package must be one of: 'speedglm', 'glm', 'h2o'")
+      if (!(self$fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
 
       if ("fit.algorithm" %in% names(self$model_contrl)) {
         self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
@@ -85,7 +85,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       } else {
         self$fit.algorithm <- reg$fit.algorithm[1]
       }
-      if (!(self$fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"))) stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner'")
+      if (!(self$fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -140,7 +140,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
       if (inherits(model.fit, "try-error")) {
         message("running " %+% self$binomialModelObj$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")
-        self$binomialModelObj <- BinomialGLM$new(fit.algorithm = "GLM", fit.package = "speedglm", ParentModel = self, ...)
+        self$binomialModelObj <- BinomialGLM$new(fit.algorithm = "glm", fit.package = "speedglm", ParentModel = self, ...)
         self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
         model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       }

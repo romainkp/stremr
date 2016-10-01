@@ -88,6 +88,8 @@ IPW_MSM_res$MSM.fit
 
 # ------------------------------------------------------------------
 # Generate automatic html report with results of the analysis
+# This assumes that pandoc is already installed
+# For more information, go to: http://pandoc.org/installing.html
 # ------------------------------------------------------------------
 \dontrun{
 make_report_rmd(OData, MSM = IPW_MSM_res,

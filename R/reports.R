@@ -2,6 +2,7 @@
 # @importFrom pander evalsOptions
 NULL
 
+# nocov start
 #' Open file
 #'
 #' Tries to open a file with operating system's default program.
@@ -31,6 +32,7 @@ openFileInOS <- function(f) {
     }
   }
 }
+# nocov end
 
 # ---------------------------------------------------------------------------------------------
 #' Generate report(s) with modeling stats and survival estimates using pandoc.
@@ -67,6 +69,14 @@ make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegi
                             file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'),
                             openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)
+
+  if (!rmarkdown::pandoc_available(version = "1.12.3"))
+    stop(
+"Report functionality requires pandoc (version 1.12.3 or higher).
+Please install it.
+For more information, go to: http://pandoc.org/installing.html",
+call. = FALSE)
+
   if ("author" %in% names(optArgReport)) {
     author <- optArgReport[['author']]
     assert_that(is.character(author))

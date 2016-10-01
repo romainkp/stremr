@@ -148,7 +148,9 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
       self$ParentModel <- ParentModel
       self$classify <- ParentModel$classify
       self$model_contrl <- ParentModel$model_contrl
-      if (!("glm" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'glm', since fit.package was set to 'speedglm' or 'glm'")
+
+      # if (!("glm" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'glm', since fit.package was set to 'speedglm' or 'glm'")
+
       assert_that(any(c("glm", "speedglm") %in% fit.package))
       self$fit.class <- fit.package
       class(self$fit.class) <- c(class(self$fit.class), self$fit.class)

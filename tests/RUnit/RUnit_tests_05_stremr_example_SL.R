@@ -177,11 +177,12 @@ test.h2oEnsemble <- function() {
 
         # report.path <- "/set/your/report/path/"
         # file.path = report.path
-        make_report_rmd(OData, openFile = FALSE,
+        if (rmarkdown::pandoc_available(version = "1.12.3"))
+            make_report_rmd(OData, openFile = FALSE,
                         # AddFUPtables = TRUE,
                         # MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = FALSE),
                         # WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                        file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Oleg Sofrygin", y_legend = 0.95)
+                        file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", y_legend = 0.95)
 
         # ---------------------------------------------------------------------------------------------------------
         # ERROR CHECK: no hyper params for randomForest:
