@@ -2,7 +2,7 @@ stremr
 ==========
 
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/stremr)](https://CRAN.R-project.org/package=stremr)
-[![](https://cranlogs.r-pkg.org/badges/stremr)](https://cran.rstudio.com/web/packages/stremr/index.html)
+[![](https://cranlogs.r-pkg.org/badges/stremr)](https://CRAN.R-project.org/package=stremr)
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg?branch=master)](https://coveralls.io/github/osofr/stremr?branch=master)
 
