@@ -170,7 +170,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # ------------------------------------------------------------------
   # Make a report:
   # ------------------------------------------------------------------
-  # report.path <- "/home/ubuntu/stremr_example"
+  # report.path <- "path/to/report/dir"
   # file.path = report.path,
   # test for opening file in local OS
   if (rmarkdown::pandoc_available(version = "1.12.3"))
