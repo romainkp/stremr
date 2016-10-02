@@ -1,5 +1,7 @@
 ## Update to catch pandoc error:
 
+* As requested, also putting 'h2oEnsemble' inside single quotes.
+
 * This update performs checks for pandoc availability. Addresses the test error on Solaris: https://cran.r-project.org/web/checks/check_results_stremr.html
 
 ## Test environments:

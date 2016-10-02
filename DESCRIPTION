@@ -11,7 +11,7 @@ Description: Analysis of longitudinal time-to-event or time-to-failure data.
     Estimators (IPW, MSM-IPW, GCOMP, longitudinal TMLE) adjust for measured time-varying 
     confounding and informative right-censoring. Model fitting can be performed either 
     with GLM or H2O-3 machine learning libraries, including the ensemble-based 
-    SuperLearner ("h2oEnsemble").
+    SuperLearner ('h2oEnsemble').
     The exposure, monitoring and censoring variables can be coded as either binary, 
     categorical or continuous. Each can be multivariate (e.g., can use more than one 
     column of dummy indicators for different censoring events). 
