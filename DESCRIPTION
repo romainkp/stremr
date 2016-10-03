@@ -1,6 +1,6 @@
 Package: stremr
 Title: Streamlined Estimation of Survival for Static, Dynamic and Stochastic Treatment and Monitoring Regimes
-Version: 0.2
+Version: 0.2.099
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
