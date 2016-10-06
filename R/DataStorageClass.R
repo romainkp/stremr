@@ -15,7 +15,7 @@
 detect.col.types <- function(sVar_mat){
   detect_vec_type <- function(vec) {
     vec_nomiss <- vec[!gvars$misfun(vec)]
-    nvals <- length(unique(vec_nomiss))
+    nvals <- data.table::uniqueN(vec_nomiss)
     if (nvals <= 2L) {
       sVartypes$bin
     } else if ((nvals <= maxncats) && (is.integerish(vec_nomiss))) {
@@ -27,7 +27,6 @@ detect.col.types <- function(sVar_mat){
   assert_that(is.integerish(getopt("maxncats")) && getopt("maxncats") > 1)
   maxncats <- getopt("maxncats")
   sVartypes <- gvars$sVartypes
-
   if (is.matrix(sVar_mat)) { # for matrix:
     return(as.list(apply(sVar_mat, 2, detect_vec_type)))
   } else if (is.data.table(sVar_mat)) { # for data.table:
@@ -219,6 +218,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
       if (!missing(YnodeVals)) self$addYnode(YnodeVals = YnodeVals, det.Y = det.Y)
 
+      if (gvars$verbose) print("...detecting the type of each input column...")
       self$def.types.sVar() # Define the type of each sVar[i]: bin, cat or cont
 
       invisible(self)
@@ -279,7 +279,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     get.dat.sVar = function(rowsubset = TRUE, covars) {
       if (!missing(covars)) {
-        # browser()
         if (length(unique(colnames(self$dat.sVar))) < length(colnames(self$dat.sVar))) {
           warning("repeating column names in the final data set; please check for duplicate summary measure / node names")
         }

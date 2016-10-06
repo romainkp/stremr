@@ -301,7 +301,7 @@ fitSeqGcomp <- function(OData, t_periods,
   # Define the intervention nodes
   # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx
   # ------------------------------------------------------------------------------------------------
-  browser()
+  # browser()
 
   gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
   gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
@@ -427,7 +427,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  browser()
+  # browser()
   # ------------------------------------------------------------------------------------------------
   # Defining the t periods to loop over FOR A SINGLE RUN OF THE iterative G-COMP/TMLE (one survival point)
   # **** TO DO: The stratification by follow-up has to be based only on 't' values that were observed in the data****
@@ -468,7 +468,10 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   OData$dat.sVar[, ("EIC_i_t") := 0.0]
   # set the initial values of Q (the observed outcome node):
   OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))]
-  OData$def.types.sVar()
+
+  OData$set.sVar.type(name.sVar = "Q.kplus1", new.type = "binary")
+  OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
+  # OData$def.types.sVar() # bottleneck
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
@@ -487,11 +490,11 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     Q_regs_list[[i]] <- reg
   }
 
-  browser()
+  # browser()
 
   Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
 
-  browser()
+  # browser()
 
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
   Qlearn.fit$fit(data = OData)
