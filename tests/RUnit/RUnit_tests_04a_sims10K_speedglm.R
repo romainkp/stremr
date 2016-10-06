@@ -141,7 +141,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # ------------------------------------------------------------------------
   # require("doParallel")
   # registerDoParallel(cores = 2)
-  if (exists("setthreads")) data.table::setthreads(1)
+  if (exists("setDTthreads")) data.table::setDTthreads(1)
 
   t.surv <- c(0,1,4)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))

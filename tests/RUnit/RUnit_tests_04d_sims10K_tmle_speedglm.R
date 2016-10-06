@@ -105,7 +105,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # ------------------------------------------------------------------------
   # require("doParallel")
   # registerDoParallel(cores = 2)
-  # data.table::setthreads(1)
+  # data.table::setDTthreads(1)
 
   # gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
   # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
