@@ -484,6 +484,8 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   }
   Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
 
+  browser()
+
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
   Qlearn.fit$fit(data = OData)
   OData$Qlearn.fit <- Qlearn.fit

@@ -208,6 +208,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
+      browser()
       # **********************************************************************
       # FITTING STEP OF Q-LEARNING
       # Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
