@@ -133,7 +133,7 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
   RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
   periods_idx <- seq_along(MSM$periods)
   names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
-  for (t.idx in seq(t.periods.RDs)) {
+  for (t.idx in seq_along(t.periods.RDs)) {
     t.period.val.idx <- periods_idx[MSM$periods %in% t.periods.RDs[t.idx]]
     se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx, getSEs)
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
@@ -170,7 +170,7 @@ get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
   RDs.TMLE.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
   periods_idx <- seq_along(new_TMLE_list$periods)
   names(RDs.TMLE.tperiods) <- "RDs_for_t" %+% t.periods.RDs
-  for (t.idx in seq(t.periods.RDs)) {
+  for (t.idx in seq_along(t.periods.RDs)) {
     t.period.val.idx <- periods_idx[new_TMLE_list$periods %in% t.periods.RDs[t.idx]]
     se.RDscale.Sdt.K <- getSE_table_d_by_d(new_TMLE_list$St, new_TMLE_list$IC.Var.S.d, new_TMLE_list$nID, t.period.val.idx, getSEs = TRUE)
     RDs.TMLE.tperiods[[t.idx]] <- make.table.m0(new_TMLE_list$St,

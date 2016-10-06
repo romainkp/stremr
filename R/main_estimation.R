@@ -47,6 +47,13 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   # The ordering of variables in this list is the assumed temporal order!
   nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t_name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENScat = noCENScat)
+
+  # --------------------------------------------------------------------------------------------------------
+  # Check no extra rows after event:
+  # --------------------------------------------------------------------------------------------------------
+  OData$check_norows_after_event()
+
+
   # --------------------------------------------------------------------------------------------------------
   # Create dummies for factors
   # --------------------------------------------------------------------------------------------------------

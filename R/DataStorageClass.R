@@ -561,6 +561,30 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       return(gstarNodes_stoch)
     },
 
+    check_norows_after_event = function() {
+      #     if (any(is.na(self$dat.sVar[[var_name]]))) {
+      #       warning("Input data contains missing values for column '" %+% var_name %+% "'.
+      # Rows with such missing values will be completely dropped. Please check and clean your data manually!")
+      #       self$dat.sVar <- self$dat.sVar[!is.na(get(var_name)), ]
+      #     }
+      rows.exist.after.FAIL <- self$dat.sVar[, {outrow = which(get(self$nodes$Ynode) %in% 1L);
+                                                LastRowIdx = .I[.N];
+                                                StartRemoveRow = LastRowIdx - (.N - outrow) + 1;
+                                                rows.exist =  (outrow != .N) && length(outrow) > 0;
+                                                list(rows.exist = rows.exist, StartRemoveRow = StartRemoveRow, LastRowIdx = LastRowIdx)},
+                                              by = eval(self$nodes$IDnode)][!is.na(rows.exist), ]
+
+      if (any(rows.exist.after.FAIL[["rows.exist"]])) {
+        rows.exist.after.FAIL <- rows.exist.after.FAIL[rows.exist.after.FAIL[["rows.exist"]], ]
+        rows.exist.after.FAIL[, removeIDX := list(list((StartRemoveRow:LastRowIdx))), by = eval(self$nodes$IDnode)]
+        idx.to.remove <- unlist(rows.exist.after.FAIL[["removeIDX"]])
+        self$dat.sVar <- self$dat.sVar[!idx.to.remove, ]
+        warning("Removed " %+% length(idx.to.remove) %+% " extra rows after time-to-event already occurred. Please check and clean your data!")
+        message("Removed " %+% length(idx.to.remove) %+% " extra rows after time-to-event already occurred. Please check and clean your data!")
+      }
+      invisible(return(self))
+    },
+
     # ---------------------------------------------------------------------------
     # Cast long format data into wide format:
     # bslcovars - names of covariates that shouldn't be cast (remain invariant with t)
