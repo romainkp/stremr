@@ -9,7 +9,7 @@ make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
   format = c("html", "pdf", "word"), skip.modelfits = FALSE,
   file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), openFile = TRUE,
-  keep_md = FALSE, keep_tex = FALSE, ...)
+  serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, ...)
 }
 \arguments{
 \item{OData}{Input data object returned by the function \code{\link{importData}}.}
@@ -45,6 +45,8 @@ Note that the html report file is always produced in addition to any other selec
 \item{file.path}{Directory path where the report file(s) should be written. Default is to use the system temporary directory.}
 
 \item{openFile}{Open the report file with OS default viewer?}
+
+\item{serve_html_rmote}{Serve the html report as a webpage via R package "rmote".}
 
 \item{keep_md}{Keep the source .md files?}
 

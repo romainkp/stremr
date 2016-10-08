@@ -109,6 +109,7 @@ test.h2oEnsemble <- function() {
                                 l1 = c(0, 1e-3, 1e-5),
                                 l2 = c(0, 1e-3, 1e-5))
 
+        h2o.glm.reg1 <- function(..., alpha = 0.0, nlambdas = 10, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
         h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
         h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
         h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
@@ -141,8 +142,9 @@ test.h2oEnsemble <- function() {
         SLparams = list( # search_criteria = list(strategy = "RandomDiscrete", max_runtime_secs = 20),
                          grid.algorithm = c("glm"),
                          # grid.algorithm = c("glm", "randomForest"),
+                         learner = ("h2o.glm.reg1"),
                          # learner = c("h2o.glm.2"),
-                         learner = c("h2o.glm.wrapper"),
+                         # learner = c("h2o.glm.wrapper"),
                          metalearner = "h2o.glm_nn",
                          nfolds = 2,
                          # nfolds = 5,

@@ -57,6 +57,8 @@ openFileInOS <- function(f) {
 #' @param openFile Open the report file with OS default viewer?
 #' @param keep_md Keep the source .md files?
 #' @param keep_tex Keep the source .tex files for pdf output?
+#' @param serve_html_rmote Serve the html report as a webpage via R package "rmote".
+# ' Requires prior initialization of the back-end server with rmote::start_rmote()
 #' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
 #' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}:
@@ -67,7 +69,7 @@ make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegi
                             WTtables = NULL, AddFUPtables = FALSE, MSM.RDtables, TMLE.RDtables,
                             format = c("html", "pdf", "word"), skip.modelfits = FALSE,
                             file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'),
-                            openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
+                            openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)
 
   if (!rmarkdown::pandoc_available(version = "1.12.3"))
@@ -176,6 +178,14 @@ call. = FALSE)
   }
 
   if (openFile) openFileInOS(outfile)
+  if (serve_html_rmote) {
+    reqrmote <- requireNamespace("rmote", quietly = TRUE)
+    serv_tmle_exists <- exists("serve_rmd_html", where = "package:rmote")
+    if (!reqrmote || !serv_tmle_exists) stop("Please install the latest version of 'rmote' package by typing this into the terminal:
+devtools::install_github('hafen/rmote')
+", call. = FALSE)
+    rmote::serve_rmd_html(file.path, file.name%+%".html")
+  }
 
   # resetting directory and other options
   options(opts.bak)
