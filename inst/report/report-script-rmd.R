@@ -11,8 +11,9 @@ opts_chunk$set(fig.path = figure.dir)
 panderOptions("table.split.table", Inf)
 
 #+ echo=FALSE, include=FALSE
-f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend, y_legend) {
-  ptsize <- 0.7
+f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend, y_legend, cex = 0.7) {
+  # ptsize <- 0.7
+  # ptsize <- 0.4
   counter <- 0
   if (missing(y_lab)) y_lab <- ""
   if (missing(x_lab)) x_lab <- "Follow-up period since study entry"
@@ -23,10 +24,10 @@ f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend
   if (missing(y_legend)) y_legend <- (1 - miny) * 4/5 + miny
   for(d.j in names(surv_list)){
     counter <- counter + 1
-    plot(as.integer(t[t_int_sel]), surv_list[[d.j]][t_int_sel], col = counter, type = 'b', cex = ptsize, ylim = c(miny, 1), ylab = y_lab, xlab = x_lab)
+    plot(as.integer(t[t_int_sel]), surv_list[[d.j]][t_int_sel], col = counter, type = 'b', cex = cex, ylim = c(miny, 1), ylab = y_lab, xlab = x_lab)
     par(new=TRUE)
   }
-  legend(x_legend, y_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = ptsize, pch = 1)
+  legend(x_legend, y_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = cex, pch = 1)
 }
 f_obtain_TMLE_St <- function(TMLE, optArgReport) {
   sysArg <- list()

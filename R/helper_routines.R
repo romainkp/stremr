@@ -108,7 +108,7 @@ getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx, getSE
     for (d2.idx in seq_along(names(S2.IPAW))) {
       #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
       if (getSEs) {
-        se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
+        se.RDscale.Sdt.K[d1.idx, d2.idx] <- stremr:::getSE.RD.d1.minus.d2(nID = nID,
                                                                  IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
                                                                  IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
 
