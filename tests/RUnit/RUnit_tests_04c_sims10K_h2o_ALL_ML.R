@@ -96,7 +96,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
                     AddFUPtables = TRUE,
                     openFile = FALSE,
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", y_legend = 0.95)
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH gbm
@@ -115,7 +115,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
                     AddFUPtables = TRUE,
                     openFile = FALSE,
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", y_legend = 0.95)
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH deeplearning
@@ -134,7 +134,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
                     AddFUPtables = TRUE,
                     openFile = FALSE,
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", y_legend = 0.95)
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ h2o random forest

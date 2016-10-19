@@ -215,7 +215,7 @@ test.speedglm.allestimators10Kdata <- function() {
                   MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                   TMLE.RDtables = get_TMLE_RDs(list(tmle_est_par1, tmle_est_par2), t.periods.RDs = c(1, 4)),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", y_legend = 0.99, x_legend = 9.5)
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", x_legend = 9.5, y_legend = 0.99)
 
   if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, TMLE = list(tmle_est_par1, tmle_est_par2),
@@ -225,7 +225,7 @@ test.speedglm.allestimators10Kdata <- function() {
                   MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                   TMLE.RDtables = get_TMLE_RDs(list(tmle_est_par1, tmle_est_par2), t.periods.RDs = c(1, 4)),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", y_legend = 0.99, x_legend = 9.5)
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", x_legend = 9.5, y_legend = 0.99)
 
   # ---------------------------------------------------------------------------------------------------------
   # TMLE / GCOMP with a stochastic intervention on MONITOR
