@@ -20,14 +20,23 @@ f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend
   if (missing(t)) t <- seq_along(surv_list[[1]])
   if (missing(t_int_sel)) t_int_sel <- seq_along(t)
   if (missing(miny)) miny <- min(unlist(lapply(surv_list, function(x) min(x[t_int_sel], na.rm = TRUE))))
-  if (missing(x_legend)) x_legend <- (max(t_int_sel, na.rm = TRUE) - min(t_int_sel, na.rm = TRUE)) * 2/3 + min(t_int_sel, na.rm = TRUE)
-  if (missing(y_legend)) y_legend <- (1 - miny) * 4/5 + miny
+  # if (missing(x_legend)) x_legend <- (max(t_int_sel, na.rm = TRUE) - min(t_int_sel, na.rm = TRUE)) * 2/3 + min(t_int_sel, na.rm = TRUE)
+  # if (missing(y_legend)) y_legend <- (1 - miny) * 4/5 + miny
   for(d.j in names(surv_list)){
     counter <- counter + 1
     plot(as.integer(t[t_int_sel]), surv_list[[d.j]][t_int_sel], col = counter, type = 'b', cex = cex, ylim = c(miny, 1), ylab = y_lab, xlab = x_lab)
     par(new=TRUE)
   }
-  legend(x_legend, y_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = cex, pch = 1)
+  if (missing(y_legend)) {
+    if (missing(x_legend)) {
+      x_legend <- "bottomleft"
+    } else {
+      if (!is.character(x_legend)) stop("x_legend must be a character when y_legend is unspecified")
+    }
+    legend(x_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = cex, pch = 1)
+  } else {
+    legend(x_legend, y_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = cex, pch = 1)
+  }
 }
 f_obtain_TMLE_St <- function(TMLE, optArgReport) {
   sysArg <- list()
