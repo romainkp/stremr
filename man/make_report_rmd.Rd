@@ -6,8 +6,8 @@
 \usage{
 make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
   WTtables = NULL, AddFUPtables = FALSE, MSM.RDtables, TMLE.RDtables,
-  format = c("html", "pdf", "word"), skip.modelfits = FALSE,
-  file.name = getOption("stremr.file.name"),
+  plotKM = FALSE, format = c("html", "pdf", "word"),
+  skip.modelfits = FALSE, file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), openFile = TRUE,
   serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, ...)
 }
@@ -34,6 +34,8 @@ by rule (monitoring and treatment).}
 \item{MSM.RDtables}{List of tables with risk differences returned by the function \code{\link{get_MSM_RDs}}.}
 
 \item{TMLE.RDtables}{List of tables with risk differences returned by the function \code{\link{get_TMLE_RDs}}.}
+
+\item{plotKM}{Logical, set to \code{TRUE} to plot KM survival curves when \code{NPMSM} argument is specified. Default is \code{FALSE}.}
 
 \item{format}{Choose the Pandoc output format for the report file (html, pdf or word).
 Note that the html report file is always produced in addition to any other selected format.}

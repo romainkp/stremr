@@ -134,16 +134,16 @@ if (AddFUPtables && (!missing(MSM) || !missing(wts_data))) {
 
 #'\pagebreak
 #'
-#' `r ifelse(!missing(NPMSM),'# Survival with IPW-Adjusted Kaplan-Meier (Non-Parametric MSM) and Standard KM','')`
+#' `r ifelse(!missing(NPMSM),'# Survival with IPW-Adjusted Kaplan-Meier (Non-Parametric / Saturated MSM for Hazard)','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "IPW-Adjusted KM and KM Survival.\\label{fig:survPlotGCOMP}"
+#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "Survival with IPW-Adjusted KM.\\label{fig:survPlotGCOMP}"
 if (!missing(NPMSM)) {
   sysArg <- list()
   if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
   surv_tables <- lapply(NPMSM, '[[', 'IPW_estimates')
-  sysArg$surv_list <- c(lapply(surv_tables, '[[', 'St.IPTW'), lapply(surv_tables, '[[', 'St.KM'))
+  sysArg$surv_list <- lapply(surv_tables, '[[', 'St.IPTW')
   rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
-  names(sysArg$surv_list) <- c(paste0("IPW.KM: ", rule.names), paste0("KM: ", rule.names))
+  names(sysArg$surv_list) <- paste0("St.IPTW: ", rule.names)
   sysArg$t <- NPMSM[[1]][["t"]]
   userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
@@ -160,6 +160,24 @@ if (!missing(NPMSM)) {
 }
 panderOptions('knitr.auto.asis', TRUE)
 
+
+#'\pagebreak
+#'
+#' `r ifelse(!missing(NPMSM) && plotKM,'# Survival with Kaplan-Meier','')`
+
+#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "Survival with KM.\\label{fig:survPlotGCOMP}"
+if (!missing(NPMSM) && plotKM) {
+  sysArg <- list()
+  if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
+  surv_tables <- lapply(NPMSM, '[[', 'IPW_estimates')
+  sysArg$surv_list <- lapply(surv_tables, '[[', 'St.KM')
+  rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
+  names(sysArg$surv_list) <- paste0("St.KM: ", rule.names)
+  sysArg$t <- NPMSM[[1]][["t"]]
+  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
+  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  do.call(f_plot_survest, sysArg)
+}
 
 #'\pagebreak
 #'
