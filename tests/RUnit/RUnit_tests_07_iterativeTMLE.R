@@ -1,4 +1,5 @@
 test.iterTMLE.10Kdata <- function() {
+  # options(stremr.verbose = TRUE)
   options(stremr.verbose = FALSE)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
@@ -50,29 +51,51 @@ test.iterTMLE.10Kdata <- function() {
   # Qstratify = Qstratify,
   iterTMLE_est1a <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
   iterTMLE_est1a$estimates[]
-#             est_name t      risk      surv ALLsuccessTMLE nFailedUpdates   type iterTMLErisk
-# 1: GCOMP & Iter.TMLE 4 0.1144987 0.8855013          FALSE              5 pooled    0.1117354
-#    iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
-# 1:    0.8882646 1.897908e-05 0.004356498 gTI.dhigh
+#             est_name t      risk      surv ALLsuccessTMLE nFailedUpdates   type iterTMLErisk iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.1144987 0.8855013          FALSE              5 pooled    0.1123336    0.8876664 1.897894e-05 0.004356482 gTI.dhigh
+
   iterTMLE_est1b <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
   iterTMLE_est1b$estimates[]
-#             est_name t       risk      surv ALLsuccessTMLE nFailedUpdates   type iterTMLErisk
-# 1: GCOMP & Iter.TMLE 4 0.04205589 0.9579441          FALSE              5 pooled   0.05480177
-#    iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
-# 1:    0.9451982 3.802249e-05 0.006166238  gTI.dlow
+#               est_name t       risk      surv ALLsuccessTMLE nFailedUpdates   type iterTMLErisk iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.04205589 0.9579441          FALSE              5 pooled    0.0541523    0.9458477 3.802643e-05 0.006166557  gTI.dlow
 
   iterTMLE_est2a <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
   iterTMLE_est2a$estimates[]
-#             est_name t      risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk
-# 1: GCOMP & Iter.TMLE 4 0.1123625 0.8876375          FALSE              5 stratified    0.1118552
-#    iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
-# 1:    0.8881448 1.897197e-05 0.004355682 gTI.dhigh
+#             est_name t      risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.1123625 0.8876375          FALSE              5 stratified     0.112169     0.887831 1.897208e-05 0.004355695 gTI.dhigh
+
+
+  iterTMLE_est2a_nodataadapt <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, adapt_stop = FALSE)
+  iterTMLE_est2a_nodataadapt$estimates[]
+#             est_name t      risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.1123625 0.8876375          FALSE              5 stratified    0.1118552    0.8881448 1.897197e-05 0.004355682 gTI.dhigh
 
   iterTMLE_est2b <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
   iterTMLE_est2b$estimates[]
-#             est_name t       risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk
-# 1: GCOMP & Iter.TMLE 4 0.04856046 0.9514395          FALSE              5 stratified   0.05478108
-#    iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
-# 1:    0.9452189 3.800412e-05 0.006164748  gTI.dlow
+#             est_name t       risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv    TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.04856046 0.9514395          FALSE              5 stratified   0.05410295    0.9458971 3.80063e-05 0.006164925  gTI.dlow
+
+  # -------------------------------------------------------
+  # Changing the factor in the adaptive stopping criteria (multiplier of 1/ (f*sqrt(N)))
+  # -------------------------------------------------------
+  # The higher the factor -> the more iterations are needed:
+  iterTMLE_est2a_fact50 <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, adapt_stop_factor = 50)
+  iterTMLE_est2a_fact50$estimates[]
+#             est_name t      risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.1123625 0.8876375          FALSE              5 stratified    0.1118552    0.8881448 1.897197e-05 0.004355682 gTI.dhigh
+
+  # the lower the factor -> the fewer iterations are needed:
+  iterTMLE_est2b_fact2 <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, adapt_stop_factor = 2)
+  iterTMLE_est2b$estimates[]
+#             est_name t       risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv    TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.04856046 0.9514395          FALSE              5 stratified   0.05410295    0.9458971 3.80063e-05 0.006164925  gTI.dlow
+
+  # -------------------------------------------------------
+  # NON-DATA-ADAPTIVE stopping criteria
+  # -------------------------------------------------------
+  iterTMLE_est2c <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, adapt_stop = FALSE)
+  iterTMLE_est2c$estimates[]
+#             est_name t       risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv     TMLE_Var     TMLE_SE rule.name
+# 1: GCOMP & Iter.TMLE 4 0.04856046 0.9514395          FALSE              5 stratified   0.05478108    0.9452189 3.800412e-05 0.006164748  gTI.dlow
 }
 

@@ -10,7 +10,8 @@ fitSeqGcomp(OData, t_periods, Qforms, Qstratify = NULL,
   intervened_MONITOR), collapse = ""), stratifyQ_by_rule = FALSE,
   TMLE = FALSE, iterTMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
   trunc_weights = 10^6, params_Q = list(), weights = NULL,
-  max_iter = 50, tol.eps = 0.001, parallel = FALSE,
+  max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10,
+  tol_eps = 0.001, parallel = FALSE,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
@@ -58,10 +59,21 @@ Must set \code{TMLE}=\code{FALSE} when setting this to \code{TRUE}.}
 \item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
-\item{max_iter}{Maximum number of iterations for iterative TMLE algorithm}
+\item{max_iter}{For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.}
 
-\item{tol.eps}{Numeric error tolerance for the iterative TMLE update.
-The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol.eps}}
+\item{adapt_stop}{For iterative TMLE only: Choose between two stopping criteria for iterative TMLE, default is \code{TRUE},
+which will stop the iterative TMLE algorithm in an adaptive way. Specifically, the iterations will stop when the mean estimate
+of the efficient influence curve is less than or equal to 1 / (\code{adapt_stop_factor}*sqrt(\code{N})), where
+N is the total number of unique subjects in data and \code{adapt_stop_factor} is set to 10 by default.
+When \code{TRUE}, the argument \code{tol_eps} is ignored and TMLE stops when either \code{max_iter} has been reached or this criteria has been satisfied.
+When \code{FALSE}, the stopping criteria is determined by values of \code{max_iter} and \code{tol_eps}.}
+
+\item{adapt_stop_factor}{For iterative TMLE only: The adaptive factor to choose the stopping criteria for iterative TMLE when \code{adapt_stop} is set to \code{TRUE}. Default is 10.
+TMLE will keep iterative until
+the mean estimate of the efficient influence curve is less than 1 / (\code{adapt_stop_factor}*sqrt(\code{N})) or when the number of iterations is \code{max_iter}.}
+
+\item{tol_eps}{For iterative TMLE only: Numeric error tolerance for the iterative TMLE update.
+The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}}
 
 \item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)}
 
