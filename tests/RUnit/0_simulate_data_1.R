@@ -74,7 +74,7 @@ notrun.save.example.data.01 <- function() {
   # --------------------------------
   # save data as csv
   # --------------------------------
-  # data.table::fwrite(OdataNoCENS, "./OdataNoCENS.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+  # data.table::fwrite(OdataNoCENS, "./OdataNoCENS.csv", verbose = TRUE, na = "NA_h2o")
   # --------------------------------
   # save as compressed R file
   # --------------------------------
@@ -99,5 +99,5 @@ notrun.save.example.data.02 <- function() {
   # --------------------------------
   # save data as csv
   # --------------------------------
-  # data.table::fwrite(OdataCatCENS, "./OdataCatCENS.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+  # data.table::fwrite(OdataCatCENS, "./OdataCatCENS.csv", verbose = TRUE, na = "NA_h2o")
 }

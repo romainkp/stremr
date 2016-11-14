@@ -12,7 +12,7 @@
 # new.pkgs <- setdiff(pkgs, rownames(installed.packages()))
 # if (length(new.pkgs)) install.packages(new.pkgs)
 ## Download and install the H2O package for R:
-# install.packages("h2o", type="source", repos=(c("https://s3.amazonaws.com/h2o-release/h2o/master/3636/R")))
+# install.packages("h2o", type="source", repos=(c("https://s3.amazonaws.com/h2o-release/h2o/master/3687/R")))
 ## --------------------------------------------------------------------------------------------------------
 ## Install h2oEnsemble (most recent stable version 1.8)
 ## --------------------------------------------------------------------------------------------------------

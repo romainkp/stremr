@@ -112,7 +112,7 @@ notrun.save.example.data.04 <- function() {
   # --------------------------------
   # save data as csv
   # --------------------------------
-  # data.table::fwrite(OdatDT_10K, "./OdatDT_10K.csv", turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+  # data.table::fwrite(OdatDT_10K, "./OdatDT_10K.csv", verbose = TRUE, na = "NA_h2o")
   # --------------------------------
   # save as compressed R file
   # --------------------------------

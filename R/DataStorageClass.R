@@ -662,7 +662,7 @@ It can be done by typing this into R terminal:
 
         # Temp file to write to:
         tmpf <- tempfile(fileext = ".csv")
-        data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+        data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
         H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
                                             header = TRUE,
                                             col.types = types,
