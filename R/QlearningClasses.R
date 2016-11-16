@@ -212,7 +212,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # FITTING STEP OF Q-LEARNING
       # Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
       # **********************************************************************
-      self$subset_idx <- self$define_idx_to_fit_initQ(data)
+      self$subset_idx <- which(self$define_idx_to_fit_initQ(data))
       # save the subset used for fitting of the current initial Q[t] -> will be used for targeting
       self$idx_used_to_fit_initQ <- self$subset_idx
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
@@ -230,7 +230,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       any_stoch <- sum(stoch_indicator) > 0
 
       # For prediction need to add all obs that were also censored at t and (possibly) those who just stopped following the rule
-      self$subset_idx <- self$define_idx_to_predictQ(data)
+      self$subset_idx <- which(self$define_idx_to_predictQ(data))
 
       if (!any_stoch) {
         probA1 <- self$predictStatic(data, g0 = interventionNodes.g0,
@@ -312,14 +312,14 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
 
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
-      rowidx_t <- which(self$subset_idx)
-      data$dat.sVar[rowidx_t, "Q.kplus1" := init_Q_all_obs]
+#       rowidx_t <- which(self$subset_idx)
+      data$dat.sVar[self$subset_idx, "Q.kplus1" := init_Q_all_obs]
 
       # Set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
       # only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
-        rowidx_t.minus1 <- rowidx_t - 1
-        data$dat.sVar[rowidx_t.minus1, "Q.kplus1" := init_Q_all_obs]
+#         rowidx_t.minus1 <- self$subset_idx - 1
+        data$dat.sVar[(self$subset_idx - 1), "Q.kplus1" := init_Q_all_obs]
         private$probA1 <- NULL
       } else {
         # save prediction P(Q.kplus=1) only for a subset in self$getsubset that was used for prediction
@@ -329,7 +329,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
-      # self$wipe.alldat
+      self$wipe.alldat
       # **********************************************************************
       invisible(self)
     },
@@ -347,17 +347,17 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       } else {
         update.Qstar.coef <- 0
       }
-      rowidx_t <- which(self$subset_idx)
+#       rowidx_t <- which(self$subset_idx)
       # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-      Q.kplus1 <- data$dat.sVar[rowidx_t, "Q.kplus1", with = FALSE][[1]]
+      Q.kplus1 <- data$dat.sVar[self$subset_idx, "Q.kplus1", with = FALSE][[1]]
       Q.kplus1.new <- plogis(qlogis(Q.kplus1) + update.Qstar.coef)
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
-      data$dat.sVar[rowidx_t, "Q.kplus1" := Q.kplus1.new]
+      data$dat.sVar[self$subset_idx, "Q.kplus1" := Q.kplus1.new]
       # Set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
       # only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
-        rowidx_t.minus1 <- rowidx_t - 1
-        data$dat.sVar[rowidx_t.minus1, "prev_Q.kplus1" := Q.kplus1.new]
+#         rowidx_t.minus1 <- rowidx_t - 1
+        data$dat.sVar[(self$subset_idx-1), "prev_Q.kplus1" := Q.kplus1.new]
         private$probA1 <- NULL
       } else {
         # save prediction P(Q.kplus=1) only for a subset in self$getsubset that was used for prediction

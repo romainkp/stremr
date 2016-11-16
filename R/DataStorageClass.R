@@ -472,7 +472,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # Modify the values in node nodes_to_repl in self$dat.sVar with values from source_for_repl using only the IDs in subset_idx:
     replaceNodesVals = function(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames) {
       for (node_idx in seq_along(nodes_to_repl)) {
-        if (sum(subset_idx) > 0) {
+        if (length(subset_idx) > 0) {
+        # if (sum(subset_idx) > 0) {
           source_node <- self$dat.sVar[subset_idx, (source_for_repl[node_idx]), with = FALSE][[source_for_repl[node_idx]]]
           self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := as.numeric(source_node)]
         }
@@ -561,11 +562,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     check_norows_after_event = function() {
-      #     if (any(is.na(self$dat.sVar[[var_name]]))) {
-      #       warning("Input data contains missing values for column '" %+% var_name %+% "'.
-      # Rows with such missing values will be completely dropped. Please check and clean your data manually!")
-      #       self$dat.sVar <- self$dat.sVar[!is.na(get(var_name)), ]
-      #     }
       rows.exist.after.FAIL <- self$dat.sVar[, {outrow = which(get(self$nodes$Ynode) %in% 1L);
                                                 LastRowIdx = .I[.N];
                                                 StartRemoveRow = LastRowIdx - (.N - outrow) + 1;
@@ -578,8 +574,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         rows.exist.after.FAIL[, removeIDX := list(list((StartRemoveRow:LastRowIdx))), by = eval(self$nodes$IDnode)]
         idx.to.remove <- unlist(rows.exist.after.FAIL[["removeIDX"]])
         self$dat.sVar <- self$dat.sVar[!idx.to.remove, ]
-        warning("Removed " %+% length(idx.to.remove) %+% " extra rows after time-to-event already occurred. Please check and clean your data!")
-        message("Removed " %+% length(idx.to.remove) %+% " extra rows after time-to-event already occurred. Please check and clean your data!")
+        msg <- "Found " %+% length(idx.to.remove) %+% " extra rows after time-to-event (outcome) occurrence.
+        Such rows aren't allowed and thus have been removed automatically.
+        Unfortunately, this requires making a copy of the input data itself, doublying the amount of used RAM.
+        If available RAM becomes an issue, consider first removing the original input data from memory by typing 'rm(...)',
+        since its no longer needed for running stremr.
+        To conserve RAM please consider removing these extra rows from your data!"
+        warning(msg)
+        message(msg)
       }
       invisible(return(self))
     },

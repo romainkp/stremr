@@ -49,7 +49,7 @@ if(FALSE) {
   # To install a specific branch:
   # devtools::install_github('osofr/stremr', ref = "simnet", build_vignettes = FALSE)
   # options(stremr.verbose = FALSE)
-  # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
+  # devtools::install_github('osofr/stremr', build_vignettes = FALSE, dependencies = FALSE)
 
   # To use drat repo:
   # install.packages("h2oEnsemble", type = "source", repos = "https://osofr.github.io/drat/")
