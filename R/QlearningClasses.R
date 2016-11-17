@@ -203,7 +203,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       return(subset_idx)
     },
 
-    fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
+    fit = function(overwrite = FALSE, data, iterTMLE = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
@@ -308,17 +308,16 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
         EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
-
       }
 
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
-#       rowidx_t <- which(self$subset_idx)
+      # rowidx_t <- which(self$subset_idx)
       data$dat.sVar[self$subset_idx, "Q.kplus1" := init_Q_all_obs]
 
       # Set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
       # only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
-#         rowidx_t.minus1 <- self$subset_idx - 1
+      # rowidx_t.minus1 <- self$subset_idx - 1
         data$dat.sVar[(self$subset_idx - 1), "Q.kplus1" := init_Q_all_obs]
         private$probA1 <- NULL
       } else {
@@ -330,6 +329,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       self$wipe.alldat
+      if (!iterTMLE) self$wipe.all.indices # If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
       # **********************************************************************
       invisible(self)
     },
@@ -347,7 +347,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       } else {
         update.Qstar.coef <- 0
       }
-#       rowidx_t <- which(self$subset_idx)
+      # rowidx_t <- which(self$subset_idx)
       # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
       Q.kplus1 <- data$dat.sVar[self$subset_idx, "Q.kplus1", with = FALSE][[1]]
       Q.kplus1.new <- plogis(qlogis(Q.kplus1) + update.Qstar.coef)
@@ -356,7 +356,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # Set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
       # only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
-#         rowidx_t.minus1 <- rowidx_t - 1
+        # rowidx_t.minus1 <- rowidx_t - 1
         data$dat.sVar[(self$subset_idx-1), "prev_Q.kplus1" := Q.kplus1.new]
         private$probA1 <- NULL
       } else {
@@ -484,11 +484,14 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     wipe.alldat = function() {
       # private$probA1 <- NULL
       # private$probAeqa <- NULL
-      self$idx_used_to_fit_initQ <- NULL
-      self$subset_idx <- NULL
+
       self$binomialModelObj$emptydata
       self$binomialModelObj$emptyY
       return(self)
+    },
+    wipe.all.indices = function() {
+      self$idx_used_to_fit_initQ <- NULL
+      self$subset_idx <- NULL
     },
     getfit = function() { private$model.fit },
     getTMLEfit = function() { private$TMLE.fit }

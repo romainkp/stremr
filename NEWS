@@ -2,3 +2,8 @@ stremr 0.1
 ==============
 
 * Initial version release to CRAN
+
+stremr 0.31
+==============
+
+* Optimized memory utilization for TMLE and GCOMP

@@ -86,9 +86,9 @@ test.iterTMLE.10Kdata <- function() {
 
   # the lower the factor -> the fewer iterations are needed:
   iterTMLE_est2b_fact2 <- fitIterTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, adapt_stop_factor = 2)
-  iterTMLE_est2b$estimates[]
-#             est_name t       risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv    TMLE_Var     TMLE_SE rule.name
-# 1: GCOMP & Iter.TMLE 4 0.04856046 0.9514395          FALSE              5 stratified   0.05410295    0.9458971 3.80063e-05 0.006164925  gTI.dlow
+  iterTMLE_est2b_fact2$estimates[]
+#             est_name t       risk      surv ALLsuccessTMLE nFailedUpdates       type iterTMLErisk iterTMLEsurv     TMLE_Var     TMLE_SE
+# 1: GCOMP & Iter.TMLE 4 0.04856046 0.9514395          FALSE              5 stratified   0.05043029    0.9495697 3.802771e-05 0.006166662
 
   # -------------------------------------------------------
   # NON-DATA-ADAPTIVE stopping criteria

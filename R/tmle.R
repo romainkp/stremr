@@ -239,7 +239,7 @@ fitSeqGcomp <- function(OData, t_periods,
   assert_that(is.list(params_Q))
   assert_that(is.logical(adapt_stop))
 
-  if (TMLE & iterTMLE) stop("Either 'TMLE' or 'iterTMLE' must be set to FALSE. Cannot estimate both types of TMLE within a single algorithm run.")
+  if (TMLE & iterTMLE) stop("Either 'TMLE' or 'iterTMLE' must be set to FALSE. Cannot estimate both within a single algorithm run.")
 
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
   # ------------------------------------------------------------------------------------------------
@@ -393,13 +393,24 @@ If this error cannot be fixed, consider creating a replicable example and filing
 # ------------------------------------------------------------------------------------------------
 iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001) {
   get_field_Qclass <- function(allQmodels, fieldName) {
-    lapply(allQmodels, function(Qclass) which(Qclass$getPsAsW.models()[[1]][[fieldName]]))
+    lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]][[fieldName]])
   }
+
+  eval_idx_used_to_fit_initQ <- function(allQmodels, OData) {
+    lapply(allQmodels, function(Qclass) which(Qclass$getPsAsW.models()[[1]]$define_idx_to_fit_initQ(data = OData)))
+  }
+
+  # clean up left-over indices after we are done iterating
+  eval_wipe.all.indices <- function(allQmodels, OData) {
+    lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]]$wipe.all.indices)
+  }
+
   Propagate_TMLE_fits <- function(allQmodels, OData, TMLE.fit) {
     lapply(allQmodels,
       function(Qclass) Qclass$getPsAsW.models()[[1]]$Propagate_TMLE_fit(data = OData, new.TMLE.fit = TMLE.fit))
     return(invisible(allQmodels))
   }
+
   allQmodels <- Qlearn.fit$getPsAsW.models() # Get the individual Qlearning classes
   # res_all_subset_idx <- as.vector(sort(unlist(get_field_Qclass(allQmodels, "subset_idx"))))
   # use_subset_idx <- res_all_subset_idx
@@ -407,6 +418,8 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
 
   # one cat'ed vector of all observations that were used for fitting init Q & updating TMLE (across all t's):
   res_idx_used_to_fit_initQ <- as.vector(sort(unlist(get_field_Qclass(allQmodels, "idx_used_to_fit_initQ"))))
+  # res_idx_used_to_fit_initQ_2 <- as.vector(sort(unlist(eval_idx_used_to_fit_initQ(allQmodels, OData))))
+  # all.equal(res_idx_used_to_fit_initQ, res_idx_used_to_fit_initQ_2)
 
   # Consider only observations with non-zero weights, these are the only obs that are needed for the TMLE update:
   idx_all_wts_above0 <- which(OData$IPwts_by_regimen[["cum.IPAW"]] > 0)
@@ -446,6 +459,9 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
   }
 
   if (gvars$verbose) print("iterative TMLE ran for N iter: " %+% iter)
+
+  # clean up after we are done iterating (set the indices in Q classes to NULL to conserve memory)
+  tmp <- eval_wipe.all.indices(allQmodels)
 
   # EVALUTE THE t-specific and i-specific components of the EIC (estimates):
   # prev_Q.kplus1 <- OData$dat.sVar[use_subset_idx, "prev_Q.kplus1", with = FALSE][[1]]
@@ -529,7 +545,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
 
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
-  Qlearn.fit$fit(data = OData)
+  Qlearn.fit$fit(data = OData, iterTMLE = iterTMLE)
   OData$Qlearn.fit <- Qlearn.fit
 
   # When the model is fit with user-defined stratas, need special functions to extract the final fit (current aproach will not work):
