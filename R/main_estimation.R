@@ -732,6 +732,7 @@ survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = T
               MSM.intervals = MSM.intervals,
               IC.Var.S.d = IC.Var.S.d,
               nID = nID,
+              nobs = nrow(wts_data_used),
               wts_data = wts_data_used,
               use_weights = use_weights,
               trunc_weights = trunc_weights

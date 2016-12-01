@@ -4,12 +4,13 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats and survival estimates using pandoc.}
 \usage{
-make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
-  WTtables = NULL, AddFUPtables = FALSE, MSM.RDtables, TMLE.RDtables,
-  plotKM = FALSE, format = c("html", "pdf", "word"),
-  skip.modelfits = FALSE, file.name = getOption("stremr.file.name"),
+make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, WTtables, FUPtables,
+  MSM.RDtables, TMLE.RDtables, plotKM = FALSE, printEstimateTables = FALSE,
+  format = c("html", "pdf", "word"), skip.modelfits = FALSE,
+  file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), openFile = TRUE,
-  serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, ...)
+  serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE,
+  save_report_data = FALSE, ...)
 }
 \arguments{
 \item{OData}{Input data object returned by the function \code{\link{importData}}.}
@@ -22,13 +23,9 @@ make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
 
 \item{GCOMP}{Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{\link{fitSeqGcomp}}.}
 
-\item{wts_data}{Optional list of data.tables or a single data.table with weights by regimen.}
-
-\item{SurvByRegimen}{... Not implemented ...}
-
 \item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{\link{get_wtsummary}}}
 
-\item{AddFUPtables}{Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
+\item{FUPtables}{Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
 by rule (monitoring and treatment).}
 
 \item{MSM.RDtables}{List of tables with risk differences returned by the function \code{\link{get_MSM_RDs}}.}
@@ -36,6 +33,8 @@ by rule (monitoring and treatment).}
 \item{TMLE.RDtables}{List of tables with risk differences returned by the function \code{\link{get_TMLE_RDs}}.}
 
 \item{plotKM}{Logical, set to \code{TRUE} to plot KM survival curves when \code{NPMSM} argument is specified. Default is \code{FALSE}.}
+
+\item{printEstimateTables}{...}
 
 \item{format}{Choose the Pandoc output format for the report file (html, pdf or word).
 Note that the html report file is always produced in addition to any other selected format.}
@@ -53,6 +52,8 @@ Note that the html report file is always produced in addition to any other selec
 \item{keep_md}{Keep the source .md files?}
 
 \item{keep_tex}{Keep the source .tex files for pdf output?}
+
+\item{save_report_data}{Save the data needed for generating this report as a list in a separate 'report_name.Rd' file.}
 
 \item{...}{Additional arguments may specify the report title (\code{author}), author (\code{title}).
 Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.

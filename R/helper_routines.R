@@ -46,6 +46,35 @@
 #   return(x.freq.sum)
 # }
 
+#' Follow-up times by regimen
+#'
+#' Subject specific follow-up times for each regimen in \code{wts_data}.
+#' @param wts_data Either a list of data.table containing weights (one for each separate regimen/intervention) or a single data.table with
+#' weights for one regimen / intervention.
+#' @param IDnode Name of the column containing subject-specific identifier in the input data.
+#' @param tnode Name of the column containing the time/period variable in the input data.
+#' @return A \code{data.table} of subject specific follow-up times for each regimen in \code{wts_data}.
+#' @seealso \code{\link{getIPWeights}} for evaluation of IP-weights.
+#' @export
+get_FUPtimes <- function(wts_data, IDnode, tnode) {
+  wts_data <- format_wts_data(wts_data)
+  t.name.col <- tnode
+  ID.name.col <- IDnode
+  follow_up_rule_ID <- wts_data[cum.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name"))]
+  data.table::setnames(follow_up_rule_ID, c(IDnode, "rule.name", "max.t"))
+  data.table::setkeyv(follow_up_rule_ID, cols = IDnode)
+  return(follow_up_rule_ID)
+  # rules <- unique(follow_up_rule_ID[["rule.name"]])
+  # # for (T.rule in rules) {
+  # #   one_ruleID <- follow_up_rule_ID[(rule.name %in% eval(T.rule)), max.t]
+  # #   hist(one_ruleID, main = "Maximum follow-up period for TRT/MONITOR rule: " %+% T.rule)
+  # # }
+  # T.rule <- rules[1]
+  # one_ruleID <- follow_up_rule_ID[(rule.name %in% eval(T.rule)), max.t]
+  # hist(one_ruleID, main = "Maximum follow-up period for TRT/MONITOR rule: " %+% T.rule, plot = FALSE)
+  # summary(one_ruleID)
+}
+
 #' IP-Weights Summary Tables
 #'
 #' Produces various table summaries of IP-Weights.
@@ -139,7 +168,8 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
                                                 RDscale = TRUE,
                                                 t.period = t.period.val.idx,
-                                                nobs = nrow(MSM$wts_data),
+                                                nobs = MSM$nobs,
+                                                # nobs = nrow(MSM$wts_data),
                                                 esti = MSM$est_name,
                                                 se.RDscale.Sdt.K = se.RDscale.Sdt.K)
   }

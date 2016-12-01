@@ -191,7 +191,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     modelfit.gA = NULL,
     modelfit.gN = NULL,
     new.factor.names = NULL,
-    noCENScat = 0L,        # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables
+    noCENScat = 0L,         # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables
     YnodeVals = NULL,       # Values of the binary outcome (Ynode) in observed data where det.Y = TRUE obs are set to NA
     det.Y = NULL,           # Logical vector, where YnodeVals[det.Y==TRUE] are deterministic (0 or 1)
     curr_data_A_g0 = TRUE,  # is the current data in OdataDT generated under observed (g0)? If FALSE, current data is under g.star (intervention)

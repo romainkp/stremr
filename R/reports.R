@@ -42,14 +42,13 @@ openFileInOS <- function(f) {
 #' @param NPMSM Optional list of a resulting calls to \code{survNPMSM} or a result of a single call to \code{\link{survNPMSM}}.
 #' @param TMLE Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{\link{fitTMLE}}.
 #' @param GCOMP Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{\link{fitSeqGcomp}}.
-#' @param wts_data Optional list of data.tables or a single data.table with weights by regimen.
-#' @param SurvByRegimen ... Not implemented ...
 #' @param WTtables Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{\link{get_wtsummary}}
-#' @param AddFUPtables Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
+#' @param FUPtables Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
 #' by rule (monitoring and treatment).
 #' @param MSM.RDtables List of tables with risk differences returned by the function \code{\link{get_MSM_RDs}}.
 #' @param TMLE.RDtables List of tables with risk differences returned by the function \code{\link{get_TMLE_RDs}}.
 #' @param plotKM Logical, set to \code{TRUE} to plot KM survival curves when \code{NPMSM} argument is specified. Default is \code{FALSE}.
+#' @param printEstimateTables ...
 #' @param format Choose the Pandoc output format for the report file (html, pdf or word).
 #' Note that the html report file is always produced in addition to any other selected format.
 #' @param skip.modelfits Do not report any of the modeling stats.
@@ -60,18 +59,19 @@ openFileInOS <- function(f) {
 #' @param keep_tex Keep the source .tex files for pdf output?
 #' @param serve_html_rmote Serve the html report as a webpage via R package "rmote".
 # ' Requires prior initialization of the back-end server with rmote::start_rmote()
+#' @param save_report_data Save the data needed for generating this report as a list in a separate 'report_name.Rd' file.
 #' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
 #' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}:
 #' \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegimen,
-                            WTtables = NULL, AddFUPtables = FALSE, MSM.RDtables, TMLE.RDtables,
-                            plotKM = FALSE,
+make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP,
+                            WTtables, FUPtables, MSM.RDtables, TMLE.RDtables,
+                            plotKM = FALSE, printEstimateTables = FALSE,
                             format = c("html", "pdf", "word"), skip.modelfits = FALSE,
                             file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'),
-                            openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, ...) {
+                            openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, save_report_data = FALSE, ...) {
   optArgReport <- list(...)
 
   if (!rmarkdown::pandoc_available(version = "1.12.3"))
@@ -80,6 +80,21 @@ make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP, wts_data, SurvByRegi
 Please install it.
 For more information, go to: http://pandoc.org/installing.html",
 call. = FALSE)
+
+  clean_est_object <- function(est_obj) {
+    if ("wts_data" %in% names(est_obj)) {
+      est_obj$wts_data <- NULL
+    } else if ("wts_data" %in% names(est_obj[[1]])) {
+      for (idx in seq_along(est_obj)) est_obj[[idx]]$wts_data <- NULL
+    }
+
+    if ("IC.Var.S.d" %in% names(est_obj)) {
+      est_obj$IC.Var.S.d <- NULL
+    } else if ("IC.Var.S.d" %in% names(est_obj[[1]])) {
+      for (idx in seq_along(est_obj)) est_obj[[idx]]$IC.Var.S.d <- NULL
+    }
+    return(est_obj)
+  }
 
   if ("author" %in% names(optArgReport)) {
     author <- optArgReport[['author']]
@@ -101,6 +116,55 @@ call. = FALSE)
     only.coefs <- FALSE
   }
 
+  ## -------------------------------------------------------------------------------------
+  ## MODEL FITS:
+  ## -------------------------------------------------------------------------------------
+  fitted.coefs.gC <- OData$modelfit.gC$get.fits()
+  fitted.coefs.gA <- OData$modelfit.gA$get.fits()
+  fitted.coefs.gN <- OData$modelfit.gN$get.fits()
+
+  ## -------------------------------------------------------------------------------------
+  ## Number of unique ID and number of person time obs
+  ## -------------------------------------------------------------------------------------
+  nuniqueIDs <- OData$nuniqueIDs
+  nobs <- OData$nobs
+
+  ## -------------------------------------------------------------------------------------
+  ## Create report data object (list) to be saved along with the report itself
+  ## -------------------------------------------------------------------------------------
+  if (save_report_data) {
+    OData_save <- OData$clone()
+    OData_save$emptydat.sVar
+    report_results_list <- list(OData = OData_save)
+
+    if (!missing(MSM)) {
+      wts_data <- MSM$wts_data
+      MSM$wts_data <- NULL
+      MSM$IC.Var.S.d <- NULL
+      report_results_list <- c(report_results_list, list(MSM = MSM))
+    }
+
+    if (!missing(NPMSM)) {
+      NPMSM <- clean_est_object(NPMSM)
+      report_results_list <- c(report_results_list, list(NPMSM = NPMSM))
+    }
+
+    if (!missing(TMLE)) {
+      TMLE <- clean_est_object(TMLE)
+      report_results_list <- c(report_results_list, list(TMLE = TMLE))
+    }
+
+    if (!missing(GCOMP)) {
+      GCOMP <- clean_est_object(GCOMP)
+      report_results_list <- c(report_results_list, list(GCOMP = GCOMP))
+    }
+
+    if (!missing(WTtables)) report_results_list <- c(report_results_list, list(WTtables = WTtables))
+    if (!missing(FUPtables)) report_results_list <- c(report_results_list, list(FUPtables = FUPtables))
+    if (!missing(MSM.RDtables)) report_results_list <- c(report_results_list, list(MSM.RDtables = MSM.RDtables))
+    if (!missing(TMLE.RDtables)) report_results_list <- c(report_results_list, list(TMLE.RDtables = TMLE.RDtables))
+  }
+
   # -------------------------------------------------------------------------------------
   # TO DO: DISCRIPTIVE STATISTICS
   # -------------------------------------------------------------------------------------
@@ -115,13 +179,6 @@ call. = FALSE)
   # * Report number lost to follow-up by time for nodes$Cnodes, by nodes$tnode
   # * Report number lost to follow-up by nodes$Ynode, by nodes$tnode
   # * Report number in each exposure cat in nodes$Anodes, by nodes$tnode
-
-  # -------------------------------------------------------------------------------------
-  # MODEL FITS:
-  # -------------------------------------------------------------------------------------
-  fitted.coefs.gC <- OData$modelfit.gC$get.fits()
-  fitted.coefs.gA <- OData$modelfit.gA$get.fits()
-  fitted.coefs.gN <- OData$modelfit.gN$get.fits()
 
   # -------------------------------------------------------------------------------------
   # RD tables
@@ -140,9 +197,13 @@ call. = FALSE)
   format <- format[1L]
   format_pandoc <- format %+% "_document"
   outfile <- file.name %+% "." %+% ifelse(format %in% "word", "docx", format)
+  figure.subdir <- "figure." %+% file.name
+  # figure.dir <- file.path(getwd(), "figure/stremr-")
 
   message("writing report to directory: " %+% getwd())
-  figure.dir <- file.path(getwd(), "figure/stremr-")
+  message("writing related figures to report subdirectory: " %+% figure.subdir)
+
+  figure.dir <- file.path(getwd(), figure.subdir %+% "/stremr-")
   report.html <- tryCatch(rmarkdown::render(report.file,
                           output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE,
                           output_options = list(keep_md = keep_md, toc = TRUE, toc_float = TRUE,
@@ -177,6 +238,11 @@ call. = FALSE)
       setwd(wd.bak)
       stop(report.other$message)
     }
+  }
+
+  if (save_report_data) {
+    # print(object.size(report_results_list), units = "MB")
+    save(list = "report_results_list", file = file.path(file.path, file.name) %+% ".Rd")
   }
 
   if (openFile) openFileInOS(outfile)
