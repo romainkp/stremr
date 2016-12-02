@@ -98,13 +98,15 @@ panderOptions('knitr.auto.asis', TRUE)
 
 #+ echo=FALSE
 if (!missing(WTtables)) {
-  pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
-  pander::pander(WTtables$summary.table, justify = c('right', rep("left",ncol(WTtables$summary.table)-1)))
+  if (!is.null(WTtables)) {
+    pander::set.caption("Distribution of the stabilized IPA weights for all rule-person-time observations")
+    pander::pander(WTtables$summary.table, justify = c('right', rep("left",ncol(WTtables$summary.table)-1)))
+  }
 }
 
 #+ echo=FALSE
 if (!missing(WTtables)) {
-  if (!is.null(WTtables$summary.DT.byrule)) {
+  if (!is.null(WTtables) && !is.null(WTtables$summary.DT.byrule)) {
     pander::set.caption("Counts of the stabilized IPA weights by each rule")
     pander::pander(WTtables$summary.DT.byrule, justify = c('right', rep("left",ncol(WTtables$summary.DT.byrule)-1)))
   }
@@ -116,35 +118,29 @@ if (!missing(WTtables)) {
 
 #+ echo=FALSE
 if (!missing(FUPtables)) {
-# if (AddFUPtables && (!missing(MSM) || !missing(wts_data))) {
-  # if (!missing(MSM)) wts_data <- MSM$wts_data
-  # wts_data <- format_wts_data(wts_data)
-  # t.name.col <- OData$nodes$tnode
-  # ID.name.col <- OData$nodes$IDnode
-  # follow_up_rule_ID <- wts_data[cum.IPAW > 0, list(max.t = max(get(t.name.col), na.rm = TRUE)), by = list(get(ID.name.col), get("rule.name"))]
-  # data.table::setnames(follow_up_rule_ID, c(OData$nodes$IDnode, "rule.name", "max.t"))
-  # data.table::setkeyv(follow_up_rule_ID, cols = OData$nodes$IDnode)
-  # # rules <- unique(wts_data[["rule.name"]])
-  rules <- unique(FUPtables[["rule.name"]])
-  for (T.rule in rules) {
-    one_ruleID <- FUPtables[(rule.name %in% eval(T.rule)), max.t]
-    hist(one_ruleID, main = "Maximum follow-up period for TRT/MONITOR rule: " %+% T.rule)
+  if (!is.null(FUPtables)) {
+    rules <- unique(FUPtables[["rule.name"]])
+    for (T.rule in rules) {
+      one_ruleID <- FUPtables[(rule.name %in% eval(T.rule)), max.t]
+      hist(one_ruleID, main = "Maximum follow-up period for TRT/MONITOR rule: " %+% T.rule)
+    }
   }
 }
 
 #+ echo=FALSE, results='asis'
 if (!missing(FUPtables)) {
-# if (AddFUPtables && (!missing(MSM) || !missing(wts_data))) {
-  rules <- unique(FUPtables[["rule.name"]])
-  for (T.rule in rules) {
-    one_ruleID <- FUPtables[(rule.name %in% eval(T.rule)), max.t]
-    panderOptions('knitr.auto.asis', FALSE)
-    followupTimes <- table(one_ruleID)
-    followupTimes <- makeFreqTable(followupTimes)
-    # followupTimes <- makeFreqTable(table(one_ruleID))
-    pander::pander(followupTimes, caption = "Distribution of the total follow-up time for TRT/MONITOR rule: " %+% T.rule)
-    pander::pander(summary(one_ruleID), caption = "Min/Max/Quantiles for the total follow-up time for TRT/MONITOR rule: " %+% T.rule)
-    panderOptions('knitr.auto.asis', TRUE)
+  if (!is.null(FUPtables)) {
+    rules <- unique(FUPtables[["rule.name"]])
+    for (T.rule in rules) {
+      one_ruleID <- FUPtables[(rule.name %in% eval(T.rule)), max.t]
+      panderOptions('knitr.auto.asis', FALSE)
+      followupTimes <- table(one_ruleID)
+      followupTimes <- makeFreqTable(followupTimes)
+      # followupTimes <- makeFreqTable(table(one_ruleID))
+      pander::pander(followupTimes, caption = "Distribution of the total follow-up time for TRT/MONITOR rule: " %+% T.rule)
+      pander::pander(summary(one_ruleID), caption = "Min/Max/Quantiles for the total follow-up time for TRT/MONITOR rule: " %+% T.rule)
+      panderOptions('knitr.auto.asis', TRUE)
+    }
   }
 }
 
