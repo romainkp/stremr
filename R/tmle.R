@@ -563,7 +563,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
 
   # 1a. Grab last reg predictions from Q-regression objects:
   lastQ_inx <- Qreg_idx[1] # The index for the last Q-fit (first time-point)
-  # Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
+  # Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
   mean_est_t <- mean(res_lastPredQ)
   if (gvars$verbose) print("Surv est: " %+% (1-mean_est_t))

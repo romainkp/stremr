@@ -1,7 +1,7 @@
 # adding to appease CRAN check with non-standard eval in data.table:
 utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN", "new.TRT.gstar",
                           "N.risk", "N.follow.rule", "stab.P", "cum.stab.P", "cum.IPAW",
-                          "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht", "ht.KM", "EIC_i_t0", "EIC_i_t1plus"))
+                          "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht", "ht.KM", "EIC_i_t0", "EIC_i_tplus"))
 
 # ---------------------------------------------------------------------------------------
 #' Import data, define various nodes, define dummies for factor columns and define OData R6 object

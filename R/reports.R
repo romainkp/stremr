@@ -247,12 +247,13 @@ call. = FALSE)
 
   if (openFile) openFileInOS(outfile)
   if (serve_html_rmote) {
-    reqrmote <- requireNamespace("rmote", quietly = TRUE)
-    serv_tmle_exists <- exists("serve_rmd_html", where = "package:rmote")
-    if (!reqrmote || !serv_tmle_exists) stop("Please install the latest version of 'rmote' package by typing this into the terminal:
-devtools::install_github('hafen/rmote')
-", call. = FALSE)
-    rmote::serve_rmd_html(file.path, file.name%+%".html")
+    stop("must install development version of stremr from github for this to work")
+  #     reqrmote <- requireNamespace("rmote", quietly = TRUE)
+  #     serv_tmle_exists <- exists("serve_rmd_html", where = "package:rmote")
+  #     if (!reqrmote || !serv_tmle_exists) stop("Please install the latest version of 'rmote' package by typing this into the terminal:
+  # devtools::install_github('hafen/rmote')
+  # ", call. = FALSE)
+  #     rmote::serve_rmd_html(file.path, file.name%+%".html")
   }
 
   # resetting directory and other options
