@@ -151,7 +151,7 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
                                             saveH2O = FALSE,
                                             destination_frame = "subsetH2Oframe")
     #2. old, slower approach, but may work on many cores (since data is loaded only once)
-    # subsetH2Oframe <- data$H2O.dat.sVar[subset_idx, c(outvar, predvars)]
+    # subsetH2Oframe <- data$H2Oframe[subset_idx, c(outvar, predvars)]
     # old version of setting data, no longer used:
     # ParentObject$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
 
@@ -190,7 +190,7 @@ predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, s
                                             saveH2O = FALSE,
                                             destination_frame = "subsetH2Oframe")
     #2. old, slower approach, but may work on many cores (since data is loaded only once)
-    # subsetH2Oframe <- data$H2O.dat.sVar[subset_idx, c(outvar, predvars)]
+    # subsetH2Oframe <- data$H2Oframe[subset_idx, c(outvar, predvars)]
     # old version of setting data, no longer used:
     # ParentObject$setdata(data, subset_idx = subset_idx, getoutvar = FALSE, getXmat = FALSE)
 
@@ -328,7 +328,7 @@ Please type this into the R terminal:
       # resuling in an error
       # ---------------------------------------------------
       # subset_t <- system.time(
-      #   subsetH2Oframe <- data$H2O.dat.sVar[subset_idx, c(outvar, predvars)]
+      #   subsetH2Oframe <- data$H2Oframe[subset_idx, c(outvar, predvars)]
       # )
       # if (gvars$verbose) {
       #   print("time to subset data into H2OFRAME: "); print(subset_t)
