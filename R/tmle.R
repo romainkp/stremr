@@ -295,6 +295,10 @@ fitSeqGcomp <- function(OData, t_periods,
     assert_that(is.data.table(IPWeights))
     assert_that("cum.IPAW" %in% names(IPWeights))
     OData$IPwts_by_regimen <- IPWeights
+    # browser()
+    IPwts_by_regimen_h2o <- fast.load.to.H2O(OData$IPwts_by_regimen[, "cum.IPAW", with = FALSE], destination_frame = "wts_data")
+    OData$IPwts_by_regimen_h2o <- IPwts_by_regimen_h2o
+    # wts_TMLE <- as.h2o(data$IPwts_by_regimen[, "cum.IPAW", with = FALSE])
 
     if (!is.null(weights)) stop("optional argument 'weights' is not implemented for TMLE or GCOMP")
     # Add additional observation-specific weights to the cumulative weights:
@@ -516,14 +520,22 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   # **** G-COMP: Initiate Q.kplus1 - (could be multiple if more than one regimen)
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)
   # ------------------------------------------------------------------------------------------------
-  # set the initial (default values of the t-specific and i-specific EIC estimates):
-  OData$dat.sVar[, ("EIC_i_t") := 0.0]
-  # set the initial values of Q (the observed outcome node):
-  OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))]
+  OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
+  OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
 
   OData$set.sVar.type(name.sVar = "Q.kplus1", new.type = "binary")
   OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
   # OData$def.types.sVar() # bottleneck
+
+  # ------------------------------------------------------------------------------------------------
+  #  ****** PRESETTING VARS FOR H2O FRAME *****
+  OData$H2Oframe[, "EIC_i_t"] <- 0.0 # set the initial (default values of the t-specific and i-specific EIC estimates)
+  OData$H2Oframe[, "Q.kplus1"] <-  h2o.asnumeric(OData$H2Oframe[[OData$nodes$Ynode]]) # set the initial values of Q (the observed outcome node)
+  OData$H2Oframe[, "prev_Q.kplus1"] <- OData$H2Oframe[, "Q.kplus1"]
+  # ------------------------------------------------------------------------------------------------
+  # as.data.table(OData$H2Oframe[OData$H2Oframe[["prev_Q.kplus1"]] != OData$H2Oframe[["Q.kplus1"]], ])
+
+  browser()
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
@@ -548,6 +560,8 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   Qlearn.fit$fit(data = OData, iterTMLE = iterTMLE)
   OData$Qlearn.fit <- Qlearn.fit
 
+  browser()
+
   # When the model is fit with user-defined stratas, need special functions to extract the final fit (current aproach will not work):
   # allQmodels[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
 
@@ -566,12 +580,19 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   # Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
   mean_est_t <- mean(res_lastPredQ)
-  if (gvars$verbose) print("Surv est: " %+% (1-mean_est_t))
+  # if (gvars$verbose)
+  print("Surv est 1: " %+% (1-mean_est_t))
+
   # # 1b. Can instead grab it directly from the data, using the appropriate strata-subsetting expression
-  #   subset_vars <- lastQ.fit$subset_vars
-  #   subset_exprs <- lastQ.fit$subset_exprs
-  #   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
-  #   mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+  lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]]
+  # allQmodels[[lastQ_inx]]$get.fits()
+  subset_vars <- lastQ.fit$subset_vars
+  subset_exprs <- lastQ.fit$subset_exprs
+  subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
+  mean_est_t_2 <- h2o.mean(OData$H2Oframe[subset_idx, "Q.kplus1"])
+  # if (gvars$verbose)
+  print("Surv est 2: " %+% (1-mean_est_t_2))
+  # mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
 
   if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ))
   if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))

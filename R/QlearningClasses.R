@@ -1,3 +1,28 @@
+# helper function for h2o frames
+h2o.plogis <- function(x) {
+  h2o_exp_x <- h2o::h2o.exp(x)
+  h2o_exp_x / (1 + h2o_exp_x)
+}
+
+# helper function for h2o frames
+h2o.qlogis <- function(x) h2o::h2o.log(x / (1 - x))
+
+
+# Poor mans slicer until h2o error is fixed:
+reassign_rows_cols <- function(data, newsubset_idx, subset_frame, col_name = "Q.kplus1", ID = "ID", t = "t") {
+  # full rows in h2o frame that will need to be set:
+  copy_rows_to_set <- data$H2Oframe[newsubset_idx, ]
+  # remove those rows from main frame:
+  data$H2Oframe <- data$H2Oframe[-newsubset_idx,]
+  # set the colum in subset frame:
+  copy_rows_to_set[, "Q.kplus1"] <- subset_frame
+  # add the subset frame back into the frame with rbind
+  data$H2Oframe <- h2o.rbind(data$H2Oframe, copy_rows_to_set)
+  # sort by t:
+  data$H2Oframe <- h2o.arrange(data$H2Oframe, ID, t)
+  return(invisible(NULL))
+}
+
 RegressionClassQlearn <- R6Class("RegressionClassQlearn",
   inherit = RegressionClass,
   class = TRUE,
@@ -59,6 +84,75 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
 #************************************************
 # TMLEs
 #************************************************
+tmle.update.h2o <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
+  QY.star <- NA
+  # h2o.sum(h2o.abs(h2oFRAME_test[, "test_col_copy"]))
+  if (sum(abs(IPWts)) < 10^-9) {
+  # if (h2o.sum(h2o.abs(IPWts)) < 10^-9) {
+    update.Qstar.coef <- 0
+    if (gvars$verbose) message("TMLE update cannot be performed since all IP-weights are exactly zero!")
+    warning("TMLE update cannot be performed since all IP-weights are exactly zero!")
+  } else if ((sum(prev_Q.kplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
+  # } else if ((h2o.sum(prev_Q.kplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
+    update.Qstar.coef <- 0
+  } else {
+    #************************************************
+    # TMLE update via weighted univariate ML (espsilon is intercept)
+    #************************************************
+    if (lower_bound_zero_Q) {
+      prev_Q.kplus1[prev_Q.kplus1 < 10^(-4)] <- 10^(-4)
+      init_Q_fitted_only[init_Q_fitted_only < 10^(-4)] <- 10^(-4)
+    }
+
+    off_TMLE <- h2o.qlogis(init_Q_fitted_only)
+
+    # Create a column (h2o frame) with consant vector of 1
+    # fit_h2oframe <- h2o.rep_len(1L, nrow(prev_Q.kplus1))
+    # fit_h2oframe <- h2o.cbind(fit_h2oframe, prev_Q.kplus1, off_TMLE, IPWts)
+    # names(fit_h2oframe) <- c("Intercept", "y", "offset_column", "weights_column")
+
+    fit_h2oframe <- h2o.cbind(prev_Q.kplus1, off_TMLE, IPWts)
+    # fit_h2oframe <- cbind(prev_Q.kplus1, off_TMLE, IPWts)
+    names(fit_h2oframe) <- c("y", "offset_column", "weights_column")
+    # x = "Intercept",
+    # browser()
+
+    # solver = c("AUTO",
+    #   "IRLSM", "L_BFGS", "COORDINATE_DESCENT_NAIVE", "COORDINATE_DESCENT")
+    LFM_fit_t <- system.time(
+    m.Qstar <- h2o::h2o.glm(y = "y", training_frame = fit_h2oframe,
+                            lambda = 0L, ignore_const_cols = FALSE, intercept = TRUE, standardize = FALSE,
+                            family = "quasibinomial", offset_column = "offset_column", weights_column = "weights_column")
+      )
+    print("LFM_fit_t"); print(LFM_fit_t)
+
+
+    # str(m.Qstar)
+    # str(m.Qstar@model$coefficients)
+    # class(m.Qstar@model$coefficients)
+
+    # m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=),
+    #                                       y = prev_Q.kplus1, weights = IPWts, offset = off_TMLE,
+    #                                       # method=c('eigen','Cholesky','qr'),
+    #                                       family = quasibinomial(), trace = FALSE, maxit = 1000),
+    #               silent = TRUE)
+
+    if (inherits(m.Qstar, "try-error")) { # TMLE update failed
+      if (gvars$verbose) message("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
+      warning("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
+      update.Qstar.coef <- 0
+    } else {
+      update.Qstar.coef <- m.Qstar@model$coefficients
+    }
+  }
+
+  fit <- list(TMLE.intercept = update.Qstar.coef)
+  class(fit)[2] <- "tmlefit"
+  # if (gvars$verbose)
+    print("tmle update: " %+% update.Qstar.coef)
+  return(fit)
+}
+
 tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
@@ -169,6 +263,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$regimen_names <- reg$regimen_names
       self$TMLE <- reg$TMLE
 
+      self$model_contrl$family <- "quasibinomial"
+
       if (gvars$verbose) {print("initialized Q class"); reg$show()}
 
       invisible(self)
@@ -176,13 +272,13 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
     define.subset.idx = function(data, subset_vars, subset_exprs) {
       subset_idx <- data$evalsubst(subset_vars, subset_exprs)
-      assert_that(is.logical(subset_idx))
-      if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
-        if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
-        subset_idx <- rep.int(subset_idx, data$p)
-        if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
-      }
-      assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
+      # assert_that(is.logical(subset_idx))
+      # if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
+      #   if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
+      #   subset_idx <- rep.int(subset_idx, data$p)
+      #   # if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
+      # }
+      # assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
       return(subset_idx)
     },
 
@@ -190,10 +286,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # self$subset_vars is the name of the outcome var, checks for (!is.na(self$subset_vars))
       # self$subset_exprs is the time variable for selecting certain rows
       subset_idx <- self$define.subset.idx(data, subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
+
       # excluded all censored observations:
-      subset_idx <- subset_idx & data$uncensored_idx
+      subset_idx <- intersect(subset_idx, which(data$uncensored_idx))
+      # subset_idx <- subset_idx & data$uncensored_idx
+
       # if stratifying by rule, exclude all obs who are not following the rule:
-      if (self$stratifyQ_by_rule) subset_idx <- subset_idx & data$rule_followers_idx
+      if (self$stratifyQ_by_rule) subset_idx <- intersect(subset_idx, which(data$rule_followers_idx))
+      # if (self$stratifyQ_by_rule) subset_idx <- subset_idx & data$rule_followers_idx
+
       return(subset_idx)
     },
 
@@ -208,15 +309,28 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
+
       # **********************************************************************
       # FITTING STEP OF Q-LEARNING
       # Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
       # **********************************************************************
-      self$subset_idx <- which(self$define_idx_to_fit_initQ(data))
+      self$subset_idx <- self$define_idx_to_fit_initQ(data)
       # save the subset used for fitting of the current initial Q[t] -> will be used for targeting
       self$idx_used_to_fit_initQ <- self$subset_idx
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
-      private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+
+      # private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      nodes <- data$nodes
+      private$model.fit <- fit_model(ID = nodes$IDnode,
+                                    t_name = nodes$tnode,
+                                    x = self$predvars,
+                                    y = self$outvar,
+                                    train_data = data,
+                                    params = self$model_contrl,
+                                    subset_idx = self$subset_idx,
+                                    useH2Oframe = TRUE,
+                                    verbose = gvars$verbose
+                                    )
       self$is.fitted <- TRUE
 
       # **********************************************************************
@@ -230,7 +344,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       any_stoch <- sum(stoch_indicator) > 0
 
       # For prediction need to add all obs that were also censored at t and (possibly) those who just stopped following the rule
-      self$subset_idx <- which(self$define_idx_to_predictQ(data))
+      self$subset_idx <- self$define_idx_to_predictQ(data)
 
       if (!any_stoch) {
         probA1 <- self$predictStatic(data, g0 = interventionNodes.g0,
@@ -243,7 +357,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                                subset_idx = self$subset_idx,
                                                stoch_indicator = stoch_indicator)
       }
-      init_Q_all_obs <- probA1[self$subset_idx]
+
+      # browser()
+      init_Q_all_obs <- probA1
+      # init_Q_all_obs <- as.h2o(probA1[self$subset_idx])
 
       # ------------------------------------------------------------------------------------------------------------------------
       # Alternative to above:
@@ -266,28 +383,79 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # TARGETING STEP OF THE TMLE
       # the TMLE update is performed only among obs who were involved in fitting of the initial Q above (self$idx_used_to_fit_initQ)
       # **********************************************************************
-      # Predicted outcome from the previous Seq-GCOMP/TMLE iteration, was saved in the current row t
-      # If the person just failed at t this is always 1 (deterministic)
-      prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
-      data$dat.sVar[self$idx_used_to_fit_initQ, "prev_Q.kplus1" := eval(as.name("Q.kplus1"))]
-      # data$dat.sVar[self$idx_used_to_fit_initQ, ]
+
+      # browser()
+      prev_Q.kplus1 <- data$H2Oframe[self$idx_used_to_fit_initQ, "Q.kplus1"]
+
+
+      # This assignment will be incorrect due to bug in h2o:
+      # data$H2Oframe[self$idx_used_to_fit_initQ, "prev_Q.kplus1"] <- prev_Q.kplus1
+
+
+
+      # print(as.data.table(data$H2Oframe[data$H2Oframe[["prev_Q.kplus1"]] != data$H2Oframe[["Q.kplus1"]], ]))
+
+      # data$H2Oframe[self$idx_used_to_fit_initQ, "prev_Q.kplus1", drop = FALSE] <- data$H2Oframe[self$idx_used_to_fit_initQ, "Q.kplus1", drop = FALSE]
+      # h2o.sum(data$H2Oframe[self$idx_used_to_fit_initQ, "prev_Q.kplus1"] - data$H2Oframe[self$idx_used_to_fit_initQ, "Q.kplus1"])
+      # length(self$idx_used_to_fit_initQ)
+      # data$H2Oframe[["prev_Q.kplus1"]][[self$idx_used_to_fit_initQ, exact = FALSE]]
+      # intersect(as.vector(h2o.which(data$H2Oframe[["prev_Q.kplus1"]] != data$H2Oframe[["Q.kplus1"]])), self$idx_used_to_fit_initQ)
+      # idx_used_to_fit_initQ
+      # ## Predicted outcome from the previous Seq-GCOMP/TMLE iteration, was saved in the current row t
+      # ## This outcome ("Q.kplus1") will be overwritten during this step.
+      # ## Hence we first save the previous outcome in a separate column "prev_Q.kplus1"
+      # ## NOTE: if the person just failed at t this is always 1 (deterministic)
+      # as.vector(prev_Q.kplus1)[121]
+      # prev_Q.kplus1[121, ]
+      # data$H2Oframe[self$idx_used_to_fit_initQ[121], "Q.kplus1"]
+      # data$H2Oframe[self$idx_used_to_fit_initQ[121], "Q.kplus1"]
+      # data$H2Oframe[2291, "Q.kplus1"]
+      # which(self$idx_used_to_fit_initQ %in% 2291)
+      # data$H2Oframe[self$idx_used_to_fit_initQ[121], c("Q.kplus1","prev_Q.kplus1")]
+      # data$H2Oframe[2291, "Q.kplus1"]
+      # data$H2Oframe[2291, "prev_Q.kplus1"]
+      # data$H2Oframe[2291, "Q.kplus1"]
+      # data$H2Oframe[self$idx_used_to_fit_initQ[121], "prev_Q.kplus1"] <- data$H2Oframe[self$idx_used_to_fit_initQ[121], "Q.kplus1"]
+      # prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
+      # data$dat.sVar[self$idx_used_to_fit_initQ, "prev_Q.kplus1" := eval(as.name("Q.kplus1"))]
+      # data$dat.sVar[, ("prev_Q.kplus1") := Q.kplus1]
+      # data$dat.sVar[["prev_Q.kplus1"]] != data$dat.sVar[["Q.kplus1"]]
+
 
       if (self$TMLE) {
         # TMLE offset will be based on the initial prediction of Q among fitted only (log(x/[1-x])):
-        init_Q_fitted_only <- probA1[self$idx_used_to_fit_initQ]
+        idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
+        init_Q_fitted_only <- probA1[idx_for_fits_among_preds]
+
+        # init_Q_fitted_only <- as.h2o(probA1[idx_fit_initQ_frompreds])
 
         # tmle update will error out if some predictions are exactly 0:
-        off_TMLE <- qlogis(init_Q_fitted_only)
+        off_TMLE <- h2o.qlogis(init_Q_fitted_only)
+        # off_TMLE <- qlogis(init_Q_fitted_only)
+
         # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
+        # browser()
+
+
         # Cumulative IPWeights for current t:
-        wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
+        wts_TMLE <- data$IPwts_by_regimen_h2o[self$idx_used_to_fit_initQ, ]
+        # wts_TMLE <- as.h2o(data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]])
+        # wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
+
 
         # TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
-        private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1,
-                                        init_Q_fitted_only = init_Q_fitted_only,
-                                        IPWts = wts_TMLE,
-                                        lower_bound_zero_Q = self$lower_bound_zero_Q,
-                                        skip_update_zero_Q = self$skip_update_zero_Q)
+        # private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1,
+        #                                 init_Q_fitted_only = init_Q_fitted_only,
+        #                                 IPWts = wts_TMLE,
+        #                                 lower_bound_zero_Q = self$lower_bound_zero_Q,
+        #                                 skip_update_zero_Q = self$skip_update_zero_Q)
+
+        private$TMLE.fit <- tmle.update.h2o(prev_Q.kplus1 = prev_Q.kplus1,
+                                            init_Q_fitted_only = init_Q_fitted_only,
+                                            IPWts = wts_TMLE,
+                                            lower_bound_zero_Q = self$lower_bound_zero_Q,
+                                            skip_update_zero_Q = self$skip_update_zero_Q)
+
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
         # TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
         # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
@@ -300,30 +468,98 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
 
         # Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        init_Q_fitted_only <- plogis(qlogis(init_Q_fitted_only) + update.Qstar.coef)
-        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
-        # wts_TMLE_all_obs <- data$IPwts_by_regimen[self$subset_idx, "cum.IPAW", with = FALSE][[1]]
-        # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + TMLE.cleverCov.coef * wts_TMLE_all_obs)
+        init_Q_fitted_only <- h2o.plogis(h2o.qlogis(init_Q_fitted_only) + update.Qstar.coef)
+        init_Q_all_obs <- h2o.plogis(h2o.qlogis(init_Q_all_obs) + update.Qstar.coef)
+
+        # init_Q_fitted_only_2 <- plogis(qlogis(as.vector(probA1[self$idx_used_to_fit_initQ])) + update.Qstar.coef)
+        # init_Q_all_obs_2 <- plogis(qlogis(as.vector(init_Q_all_obs)) + update.Qstar.coef)
+        # as.vector(init_Q_fitted_only)-init_Q_fitted_only_2
+
+        # init_Q_fitted_only <- plogis(qlogis(init_Q_fitted_only) + update.Qstar.coef)
+        # init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
+
         # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))]
 
         EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
-        data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
+
+        # This assignment will be incorrect due to bug:
+        data$H2Oframe[self$idx_used_to_fit_initQ, "EIC_i_t"] <- EIC_i_t_calc
+        # data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
+
       }
 
+
       # Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values:
-      # rowidx_t <- which(self$subset_idx)
-      data$dat.sVar[self$subset_idx, "Q.kplus1" := init_Q_all_obs]
+      # This assignment will be incorrect due to bug:
+      # data$H2Oframe[self$subset_idx, "Q.kplus1"] <- init_Q_all_obs
+      # data.table version:
+      # data$dat.sVar[self$subset_idx, "Q.kplus1" := init_Q_all_obs]
+
+
+
+      # print("mean(init_Q_all_obs)"); print(mean(init_Q_all_obs))
+      # print("h2o.mean(data$H2Oframe[self$subset_idx,Q.kplus1])"); print(h2o.mean(data$H2Oframe[self$subset_idx, "Q.kplus1"]))
+
+
 
       # Set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
       # only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
-      # rowidx_t.minus1 <- self$subset_idx - 1
-        data$dat.sVar[(self$subset_idx - 1), "Q.kplus1" := init_Q_all_obs]
+        newsubset_idx <- (self$subset_idx - 1)
+        subset_frame <- init_Q_all_obs # what we want to set
+
+        # browser()
+
+        # h2o.frame version (DOES NOT WORK AS INTENDED!!!!):
+        # data$H2Oframe[newsubset_idx, "Q.kplus1"] <- subset_frame
+
+        reassign_rows_cols(data, newsubset_idx, subset_frame, col_name = "Q.kplus1", ID = data$nodes$IDnode, t = data$nodes$tnode)
+
+        # data.table version:
+        # # data$dat.sVar[(self$subset_idx - 1), "Q.kplus1" := init_Q_all_obs]
+
+        # # data$H2Oframe[rows_to_set_Q, "Q.kplus1"] <- NA
+        # copy_to_assign <- data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"]
+        # copy_to_assign[, "Q.kplus1"] <- init_Q_all_obs
+        # data$H2Oframe <- data$H2Oframe[-(self$subset_idx - 1), "Q.kplus1"]
+        # rows_to_set_Q <- as.h2o(self$subset_idx - 1)
+        # h2o.cbind(rows_to_set_Q, init_Q_all_obs)
+        # sum(is.na(data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"]))
+        # all(is.na(data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"]))
+        # data$H2Oframe[is.na(data$H2Oframe[["Q.kplus1"]]) & data$H2Oframe[["t"]] == 9, "Q.kplus1"] <- init_Q_all_obs
+        # data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"] <- NA
+        # print(all(data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"] == init_Q_all_obs))
+        # print(sum(data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"] != init_Q_all_obs))
+        # browser()
+        # # head(self$subset_idx - 1, 50)
+        # # wrong_idx <- as.vector(h2o.which(data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"] != init_Q_all_obs))
+        # # head(wrong_idx, 100)
+        # # data$H2Oframe[(self$subset_idx - 1), ][wrong_idx, ]
+        # # data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"][wrong_idx, ]
+        # # init_Q_all_obs[wrong_idx, ]
+        # # length((self$subset_idx - 1))
+
+        # if (!all(data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"] == init_Q_all_obs)) {
+        #   # head(subset_idx, 70)
+        #   # print(copy_col_1[subset_idx, ][subset_frame != copy_col_1[subset_idx, ],])
+        #   # print(subset_frame[subset_frame != copy_col_1[subset_idx, ],])
+        #   wrong_index_subset <- as.vector(h2o.which(init_Q_all_obs != data$H2Oframe[(self$subset_idx - 1), "Q.kplus1"]))
+        #   print(length(wrong_index_subset))
+        #   # copy_col_1[subset_idx[wrong_index_subset], ] <- subset_frame[wrong_index_subset,]
+
+        #   data$H2Oframe[(self$subset_idx - 1)[wrong_index_subset], "Q.kplus1"] <- init_Q_all_obs[wrong_index_subset, ]
+        # }
+
+
+
         private$probA1 <- NULL
       } else {
+
         # save prediction P(Q.kplus=1) only for a subset in self$getsubset that was used for prediction
-        private$probAeqa <- init_Q_all_obs
+        # **** Pull the final predictions on all N subjects from h2o into R ****
+        private$probAeqa <- as.vector(init_Q_all_obs)
         private$probA1 <- NULL
+
       }
 
       # **********************************************************************
@@ -378,20 +614,37 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       if (missing(newdata) && !is.null(private$probA1)) {
         return(private$probA1)
       } else if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
+        browser()
+        # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
+        private$probA1 <- predict_SL(modelfit = private$model.fit,
+                                     add_subject_data = FALSE,
+                                     subset_idx = subset_idx,
+                                     use_best_retrained_model = FALSE,
+                                     pred_holdout = FALSE,
+                                     force_data.table = FALSE,
+                                     verbose = gvars$verbose)
         return(private$probA1)
       } else {
         self$n <- newdata$nobs
         if (missing(subset_idx)) {
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
-        private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
-        if (any(is.na(private$probA1[subset_idx]) & !is.nan(private$probA1[subset_idx]))) {
+        # browser()
+        # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
+        private$probA1 <- predict_SL(modelfit = private$model.fit, newdata = newdata,
+                                     add_subject_data = FALSE,
+                                     subset_idx = subset_idx,
+                                     use_best_retrained_model = FALSE,
+                                     pred_holdout = FALSE,
+                                     force_data.table = FALSE,
+                                     verbose = gvars$verbose)
+
+        if (any(is.na(private$probA1[[1]]) )) { # & !is.nan(private$probA1[[1]])
+        # if (any(is.na(private$probA1[subset_idx]) & !is.nan(private$probA1[subset_idx]))) {
           stop("some of the predicted probabilities during seq Gcomp resulted in NAs, which indicates an error of a prediction routine")
         }
         # assert_that(!any(is.na(private$probA1[subset_idx]))) # check that predictions P(A=1 | dmat) exist for all obs.
-
-        invisible(return(private$probA1))
+        return(private$probA1)
       }
     },
 

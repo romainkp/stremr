@@ -87,6 +87,14 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       }
       if (!(self$fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
 
+
+      self$model_contrl$fit.algorithm <- self$fit.algorithm
+      self$model_contrl$fit.package <- self$fit.package
+
+      ## Add default family / distribution specification, if not provided:
+      if (!("family" %in% names(self$model_contrl))) self$model_contrl$family <- "binomial"
+      if (!("bernoulli" %in% names(self$model_contrl))) self$model_contrl$distribution <- "bernoulli"
+
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
 
@@ -136,20 +144,55 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
       self$define.subset.idx(data)
-      model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+
+      # browser()
+
+      # model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      nodes <- data$nodes
+      model.fit <- try({
+                        fit_model(ID = nodes$IDnode,
+                                  t_name = nodes$tnode,
+                                  x = self$predvars,
+                                  y = self$outvar,
+                                  train_data = data,
+                                  params = self$model_contrl,
+                                  subset_idx = self$subset_idx,
+                                  useH2Oframe = TRUE,
+                                  verbose = TRUE
+                                  )
+      })
+
+      # str(model.fit$getfit$fitted_models_all[[1]])
+      # Coefficients: glm coefficients
+      #       names coefficients standardized_coefficients
+      # 1 Intercept  -312.244210               -164.207677
+      # 2         t    20.147272                 98.472159
+      # 3   highA1c    -0.026123                 -0.010528
 
       if (inherits(model.fit, "try-error")) {
+        # browser()
         message("running " %+% self$binomialModelObj$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")
-        self$binomialModelObj <- BinomialGLM$new(fit.algorithm = "glm", fit.package = "speedglm", ParentModel = self, ...)
-        self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
-        model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+        # self$binomialModelObj <- BinomialGLM$new(fit.algorithm = "glm", fit.package = "speedglm", ParentModel = self, ...)
+        # self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
+        # model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+        self$model_contrl$fit.package <- "speedglm"
+        self$model_contrl$fit.algorithm <- "glm"
+        model.fit <- fit_model(ID = nodes$IDnode,
+                                t_name = nodes$tnode,
+                                x = self$predvars,
+                                y = self$outvar,
+                                train_data = data,
+                                params = self$model_contrl,
+                                subset_idx = self$subset_idx,
+                                useH2Oframe = TRUE
+                                )
       }
 
       private$model.fit <- model.fit
 
       self$is.fitted <- TRUE
       if (predict) {
-        self$predictAeqa(...)
+        self$predictAeqa(..., indA = data$get.outvar(self$subset_idx, self$getoutvarnm))
       }
 
       # **********************************************************************
@@ -164,11 +207,25 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     predict = function(newdata, ...) {
       assert_that(self$is.fitted)
       if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
+        # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
+        private$probA1 <- predict_SL(modelfit = private$model.fit,
+                                     add_subject_data = FALSE,
+                                     subset_idx = self$subset_idx,
+                                     use_best_retrained_model = FALSE,
+                                     pred_holdout = FALSE,
+                                     force_data.table = TRUE,
+                                     verbose = gvars$verbose)
       } else {
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
-        private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
+        # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
+        private$probA1 <- predict_SL(modelfit = private$model.fit, newdata = newdata,
+                                     add_subject_data = FALSE,
+                                     subset_idx = self$subset_idx,
+                                     use_best_retrained_model = FALSE,
+                                     pred_holdout = FALSE,
+                                     force_data.table = TRUE,
+                                     verbose = gvars$verbose)
       }
       return(invisible(self))
     },
@@ -176,31 +233,46 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
     # Needs to know the values of b for prediction
     # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    predictAeqa = function(newdata, bw.j.sA_diff, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+    predictAeqa = function(newdata, bw.j.sA_diff, indA, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
       if (missing(newdata) && !is.null(private$probAeqa)) {
         return(private$probAeqa)
       }
 
       self$predict(newdata)
 
-      if (missing(newdata)) {
+      if (missing(newdata) & missing(indA)) {
         indA <- self$getoutvarval
-      } else {
+      } else if (missing(indA)) {
         indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
       }
 
+      # browser()
+
       assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
       probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-      probA1 <- private$probA1[self$getsubset]
+      probA1 <- private$probA1 # [self$getsubset]
 
       # check that predictions P(A=1 | dmat) exist for all obs (not NA)
-      if (any(is.na(probA1) & !is.nan(probA1))) {
+      # browser()
+
+      if (any(is.na(probA1))) {
+      # if (any(is.na(probA1) & !is.nan(probA1))) {
         stop("some of the modeling predictions resulted in NAs, which indicates an error of a prediction routine")
       }
       # assert_that(!any(is.na(probA1)))
 
       # Discrete version for joint density:
-      probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
+
+      # likelihood_1 <- as.vector(probA1^(indA) * (1 - probA1)^(1L - indA))
+      likelihood_2 <- probA1[[1]]^(indA) * (1 - probA1[[1]])^(1L - indA)
+      # likelihood_3 <- probA1[, (names(probA1)) := .SD^(indA) * (1 - .SD)^(1L - indA)]
+
+      # print(all.equal(likelihood_1, likelihood_2))
+      # print(all.equal(likelihood_1, likelihood_3[[1]]))
+
+      # probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
+      probAeqa[self$getsubset] <- likelihood_2
+
       # continuous version for the joint density:
       # probAeqa[self$getsubset] <- (probA1^indA) * exp(-probA1)^(1 - indA)
       # Alternative intergrating the last hazard chunk up to x:
@@ -209,7 +281,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         # + integrating the constant hazard all the way up to value of each sa:
         # probAeqa[self$getsubset] <- probAeqa[self$getsubset] * (1 - bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
         # cont. version of above:
-        probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
+        probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1[[1]])^(indA)
       }
       private$probAeqa <- probAeqa
 
@@ -222,20 +294,20 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
     define.subset.idx = function(data) {
       if (is.logical(self$subset_vars)) {
-        subset_idx <- self$subset_vars
+        subset_idx <- which(self$subset_vars)
       } else if (is.call(self$subset_vars)) {
         stop("calls aren't allowed in binomialModelObj$subset_vars")
       } else if (is.character(self$subset_vars)) {
         subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
       }
-      assert_that(is.logical(subset_idx))
-      if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
-        if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
-        subset_idx <- rep.int(subset_idx, data$p)
-        if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
-      }
-      assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
-      self$subset_idx <- which(subset_idx)
+      # assert_that(is.logical(subset_idx))
+      # if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
+      #   if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
+      #   subset_idx <- rep.int(subset_idx, data$p)
+      #   if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
+      # }
+      # assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
+      self$subset_idx <- subset_idx
       return(invisible(self))
     },
 
@@ -349,7 +421,8 @@ DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutc
       }
       assert_that(is.integerish(indA)) # check that observed exposure is always a vector of integers
       probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-      probA1 <- private$probA1[self$getsubset]
+      # probA1 <- private$probA1[self$getsubset]
+      probA1 <- private$probA1
       probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
       self$wipe.alldat # to save RAM space when doing many stacked regressions wipe out all internal data:
       return(probAeqa)

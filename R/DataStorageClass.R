@@ -281,40 +281,71 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     # Could also do evaluation in a special env with a custom subsetting fun '[' that will dynamically find the correct dataset that contains
     # sVar.name (dat.sVar or dat.bin.sVar) and will return sVar vector
+    # evalsubst = function(subset_vars, subset_exprs = NULL) {
+    #   res <- rep.int(TRUE, self$nobs)
+    #   if (!missing(subset_vars)) {
+    #     assert_that(is.character(subset_vars))
+    #     for (subsetvar in subset_vars) {
+    #       # *) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
+    #       sVar.vec <- self$get.outvar(var = subsetvar)
+    #       assert_that(!is.null(sVar.vec))
+    #       # *) reconstruct correct expression that tests for missing values
+    #       res <- res & (!gvars$misfun(sVar.vec))
+    #     }
+    #   }
+    #   if (!is.null(subset_exprs)) {
+    #     if (is.logical(subset_exprs)) {
+    #       res <- res & subset_exprs
+    #     } else if (is.character(subset_exprs)){
+    #       # ******************************************************
+    #       # data.table evaluation of the logical subset expression
+    #       # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_exprs))
+    #       # ******************************************************
+    #       res.tmp <- self$dat.sVar[, eval(parse(text = subset_exprs)), by = get(self$nodes$ID)][["V1"]]
+    #       assert_that(is.logical(res.tmp))
+    #       res <- res & res.tmp
+    #       # ******************************************************
+    #       # THIS WAS A BOTTLENECK: for 500K w/ 1000 bins: 4-5sec
+    #       # REPLACING WITH env that is made of data.frames instead of matrices
+    #       # ******************************************************
+    #       # eval.env <- c(data.frame(self$dat.sVar), data.frame(self$dat.bin.sVar), as.list(gvars))
+    #       # res <- try(eval(subset_exprs, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
+    #       # self$dat.sVar[eval(),]
+    #       # stop("disabled for memory/speed efficiency")
+    #     }
+    #   }
+    #   return(res)
+    # },
+
     evalsubst = function(subset_vars, subset_exprs = NULL) {
       res <- rep.int(TRUE, self$nobs)
       if (!missing(subset_vars)) {
         assert_that(is.character(subset_vars))
         for (subsetvar in subset_vars) {
-          # *) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
+          # (*) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
           sVar.vec <- self$get.outvar(var = subsetvar)
           assert_that(!is.null(sVar.vec))
-          # *) reconstruct correct expression that tests for missing values
+          # (*) reconstruct correct expression that tests for missing values
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }
       if (!is.null(subset_exprs)) {
         if (is.logical(subset_exprs)) {
-          res <- res & subset_exprs
-        } else if (is.character(subset_exprs)){
-          # ******************************************************
-          # data.table evaluation of the logical subset expression
-          # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_exprs))
-          # ******************************************************
+          return(which(res & subset_exprs))
+        } else if (is.character(subset_exprs)) {
+          ## ******************************************************
+          ## data.table evaluation of the logical subset expression
+          ## Note: This can be made faster by using keys in data.table on variables in eval(parse(text = subset_exprs))
+          ## ******************************************************
           res.tmp <- self$dat.sVar[, eval(parse(text = subset_exprs)), by = get(self$nodes$ID)][["V1"]]
           assert_that(is.logical(res.tmp))
-          res <- res & res.tmp
-          # ******************************************************
-          # THIS WAS A BOTTLENECK: for 500K w/ 1000 bins: 4-5sec
-          # REPLACING WITH env that is made of data.frames instead of matrices
-          # ******************************************************
-          # eval.env <- c(data.frame(self$dat.sVar), data.frame(self$dat.bin.sVar), as.list(gvars))
-          # res <- try(eval(subset_exprs, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
-          # self$dat.sVar[eval(),]
-          # stop("disabled for memory/speed efficiency")
+          return(which(res & res.tmp))
+        } else if (is.integer(subset_exprs)) {
+          ## The expression is already a row index, hence should be returned unchanged
+          return(subset_exprs)
         }
       }
-      return(res)
+      return(which(res))
     },
 
     # ---------------------------------------------------------------------
@@ -534,6 +565,12 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       data.table::setnames(self$dat.sVar, old = current, new = current %+% ".temp.current")
       data.table::setnames(self$dat.sVar, old = target, new = current)
       data.table::setnames(self$dat.sVar, old = current %+% ".temp.current", new = target)
+
+      if (!is.null(self$H2Oframe)) {
+        names(self$H2Oframe)[names(self$H2Oframe) %in% current] <- current %+% ".temp.current"
+        names(self$H2Oframe)[names(self$H2Oframe) %in% target] <- current
+        names(self$H2Oframe)[names(self$H2Oframe) %in% (current %+% ".temp.current")] <- target
+      }
     },
 
     eval_rule_followers = function(NodeName, gstar.NodeName) {
@@ -717,6 +754,15 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.IPwts <- IPwts
       }
     },
+    IPwts_by_regimen_h2o = function(IPwts) {
+      if (missing(IPwts)) {
+        return(private$.IPwts_h2o)
+      } else {
+        # assert_that(is.data.table(IPwts))
+        private$.IPwts_h2o <- IPwts
+      }
+    },
+
     active.bin.sVar = function() { private$.active.bin.sVar },
     ord.sVar = function() { private$.ord.sVar },
     type.sVar = function() { private$.type.sVar }
@@ -736,6 +782,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     .uncensored_idx = NULL,       # logical vector for all observation indices that are not censored at current t
     .rule_followers_idx = NULL,   # logical vector for all observation indices that are following the current rule of interest at current t
     .IPwts = NULL,
+    .IPwts_h2o = NULL,
     # Replace all missing (NA) values with a default integer (0) for matrix
     fixmiss_sVar_mat = function() {
       self$dat.sVar[gvars$misfun(self$dat.sVar)] <- gvars$misXreplace
