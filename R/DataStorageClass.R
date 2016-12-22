@@ -12,13 +12,13 @@
 # -----------------------------------------------------------------------------
 # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
 # -----------------------------------------------------------------------------
-fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar") {
+fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
   tmpf <- tempfile(fileext = ".csv")
   assertthat::assert_that(is.data.table(dat.sVar))
 
-  devDTvs <- exists("fwrite", where = "package:data.table")
+  # devDTvs <- exists("fwrite", where = "package:data.table")
 
-  if (!devDTvs) {
+  if (!use_DTfwrite) {
     message("For optimal performance please install the most recent version of data.table package.")
     H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
   } else {
