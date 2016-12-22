@@ -150,16 +150,16 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       # model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       nodes <- data$nodes
       model.fit <- try({
-                        fit_model(ID = nodes$IDnode,
-                                  t_name = nodes$tnode,
-                                  x = self$predvars,
-                                  y = self$outvar,
-                                  train_data = data,
-                                  params = self$model_contrl,
-                                  subset_idx = self$subset_idx,
-                                  useH2Oframe = TRUE,
-                                  verbose = TRUE
-                                  )
+                        longGriDiSL::fit_model(ID = nodes$IDnode,
+                                                t_name = nodes$tnode,
+                                                x = self$predvars,
+                                                y = self$outvar,
+                                                train_data = data,
+                                                params = self$model_contrl,
+                                                subset_idx = self$subset_idx,
+                                                useH2Oframe = TRUE,
+                                                verbose = TRUE
+                                                )
       })
 
       # str(model.fit$getfit$fitted_models_all[[1]])
@@ -177,15 +177,15 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         # model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
         self$model_contrl$fit.package <- "speedglm"
         self$model_contrl$fit.algorithm <- "glm"
-        model.fit <- fit_model(ID = nodes$IDnode,
-                                t_name = nodes$tnode,
-                                x = self$predvars,
-                                y = self$outvar,
-                                train_data = data,
-                                params = self$model_contrl,
-                                subset_idx = self$subset_idx,
-                                useH2Oframe = TRUE
-                                )
+        model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
+                                            t_name = nodes$tnode,
+                                            x = self$predvars,
+                                            y = self$outvar,
+                                            train_data = data,
+                                            params = self$model_contrl,
+                                            subset_idx = self$subset_idx,
+                                            useH2Oframe = TRUE
+                                            )
       }
 
       private$model.fit <- model.fit
@@ -208,24 +208,24 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       assert_that(self$is.fitted)
       if (missing(newdata) && is.null(private$probA1)) {
         # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
-        private$probA1 <- predict_SL(modelfit = private$model.fit,
-                                     add_subject_data = FALSE,
-                                     subset_idx = self$subset_idx,
-                                     use_best_retrained_model = FALSE,
-                                     pred_holdout = FALSE,
-                                     force_data.table = TRUE,
-                                     verbose = gvars$verbose)
+        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
+                                                 add_subject_data = FALSE,
+                                                 subset_idx = self$subset_idx,
+                                                 use_best_retrained_model = FALSE,
+                                                 pred_holdout = FALSE,
+                                                 force_data.table = TRUE,
+                                                 verbose = gvars$verbose)
       } else {
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
         # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-        private$probA1 <- predict_SL(modelfit = private$model.fit, newdata = newdata,
-                                     add_subject_data = FALSE,
-                                     subset_idx = self$subset_idx,
-                                     use_best_retrained_model = FALSE,
-                                     pred_holdout = FALSE,
-                                     force_data.table = TRUE,
-                                     verbose = gvars$verbose)
+        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
+                                                 add_subject_data = FALSE,
+                                                 subset_idx = self$subset_idx,
+                                                 use_best_retrained_model = FALSE,
+                                                 pred_holdout = FALSE,
+                                                 force_data.table = TRUE,
+                                                 verbose = gvars$verbose)
       }
       return(invisible(self))
     },
