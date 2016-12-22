@@ -25,6 +25,7 @@ Depends:
 Imports:
     assertthat,
     data.table,
+    longGriDiSL,
     methods,
     R6,
     Rcpp,

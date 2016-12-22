@@ -1,3 +1,5 @@
+
+
 # helper function for h2o frames
 h2o.plogis <- function(x) {
   h2o_exp_x <- h2o::h2o.exp(x)
@@ -321,7 +323,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       nodes <- data$nodes
-      private$model.fit <- fit_model(ID = nodes$IDnode,
+      private$model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
                                     t_name = nodes$tnode,
                                     x = self$predvars,
                                     y = self$outvar,
@@ -616,13 +618,13 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       } else if (missing(newdata) && is.null(private$probA1)) {
         browser()
         # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
-        private$probA1 <- predict_SL(modelfit = private$model.fit,
-                                     add_subject_data = FALSE,
-                                     subset_idx = subset_idx,
-                                     use_best_retrained_model = FALSE,
-                                     pred_holdout = FALSE,
-                                     force_data.table = FALSE,
-                                     verbose = gvars$verbose)
+        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
+                                                  add_subject_data = FALSE,
+                                                  subset_idx = subset_idx,
+                                                  use_best_retrained_model = FALSE,
+                                                  pred_holdout = FALSE,
+                                                  force_data.table = FALSE,
+                                                  verbose = gvars$verbose)
         return(private$probA1)
       } else {
         self$n <- newdata$nobs
@@ -631,13 +633,13 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
         # browser()
         # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
-        private$probA1 <- predict_SL(modelfit = private$model.fit, newdata = newdata,
-                                     add_subject_data = FALSE,
-                                     subset_idx = subset_idx,
-                                     use_best_retrained_model = FALSE,
-                                     pred_holdout = FALSE,
-                                     force_data.table = FALSE,
-                                     verbose = gvars$verbose)
+        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
+                                                   add_subject_data = FALSE,
+                                                   subset_idx = subset_idx,
+                                                   use_best_retrained_model = FALSE,
+                                                   pred_holdout = FALSE,
+                                                   force_data.table = FALSE,
+                                                   verbose = gvars$verbose)
 
         if (any(is.na(private$probA1[[1]]) )) { # & !is.nan(private$probA1[[1]])
         # if (any(is.na(private$probA1[subset_idx]) & !is.nan(private$probA1[subset_idx]))) {
