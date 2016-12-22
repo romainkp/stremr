@@ -557,6 +557,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
     # swap node names in the data.table: current -> target and target -> current
     swapNodes = function(current, target) {
+      browser()
       # if current and target have the same node names, will result in error, so exclude
       common_names <- intersect(current, target)
       current <- current[!current %in% common_names]

@@ -1,7 +1,7 @@
 notest.h2oQuasiBinomGLM.Ensemble <- function() {
     reqh2o <- requireNamespace("h2o", quietly = TRUE)
     if (reqh2o) {
-        options(stremr.verbose = FALSE)
+        options(stremr.verbose = TRUE)
         `%+%` <- function(a, b) paste0(a, b)
         require("h2o")
         h2o::h2o.init(nthreads = 1)
@@ -45,9 +45,20 @@ notest.h2oQuasiBinomGLM.Ensemble <- function() {
     h2o.no_progress()
 
     # params = list(fit.package = "h2o", fit.algorithm = "glm", solver = "L_BFGS", family = "quasibinomial")
-    set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm") # TO DO: add family to glob options , family = "binomial"
+    # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm") # TO DO: add family to glob options , family = "binomial"
+    # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm") # TO DO: add family to glob options , family = "binomial"
+
+    stremrOptions("fit.package", "h2o")
+    stremrOptions("fit.algorithm", "glm")
+    model <- "h2o.glm"
+
+    params_CENS = list(ntrees = 5000, learn_rate = 0.01, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+    params_TRT = list(ntrees = 5000, learn_rate = 0.01, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+    params_MONITOR = list(ntrees = 5000, learn_rate = 0.01, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                            params_CENS = params_CENS, params_TRT = params_TRT, params_MONITOR = params_MONITOR)
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     surv1 <- survNPMSM(wts.St.dlow, OData)
