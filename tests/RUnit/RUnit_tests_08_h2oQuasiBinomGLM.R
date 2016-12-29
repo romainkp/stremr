@@ -7,7 +7,7 @@ notest.h2oQuasiBinomGLM.Ensemble <- function() {
         h2o::h2o.init(nthreads = 1)
         # h2o::h2o.shutdown(prompt = FALSE)
         # h2o::h2o.init(nthreads = -1)
-        require('h2oEnsemble')
+        # require('h2oEnsemble')
         require("data.table")
         # require("stremr")
         data(OdatDT_10K)
@@ -43,6 +43,7 @@ notest.h2oQuasiBinomGLM.Ensemble <- function() {
     # OData$define_CVfolds(nfolds = 10, seed = 23)
     OData$fast.load.to.H2O(saveH2O = TRUE)
     h2o.no_progress()
+    # h2o.show_progress()
 
     # params = list(fit.package = "h2o", fit.algorithm = "glm", solver = "L_BFGS", family = "quasibinomial")
     # set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm") # TO DO: add family to glob options , family = "binomial"

@@ -1,4 +1,13 @@
-
+h2o.arrange <- function (x, ...)  {
+    by = as.character(list(...))
+    print(by)
+    if (!length(by))
+        stop("Please provide at least one column to sort by")
+    by = h2o:::checkMatch(by, names(x))
+    if (anyDuplicated(by))
+        stop("Some duplicate column names have been provided")
+    h2o:::.newExpr("sort", x, by - 1L)
+}
 
 # helper function for h2o frames
 h2o.plogis <- function(x) {
@@ -8,7 +17,6 @@ h2o.plogis <- function(x) {
 
 # helper function for h2o frames
 h2o.qlogis <- function(x) h2o::h2o.log(x / (1 - x))
-
 
 # Poor mans slicer until h2o error is fixed:
 reassign_rows_cols <- function(data, newsubset_idx, subset_frame, col_name = "Q.kplus1", ID = "ID", t = "t") {
@@ -514,8 +522,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
         # h2o.frame version (DOES NOT WORK AS INTENDED!!!!):
         # data$H2Oframe[newsubset_idx, "Q.kplus1"] <- subset_frame
-
-        reassign_rows_cols(data, newsubset_idx, subset_frame, col_name = "Q.kplus1", ID = data$nodes$IDnode, t = data$nodes$tnode)
+        reassign_rows_cols(data, newsubset_idx, subset_frame, col_name = "Q.kplus1", as.name(data$nodes$IDnode), as.name(data$nodes$tnode))
+        # reassign_rows_cols(data, newsubset_idx, subset_frame, col_name = "Q.kplus1", ID = data$nodes$IDnode, t = data$nodes$tnode)
 
         # data.table version:
         # # data$dat.sVar[(self$subset_idx - 1), "Q.kplus1" := init_Q_all_obs]
