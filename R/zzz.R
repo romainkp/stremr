@@ -11,7 +11,7 @@ gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$toler
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
-allowed.fit.package <- c("speedglm", "glm", "h2o")
+allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost")
 allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 

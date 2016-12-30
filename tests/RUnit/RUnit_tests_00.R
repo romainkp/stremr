@@ -3,7 +3,6 @@
 if(FALSE) {
   # to automatically enter browser when error shows up:
   # options(error=recover)
-
   library("RUnit")
   library("roxygen2")
   library("devtools")

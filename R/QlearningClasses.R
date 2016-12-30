@@ -224,16 +224,17 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       nodes <- data$nodes
+
       private$model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
-                                    t_name = nodes$tnode,
-                                    x = self$predvars,
-                                    y = self$outvar,
-                                    train_data = data,
-                                    params = self$model_contrl,
-                                    subset_idx = self$subset_idx,
-                                    # useH2Oframe = TRUE,
-                                    verbose = gvars$verbose
-                                    )
+                                                  t_name = nodes$tnode,
+                                                  x = self$predvars,
+                                                  y = self$outvar,
+                                                  train_data = data,
+                                                  params = self$model_contrl,
+                                                  subset_idx = self$subset_idx,
+                                                  # useH2Oframe = TRUE,
+                                                  verbose = gvars$verbose
+                                                  )
       self$is.fitted <- TRUE
 
       # **********************************************************************
@@ -294,7 +295,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## data$H2Oframe[self$idx_used_to_fit_initQ, "prev_Q.kplus1"] <- prev_Q.kplus1
 
       if (self$TMLE) {
-        browser()
         ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
         ## Thus, need to find which elements in predicted Q vector (probA1) where actually used for fitting the init Q
         idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
@@ -424,40 +424,41 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     predict = function(newdata, subset_idx, ...) {
       assert_that(self$is.fitted)
       if (missing(newdata) && !is.null(private$probA1)) {
+        ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         return(private$probA1)
       } else if (missing(newdata) && is.null(private$probA1)) {
-        browser()
         # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
-        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
+        probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
                                                   add_subject_data = FALSE,
                                                   subset_idx = subset_idx,
                                                   use_best_retrained_model = FALSE,
                                                   pred_holdout = FALSE,
                                                   force_data.table = TRUE, # force_data.table = FALSE,
                                                   verbose = gvars$verbose)
+        ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
+        private$probA1 <- probA1[[1]]
         return(private$probA1)
       } else {
         self$n <- newdata$nobs
         if (missing(subset_idx)) {
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
-        # browser()
         # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
-        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
+        probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                                    add_subject_data = FALSE,
                                                    subset_idx = subset_idx,
                                                    use_best_retrained_model = FALSE,
                                                    pred_holdout = FALSE,
                                                    force_data.table = TRUE, # force_data.table = FALSE,
                                                    verbose = gvars$verbose)
-
+        ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
+        private$probA1 <- probA1[[1]]
         ## check that predictions P(A=1 | dmat) exist for all obs
-        if (any(is.na(private$probA1[[1]]) & !is.nan(private$probA1[[1]]))) {
-        # if (any(is.na(private$probA1[[1]]) )) { # & !is.nan(private$probA1[[1]])
+        if (any(is.na(private$probA1) & !is.nan(private$probA1))) {
+        # if (any(is.na(private$probA1) )) { # & !is.nan(private$probA1)
           stop("some of the predicted probabilities during seq Gcomp resulted in NAs, which indicates an error of a prediction routine")
         }
-        ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
-        return(private$probA1[[1]])
+        return(private$probA1)
       }
     },
 
@@ -524,7 +525,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
       stoch.probA1 <- stoch.probA1
       private$probA1[subset_idx] <- stoch.probA1
-      invisible(return(private$probA1))
+      return(invisible(private$probA1))
     },
 
     # Return the presaved prediction P(Q.kplus=1) only for a subset based on self$getsubset and private$probA1 (which has all n predictions)

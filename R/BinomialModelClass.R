@@ -114,12 +114,12 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       # ***************************************************************************
       # Add any additional options passed on to modeling functions as extra args
       # ***************************************************************************
-      if (self$fit.package %in% c("h2o", "h2oEnsemble")) {
-        self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
-      } else {
-        self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
-      }
-      self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
+      # if (self$fit.package %in% c("h2o", "h2oEnsemble")) {
+      #   self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
+      # } else {
+      #   self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
+      # }
+      # self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
 
       if (gvars$verbose) {
         print("New instance of " %+% class(self)[1] %+% " :"); print(self$show())
@@ -157,8 +157,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
                                                 train_data = data,
                                                 params = self$model_contrl,
                                                 subset_idx = self$subset_idx,
-                                                useH2Oframe = TRUE,
-                                                verbose = TRUE
+                                                # useH2Oframe = TRUE,
+                                                verbose = gvars$verbose
                                                 )
       })
 
@@ -171,7 +171,9 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
       if (inherits(model.fit, "try-error")) {
         # browser()
-        message("running " %+% self$binomialModelObj$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")
+        # message("running " %+% self$binomialModelObj$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")
+        message("running " %+% paste0(self$fit.package, self$fit.package, collapse=",") %+% " has failed, trying to run speedglm as a backup...")
+
         # self$binomialModelObj <- BinomialGLM$new(fit.algorithm = "glm", fit.package = "speedglm", ParentModel = self, ...)
         # self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
         # model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
@@ -184,7 +186,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
                                             train_data = data,
                                             params = self$model_contrl,
                                             subset_idx = self$subset_idx,
-                                            useH2Oframe = TRUE
+                                            # useH2Oframe = TRUE
+                                            verbose = gvars$verbose
                                             )
       }
 
@@ -296,7 +299,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (is.logical(self$subset_vars)) {
         subset_idx <- which(self$subset_vars)
       } else if (is.call(self$subset_vars)) {
-        stop("calls aren't allowed in binomialModelObj$subset_vars")
+        stop("calls aren't allowed for self$subset_vars")
       } else if (is.character(self$subset_vars)) {
         subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
       }
@@ -347,15 +350,16 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       # private$probA1 <- NULL
       # private$probAeqa <- NULL
       self$subset_idx <- NULL
-      self$binomialModelObj$emptydata
-      self$binomialModelObj$emptyY
+      # self$binomialModelObj$emptydata
+      # self$binomialModelObj$emptyY
       return(self)
     },
     getfit = function() { private$model.fit },
     getprobA1 = function() { private$probA1 },
     getsubset = function() { self$subset_idx },
     getoutvarnm = function() { self$outvar },
-    getoutvarval = function() { self$binomialModelObj$getY }
+    # getoutvarval = function() { self$binomialModelObj$getY }
+    getoutvarval = function() { stop("self$getoutvarval is not implemented") }
   ),
   private = list(
     model.fit = list(),   # the model fit (either coefficients or the model fit object)

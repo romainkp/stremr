@@ -566,11 +566,11 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       data.table::setnames(self$dat.sVar, old = target, new = current)
       data.table::setnames(self$dat.sVar, old = current %+% ".temp.current", new = target)
 
-      if (!is.null(self$H2Oframe)) {
-        names(self$H2Oframe)[names(self$H2Oframe) %in% current] <- current %+% ".temp.current"
-        names(self$H2Oframe)[names(self$H2Oframe) %in% target] <- current
-        names(self$H2Oframe)[names(self$H2Oframe) %in% (current %+% ".temp.current")] <- target
-      }
+      # if (!is.null(self$H2Oframe)) {
+      #   names(self$H2Oframe)[names(self$H2Oframe) %in% current] <- current %+% ".temp.current"
+      #   names(self$H2Oframe)[names(self$H2Oframe) %in% target] <- current
+      #   names(self$H2Oframe)[names(self$H2Oframe) %in% (current %+% ".temp.current")] <- target
+      # }
     },
 
     eval_rule_followers = function(NodeName, gstar.NodeName) {

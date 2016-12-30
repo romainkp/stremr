@@ -317,7 +317,6 @@ fitSeqGcomp <- function(OData, t_periods,
   # Define the intervention nodes
   # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx
   # ------------------------------------------------------------------------------------------------
-  # browser()
 
   gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
   gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
@@ -441,6 +440,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
     EIC_i_tplus <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
     # Get t-specific and i-specific components of the EIC for all t = t.init (mean pred from last reg, all n obs)
     res_lastPredQ <- Qlearn.fit$predictRegK(Qreg_idx[1], OData$nuniqueIDs) # Qreg_idx[1] is the index for the last Q-fit
+
     EIC_i_t0 <- (res_lastPredQ - mean(res_lastPredQ))
     # Sum them all up and divide by N -> obtain the estimate of P_n(D^*_n):
     EIC_est <- (sum(EIC_i_t0) + sum(EIC_i_tplus)) / OData$nuniqueIDs
@@ -483,7 +483,6 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  # browser()
   # ------------------------------------------------------------------------------------------------
   # Defining the t periods to loop over FOR A SINGLE RUN OF THE iterative G-COMP/TMLE (one survival point)
   # **** TO DO: The stratification by follow-up has to be based only on 't' values that were observed in the data****
