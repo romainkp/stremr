@@ -1,6 +1,6 @@
 Package: stremr
 Title: Streamlined Estimation of Survival for Static, Dynamic and Stochastic Treatment and Monitoring Regimes
-Version: 0.4.0
+Version: 0.5.99
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
@@ -38,13 +38,14 @@ Imports:
 LinkingTo: Rcpp
 Suggests:
     devtools,
+    doParallel,
+    foreach,
     h2o,
     h2oEnsemble,
     knitr,
     magrittr,
     RUnit,
-    foreach,
-    doParallel
+    xgboost
 Additional_repositories: https://osofr.github.io/drat/
 License: GPL (>= 2)
 LazyData: true

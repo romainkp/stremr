@@ -1,4 +1,20 @@
 # ------------------------------------------------------------------------------------------
+# Sequential (Recursive) G-COMP Algorithm:
+# ------------------------------------------------------------------------------------------
+# 1. At each t iteration:
+#     Fitting:
+#        Outcome is always Q.kplus1 (either by regimen or not). Fitting subset excludes all obs censored at t.
+#     Prediction:
+#        Swap the entire column(s) A[t] with A^*[t] by renaming them in OData$dat.sVar (might do this for more than one regimen in the future, if pooling Q's)
+#        Subset all observation by t (including all censored and non-followers).
+#        PredictP1() for everybody in the subset, then save the prediction in rows Q.kplus1[t] and rows Q.kplus1[t-1] for all obs that were used in prediction.
+#        Results in correct algorithm even when stratifyQ_by_rule=TRUE: next iteration (t-1) will do fit only based on obs that followed the rule at t-1.
+# 2. At next iteration t-1:
+#     Fitting:
+#        Use the predictions in Q.kplus1[t-1] as new outcomes and repeat until reached minimum t.
+# ------------------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------------------
 # H2O ISSUES WITH PARALLEL TRAINING:
 # ------------------------------------------------------------------------------------------
 # 1) EVERYTIME a subset [,] is done on frame (H2O.dat.sVar[rows_subset, vars]) a new frame is created with an automatically ID
@@ -74,22 +90,6 @@
 #     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen:
 #     => Can either pool all Q.regimens at once (fit one model for repated observations, one for each rule, smoothing over rules).
 #     => Can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
-# ------------------------------------------------------------------------------------------
-
-# ------------------------------------------------------------------------------------------
-# Sequential (Recursive) G-COMP Algorithm:
-# ------------------------------------------------------------------------------------------
-# 1. At each t iteration:
-#     Fitting:
-#        Outcome is always Q.kplus1 (either by regimen or not). Fitting subset excludes all obs censored at t.
-#     Prediction:
-#        Swap the entire column(s) A[t] with A^*[t] by renaming them in OData$dat.sVar (might do this for more than one regimen in the future, if pooling Q's)
-#        Subset all observation by t (including all censored and non-followers).
-#        PredictP1() for everybody in the subset, then save the prediction in rows Q.kplus1[t] and rows Q.kplus1[t-1] for all obs that were used in prediction.
-#        Results in correct algorithm even when stratifyQ_by_rule=TRUE: next iteration (t-1) will do fit only based on obs that followed the rule at t-1.
-# 2. At next iteration t-1:
-#     Fitting:
-#        Use the predictions in Q.kplus1[t-1] as new outcomes and repeat until reached minimum t.
 # ------------------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------------------------------------------------
@@ -295,13 +295,13 @@ fitSeqGcomp <- function(OData, t_periods,
     assert_that(is.data.table(IPWeights))
     assert_that("cum.IPAW" %in% names(IPWeights))
     OData$IPwts_by_regimen <- IPWeights
-    # browser()
-    IPwts_by_regimen_h2o <- fast.load.to.H2O(OData$IPwts_by_regimen[, "cum.IPAW", with = FALSE], destination_frame = "wts_data")
-    OData$IPwts_by_regimen_h2o <- IPwts_by_regimen_h2o
-    # wts_TMLE <- as.h2o(data$IPwts_by_regimen[, "cum.IPAW", with = FALSE])
+
+    ## To load all weights into H2OFrame:
+    # IPwts_by_regimen_h2o <- fast.load.to.H2O(OData$IPwts_by_regimen[, "cum.IPAW", with = FALSE], destination_frame = "wts_data")
+    # OData$IPwts_by_regimen_h2o <- IPwts_by_regimen_h2o
 
     if (!is.null(weights)) stop("optional argument 'weights' is not implemented for TMLE or GCOMP")
-    # Add additional observation-specific weights to the cumulative weights:
+    ## Add additional observation-specific weights to the cumulative weights:
     # IPWeights <- process_opt_wts(IPWeights, weights, nodes, adjust_outcome = FALSE)
   }
 
@@ -523,19 +523,16 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
   OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
 
+  # OData$def.types.sVar() ## bottleneck, replaced with below:
   OData$set.sVar.type(name.sVar = "Q.kplus1", new.type = "binary")
   OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
-  # OData$def.types.sVar() # bottleneck
 
-  # ------------------------------------------------------------------------------------------------
-  #  ****** PRESETTING VARS FOR H2O FRAME *****
-  OData$H2Oframe[, "EIC_i_t"] <- 0.0 # set the initial (default values of the t-specific and i-specific EIC estimates)
-  OData$H2Oframe[, "Q.kplus1"] <-  h2o.asnumeric(OData$H2Oframe[[OData$nodes$Ynode]]) # set the initial values of Q (the observed outcome node)
-  OData$H2Oframe[, "prev_Q.kplus1"] <- OData$H2Oframe[, "Q.kplus1"]
-  # ------------------------------------------------------------------------------------------------
-  # as.data.table(OData$H2Oframe[OData$H2Oframe[["prev_Q.kplus1"]] != OData$H2Oframe[["Q.kplus1"]], ])
-
-  browser()
+  ## ------------------------------------------------------------------------------------------------
+  ##  ****** SAME AS ABOVE BUT WITH H2OFRAME *****
+  # OData$H2Oframe[, "EIC_i_t"] <- 0.0 # set the initial (default values of the t-specific and i-specific EIC estimates)
+  # OData$H2Oframe[, "Q.kplus1"] <-  h2o.asnumeric(OData$H2Oframe[[OData$nodes$Ynode]]) # set the initial values of Q (the observed outcome node)
+  # OData$H2Oframe[, "prev_Q.kplus1"] <- OData$H2Oframe[, "Q.kplus1"]
+  ## ------------------------------------------------------------------------------------------------
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
@@ -560,8 +557,6 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   Qlearn.fit$fit(data = OData, iterTMLE = iterTMLE)
   OData$Qlearn.fit <- Qlearn.fit
 
-  browser()
-
   # When the model is fit with user-defined stratas, need special functions to extract the final fit (current aproach will not work):
   # allQmodels[[1]]$getPsAsW.models()[[1]]$getPsAsW.models()
 
@@ -580,19 +575,18 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   # Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
   mean_est_t <- mean(res_lastPredQ)
-  # if (gvars$verbose)
-  print("Surv est 1: " %+% (1-mean_est_t))
+
+  if (gvars$verbose) print("Surv est: " %+% (1 - mean_est_t))
 
   # # 1b. Can instead grab it directly from the data, using the appropriate strata-subsetting expression
-  lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]]
-  # allQmodels[[lastQ_inx]]$get.fits()
+  lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]] ## allQmodels[[lastQ_inx]]$get.fits()
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
-  mean_est_t_2 <- h2o.mean(OData$H2Oframe[subset_idx, "Q.kplus1"])
-  # if (gvars$verbose)
-  print("Surv est 2: " %+% (1-mean_est_t_2))
-  # mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+  mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+  ## same as above but with H2OFRAME:
+  # mean_est_t_2 <- h2o.mean(OData$H2Oframe[subset_idx, "Q.kplus1"])
+  if (gvars$verbose) print("Surv est 2: " %+% (1 - mean_est_t_2))
 
   if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ))
   if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
