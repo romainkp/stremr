@@ -145,6 +145,8 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param reg_CENS ...
 #' @param reg_TRT ...
 #' @param reg_MONITOR ...
+#' @param fit.method ...
+#' @param fold_column ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
@@ -155,11 +157,25 @@ fitPropensity <- function(OData,
                           stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
                           params_CENS = list(), params_TRT = list(), params_MONITOR = list(),
                           reg_CENS, reg_TRT, reg_MONITOR,
+                          fit.method = c("none", "cv", "holdout"), fold_column = NULL,
                           verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
+
+  # fit.method <- getopt("fit.method")
+  # nfolds <- getopt("nfolds")}
+  # fold_column <- getopt("fold_column")
+  if (!missing(fit.method)) {
+    params_CENS[["fit.method"]] <- params_TRT[["fit.method"]] <- params_MONITOR[["fit.method"]] <- fit.method
+  }
+  # if (!missing(nfolds)) {
+  #   params_CENS[["nfolds"]] <- params_TRT[["nfolds"]] <- params_MONITOR[["nfolds"]] <- nfolds
+  # }
+  if (!missing(fold_column)) {
+    params_CENS[["fold_column"]] <- params_TRT[["fold_column"]] <- params_MONITOR[["fold_column"]] <- fold_column
+  }
 
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;

@@ -12,8 +12,9 @@ gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
 allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost")
-allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")
-allowed.bin.method = c("equal.mass", "equal.len", "dhist")
+allowed.fit.algorithm <- c("glm", "gbm", "randomForest", "deeplearning")
+allowed.fit.method <- c("none", "cv", "holdout")
+allowed.bin.method <- c("equal.mass", "equal.len", "dhist")
 
 #' Querying/setting a single \code{stremr} option
 #'
@@ -53,9 +54,7 @@ stremrOptions <- function (o, value)  {
   }
 }
 
-getopt <- function(optname) {
-  return(stremrOptions(o = optname))
-}
+getopt <- function(optname) return(stremrOptions(o = optname))
 
 #' Print Current Option Settings for \code{stremr}
 #' @return Invisibly returns a list of \code{stremr} options.
@@ -73,7 +72,9 @@ print_stremr_opts <- function() {
 #' The preferred way to set options for \code{stremr} is to use \code{\link{stremrOptions}}, which allows specifying individual options without having to reset all other options.
 #' To reset all options to their defaults simply run \code{set_all_stremr_options()} without any parameters/arguments.
 #' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
-#' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")
+#' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning")
+#' @param fit.method ...
+#' @param fold_column ...
 #' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
 #'  exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 #'  into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
@@ -105,8 +106,11 @@ print_stremr_opts <- function() {
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{stremrOptions}}, \code{\link{print_stremr_opts}}
 #' @export
-set_all_stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
-                            fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
+set_all_stremr_options <- function(
+                            fit.package = c("speedglm", "glm", "h2o", "xgboost"),
+                            fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning"),
+                            fit.method = c("none", "cv", "holdout"),
+                            fold_column = NULL,
                             bin.method = c("equal.mass", "equal.len", "dhist"),
                             nbins = 10,
                             maxncats = 20,
@@ -120,14 +124,20 @@ set_all_stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
 
   fit.package <- fit.package[1L]
   fit.algorithm <- fit.algorithm[1L]
+  fit.method <- fit.method[1L]
   bin.method <- bin.method[1]
+
   if (!(fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
   if (!(fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
+  if (!(fit.method %in% allowed.fit.method)) stop("fit.method must be one of: " %+% paste0(allowed.fit.method, collapse=", "))
   if (!(bin.method %in% allowed.bin.method)) stop("bin.method must be one of: " %+% paste0(allowed.bin.method, collapse=", "))
 
   opts <- list(
     fit.package = fit.package,
     fit.algorithm = fit.algorithm,
+    fit.method = fit.method,
+    fold_column = fold_column,
+
     bin.method = bin.method,
     # parfit = parfit,
     nbins = nbins,
@@ -137,6 +147,7 @@ set_all_stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
     lower_bound_zero_Q = lower_bound_zero_Q,
     skip_update_zero_Q = skip_update_zero_Q
   )
+
   gvars$opts <- opts
   options(stremr = opts)
   invisible(old.opts)

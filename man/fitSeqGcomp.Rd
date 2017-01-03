@@ -11,8 +11,8 @@ fitSeqGcomp(OData, t_periods, Qforms, Qstratify = NULL,
   TMLE = FALSE, iterTMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
   trunc_weights = 10^6, params_Q = list(), weights = NULL,
   max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10,
-  tol_eps = 0.001, parallel = FALSE,
-  verbose = getOption("stremr.verbose"))
+  tol_eps = 0.001, parallel = FALSE, fit.method = c("none", "cv",
+  "holdout"), fold_column = NULL, verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -76,6 +76,10 @@ the mean estimate of the efficient influence curve is less than 1 / (\code{adapt
 The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}}
 
 \item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)}
+
+\item{fit.method}{...}
+
+\item{fold_column}{...}
 
 \item{verbose}{...}
 }

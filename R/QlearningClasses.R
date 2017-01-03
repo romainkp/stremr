@@ -1,61 +1,3 @@
-RegressionClassQlearn <- R6Class("RegressionClassQlearn",
-  inherit = RegressionClass,
-  class = TRUE,
-  portable = TRUE,
-  public = list(
-    Qreg_counter = integer(),
-    t_period = integer(),
-    TMLE = FALSE,
-    stratifyQ_by_rule = FALSE,
-    lower_bound_zero_Q = TRUE,
-    skip_update_zero_Q = TRUE,
-    regimen_names = NA,
-    pool_regimes = FALSE,
-    initialize = function(Qreg_counter,
-                          t_period,
-                          TMLE,
-                          stratifyQ_by_rule,
-                          regimen_names,
-                          pool_regimes,
-                          lower_bound_zero_Q = getopt("lower_bound_zero_Q"),
-                          skip_update_zero_Q = getopt("skip_update_zero_Q"),
-                          ...) {
-      self$Qreg_counter <- Qreg_counter
-      self$t_period <- t_period
-
-      if (!missing(TMLE)) self$TMLE <- TMLE
-      if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
-      if (!missing(regimen_names)) self$regimen_names <- regimen_names
-      if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
-
-      self$lower_bound_zero_Q <- lower_bound_zero_Q
-      self$skip_update_zero_Q <- skip_update_zero_Q
-
-      super$initialize(...)
-    }
-  ),
-  active = list(
-    get.reg = function() {
-      list(Qreg_counter = self$Qreg_counter,
-           t_period = self$t_period,
-           TMLE = self$TMLE,
-           outvar = self$outvar,
-           predvars = self$predvars,
-           outvar.class = self$outvar.class,
-           subset_vars = self$subset_vars,
-           subset_exprs = self$subset_exprs,
-           subset_censored = self$subset_censored,
-           stratifyQ_by_rule = self$stratifyQ_by_rule,
-           lower_bound_zero_Q = self$lower_bound_zero_Q,
-           regimen_names = self$regimen_names,
-           pool_regimes = self$pool_regimes,
-           model_contrl = self$model_contrl,
-           censoring = self$censoring
-           )
-    }
-  )
-)
-
 tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
@@ -166,8 +108,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$regimen_names <- reg$regimen_names
       self$TMLE <- reg$TMLE
 
-      self$model_contrl$family <- "quasibinomial"
-
       if (gvars$verbose) {print("initialized Q class"); reg$show()}
 
       invisible(self)
@@ -212,7 +152,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
-
       # **********************************************************************
       # FITTING STEP OF Q-LEARNING
       # Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
@@ -225,16 +164,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       nodes <- data$nodes
 
-      private$model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
-                                                  t_name = nodes$tnode,
-                                                  x = self$predvars,
-                                                  y = self$outvar,
-                                                  train_data = data,
-                                                  params = self$model_contrl,
-                                                  subset_idx = self$subset_idx,
-                                                  # useH2Oframe = TRUE,
-                                                  verbose = gvars$verbose
-                                                  )
+      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
+
       self$is.fitted <- TRUE
 
       # **********************************************************************
@@ -431,7 +362,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
                                                   add_subject_data = FALSE,
                                                   subset_idx = subset_idx,
-                                                  use_best_retrained_model = FALSE,
+                                                  use_best_retrained_model = TRUE,
                                                   pred_holdout = FALSE,
                                                   force_data.table = TRUE, # force_data.table = FALSE,
                                                   verbose = gvars$verbose)
@@ -447,7 +378,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                                    add_subject_data = FALSE,
                                                    subset_idx = subset_idx,
-                                                   use_best_retrained_model = FALSE,
+                                                   use_best_retrained_model = TRUE,
                                                    pred_holdout = FALSE,
                                                    force_data.table = TRUE, # force_data.table = FALSE,
                                                    verbose = gvars$verbose)

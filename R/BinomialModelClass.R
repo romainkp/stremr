@@ -1,3 +1,58 @@
+fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx) {
+  # browser()
+  # str(models)
+  # str(model_contrl)
+
+  if (is.null(model_contrl[["fit.method"]])) method <- getopt("fit.method") else method <- model_contrl[["fit.method"]]
+  if (is.null(model_contrl[["fold_column"]])) fold_column <- getopt("fold_column") else fold_column <- model_contrl[["fold_column"]]
+  # if (is.null(model_contrl[["nfolds"]])) nfolds <- getopt("nfolds") else nfolds <- model_contrl[["nfolds"]]
+
+  if ((method %in% "cv") && is.null(fold_column) && is.null(data$fold_column)) {
+
+    stop(
+"Must manually define the folds and specify the 'fold_column' to be able to perform cross-validation (method = 'cv').
+The fold column can be defined by either:
+a) Calling define_CVfolds(data, ...), where data is the object returned by importData(); or
+b) Setting the 'fold_column' option to the name of the column that contains the fold IDs (stremrOptions('fold_column', 'name_of_the_fold_column')); or
+c) Passing the name of the existing fold column as the argument 'fold_column' of the calling function")
+
+  ## Manually provided column name with fold IDs, perform some check and save the fold information
+  } else if ((method %in% "cv") && !is.null(fold_column)) {
+
+    if (!is.character(fold_column)) stop("argument 'fold_column' must be a string")
+    data$define_CVfolds(fold_column = fold_column)
+
+  ## Use the existing fold ID column (previously defined by calling define_CVfolds())
+  } else if ((method %in% "cv") && is.null(fold_column)) fold_column <- data$fold_column
+
+  model.fit <- try({model.fit <- longGriDiSL::fit(models,
+                               method = method,
+                               ID = nodes$IDnode, t_name = nodes$tnode,
+                               x = predvars, y = outvar,
+                               data = data,
+                               verbose = gvars$verbose,
+                               fold_column = fold_column,
+                               subset_idx = subset_idx)
+  })
+
+  if (inherits(model.fit, "try-error")) {
+    message("running " %+% paste0(model_contrl$fit.package, model_contrl$fit.algorithm, collapse=",") %+% " has failed, trying to run speedglm as a backup...")
+    model_contrl[["fit.package"]] <- "speedglm"
+    model_contrl[["fit.algorithm"]] <- "glm"
+    model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
+                                        t_name = nodes$tnode,
+                                        x = predvars, y = outvar,
+                                        train_data = data,
+                                        models = model_contrl,
+                                        subset_idx = subset_idx,
+                                        # useH2Oframe = TRUE
+                                        verbose = gvars$verbose
+                                        )
+  }
+
+  return(model.fit)
+}
+
 #----------------------------------------------------------------------------------
 # Classes for modelling regression models with binary outcome Bin ~ Xmat
 #----------------------------------------------------------------------------------
@@ -19,7 +74,6 @@
 #' \item{cont.sVar.flag} - Is the original outcome variable continuous?
 #' \item{bw.j} - Bin width (interval length) for an outcome that is a bin indicator of a discretized continous outcome.
 #' \item{GLMpackage} - Controls which package will be used for performing model fits (\code{glm} or \code{speedglm}).
-#' \item{binomialModelObj} - Pointer to an instance of \code{binomialModelObj} class that contains the data.
 #' }
 #' @section Methods:
 #' \describe{
@@ -55,10 +109,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     bw.j = numeric(),
     is.fitted = FALSE,
 
-    binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
-    fit.package = character(),
-    fit.algorithm = character(),
     model_contrl = list(),
+    models = list(),
 
     n = NA_integer_,        # number of rows in the input data
     nbins = integer(),
@@ -69,31 +121,32 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
-      self$model_contrl <- reg$model_contrl
+      model_contrl <- reg$model_contrl
 
-      if ("fit.package" %in% names(self$model_contrl)) {
-        self$fit.package <- self$model_contrl[['fit.package']]
-        assert_that(is.character(self$fit.package))
+      if (!is.null(model_contrl[["models"]])) {
+        self$models <- model_contrl[["models"]]
+        model_contrl[["models"]] <- NULL
+
       } else {
-        self$fit.package <- reg$fit.package[1]
+
+        if ("fit.package" %in% names(model_contrl)) fit.package <- model_contrl[['fit.package']] else fit.package <- reg$fit.package[1L]
+        if (!(fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
+
+        if ("fit.algorithm" %in% names(model_contrl)) fit.algorithm <- model_contrl[['fit.algorithm']] else fit.algorithm <- reg$fit.algorithm[1]
+        if (!(fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
+
+        ## Add default family / distribution specification, if not provided:
+        family <- model_contrl[["family"]]
+        if (is.null(family)) family <- "quasibinomial"
+        distribution <- model_contrl[["distribution"]]
+        if (is.null(distribution)) distribution <- "bernoulli"
+
+        estimator <- fit.package %+% "_" %+% fit.algorithm
+        # self$models <- longGriDiSL::defGrid(estimator = estimator, family = family, distribution = distribution)
+        self$models <- longGriDiSL::defLearner(estimator = estimator, family = family, distribution = distribution)
       }
-      if (!(self$fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
 
-      if ("fit.algorithm" %in% names(self$model_contrl)) {
-        self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
-        assert_that(is.character(self$fit.algorithm))
-      } else {
-        self$fit.algorithm <- reg$fit.algorithm[1]
-      }
-      if (!(self$fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
-
-
-      self$model_contrl$fit.algorithm <- self$fit.algorithm
-      self$model_contrl$fit.package <- self$fit.package
-
-      ## Add default family / distribution specification, if not provided:
-      if (!("family" %in% names(self$model_contrl))) self$model_contrl$family <- "binomial"
-      if (!("bernoulli" %in% names(self$model_contrl))) self$model_contrl$distribution <- "bernoulli"
+      self$model_contrl <- model_contrl
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -110,16 +163,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
       if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
       assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
-
-      # ***************************************************************************
-      # Add any additional options passed on to modeling functions as extra args
-      # ***************************************************************************
-      # if (self$fit.package %in% c("h2o", "h2oEnsemble")) {
-      #   self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
-      # } else {
-      #   self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
-      # }
-      # self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
 
       if (gvars$verbose) {
         print("New instance of " %+% class(self)[1] %+% " :"); print(self$show())
@@ -144,54 +187,9 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
       self$define.subset.idx(data)
-
-      # browser()
-
-      # model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       nodes <- data$nodes
-      model.fit <- try({
-                        longGriDiSL::fit_model(ID = nodes$IDnode,
-                                                t_name = nodes$tnode,
-                                                x = self$predvars,
-                                                y = self$outvar,
-                                                train_data = data,
-                                                params = self$model_contrl,
-                                                subset_idx = self$subset_idx,
-                                                # useH2Oframe = TRUE,
-                                                verbose = gvars$verbose
-                                                )
-      })
 
-      # str(model.fit$getfit$fitted_models_all[[1]])
-      # Coefficients: glm coefficients
-      #       names coefficients standardized_coefficients
-      # 1 Intercept  -312.244210               -164.207677
-      # 2         t    20.147272                 98.472159
-      # 3   highA1c    -0.026123                 -0.010528
-
-      if (inherits(model.fit, "try-error")) {
-        # browser()
-        # message("running " %+% self$binomialModelObj$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")
-        message("running " %+% paste0(self$fit.package, self$fit.package, collapse=",") %+% " has failed, trying to run speedglm as a backup...")
-
-        # self$binomialModelObj <- BinomialGLM$new(fit.algorithm = "glm", fit.package = "speedglm", ParentModel = self, ...)
-        # self$binomialModelObj$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
-        # model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
-        self$model_contrl$fit.package <- "speedglm"
-        self$model_contrl$fit.algorithm <- "glm"
-        model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
-                                            t_name = nodes$tnode,
-                                            x = self$predvars,
-                                            y = self$outvar,
-                                            train_data = data,
-                                            params = self$model_contrl,
-                                            subset_idx = self$subset_idx,
-                                            # useH2Oframe = TRUE
-                                            verbose = gvars$verbose
-                                            )
-      }
-
-      private$model.fit <- model.fit
+      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
 
       self$is.fitted <- TRUE
       if (predict) {
@@ -214,7 +212,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
-                                                 use_best_retrained_model = FALSE,
+                                                 use_best_retrained_model = TRUE,
                                                  pred_holdout = FALSE,
                                                  force_data.table = TRUE,
                                                  verbose = gvars$verbose)
@@ -225,7 +223,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
-                                                 use_best_retrained_model = FALSE,
+                                                 use_best_retrained_model = TRUE,
                                                  pred_holdout = FALSE,
                                                  force_data.table = TRUE,
                                                  verbose = gvars$verbose)

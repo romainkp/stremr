@@ -190,8 +190,8 @@ RegressionClass <- R6Class("RegressionClass",
   public = list(
     reg_hazard = FALSE,            # If TRUE, the joint P(outvar|predvars) is factorized as \prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard)
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
-    fit.package = c("speedglm", "glm", "h2o"),
-    fit.algorithm = c("glm", "gbm", "randomForest", "SL"),
+    fit.package = c("speedglm", "glm", "h2o", "xgboost"),
+    fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning"),
     # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
     initialize = function(ReplMisVal0 = TRUE,
                           fit.package = getopt("fit.package"),
@@ -247,6 +247,64 @@ RegressionClass <- R6Class("RegressionClass",
   ),
   private = list(
     .S3class = "generic"
+  )
+)
+
+RegressionClassQlearn <- R6Class("RegressionClassQlearn",
+  inherit = RegressionClass,
+  class = TRUE,
+  portable = TRUE,
+  public = list(
+    Qreg_counter = integer(),
+    t_period = integer(),
+    TMLE = FALSE,
+    stratifyQ_by_rule = FALSE,
+    lower_bound_zero_Q = TRUE,
+    skip_update_zero_Q = TRUE,
+    regimen_names = NA,
+    pool_regimes = FALSE,
+    initialize = function(Qreg_counter,
+                          t_period,
+                          TMLE,
+                          stratifyQ_by_rule,
+                          regimen_names,
+                          pool_regimes,
+                          lower_bound_zero_Q = getopt("lower_bound_zero_Q"),
+                          skip_update_zero_Q = getopt("skip_update_zero_Q"),
+                          ...) {
+      self$Qreg_counter <- Qreg_counter
+      self$t_period <- t_period
+
+      if (!missing(TMLE)) self$TMLE <- TMLE
+      if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
+      if (!missing(regimen_names)) self$regimen_names <- regimen_names
+      if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
+
+      self$lower_bound_zero_Q <- lower_bound_zero_Q
+      self$skip_update_zero_Q <- skip_update_zero_Q
+
+      super$initialize(...)
+    }
+  ),
+  active = list(
+    get.reg = function() {
+      list(Qreg_counter = self$Qreg_counter,
+           t_period = self$t_period,
+           TMLE = self$TMLE,
+           outvar = self$outvar,
+           predvars = self$predvars,
+           outvar.class = self$outvar.class,
+           subset_vars = self$subset_vars,
+           subset_exprs = self$subset_exprs,
+           subset_censored = self$subset_censored,
+           stratifyQ_by_rule = self$stratifyQ_by_rule,
+           lower_bound_zero_Q = self$lower_bound_zero_Q,
+           regimen_names = self$regimen_names,
+           pool_regimes = self$pool_regimes,
+           model_contrl = self$model_contrl,
+           censoring = self$censoring
+           )
+    }
   )
 )
 

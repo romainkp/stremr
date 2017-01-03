@@ -15,37 +15,8 @@
 # ------------------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------------------
-# H2O ISSUES WITH PARALLEL TRAINING:
-# ------------------------------------------------------------------------------------------
-# 1) EVERYTIME a subset [,] is done on frame (H2O.dat.sVar[rows_subset, vars]) a new frame is created with an automatically ID
-# 2) EVERYTIME a prediction is made a new h2o frame is created: predictions_"modelIDname"_on_"H2OFRAMENAME"
-# 3) EVERYTIME a prediction result is pulled ([,"p1"]), a new temp FRAME  is created
-# 4) WHEN DOING "subsetH2Oframe[, outvar]" in BinomialH2O$setdata A NEW temp FRAME (AUTOMATIC ID) is CREATED
-# 5) Having Q.kplus1 as a column in the main DT or FRAME is also an issue, since parallel training might overwrite it
-
-# ------------------------------------------------------------------------------------------
-# POTENTIAL SOLUTION:
-# ------------------------------------------------------------------------------------------
-# *) PASS Q.kplus1 AS a vector argument?
-# *) using existing approach to LOADING A NEW FRAME FOR EVERY single call to QlearnModel$fit,
-#    but pass the args so that destination_frame is always different for each separate call of fitSeqGcomp_onet()
-# *) remove all the implicit FRAME creating steps ('[,]' with automatic IDs) with explicit steps so that destination_frame can be specified
-# *) use h2o.removeAll() to remove all frames at once
-# *) use h2o.rm(ids) to remove a single frame by its ID
-# *) h2o.ls() to list all current frames
-# *) Classify a single instance at a time:
-# http://www.h2o.ai/product/faq/#H2OClassifyInstance
-# The plain Java (POJO) scoring predict API is: public final float[] predict( double[] data, float[] preds)
-# // Pass in data in a double[], pre-aligned to the Model's requirements.
-# // Jam predictions into the preds[] array; preds[0] is reserved for the
-# // main prediction (class for classifiers or value for regression),
-# // and remaining columns hold a probability distribution for classifiers.
-
-# ------------------------------------------------------------------------------------------
 # TO DO:
 # ------------------------------------------------------------------------------------------
-# *) Need to finish/clean-up the suit of tests for all componensts.
-# *) BUG with TMLE weights when applying to real data -> last row with NA's screws everything up.
 # *) The definition of Qperiods below needs to be based on actual periods observed in the data.
 # *) Consider bringing in tmlenet syntax for defining the interventions in a node-like style.
 # *) Need to be able to differentiate binomial (binary) outcome classification and continuous outcome regression for h2o:
@@ -91,6 +62,7 @@
 #     => Can either pool all Q.regimens at once (fit one model for repated observations, one for each rule, smoothing over rules).
 #     => Can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
 # ------------------------------------------------------------------------------------------
+
 
 # ------------------------------------------------------------------------------------------------------------------------
 # When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
@@ -208,6 +180,8 @@ fitTMLE <- function(...) {
 #' @param tol_eps For iterative TMLE only: Numeric error tolerance for the iterative TMLE update.
 #' The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}
 #' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)
+#' @param fit.method ...
+#' @param fold_column ...
 #' @param verbose ...
 #' @return ...
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
@@ -231,6 +205,7 @@ fitSeqGcomp <- function(OData, t_periods,
                         adapt_stop_factor = 10,
                         tol_eps = 0.001,
                         parallel = FALSE,
+                        fit.method = c("none", "cv", "holdout"), fold_column = NULL,
                         verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
@@ -271,9 +246,14 @@ fitSeqGcomp <- function(OData, t_periods,
   # params_Q$solver <- "COORDINATE_DESCENT_NAIVE"
   # params_Q$solver <- "IRLSM"
   # params_Q$solver = "L_BFGS"
+  # params_Q$family <- "quasibinomial"
+  # # parameter for running GBM with continuous outcome (default is classification with "bernoulli" and 0/1 outcome):
+  # params_Q$distribution <- "gaussian"
 
-  # parameter for running GBM with continuous outcome (default is classification with "bernoulli" and 0/1 outcome):
-  params_Q$distribution <- "gaussian"
+  # if (missing(fit.method)) fit.method <- getopt("fit.method")
+  # if (missing(fold_column)) fold_column <- getopt("fold_column")
+  if (!missing(fit.method)) params_Q[["fit.method"]] <- fit.method
+  if (!missing(fold_column)) params_Q[["fold_column"]] <- fold_column
 
   # ------------------------------------------------------------------------------------------------
   # **** Add weights if TMLE=TRUE and if weights were defined

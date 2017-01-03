@@ -9,10 +9,22 @@
   # *) creating binary indicator matrix for continous/categorical sVar (binirize.sVar, binirize.cat.sVar)
   # *) creating design matrix (Xmat) based on predvars and row subsets (evalsubst)
 
+#' Define fold ID column for cross-validation
+#'
+#' @param data Object of class \code{DataStorageClass} (returned by calling \code{importData} function).
+#' @param nfolds The number of folds to use in V fold cross-validation.
+#' @param fold_column The name for the column that will contain the fold IDs.
+#' @param seed Fix the seed for random generator.
+#' @export
+define_CVfolds = function(data, nfolds = 5, fold_column = "fold_ID", seed = NULL) {
+  data$define_CVfolds(nfolds = nfolds, fold_column = fold_column, seed = seed)
+  return(data)
+}
+
 # -----------------------------------------------------------------------------
 # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
 # -----------------------------------------------------------------------------
-fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
+fast.load.to.H2O <- function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
   tmpf <- tempfile(fileext = ".csv")
   assertthat::assert_that(is.data.table(dat.sVar))
 
@@ -638,20 +650,40 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       return(odata_wide)
     },
 
-    define_CVfolds = function(nfolds = 5, fold_column = "fold_id", seed = 1) {
-      if (fold_column %in% names(self$dat.sVar)) {
-        self$dat.sVar[, (fold_column) := NULL]
+    define_CVfolds = function(nfolds = 5, fold_column = "fold_ID", seed = NULL) {
+
+      ## Means that fold column is already defined in the input data, just copy the information and perform few checks
+      if (missing(nfolds)) {
+        if (missing(fold_column)) stop("fold_column must be specified when nfolds is missing")
+        if (!fold_column %in% names(self$dat.sVar)) stop("fold_column could not be located in the input data")
+        if (!is.integerish(self$dat.sVar[[fold_column]]) && !(is.factor(self$dat.sVar[[fold_column]])))
+          stop("'fold_column must be either an integer or a factor")
+        nfolds <- length(unique(self$dat.sVar[[fold_column]]))
+
+        self$fold_column <- fold_column
+        ## evaluate the number of unique folds:
+        self$nfolds <- nfolds
+        return(invisible(self))
+
+      } else {
+
+        if (fold_column %in% names(self$dat.sVar)) self$dat.sVar[, (fold_column) := NULL]
+        nuniqueIDs <- self$nuniqueIDs
+        if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
+
+
+        fold_IDs <- sprintf("%02d", seq(nfolds))
+        fold_id <- as.factor(sample(rep(fold_IDs, ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
+        # fold_id <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]  # Cross-validation folds (stratified folds not yet supported)
+
+        foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
+        setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
+        setkeyv(foldsDT, cols = self$nodes$IDnode)
+        self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
+        self$fold_column <- fold_column
+        self$nfolds <- nfolds
+        return(invisible(self))
       }
-      nuniqueIDs <- self$nuniqueIDs
-      if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
-      fold_id <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]  # Cross-validation folds (stratified folds not yet supported)
-      foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
-      setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
-      setkeyv(foldsDT, cols = self$nodes$IDnode)
-      self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
-      self$fold_column <- fold_column
-      self$nfolds <- nfolds
-      return(invisible(self))
     },
 
     # -----------------------------------------------------------------------------

@@ -20,7 +20,6 @@ This R6 class can request, store and manage the design matrix Xmat, as well as t
 \item{cont.sVar.flag} - Is the original outcome variable continuous?
 \item{bw.j} - Bin width (interval length) for an outcome that is a bin indicator of a discretized continous outcome.
 \item{GLMpackage} - Controls which package will be used for performing model fits (\code{glm} or \code{speedglm}).
-\item{binomialModelObj} - Pointer to an instance of \code{binomialModelObj} class that contains the data.
 }
 }
 \section{Methods}{

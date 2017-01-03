@@ -148,7 +148,6 @@ test.speedglm.allestimators10Kdata <- function() {
   tmle_est_par4 <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", rule_name = "stratTMLE.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = FALSE)
   tmle_est_par4$estimates[]
 
-
   # ------------------------------------------------------------------
   # Make a report:
   # ------------------------------------------------------------------

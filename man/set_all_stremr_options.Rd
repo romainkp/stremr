@@ -4,16 +4,21 @@
 \alias{set_all_stremr_options}
 \title{Setting \code{stremr} Options}
 \usage{
-set_all_stremr_options(fit.package = c("speedglm", "glm", "h2o"),
-  fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning",
-  "SuperLearner"), bin.method = c("equal.mass", "equal.len", "dhist"),
-  nbins = 10, maxncats = 20, maxNperBin = 500,
-  lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE)
+set_all_stremr_options(fit.package = c("speedglm", "glm", "h2o", "xgboost"),
+  fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning"),
+  fit.method = c("none", "cv", "holdout"), fold_column = NULL,
+  bin.method = c("equal.mass", "equal.len", "dhist"), nbins = 10,
+  maxncats = 20, maxNperBin = 500, lower_bound_zero_Q = TRUE,
+  skip_update_zero_Q = TRUE)
 }
 \arguments{
 \item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}
 
-\item{fit.algorithm}{Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")}
+\item{fit.algorithm}{Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning")}
+
+\item{fit.method}{...}
+
+\item{fold_column}{...}
 
 \item{bin.method}{The method for choosing bins when discretizing and fitting the conditional continuous summary
 exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
