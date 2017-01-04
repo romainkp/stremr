@@ -212,8 +212,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
-                                                 use_best_retrained_model = TRUE,
-                                                 pred_holdout = FALSE,
+                                                 # use_best_retrained_model = TRUE,
+                                                 holdout = FALSE,
                                                  force_data.table = TRUE,
                                                  verbose = gvars$verbose)
       } else {
@@ -223,8 +223,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
-                                                 use_best_retrained_model = TRUE,
-                                                 pred_holdout = FALSE,
+                                                 # use_best_retrained_model = TRUE,
+                                                 holdout = FALSE,
                                                  force_data.table = TRUE,
                                                  verbose = gvars$verbose)
       }

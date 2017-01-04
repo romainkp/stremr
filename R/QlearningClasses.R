@@ -360,12 +360,12 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       } else if (missing(newdata) && is.null(private$probA1)) {
         # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
         probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
-                                                  add_subject_data = FALSE,
-                                                  subset_idx = subset_idx,
-                                                  use_best_retrained_model = TRUE,
-                                                  pred_holdout = FALSE,
-                                                  force_data.table = TRUE, # force_data.table = FALSE,
-                                                  verbose = gvars$verbose)
+                                          add_subject_data = FALSE,
+                                          subset_idx = subset_idx,
+                                          # use_best_retrained_model = TRUE,
+                                          holdout = FALSE,
+                                          force_data.table = TRUE, # force_data.table = FALSE,
+                                          verbose = gvars$verbose)
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
         return(private$probA1)
@@ -376,12 +376,12 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
         # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
         probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
-                                                   add_subject_data = FALSE,
-                                                   subset_idx = subset_idx,
-                                                   use_best_retrained_model = TRUE,
-                                                   pred_holdout = FALSE,
-                                                   force_data.table = TRUE, # force_data.table = FALSE,
-                                                   verbose = gvars$verbose)
+                                           add_subject_data = FALSE,
+                                           subset_idx = subset_idx,
+                                           # use_best_retrained_model = TRUE,
+                                           holdout = FALSE,
+                                           force_data.table = TRUE, # force_data.table = FALSE,
+                                           verbose = gvars$verbose)
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
         ## check that predictions P(A=1 | dmat) exist for all obs
