@@ -209,7 +209,7 @@ test.xgboost.grid.10Kdata <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-    Qgridmodels <- longGriDiSL::defGrid(estimator = "xgboost_gbm",
+    Qgridmodels <- longGriDiSL::defGrid(estimator = "xgboost__gbm",
                            family = "quasibinomial",
                            search_criteria = list(strategy = "RandomDiscrete", max_models = 10),
                            param_grid = hyper_params,
