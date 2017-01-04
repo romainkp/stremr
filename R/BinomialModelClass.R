@@ -37,17 +37,34 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
 
   if (inherits(model.fit, "try-error")) {
     message("running " %+% paste0(model_contrl$fit.package, model_contrl$fit.algorithm, collapse=",") %+% " has failed, trying to run speedglm as a backup...")
-    model_contrl[["fit.package"]] <- "speedglm"
-    model_contrl[["fit.algorithm"]] <- "glm"
-    model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
-                                        t_name = nodes$tnode,
-                                        x = predvars, y = outvar,
-                                        train_data = data,
-                                        models = model_contrl,
-                                        subset_idx = subset_idx,
-                                        # useH2Oframe = TRUE
-                                        verbose = gvars$verbose
-                                        )
+    # browser()
+    # model_contrl[["fit.package"]] <- "speedglm"
+    # model_contrl[["fit.algorithm"]] <- "glm"
+
+    glm_model <- models[1]
+    glm_model[[1]][["fit.package"]] <- "speedglm"
+    glm_model[[1]][["fit.algorithm"]] <- "glm"
+    class(glm_model) <- c(class(glm_model), "ModelStack")
+    # glm_model <- longGriDiSL::defLearner(estimator = "speedglm__glm", family = family, distribution = distribution)
+
+    # model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
+    #                                     t_name = nodes$tnode,
+    #                                     x = predvars, y = outvar,
+    #                                     train_data = data,
+    #                                     models = model_contrl,
+    #                                     subset_idx = subset_idx,
+    #                                     # useH2Oframe = TRUE
+    #                                     verbose = gvars$verbose
+    #                                     )
+    model.fit <- longGriDiSL::fit(glm_model,
+                                   method = "none",
+                                   ID = nodes$IDnode, t_name = nodes$tnode,
+                                   x = predvars, y = outvar,
+                                   data = data,
+                                   verbose = gvars$verbose,
+                                   fold_column = fold_column,
+                                   subset_idx = subset_idx)
+
   }
 
   return(model.fit)
@@ -141,7 +158,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         distribution <- model_contrl[["distribution"]]
         if (is.null(distribution)) distribution <- "bernoulli"
 
-        estimator <- fit.package %+% "_" %+% fit.algorithm
+        estimator <- fit.package %+% "__" %+% fit.algorithm
         # self$models <- longGriDiSL::defGrid(estimator = estimator, family = family, distribution = distribution)
         self$models <- longGriDiSL::defLearner(estimator = estimator, family = family, distribution = distribution)
       }
