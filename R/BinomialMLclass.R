@@ -243,24 +243,6 @@ For instructions on using h2o and installing its latest version for R go to:
         call. = FALSE)
       }
 
-      if (fit.algorithm %in% "SuperLearner") {
-        if (!requireNamespace("h2oEnsemble", quietly = TRUE)) {
-          stop(
-"Package h2oEnsemble is needed for modeling with SuperLearner.
-Please install it by typing this into R terminal:
-  library(devtools)
-  install_github(\"h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package\")",
-          call. = FALSE)
-        }
-
-        if (!"package:h2oEnsemble" %in% search())
-          stop(
-"must load 'h2oEnsemble' package prior to using the SuperLearner.
-Please type this into the R terminal:
-  library('h2oEnsemble')",
-          call. = FALSE)
-      }
-
       self$fit.class <- fit.algorithm
       class(self$fit.class) <- c(class(self$fit.class), "h2o" %+% self$fit.class)
       invisible(self)

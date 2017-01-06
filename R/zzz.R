@@ -12,7 +12,7 @@ gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
 allowed.fit.package <- c("speedglm", "glm", "h2o")
-allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")
+allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning")
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
 #' Querying/setting a single \code{stremr} option

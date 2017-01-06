@@ -106,7 +106,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       # ***************************************************************************
       # Add any additional options passed on to modeling functions as extra args
       # ***************************************************************************
-      if (self$fit.package %in% c("h2o", "h2oEnsemble")) {
+      if (self$fit.package %in% c("h2o")) {
         self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
       } else {
         self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
