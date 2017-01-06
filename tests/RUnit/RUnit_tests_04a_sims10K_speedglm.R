@@ -169,7 +169,7 @@ test.speedglm.allestimators10Kdata <- function() {
   if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Insert Author Name", openFile = FALSE)
 
-  if (rmarkdown::pandoc_available(version = "1.12.3"))
+  if (rmarkdown::pandoc_available(version = "1.12.3")) {
     make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(gcomp_est1, gcomp_est2), TMLE = list(tmle_est_par1, tmle_est_par2),
                   format = "html",
                   FUPtables = get_FUPtimes(MSM.IPAW$wts_data, IDnode = "ID", tnode = "t"),
@@ -181,9 +181,10 @@ test.speedglm.allestimators10Kdata <- function() {
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", x_legend = 9.5, y_legend = 0.99,
                   save_report_data = TRUE
                   )
+    load(file = file.path(getOption('stremr.file.path'), "sim.data.example.fup") %+% ".Rd")
+  }
 
-  load(file = file.path(getOption('stremr.file.path'), "sim.data.example.fup") %+% ".Rd")
-  names(report_results_list)
+
 
   if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData, NPMSM = report_results_list$NPMSM, MSM = report_results_list$MSM, GCOMP = report_results_list$GCOMP, TMLE = report_results_list$TMLE,
