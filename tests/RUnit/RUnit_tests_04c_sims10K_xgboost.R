@@ -14,7 +14,7 @@ test.xgboost.10Kdata <- function() {
   if (reqxgb) {
     `%+%` <- function(a, b) paste0(a, b)
     options(stremr.verbose = TRUE)
-    options(stremr.verbose = FALSE)
+    # options(stremr.verbose = FALSE)
     require("data.table")
 
     data(OdatDT_10K)
@@ -58,7 +58,7 @@ test.xgboost.10Kdata <- function() {
     OData$nfolds <- NULL
 
     # ----------------------------------------------------------------
-    # FIT PROPENSITY SCORES WITH xgboost glm
+    # FIT PROPENSITY SCORES WITH xgboost glm and V fold CV
     # ----------------------------------------------------------------
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
 
@@ -79,9 +79,9 @@ test.xgboost.10Kdata <- function() {
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # ----------------------------------------------------------------
-    # FIT PROPENSITY SCORES WITH xgboost gbm
+    # FIT PROPENSITY SCORES WITH xgboost gbm and V fold CV
     # ----------------------------------------------------------------
-    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm")
+    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit.method = "cv", fold_column = "fold_ID")
     # set_all_stremr_options(estimator = "xgboost_gbm")
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
@@ -98,31 +98,16 @@ test.xgboost.10Kdata <- function() {
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
-    # ----------------------------------------------------------------
-    # FIT PROPENSITY SCORES WITH randomForest (not implemented)
-    # ----------------------------------------------------------------
-    # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "drf")
-    # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-    #                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
-
-    # wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-    # surv1 <- survNPMSM(wts.St.dlow, OData)
-    # wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-    # surv2 <- survNPMSM(wts.St.dhigh, OData)
-
-    # if (rmarkdown::pandoc_available(version = "1.12.3"))
-    #     make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
-    #                 AddFUPtables = TRUE,
-    #                 openFile = FALSE,
-    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
-
     # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ xgboost gbm and CV
     # ---------------------------------------------------------------------------------------------------------
-    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
+    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit.method = "cv", fold_column = "fold_ID")
 
     params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
+    # params = list(fit.package = "h2o", fit.algorithm = "gbm", distribution = "bernoulli") # , objective = "reg:logistic"
+    # params = list(fit.package = "h2o", fit.algorithm = "gbm", distribution = "gaussian") # , objective = "reg:logistic"
+
+    # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
         # ntrees = 20, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
     # params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
     t.surv <- c(10)
@@ -163,6 +148,28 @@ test.xgboost.10Kdata <- function() {
     # 6: 0.0004183633 0.02045393 gTI.dhigh
 
   }
+}
+
+
+test.xgboost.RFs.10Kdata <- function() {
+   # ----------------------------------------------------------------
+    # FIT PROPENSITY SCORES WITH randomForest (not implemented)
+    # ----------------------------------------------------------------
+    # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "drf")
+    # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+    #                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+
+    # wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+    # surv1 <- survNPMSM(wts.St.dlow, OData)
+    # wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+    # surv2 <- survNPMSM(wts.St.dhigh, OData)
+
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    #     make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 AddFUPtables = TRUE,
+    #                 openFile = FALSE,
+    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 }
 
 test.xgboost.grid.10Kdata <- function() {
