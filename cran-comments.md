@@ -1,3 +1,27 @@
+## Update to fix error with data.table package:
+
+* This update fixes the current error with data.table package.
+
+## Test environments:
+* local OS X install, R 3.3.1
+* Ubuntu 12.04 R 3.3.1
+* win-builder (devel and release)
+
+## R CMD check results
+There were no ERRORs or WARNINGs. 
+
+There was 1 NOTE:
+
+* Possibly mis-spelled words in DESCRIPTION:
+  GCOMP (12:31)
+  IPW (12:17, 12:26)
+  MSM (12:22)
+  TMLE (12:51)
+
+These are not mis-spelled. I manually checked all of these words. 
+They define specific estimators / terms that are known to the intended user.
+
+
 ## Update to catch pandoc error:
 
 * As requested, also putting 'h2oEnsemble' inside single quotes.
