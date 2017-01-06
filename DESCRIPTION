@@ -8,10 +8,14 @@ Authors@R: c(
 Description: Analysis of longitudinal time-to-event or time-to-failure data. 
     Estimates the counterfactual discrete survival curve under static, dynamic and 
     stochastic interventions on treatment (exposure) and monitoring events over time. 
-    Estimators (IPW, MSM-IPW, GCOMP, longitudinal TMLE) adjust for measured time-varying 
-    confounding and informative right-censoring. Model fitting can be performed either 
-    with GLM or H2O-3 machine learning libraries, including the ensemble-based 
-    SuperLearner ('h2oEnsemble').
+    Adjusts for measured time-varying confounding and informative right-censoring.
+    Possible estimators are: bounded IPW, hazard-based IPW (AKME), MSM-IPW, GCOMP, 
+    standard LTMLE and iterative LTMLE. 
+    Nuisance parameters can be modeled with machine learning algorithms implemented in 
+    xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets).
+    Simple syntax for specifying large grids of tuning parameters, including random 
+    grid search over parameter space. 
+    Model selection can be performed via V-fold cross-validation or random validation splits.
     The exposure, monitoring and censoring variables can be coded as either binary, 
     categorical or continuous. Each can be multivariate (e.g., can use more than one 
     column of dummy indicators for different censoring events). 
@@ -25,7 +29,7 @@ Depends:
 Imports:
     assertthat,
     data.table,
-    longGriDiSL,
+    GriDiSL,
     methods,
     R6,
     Rcpp,
@@ -41,7 +45,6 @@ Suggests:
     doParallel,
     foreach,
     h2o,
-    h2oEnsemble,
     knitr,
     magrittr,
     RUnit,

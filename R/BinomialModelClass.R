@@ -25,7 +25,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   ## Use the existing fold ID column (previously defined by calling define_CVfolds())
   } else if ((method %in% "cv") && is.null(fold_column)) fold_column <- data$fold_column
 
-  model.fit <- try({model.fit <- longGriDiSL::fit(models,
+  model.fit <- try({model.fit <- GriDiSL::fit(models,
                                method = method,
                                ID = nodes$IDnode, t_name = nodes$tnode,
                                x = predvars, y = outvar,
@@ -45,9 +45,9 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     glm_model[[1]][["fit.package"]] <- "speedglm"
     glm_model[[1]][["fit.algorithm"]] <- "glm"
     class(glm_model) <- c(class(glm_model), "ModelStack")
-    # glm_model <- longGriDiSL::defLearner(estimator = "speedglm__glm", family = family, distribution = distribution)
+    # glm_model <- GriDiSL::defLearner(estimator = "speedglm__glm", family = family, distribution = distribution)
 
-    # model.fit <- longGriDiSL::fit_model(ID = nodes$IDnode,
+    # model.fit <- GriDiSL::fit_model(ID = nodes$IDnode,
     #                                     t_name = nodes$tnode,
     #                                     x = predvars, y = outvar,
     #                                     train_data = data,
@@ -56,7 +56,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     #                                     # useH2Oframe = TRUE
     #                                     verbose = gvars$verbose
     #                                     )
-    model.fit <- longGriDiSL::fit(glm_model,
+    model.fit <- GriDiSL::fit(glm_model,
                                    method = "none",
                                    ID = nodes$IDnode, t_name = nodes$tnode,
                                    x = predvars, y = outvar,
@@ -159,8 +159,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         if (is.null(distribution)) distribution <- "bernoulli"
 
         estimator <- fit.package %+% "__" %+% fit.algorithm
-        # self$models <- longGriDiSL::defGrid(estimator = estimator, family = family, distribution = distribution)
-        self$models <- longGriDiSL::defLearner(estimator = estimator, family = family, distribution = distribution)
+        # self$models <- GriDiSL::defGrid(estimator = estimator, family = family, distribution = distribution)
+        self$models <- GriDiSL::defLearner(estimator = estimator, family = family, distribution = distribution)
       }
 
       self$model_contrl <- model_contrl
@@ -226,7 +226,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       assert_that(self$is.fitted)
       if (missing(newdata) && is.null(private$probA1)) {
         # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
-        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit,
+        private$probA1 <- GriDiSL::predict_SL(modelfit = private$model.fit,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
                                                  # use_best_retrained_model = TRUE,
@@ -237,7 +237,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
         # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-        private$probA1 <- longGriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
+        private$probA1 <- GriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
                                                  # use_best_retrained_model = TRUE,
