@@ -115,7 +115,7 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
 gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                          Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+                          Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
 # ----------------------------------------------------------------------
@@ -123,7 +123,7 @@ gcomp_est[]
 # ----------------------------------------------------------------------
 \dontrun{
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                    Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+                    Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
 
@@ -185,22 +185,22 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
 
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }
 

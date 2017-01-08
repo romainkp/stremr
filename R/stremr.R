@@ -21,6 +21,7 @@ tryCatch.W.E <- function(expr){
 # Class Membership Tests
 #-----------------------------------------------------------------------------
 is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(DataStorageClass)
+is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 
 #-----------------------------------------------------------------------------
 # General utilities / Global Vars

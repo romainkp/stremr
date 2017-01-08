@@ -205,12 +205,12 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 G-Computation (pooled):
 ```R
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 ```
 
 Targeted Maximum Likelihood Estimation (TMLE) (stratified):
 ```R
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 ```
 
@@ -219,7 +219,7 @@ To parallelize estimation over several time-points (`t.surv`) for either GCOMP o
 require("doParallel")
 registerDoParallel(cores = 40)
 data.table::setthreads(1)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
 ```
 
 <a name="H2OML"></a>
@@ -237,7 +237,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gf
 
 Other available algorithms are `H2O-3` Gradient Boosting Machines (`fit.algorithm = "gbm"`), distributed GLM (including LASSO and Ridge) (`fit.algorithm = "glm"`) and Deep Neural Nets (`fit.algorithm = "deeplearning"`).
 
-Use arguments `params_...` in `fitPropensity()` and `params_Q` in `fitSeqGcomp()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
+Use arguments `params_...` in `fitPropensity()` and `models` in `fitSeqGcomp()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
 ```R
 params_TRT = list(fit.package = "h2o", fit.algorithm = "gbm", ntrees = 50, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
@@ -250,9 +250,9 @@ OData <- fitPropensity(OData,
 
 Running TMLE based on the previous fit of the propensity scores. Also applying Random Forest to estimate the sequential outcome model:
 ```R
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+models = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params_Q, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = models, stratifyQ_by_rule = TRUE)
 ```
 
 <a name="SuperLearner"></a>
@@ -354,7 +354,7 @@ OData <- fitPropensity(OData,
             gform_MONITOR = gform_MONITOR, params_MONITOR = params_MONITOR)
 ```
 
-The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One needs to specify the relevant parameters and the ensemble models as part of the `params_Q` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
+The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One needs to specify the relevant parameters and the ensemble models as part of the `models` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
 
 ### Citation
 

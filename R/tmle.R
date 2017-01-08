@@ -164,7 +164,7 @@ fitTMLE <- function(...) {
 #' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
-#' @param params_Q Optional parameters to be passed to the specific fitting algorithm for Q-learning
+#' @param models Optional parameters to be passed to the specific fitting algorithm for fitting the iterative (sequential) G-Computation formula.
 #' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param max_iter For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.
@@ -198,7 +198,7 @@ fitSeqGcomp <- function(OData, t_periods,
                         IPWeights = NULL,
                         stabilize = FALSE,
                         trunc_weights = 10^6,
-                        params_Q = list(),
+                        models = NULL,
                         weights = NULL,
                         max_iter = 15,
                         adapt_stop = TRUE,
@@ -211,7 +211,7 @@ fitSeqGcomp <- function(OData, t_periods,
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  assert_that(is.list(params_Q))
+  if (!is.null(models)) assert_that(is.ModelStack(models))
   assert_that(is.logical(adapt_stop))
 
   if (TMLE & iterTMLE) stop("Either 'TMLE' or 'iterTMLE' must be set to FALSE. Cannot estimate both within a single algorithm run.")
@@ -242,18 +242,21 @@ fitSeqGcomp <- function(OData, t_periods,
   # ------------------------------------------------------------------------------------------------
   # parameter for running h2o.glm with continous outcome (this is the only sovler that works)
   # to try experimental solvers in h2o.glm (see line #901 of GLM.java)
-  # params_Q$solver <- "COORDINATE_DESCENT"
-  # params_Q$solver <- "COORDINATE_DESCENT_NAIVE"
-  # params_Q$solver <- "IRLSM"
-  # params_Q$solver = "L_BFGS"
-  # params_Q$family <- "quasibinomial"
+  # models$solver <- "COORDINATE_DESCENT"
+  # models$solver <- "COORDINATE_DESCENT_NAIVE"
+  # models$solver <- "IRLSM"
+  # models$solver = "L_BFGS"
+  # models$family <- "quasibinomial"
   # # parameter for running GBM with continuous outcome (default is classification with "bernoulli" and 0/1 outcome):
-  # params_Q$distribution <- "gaussian"
+  # models$distribution <- "gaussian"
 
   # if (missing(fit.method)) fit.method <- getopt("fit.method")
   # if (missing(fold_column)) fold_column <- getopt("fold_column")
-  if (!missing(fit.method)) params_Q[["fit.method"]] <- fit.method
-  if (!missing(fold_column)) params_Q[["fold_column"]] <- fold_column
+
+  models_control <- list(models = models)
+
+  if (!missing(fit.method)) models_control[["fit.method"]] <- fit.method
+  if (!missing(fold_column)) models_control[["fold_column"]] <- fold_column
 
   # ------------------------------------------------------------------------------------------------
   # **** Add weights if TMLE=TRUE and if weights were defined
@@ -322,7 +325,7 @@ fitSeqGcomp <- function(OData, t_periods,
       res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
         t_period <- t_periods[t_idx]
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
-                                params_Q = params_Q, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
+                                models = models_control, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
         return(res)
       }
     } else {
@@ -330,7 +333,7 @@ fitSeqGcomp <- function(OData, t_periods,
       for (t_idx in seq_along(t_periods)) {
         t_period <- t_periods[t_idx]
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
-                                params_Q = params_Q, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
+                                models = models_control, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -457,7 +460,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
   return(invisible(Qlearn.fit))
 }
 
-fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE, iterTMLE, params_Q, max_iter = 10, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
+fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE, iterTMLE, models, max_iter = 10, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -525,7 +528,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i],
                                      TMLE = TMLE, stratifyQ_by_rule = stratifyQ_by_rule,
                                      outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
-                                     subset_vars = list("Q.kplus1"), subset_exprs = all_Q_stratify[i], model_contrl = params_Q,
+                                     subset_vars = list("Q.kplus1"), subset_exprs = all_Q_stratify[i], model_contrl = models,
                                      censoring = FALSE)
     Q_regs_list[[i]] <- reg
   }

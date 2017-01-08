@@ -139,9 +139,9 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param stratify_CENS ...
 #' @param stratify_TRT ...
 #' @param stratify_MONITOR ...
-#' @param params_CENS ...
-#' @param params_TRT ...
-#' @param params_MONITOR ...
+#' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s).
+#' @param models_TRT Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s).
+#' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism.
 #' @param reg_CENS ...
 #' @param reg_TRT ...
 #' @param reg_MONITOR ...
@@ -155,7 +155,7 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 fitPropensity <- function(OData,
                           gform_CENS, gform_TRT, gform_MONITOR,
                           stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
-                          params_CENS = list(), params_TRT = list(), params_MONITOR = list(),
+                          models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
                           reg_CENS, reg_TRT, reg_MONITOR,
                           fit.method = c("none", "cv", "holdout"), fold_column = NULL,
                           verbose = getOption("stremr.verbose")) {
@@ -167,14 +167,23 @@ fitPropensity <- function(OData,
   # fit.method <- getopt("fit.method")
   # nfolds <- getopt("nfolds")}
   # fold_column <- getopt("fold_column")
+
+  if (!is.null(models_CENS)) assert_that(is.ModelStack(models_CENS))
+  if (!is.null(models_TRT)) assert_that(is.ModelStack(models_TRT))
+  if (!is.null(models_MONITOR)) assert_that(is.ModelStack(models_MONITOR))
+
+  models_CENS_control <- list(models = models_CENS)
+  models_TRT_control <- list(models = models_TRT)
+  models_MONITOR_control <- list(models = models_MONITOR)
+
   if (!missing(fit.method)) {
-    params_CENS[["fit.method"]] <- params_TRT[["fit.method"]] <- params_MONITOR[["fit.method"]] <- fit.method
+    models_CENS_control[["fit.method"]] <- models_TRT_control[["fit.method"]] <- models_MONITOR_control[["fit.method"]] <- fit.method
   }
   # if (!missing(nfolds)) {
-  #   params_CENS[["nfolds"]] <- params_TRT[["nfolds"]] <- params_MONITOR[["nfolds"]] <- nfolds
+  #   models_CENS[["nfolds"]] <- models_TRT[["nfolds"]] <- models_MONITOR[["nfolds"]] <- nfolds
   # }
   if (!missing(fold_column)) {
-    params_CENS[["fold_column"]] <- params_TRT[["fold_column"]] <- params_MONITOR[["fold_column"]] <- fold_column
+    models_CENS_control[["fold_column"]] <- models_TRT_control[["fold_column"]] <- models_MONITOR_control[["fold_column"]] <- fold_column
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -188,11 +197,11 @@ fitPropensity <- function(OData,
   names(g_CAN_regs_list) <- c("gC", "gA", "gN")
   class(g_CAN_regs_list) <- c(class(g_CAN_regs_list), "ListOfRegressionForms")
 
-  g_CAN_regs_list[["gC"]] <- internal_define_reg(reg_CENS, gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS, model_contrl = params_CENS,
+  g_CAN_regs_list[["gC"]] <- internal_define_reg(reg_CENS, gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS, model_contrl = models_CENS_control,
                                                  OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
-  g_CAN_regs_list[["gA"]] <- internal_define_reg(reg_TRT, gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT, model_contrl = params_TRT,
+  g_CAN_regs_list[["gA"]] <- internal_define_reg(reg_TRT, gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT, model_contrl = models_TRT_control,
                                                  OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  g_CAN_regs_list[["gN"]] <- internal_define_reg(reg_MONITOR, gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR, model_contrl = params_MONITOR,
+  g_CAN_regs_list[["gN"]] <- internal_define_reg(reg_MONITOR, gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR, model_contrl = models_MONITOR_control,
                                                  OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
 
   # ------------------------------------------------------------------------------------------
@@ -201,11 +210,6 @@ fitPropensity <- function(OData,
   # Perform fit and prediction
   # ------------------------------------------------------------------------------------------
   modelfits.g0 <- GenericModel$new(reg = g_CAN_regs_list, DataStorageClass.g0 = OData)
-
-  # load data into h2o (not used):
-  # mainH2Oframe <- OData$fast.load.to.H2O(OData$dat.sVar,
-  #                                       saveH2O = TRUE,
-  #                                       destination_frame = "H2OMainDataTable")
   modelfits.g0$fit(data = OData, predict = TRUE)
 
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
@@ -807,7 +811,7 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
                         silent = TRUE)
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
       if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
-      ctrl <- glm.control(trace = FALSE)
+      ctrl <- glm_control(trace = FALSE)
       SuppressGivenWarnings({
         m.fit <- stats::glm.fit(x = Xdesign.mat,
                                 y = as.numeric(wts_data[[Ynode]]),

@@ -1,8 +1,4 @@
 fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx) {
-  # browser()
-  # str(models)
-  # str(model_contrl)
-
   if (is.null(model_contrl[["fit.method"]])) method <- getopt("fit.method") else method <- model_contrl[["fit.method"]]
   if (is.null(model_contrl[["fold_column"]])) fold_column <- getopt("fold_column") else fold_column <- model_contrl[["fold_column"]]
   # if (is.null(model_contrl[["nfolds"]])) nfolds <- getopt("nfolds") else nfolds <- model_contrl[["nfolds"]]
@@ -26,13 +22,13 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   } else if ((method %in% "cv") && is.null(fold_column)) fold_column <- data$fold_column
 
   model.fit <- try({model.fit <- GriDiSL::fit(models,
-                               method = method,
-                               ID = nodes$IDnode, t_name = nodes$tnode,
-                               x = predvars, y = outvar,
-                               data = data,
-                               verbose = gvars$verbose,
-                               fold_column = fold_column,
-                               subset_idx = subset_idx)
+                                              method = method,
+                                              ID = nodes$IDnode, t_name = nodes$tnode,
+                                              x = predvars, y = outvar,
+                                              data = data,
+                                              verbose = gvars$verbose,
+                                              fold_column = fold_column,
+                                              subset_idx = subset_idx)
   })
 
   if (inherits(model.fit, "try-error")) {
@@ -57,13 +53,13 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     #                                     verbose = gvars$verbose
     #                                     )
     model.fit <- GriDiSL::fit(glm_model,
-                                   method = "none",
-                                   ID = nodes$IDnode, t_name = nodes$tnode,
-                                   x = predvars, y = outvar,
-                                   data = data,
-                                   verbose = gvars$verbose,
-                                   fold_column = fold_column,
-                                   subset_idx = subset_idx)
+                               method = "none",
+                               ID = nodes$IDnode, t_name = nodes$tnode,
+                               x = predvars, y = outvar,
+                               data = data,
+                               verbose = gvars$verbose,
+                               fold_column = fold_column,
+                               subset_idx = subset_idx)
 
   }
 
@@ -141,6 +137,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       model_contrl <- reg$model_contrl
 
       if (!is.null(model_contrl[["models"]])) {
+
         self$models <- model_contrl[["models"]]
         model_contrl[["models"]] <- NULL
 

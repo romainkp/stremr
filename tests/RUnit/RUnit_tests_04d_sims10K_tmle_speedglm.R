@@ -126,12 +126,12 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # t.surv <- c(1,2,3,4,5,6,7,8,9,10)
   # Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  # gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  # gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
   # gcomp_est; tmle_est
 
-  # gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
-  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+  # gcomp_fit <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+  # tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
   # gcomp_est; tmle_est
 
   # ------------------------------------------------------------------------
