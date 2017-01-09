@@ -6,6 +6,99 @@
 # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 # ---------------------------------------------------------------------------
 
+## doesn't work
+test.xgb_parallel <- function() {
+    require("xgboost")
+    library('foreach')
+    library('doParallel')
+    library('xgboost')
+
+    # data(agaricus.train, package='xgboost')
+    # data(agaricus.test, package='xgboost')
+
+    # dtrain <- xgboost::xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
+    # dtest <- xgboost::xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
+    # watchlist <- list(eval = dtest, train = dtrain)
+
+    # ## A simple xgb.train example:
+    # param <- list(max_depth = 5, eta = 0.02, silent = 1, nthread = 2,
+    #               objective = "binary:logistic", eval_metric = "auc")
+    # bst <- xgboost::xgb.train(param, dtrain, nrounds = 2, watchlist)
+
+
+    Models <- function(seed){
+        data(agaricus.train, package='xgboost')
+        data(agaricus.test, package='xgboost')
+
+        dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
+        dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
+
+        watchlist <- list(eval = dtest, train = dtrain)
+        param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
+                      objective = "binary:logistic", eval_metric = "auc")
+        bst <- xgb.train(param, dtrain, nrounds = 2, watchlist)
+        return(bst)
+    }
+
+    # registerDoParallel(cores = 20)
+    # cl <- makeCluster(20)
+    cl <- makeForkCluster(20)
+    registerDoParallel(cl)
+
+    r <- foreach(n=seq.int(100), .packages=c('xgboost')) %dopar% {
+        Models(n)
+        # dtrain <- xgboost::xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
+        # dtest <- xgboost::xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
+        # watchlist <- list(eval = dtest, train = dtrain)
+
+        # param <- list(max_depth = 5, eta = 0.02, silent = 1, nthread = 1,
+        #               objective = "binary:logistic", eval_metric = "auc")
+        # bst <- xgboost::xgb.train(param, dtrain, nrounds = 2, watchlist)
+        # bst$niter
+      # do.call('rbind', lapply(seq_len(n), function(i) {
+      #   ind <- sample(100, 100, replace=TRUE)
+      #   result1 <- glm(x[ind,2]~x[ind,1], family=binomial(logit))
+      #   coefficients(result1)
+      # }))
+    }
+
+    stopCluster(cl)
+
+}
+
+
+test.xgb_parallel_2 <- function() {
+    library('foreach')
+    library('doParallel')
+    library('xgboost')
+
+    BootStrappedModels <- function(seed){
+        x = matrix(rnorm(1:1000),200,5)
+        target = sample(0:2,200,replace = TRUE)
+        xgb_dat <- xgb.DMatrix(x, label = target)
+
+        param <- list("objective" = "multi:softprob",
+                      "eval_metric" = "mlogloss",
+                      "num_class" = 3,
+                      "nthread" = 5)
+        # tempModel <- xgboost(params=param, data=x, label=(target), nrounds=5)
+        tempModel <- xgb.train(params=param, data=xgb_dat, nrounds=5)
+        return (tempModel)
+    }
+
+    # registerDoParallel(cores = 20)
+    # cl <- makeCluster(20)
+    cl <- makeForkCluster(20)
+    registerDoParallel(cl)
+
+    models <- foreach (i=(1:100), .packages=c('xgboost')) %dopar% {
+      BootStrappedModels(i)
+    }
+
+    stopCluster(cl)
+    preds <- predict(models[[1]],x) ####This is where failure occurs
+}
+
 # ---------------------------------------------------------------------------
 # Test xgboost learners
 # ---------------------------------------------------------------------------
@@ -13,8 +106,9 @@ test.xgboost.10Kdata <- function() {
   reqxgb <- requireNamespace("xgboost", quietly = TRUE)
   if (reqxgb) {
     `%+%` <- function(a, b) paste0(a, b)
-    options(stremr.verbose = TRUE)
-    # options(stremr.verbose = FALSE)
+    library("stremr")
+    # options(stremr.verbose = TRUE)
+    options(stremr.verbose = FALSE)
     require("data.table")
 
     data(OdatDT_10K)
@@ -108,7 +202,7 @@ test.xgboost.10Kdata <- function() {
     checkException(tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE))
 
     # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-    params <- GriDiSL::defLearner(estimator = "xgboost__gbm", family = "quasibinomial",
+    params <- GriDiSL::defLearner(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 2,
                                    nrounds = 500,
                                    learning_rate = 0.05, # learning_rate = 0.01,
                                    max_depth = 5,
@@ -133,16 +227,43 @@ test.xgboost.10Kdata <- function() {
     # Parallel TMLE w/ xgboost gbm and CV
     # ---------------------------------------------------------------------------------------------------------
     require("doParallel")
-    registerDoParallel(cores = 6)
+    # registerDoParallel(cores = 6)
+    cl <- makeForkCluster(10)
+    registerDoParallel(cl)
+    # cl <- makeCluster(10)
+    # registerDoParallel(cl)
+
+    data.table::setDTthreads(1)
+
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
-    params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-    t.surv <- c(5,6,7,8,9,10)
+    # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
+    params <- GriDiSL::defLearner(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+                                  nrounds = 500,
+                                  learning_rate = 0.05, # learning_rate = 0.01,
+                                  max_depth = 5,
+                                  min_child_weight = 10,
+                                  colsample_bytree = 0.3,
+                                  early_stopping_rounds = 10,
+                                  seed = 23)
+
+    # params <- GriDiSL::defLearner(estimator = "speedglm__glm", family = "quasibinomial",
+    #                               # nthread = 1,
+    #                               # nrounds = 500,
+    #                               # learning_rate = 0.05, # learning_rate = 0.01,
+    #                               # max_depth = 5,
+    #                               # min_child_weight = 10,
+    #                               # colsample_bytree = 0.3,
+    #                               # early_stopping_rounds = 10,
+    #                               seed = 23)
+
+    t.surv <- c(1,2,3,4,5,6,7,8,9,10)
+    # t.surv <- c(5,10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     tmle_est <- fitTMLE(OData, t_periods = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         parallel = TRUE)
-    tmle_est$estimates[]
+    print(tmle_est$estimates[])
 
     # est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates   type
     # 1:     TMLE  5 0.1507051 0.8492949           TRUE              0 pooled
@@ -159,6 +280,20 @@ test.xgboost.10Kdata <- function() {
     # 5: 0.0003959690 0.01989897 gTI.dhigh
     # 6: 0.0004183633 0.02045393 gTI.dhigh
 
+    # latest server run using PSOCK cluster:
+    #         est_name  t       risk      surv ALLsuccessTMLE nFailedUpdates   type     TMLE_Var     TMLE_SE rule.name
+    #  1:     TMLE  1 0.02450699 0.9754930           TRUE              0 pooled 3.674968e-05 0.006062151 gTI.dhigh
+    #  2:     TMLE  2 0.04892953 0.9510705           TRUE              0 pooled 7.700189e-05 0.008775072 gTI.dhigh
+    #  3:     TMLE  3 0.08690177 0.9130982           TRUE              0 pooled 1.482959e-04 0.012177679 gTI.dhigh
+    #  4:     TMLE  4 0.12705143 0.8729486           TRUE              0 pooled 2.157107e-04 0.014687095 gTI.dhigh
+    #  5:     TMLE  5 0.14872879 0.8512712           TRUE              0 pooled 2.524471e-04 0.015888583 gTI.dhigh
+    #  6:     TMLE  6 0.17629191 0.8237081           TRUE              0 pooled 3.123623e-04 0.017673774 gTI.dhigh
+    #  7:     TMLE  7 0.20630433 0.7936957           TRUE              0 pooled 3.562768e-04 0.018875297 gTI.dhigh
+    #  8:     TMLE  8 0.22884185 0.7711581           TRUE              0 pooled 3.862008e-04 0.019651993 gTI.dhigh
+    #  9:     TMLE  9 0.24857200 0.7514280           TRUE              0 pooled 4.131439e-04 0.020325941 gTI.dhigh
+    # 10:     TMLE 10 0.26547898 0.7345210           TRUE              0 pooled 4.322688e-04 0.020791075 gTI.dhigh
+
+    stopCluster(cl)
   }
 }
 
@@ -338,7 +473,7 @@ test.xgboost.grid.10Kdata <- function() {
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
     t.surv <- c(5,6,7,8,9,10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE, parallel = TRUE)
+    gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
     gcomp_est$estimates[]
     #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates   type
     # 1:    GCOMP  5 0.1806779 0.8193221          FALSE              6 pooled
