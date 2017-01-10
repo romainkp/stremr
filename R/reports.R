@@ -123,6 +123,14 @@ call. = FALSE)
   fitted.coefs.gA <- OData$modelfit.gA$get.fits()
   fitted.coefs.gN <- OData$modelfit.gN$get.fits()
 
+  # browser()
+  # str(fitted.coefs.gC[[1]])
+  # fitted.coefs.gC[[1]]$show(print_format = FALSE, model_stats = TRUE, all_fits = TRUE)
+  # fitted.coefs.gC[[1]]$summary(all_fits = TRUE)
+  # str(fitted.coefs.gC[[1]]$get_best_models()[[1]])
+  # fitted.coefs.gC[[1]]$get_best_models()[[1]]
+  # print(fitted.coefs.gC[[1]]$get_best_models(), only.coefs = TRUE)
+
   ## -------------------------------------------------------------------------------------
   ## Number of unique ID and number of person time obs
   ## -------------------------------------------------------------------------------------

@@ -6,25 +6,13 @@
 # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
 # ---------------------------------------------------------------------------
 
-## doesn't work
+## ---------------------------------------------
+## Runs fine on AWS
+## ---------------------------------------------
 test.xgb_parallel <- function() {
-    require("xgboost")
     library('foreach')
     library('doParallel')
     library('xgboost')
-
-    # data(agaricus.train, package='xgboost')
-    # data(agaricus.test, package='xgboost')
-
-    # dtrain <- xgboost::xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
-    # dtest <- xgboost::xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
-    # watchlist <- list(eval = dtest, train = dtrain)
-
-    # ## A simple xgb.train example:
-    # param <- list(max_depth = 5, eta = 0.02, silent = 1, nthread = 2,
-    #               objective = "binary:logistic", eval_metric = "auc")
-    # bst <- xgboost::xgb.train(param, dtrain, nrounds = 2, watchlist)
-
 
     Models <- function(seed){
         data(agaricus.train, package='xgboost')
@@ -40,29 +28,20 @@ test.xgb_parallel <- function() {
         return(bst)
     }
 
-    # registerDoParallel(cores = 20)
-    # cl <- makeCluster(20)
-    cl <- makeForkCluster(20)
-    registerDoParallel(cl)
+    registerDoParallel(cores = 20)
 
-    r <- foreach(n=seq.int(100), .packages=c('xgboost')) %dopar% {
+    r <- foreach(n=seq.int(200), .packages=c('xgboost')) %dopar% {
         Models(n)
-        # dtrain <- xgboost::xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
-        # dtest <- xgboost::xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
-        # watchlist <- list(eval = dtest, train = dtrain)
-
-        # param <- list(max_depth = 5, eta = 0.02, silent = 1, nthread = 1,
-        #               objective = "binary:logistic", eval_metric = "auc")
-        # bst <- xgboost::xgb.train(param, dtrain, nrounds = 2, watchlist)
-        # bst$niter
-      # do.call('rbind', lapply(seq_len(n), function(i) {
-      #   ind <- sample(100, 100, replace=TRUE)
-      #   result1 <- glm(x[ind,2]~x[ind,1], family=binomial(logit))
-      #   coefficients(result1)
-      # }))
     }
 
     stopCluster(cl)
+    stopImplicitCluster()
+
+    # cl <- makeCluster(20)
+    # registerDoParallel(cl)
+
+    # cl <- makeForkCluster(32)
+    # registerDoParallel(cl)
 
 }
 
@@ -75,27 +54,32 @@ test.xgb_parallel_2 <- function() {
     BootStrappedModels <- function(seed){
         x = matrix(rnorm(1:1000),200,5)
         target = sample(0:2,200,replace = TRUE)
+
         xgb_dat <- xgb.DMatrix(x, label = target)
 
         param <- list("objective" = "multi:softprob",
                       "eval_metric" = "mlogloss",
                       "num_class" = 3,
-                      "nthread" = 5)
-        # tempModel <- xgboost(params=param, data=x, label=(target), nrounds=5)
+                      "nthread" = 1)
         tempModel <- xgb.train(params=param, data=xgb_dat, nrounds=5)
         return (tempModel)
     }
 
-    # registerDoParallel(cores = 20)
+    registerDoParallel(cores = 32)
     # cl <- makeCluster(20)
-    cl <- makeForkCluster(20)
-    registerDoParallel(cl)
+    # cl <- makeForkCluster(32)
+    # registerDoParallel(cl)
+
+    # registerDoSEQ()
 
     models <- foreach (i=(1:100), .packages=c('xgboost')) %dopar% {
       BootStrappedModels(i)
     }
 
+
     stopCluster(cl)
+    stopImplicitCluster()
+
     preds <- predict(models[[1]],x) ####This is where failure occurs
 }
 
@@ -107,8 +91,8 @@ test.xgboost.10Kdata <- function() {
   if (reqxgb) {
     `%+%` <- function(a, b) paste0(a, b)
     library("stremr")
-    # options(stremr.verbose = TRUE)
-    options(stremr.verbose = FALSE)
+    options(stremr.verbose = TRUE)
+    # options(stremr.verbose = FALSE)
     require("data.table")
 
     data(OdatDT_10K)
@@ -226,14 +210,16 @@ test.xgboost.10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # Parallel TMLE w/ xgboost gbm and CV
     # ---------------------------------------------------------------------------------------------------------
+    require("foreach")
     require("doParallel")
-    # registerDoParallel(cores = 6)
-    cl <- makeForkCluster(10)
-    registerDoParallel(cl)
-    # cl <- makeCluster(10)
-    # registerDoParallel(cl)
 
-    data.table::setDTthreads(1)
+    registerDoParallel(cores = 20)
+
+    # cl <- makeForkCluster(10)
+    # registerDoParallel(cl)
+    # # cl <- makeCluster(10)
+    # # registerDoParallel(cl)
+    # data.table::setDTthreads(1)
 
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
     # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
@@ -256,13 +242,19 @@ test.xgboost.10Kdata <- function() {
     #                               # early_stopping_rounds = 10,
     #                               seed = 23)
 
+    # t.surv <- c(1,2,3,4,5,6,7,8,9,10)
     t.surv <- c(1,2,3,4,5,6,7,8,9,10)
-    # t.surv <- c(5,10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    tmle_est <- fitTMLE(OData, t_periods = t.surv,
+    tmle_est <- fitSeqGcomp(OData, t_periods = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         parallel = TRUE)
+
+    # tmle_est <- fitTMLE(OData, t_periods = t.surv,
+    #                     intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
+    #                     stratifyQ_by_rule = FALSE,
+    #                     parallel = TRUE)
+
     print(tmle_est$estimates[])
 
     # est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates   type

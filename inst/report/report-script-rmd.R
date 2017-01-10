@@ -67,7 +67,7 @@ panderOptions('knitr.auto.asis', FALSE)
 set.alignment('left', row.names = 'right')
 if (!skip.modelfits) {
   for (reg.model in fitted.coefs.gC) {
-    print(reg.model, only.coefs = only.coefs)
+    print(reg.model$get_best_models(), only.coefs = only.coefs)
   }
 }
 
@@ -76,7 +76,7 @@ if (!skip.modelfits) {
 #+ echo=FALSE, results='asis'
 if (!skip.modelfits) {
   for (reg.model in fitted.coefs.gA) {
-    print(reg.model, only.coefs = only.coefs)
+    print(reg.model$get_best_models(), only.coefs = only.coefs)
   }
 }
 
@@ -85,7 +85,7 @@ if (!skip.modelfits) {
 #+ echo=FALSE, results='asis'
 if (!skip.modelfits) {
   for (reg.model in fitted.coefs.gN) {
-    print(reg.model, only.coefs = only.coefs)
+    print(reg.model$get_best_models(), only.coefs = only.coefs)
   }
 }
 
