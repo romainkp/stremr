@@ -119,8 +119,6 @@ call. = FALSE)
   ## -------------------------------------------------------------------------------------
   ## MODEL FITS:
   ## -------------------------------------------------------------------------------------
-  browser()
-
   model_fits_gC <- OData$modelfit.gC$get.fits()
   model_summaries_gC <- OData$modelfit.gC$get.model.summaries()
 
