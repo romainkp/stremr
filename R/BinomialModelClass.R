@@ -125,11 +125,12 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     model_contrl = list(),
     models = list(),
 
-    n = NA_integer_,        # number of rows in the input data
+    n = NA_integer_,         # total number of rows in the input data
+    n_obs_fit = NA_integer_, # total number of observations used for fitting the model
     nbins = integer(),
-    subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
+    subset_vars = NULL,      # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
     subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
-    subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
+    subset_idx = NULL,       # Logical vector of length n (TRUE = include the obs)
 
     ReplMisVal0 = logical(),
 
@@ -203,6 +204,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       self$define.subset.idx(data)
       nodes <- data$nodes
 
+      self$n_obs_fit <- length(self$subset_idx)
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
 
       self$is.fitted <- TRUE
@@ -347,12 +349,16 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       return(list(model.fit))
     },
 
+    get.model.summaries = function() {
+      return(list(self$show(print_format = FALSE)))
+    },
+
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE) {
       if (print_format) {
-        return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% ";\\ Stratify: " %+% self$subset_exprs)
+        return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% ";\\ Stratify: " %+% self$subset_exprs %+% ";\\ N: " %+% self$n_obs_fit)
       } else {
-        return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs))
+        return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs, N = self$n_obs_fit))
       }
     }
   ),

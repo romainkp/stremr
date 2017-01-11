@@ -7,7 +7,7 @@
 #+ setup, include=FALSE
 require("knitr")
 require("pander")
-require("GriDiSL")
+# require("GriDiSL")
 opts_chunk$set(fig.path = figure.dir)
 panderOptions("table.split.table", Inf)
 
@@ -59,6 +59,9 @@ f_obtain_TMLE_St <- function(TMLE, optArgReport) {
 #' Number of person-time observations in the input data:
 {{prettyNum(nobs, big.mark = ",", scientific = FALSE)}}
 #'
+#' Total number of unique time-points in the input data:
+{{prettyNum(nuniquets, big.mark = ",", scientific = FALSE)}}
+#'
 #' # Model fits for propensity scores
 #'
 #' ## Model(s) for censoring variable(s):
@@ -67,8 +70,10 @@ f_obtain_TMLE_St <- function(TMLE, optArgReport) {
 panderOptions('knitr.auto.asis', FALSE)
 set.alignment('left', row.names = 'right')
 if (!skip.modelfits) {
-  for (reg.model in fitted.coefs.gC) {
-    best_model <- reg.model$get_best_models(K=1)[[1]]
+  for (reg.model.idx in seq_along(model_fits_gC)) {
+    cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
+    pander::pander(model_summaries_gC[[reg.model.idx]])
+    best_model <- model_fits_gC[[reg.model.idx]]$get_best_models(K=1)[[1]]
     GriDiSL::print_tables(best_model)
     # print(reg.model$get_best_models(), only.coefs = only.coefs)
   }
@@ -78,8 +83,10 @@ if (!skip.modelfits) {
 
 #+ echo=FALSE, results='asis'
 if (!skip.modelfits) {
-  for (reg.model in fitted.coefs.gA) {
-    best_model <- reg.model$get_best_models(K=1)[[1]]
+  for (reg.model.idx in seq_along(model_fits_gA)) {
+    cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
+    pander::pander(model_summaries_gA[[reg.model.idx]])
+    best_model <- model_fits_gA[[reg.model.idx]]$get_best_models(K=1)[[1]]
     GriDiSL::print_tables(best_model)
     # print(reg.model$get_best_models(), only.coefs = only.coefs)
   }
@@ -89,8 +96,10 @@ if (!skip.modelfits) {
 
 #+ echo=FALSE, results='asis'
 if (!skip.modelfits) {
-  for (reg.model in fitted.coefs.gN) {
-    best_model <- reg.model$get_best_models(K=1)[[1]]
+  for (reg.model.idx in seq_along(model_fits_gN)) {
+    cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
+    pander::pander(model_summaries_gN[[reg.model.idx]])
+    best_model <- model_fits_gN[[reg.model.idx]]$get_best_models(K=1)[[1]]
     GriDiSL::print_tables(best_model)
     # print(reg.model$get_best_models(), only.coefs = only.coefs)
   }

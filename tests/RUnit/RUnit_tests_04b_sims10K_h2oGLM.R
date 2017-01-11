@@ -71,7 +71,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     if (rmarkdown::pandoc_available(version = "1.12.3"))
         make_report_rmd(OData,
                     MSM = MSM.IPAW,
-                    AddFUPtables = TRUE,
+                    # AddFUPtables = TRUE,
                     # openFile = FALSE,
                     openFile = TRUE,
                     RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),

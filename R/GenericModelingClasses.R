@@ -182,7 +182,17 @@ GenericModel <- R6Class(classname = "GenericModel",
         if (is.list(res)) res_models <- c(res_models, res)
       }
       return(res_models)
+    },
+    # call itself until reaches a terminal model fit with coefficients + regression returned with show()
+    get.model.summaries = function() {
+      res_models <- NULL
+      for (k_i in seq_along(private$PsAsW.models)) {
+        res <- private$PsAsW.models[[k_i]]$get.model.summaries()
+        if (is.list(res)) res_models <- c(res_models, res)
+      }
+      return(res_models)
     }
+
   ),
   active = list(
     # recursively call all saved daughter model fits and wipe out any traces of saved data

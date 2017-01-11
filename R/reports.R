@@ -119,9 +119,16 @@ call. = FALSE)
   ## -------------------------------------------------------------------------------------
   ## MODEL FITS:
   ## -------------------------------------------------------------------------------------
-  fitted.coefs.gC <- OData$modelfit.gC$get.fits()
-  fitted.coefs.gA <- OData$modelfit.gA$get.fits()
-  fitted.coefs.gN <- OData$modelfit.gN$get.fits()
+  browser()
+
+  model_fits_gC <- OData$modelfit.gC$get.fits()
+  model_summaries_gC <- OData$modelfit.gC$get.model.summaries()
+
+  model_fits_gA <- OData$modelfit.gA$get.fits()
+  model_summaries_gA <- OData$modelfit.gA$get.model.summaries()
+
+  model_fits_gN <- OData$modelfit.gN$get.fits()
+  model_summaries_gN <- OData$modelfit.gA$get.model.summaries()
 
   # str(fitted.coefs.gC[[1]])
   # fitted.coefs.gC[[1]]$show(print_format = FALSE, model_stats = TRUE, all_fits = TRUE)
@@ -135,6 +142,7 @@ call. = FALSE)
   ## -------------------------------------------------------------------------------------
   nuniqueIDs <- OData$nuniqueIDs
   nobs <- OData$nobs
+  nuniquets <- OData$nuniquets
 
   ## -------------------------------------------------------------------------------------
   ## Create report data object (list) to be saved along with the report itself
