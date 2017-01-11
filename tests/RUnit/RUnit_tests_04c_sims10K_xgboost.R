@@ -149,6 +149,11 @@ test.xgboost.10Kdata <- function() {
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
     surv2 <- survNPMSM(wts.St.dhigh, OData)
 
+    # str(OData)
+    # library("GriDiSL")
+    # OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]]
+    # class(OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]])
+
     if (rmarkdown::pandoc_available(version = "1.12.3"))
         make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
                     AddFUPtables = TRUE,
