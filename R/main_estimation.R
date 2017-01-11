@@ -139,15 +139,24 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param stratify_CENS ...
 #' @param stratify_TRT ...
 #' @param stratify_MONITOR ...
-#' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s).
-#' @param models_TRT Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s).
-#' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism.
+#' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s) with \code{GriDiSL} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
+#' @param models_TRT Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s) with \code{GriDiSL} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
+#' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with \code{GriDiSL} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
 #' @param reg_CENS ...
 #' @param reg_TRT ...
 #' @param reg_MONITOR ...
-#' @param fit.method ...
-#' @param fold_column ...
+#' @param fit.method Model selection approach. Can be \code{"none"} - no model selection,
+#' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
+# \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
+# where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
+#' @param fold_column The column (factor) that contains the fold IDs to be used as part of the validation sample. Use the provided function \code{\link{define_CVfolds}} to
+#' define such folds or define the folds using your own method.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional arguments will be passed on directly to all \code{GridSL} modeling functions that are called from this routine,
+#' e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments must be named.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
@@ -158,7 +167,7 @@ fitPropensity <- function(OData,
                           models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
                           reg_CENS, reg_TRT, reg_MONITOR,
                           fit.method = c("none", "cv", "holdout"), fold_column = NULL,
-                          verbose = getOption("stremr.verbose")) {
+                          verbose = getOption("stremr.verbose"), ...) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -172,19 +181,21 @@ fitPropensity <- function(OData,
   if (!is.null(models_TRT)) assert_that(is.ModelStack(models_TRT))
   if (!is.null(models_MONITOR)) assert_that(is.ModelStack(models_MONITOR))
 
-  models_CENS_control <- list(models = models_CENS)
-  models_TRT_control <- list(models = models_TRT)
-  models_MONITOR_control <- list(models = models_MONITOR)
+  sVar.exprs <- capture.exprs(...)
+
+  models_CENS_control <- c(list(   models = models_CENS),    opt_params = list(sVar.exprs))
+  models_TRT_control <- c(list(    models = models_TRT),     opt_params = list(sVar.exprs))
+  models_MONITOR_control <- c(list(models = models_MONITOR), opt_params = list(sVar.exprs))
 
   if (!missing(fit.method)) {
     models_CENS_control[["fit.method"]] <- models_TRT_control[["fit.method"]] <- models_MONITOR_control[["fit.method"]] <- fit.method
   }
-  # if (!missing(nfolds)) {
-  #   models_CENS[["nfolds"]] <- models_TRT[["nfolds"]] <- models_MONITOR[["nfolds"]] <- nfolds
-  # }
   if (!missing(fold_column)) {
     models_CENS_control[["fold_column"]] <- models_TRT_control[["fold_column"]] <- models_MONITOR_control[["fold_column"]] <- fold_column
   }
+  # if (!missing(nfolds)) {
+  #   models_CENS[["nfolds"]] <- models_TRT[["nfolds"]] <- models_MONITOR[["nfolds"]] <- nfolds
+  # }
 
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;

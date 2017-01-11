@@ -1,3 +1,112 @@
+#---------------------------------------------------------------------------------
+# SPECIFYING regressions
+#---------------------------------------------------------------------------------
+get_vars_fromlist <- function(varname, sVar.map) {
+  if (varname %in% names(sVar.map)) {
+    as.vector(sVar.map[[varname]])
+  } else {
+    varname
+  }
+}
+# Parse the formulas for summary measure names and create a map to actual covariate names in sA & sW
+process_regform <- function(regform, sVar.map = NULL, factor.map = NULL) {
+  # regform1 <- as.formula("N ~ 1")
+  # Getting predictors (sW names):
+  regformterms <- terms(regform)
+  sW.names <- attributes(regformterms)$term.labels
+  sW.names.alt <- colnames(attributes(regformterms)$factors)
+  assert_that(all(sW.names == sW.names.alt))
+  # Getting OUTCOMEs (sA names):
+  (out.var <- deparse(attributes(regformterms)$variables[[2]])) # LHS character string
+
+  out.vars.form <- as.formula(". ~ " %+% out.var)
+  out.vars.terms <- terms(out.vars.form)
+  sA.names <- attributes(out.vars.terms)$term.labels
+
+  outvars <- unlist(lapply(sA.names, get_vars_fromlist, sVar.map))
+  predvars <- unlist(lapply(sW.names, get_vars_fromlist, sVar.map))
+  # in case some factors were also involved (these will then be replaced only on a second iteration)
+  predvars <- unlist(lapply(predvars, get_vars_fromlist, factor.map))
+  return(list(outvars = outvars, predvars = predvars))
+}
+
+# Loop through a list of SingleRegressionFormClass objects and their outvars as if it was one long list of outvars and create the subsetting expressions
+# This uses S3 method dispatch on object ListOfRegressionForms
+stratify_by_uncensored <- function(regs) {
+  for (Var_indx in seq_along(get_outvars(regs)[-1])) {
+    curr_outvar <- get_outvars(regs)[Var_indx+1]
+    curr_exprs <- get_subset_exprs(regs)[[Var_indx+1]]
+    prev_outvars <- as.vector(unique(get_outvars(regs)[1:Var_indx]))
+    prev_outvars_to_condition <- prev_outvars[!(prev_outvars %in% curr_outvar)]
+    if (length(prev_outvars_to_condition) > 0) {
+      strat.C <- paste0(prev_outvars_to_condition %+% " == " %+% gvars$noCENScat, collapse=" & ")
+      if (!is.null(curr_exprs)) {
+        reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = stringr::str_c(curr_exprs, " & ", strat.C))
+      } else {
+        reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = strat.C)
+      }
+    }
+  }
+  return(regs)
+}
+
+# Create subsetting expressions for a node (Anode, Cnode or Nnode)
+# Named list with character expressions for subsetting.
+# Each list item corresponds to one outcome in SingleRegressionFormClass
+create_subset_expr <- function(outvars, stratify.EXPRS) {
+  if (is.null(stratify.EXPRS)) {
+    return(NULL)
+  }
+  Node_subset_expr <- vector(mode="list", length=length(outvars))
+  names(Node_subset_expr) <- outvars
+  assert_that(is.list(stratify.EXPRS))
+  if (!all(outvars %in% names(stratify.EXPRS))) {
+    stop("Could not locate the appropriate regression variable(s) within the supplied stratification list stratify_CENS, stratify_TRT or stratify_MONITOR." %+% "\n" %+%
+          "The regression outcome variable(s) specified in gform_CENS, gform_TRT or gform_MONITOR were: ( '" %+% paste0(outvars, collapse=",") %+% "' )" %+% "\n" %+%
+          "However, the item names in the matching stratification list were: ( '" %+% paste0(names(stratify.EXPRS), collapse=",") %+% "' )"
+          )
+  }
+  for (idx in seq_along(Node_subset_expr))
+    if (!is.null(stratify.EXPRS[[outvars[idx]]]))
+      Node_subset_expr[[idx]] <- stratify.EXPRS[[outvars[idx]]]
+  return(Node_subset_expr)
+}
+
+# When several reg forms are specified (multivariate Anodes), process outvars into one vector and process predvars in a named list of vectors
+# stratify.EXPRS - Must be a named list. One item (characeter vectors) per one outcome in regforms.
+process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model_contrl = NULL, OData, sVar.map = NULL, factor.map = NULL, censoring = FALSE, outvar.class = NULL) {
+  using.default <- FALSE
+  if (missing(regforms)) {
+    using.default <- TRUE
+    regforms <- default.reg
+  }
+  if (!is.null(stratify.EXPRS)) assert_that(is.list(stratify.EXPRS))
+  regs <- vector(mode="list", length=length(regforms))
+  for (idx in seq_along(regforms)) {
+    res <- process_regform(as.formula(regforms[[idx]]), sVar.map = sVar.map, factor.map = factor.map)
+    if (using.default && gvars$verbose)
+      message("Using the default regression formula: " %+% paste0(res$outvars, collapse="+") %+% " ~ " %+% paste0(res$predvars, collapse="+"))
+
+      if (!is.null(outvar.class)) {
+        outvar.class <- as.list(rep.int(outvar.class, length(res$outvars)))
+        names(outvar.class) <- res$outvars
+      } else {
+        outvar.class <- OData$type.sVar[res$outvars]
+        names(outvar.class) <- res$outvars
+      }
+      subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
+
+      regobj <- RegressionClass$new(outvar = res$outvars, predvars = res$predvars, outvar.class = outvar.class,
+                                    subset_vars = NULL, subset_exprs = subset_exprs, model_contrl = model_contrl,
+                                    censoring = censoring)
+      regs[[idx]] <- regobj
+      outvar.class <- NULL
+  }
+  class(regs) <- c(class(regs), "ListOfRegressionForms")
+  if (censoring) regs <- stratify_by_uncensored(regs)
+  return(regs)
+}
+
 # --------------------------------------------------------
 # DEFINES THE LOWEST LEVEL REPRESENTATION FOR A SINGLE REGRESSION FORMULA BASED WITH THE FOLLOWING STRUCTURE
 # --------------------------------------------------------
@@ -190,15 +299,16 @@ RegressionClass <- R6Class("RegressionClass",
   public = list(
     reg_hazard = FALSE,            # If TRUE, the joint P(outvar|predvars) is factorized as \prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard)
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
-    fit.package = c("speedglm", "glm", "h2o", "xgboost"),
-    fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning"),
+    # fit.package = c("speedglm", "glm", "h2o", "xgboost"),
+    # fit.algorithm = c("glm", "gbm", "randomForest", "drf" "deeplearning"),
     # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
     initialize = function(ReplMisVal0 = TRUE,
-                          fit.package = getopt("fit.package"),
-                          fit.algorithm = getopt("fit.algorithm"), ...) {
+                          # fit.package = getopt("fit.package"),
+                          # fit.algorithm = getopt("fit.algorithm"),
+                          ...) {
       self$ReplMisVal0 <- ReplMisVal0
-      self$fit.package <- fit.package
-      self$fit.algorithm <- fit.algorithm
+      # self$fit.package <- fit.package
+      # self$fit.algorithm <- fit.algorithm
       super$initialize(...)
     },
 

@@ -144,21 +144,15 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
       } else {
 
-        if ("fit.package" %in% names(model_contrl)) fit.package <- model_contrl[['fit.package']] else fit.package <- reg$fit.package[1L]
-        if (!(fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
+        opt_params <- model_contrl[["opt_params"]]
+        model_contrl[["opt_params"]] <- NULL
 
-        if ("fit.algorithm" %in% names(model_contrl)) fit.algorithm <- model_contrl[['fit.algorithm']] else fit.algorithm <- reg$fit.algorithm[1]
-        if (!(fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
+        if (!("estimator" %in% names(opt_params))) opt_params[["estimator"]] <- getopt("fit.package") %+% "__" %+% getopt("fit.algorithm")
+        if (!("family" %in% names(opt_params))) opt_params[["family"]] <- "quasibinomial"
+        if (!("distribution" %in% names(opt_params))) opt_params[["distribution"]] <- "bernoulli"
 
-        ## Add default family / distribution specification, if not provided:
-        family <- model_contrl[["family"]]
-        if (is.null(family)) family <- "quasibinomial"
-        distribution <- model_contrl[["distribution"]]
-        if (is.null(distribution)) distribution <- "bernoulli"
+        self$models <- do.call(GriDiSL::defLearner, opt_params)
 
-        estimator <- fit.package %+% "__" %+% fit.algorithm
-        # self$models <- GriDiSL::defGrid(estimator = estimator, family = family, distribution = distribution)
-        self$models <- GriDiSL::defLearner(estimator = estimator, family = family, distribution = distribution)
       }
 
       self$model_contrl <- model_contrl

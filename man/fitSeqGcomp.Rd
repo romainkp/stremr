@@ -12,7 +12,7 @@ fitSeqGcomp(OData, t_periods, Qforms, Qstratify = NULL,
   trunc_weights = 10^6, models = NULL, weights = NULL, max_iter = 15,
   adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
   parallel = FALSE, fit.method = c("none", "cv", "holdout"),
-  fold_column = NULL, verbose = getOption("stremr.verbose"))
+  fold_column = NULL, verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -54,7 +54,8 @@ Must set \code{TMLE}=\code{FALSE} when setting this to \code{TRUE}.}
 
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 
-\item{models}{Optional parameters to be passed to the specific fitting algorithm for fitting the iterative (sequential) G-Computation formula.}
+\item{models}{Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.}
 
 \item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
@@ -68,20 +69,29 @@ N is the total number of unique subjects in data and \code{adapt_stop_factor} is
 When \code{TRUE}, the argument \code{tol_eps} is ignored and TMLE stops when either \code{max_iter} has been reached or this criteria has been satisfied.
 When \code{FALSE}, the stopping criteria is determined by values of \code{max_iter} and \code{tol_eps}.}
 
-\item{adapt_stop_factor}{For iterative TMLE only: The adaptive factor to choose the stopping criteria for iterative TMLE when \code{adapt_stop} is set to \code{TRUE}. Default is 10.
+\item{adapt_stop_factor}{For iterative TMLE only: The adaptive factor to choose the stopping criteria for iterative TMLE when
+\code{adapt_stop} is set to \code{TRUE}. Default is 10.
 TMLE will keep iterative until
 the mean estimate of the efficient influence curve is less than 1 / (\code{adapt_stop_factor}*sqrt(\code{N})) or when the number of iterations is \code{max_iter}.}
 
 \item{tol_eps}{For iterative TMLE only: Numeric error tolerance for the iterative TMLE update.
 The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}}
 
-\item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)}
+\item{parallel}{Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
+requires a previously defined parallel back-end cluster)}
 
-\item{fit.method}{...}
+\item{fit.method}{Model selection approach. Can be \code{"none"} - no model selection,
+\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).}
 
-\item{fold_column}{...}
+\item{fold_column}{The column (factor) that contains the fold IDs to be used as part of the validation sample. Use the provided function \code{\link{define_CVfolds}} to
+define such folds or define the folds using your own method.}
 
-\item{verbose}{...}
+\item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
+
+\item{...}{When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
+modeling functions that are called from this routine,
+e.g., \code{family = "binomial"} can be used to specify the model family.
+Note that all such arguments must be named.}
 }
 \value{
 ...

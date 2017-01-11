@@ -34,7 +34,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     # ----------------------------------------------------------------
     # IMPORT DATA
     # ----------------------------------------------------------------
-    # options(stremr.verbose = TRUE)
+    options(stremr.verbose = TRUE)
     set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
     h2o::h2o.init(nthreads = 1)
 
@@ -54,8 +54,11 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
           ))
     gform_CENS <- c("C ~ highA1c + t")
     gform_MONITOR <- "N ~ 1"
+
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                            family = "binomial", solver = "L_BFGS")
+
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
 

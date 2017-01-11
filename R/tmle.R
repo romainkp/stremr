@@ -164,7 +164,8 @@ fitTMLE <- function(...) {
 #' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
-#' @param models Optional parameters to be passed to the specific fitting algorithm for fitting the iterative (sequential) G-Computation formula.
+#' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
 #' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param max_iter For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.
@@ -174,15 +175,25 @@ fitTMLE <- function(...) {
 #' N is the total number of unique subjects in data and \code{adapt_stop_factor} is set to 10 by default.
 #' When \code{TRUE}, the argument \code{tol_eps} is ignored and TMLE stops when either \code{max_iter} has been reached or this criteria has been satisfied.
 #' When \code{FALSE}, the stopping criteria is determined by values of \code{max_iter} and \code{tol_eps}.
-#' @param adapt_stop_factor For iterative TMLE only: The adaptive factor to choose the stopping criteria for iterative TMLE when \code{adapt_stop} is set to \code{TRUE}. Default is 10.
+#' @param adapt_stop_factor For iterative TMLE only: The adaptive factor to choose the stopping criteria for iterative TMLE when
+#' \code{adapt_stop} is set to \code{TRUE}. Default is 10.
 #' TMLE will keep iterative until
 #' the mean estimate of the efficient influence curve is less than 1 / (\code{adapt_stop_factor}*sqrt(\code{N})) or when the number of iterations is \code{max_iter}.
 #' @param tol_eps For iterative TMLE only: Numeric error tolerance for the iterative TMLE update.
 #' The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}
-#' @param parallel Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)
-#' @param fit.method ...
-#' @param fold_column ...
-#' @param verbose ...
+#' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
+#' requires a previously defined parallel back-end cluster)
+#' @param fit.method Model selection approach. Can be \code{"none"} - no model selection,
+#' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
+# \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
+# where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
+#' @param fold_column The column (factor) that contains the fold IDs to be used as part of the validation sample. Use the provided function \code{\link{define_CVfolds}} to
+#' define such folds or define the folds using your own method.
+#' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
+#' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
+#' modeling functions that are called from this routine,
+#' e.g., \code{family = "binomial"} can be used to specify the model family.
+#' Note that all such arguments must be named.
 #' @return ...
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
@@ -206,7 +217,7 @@ fitSeqGcomp <- function(OData, t_periods,
                         tol_eps = 0.001,
                         parallel = FALSE,
                         fit.method = c("none", "cv", "holdout"), fold_column = NULL,
-                        verbose = getOption("stremr.verbose")) {
+                        verbose = getOption("stremr.verbose"), ...) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -220,16 +231,9 @@ fitSeqGcomp <- function(OData, t_periods,
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
   # ------------------------------------------------------------------------------------------------
-
   OData$uncensored_idx <- OData$eval_uncensored()
   OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
-  # ------------------------------------------------------------------------------------------------
-  # **** Load dat.sVar into H2O.Frame memory if loading data only once
-  # ------------------------------------------------------------------------------------------------
-  # mainH2Oframe <- OData$fast.load.to.H2O(OData$dat.sVar,
-  #                                       saveH2O = TRUE,
-  #                                       destination_frame = "H2OMainDataTable")
   # ------------------------------------------------------------------------------------------------
   # *** TO change the column names of H2O.FRAME (for Qlearning steps if data is loaded only once) ***
   # ------------------------------------------------------------------------------------------------
@@ -237,23 +241,8 @@ fitSeqGcomp <- function(OData, t_periods,
   # names(subsetH2Oframe) <- names(subsetH2Oframe)%+%"_1"
   # names(subsetH2Oframe)[1] <- "T2"%+%"_1"
 
-  # ------------------------------------------------------------------------------------------------
-  # **** Define regression paramers specific to Q-learning (continuous outcome)
-  # ------------------------------------------------------------------------------------------------
-  # parameter for running h2o.glm with continous outcome (this is the only sovler that works)
-  # to try experimental solvers in h2o.glm (see line #901 of GLM.java)
-  # models$solver <- "COORDINATE_DESCENT"
-  # models$solver <- "COORDINATE_DESCENT_NAIVE"
-  # models$solver <- "IRLSM"
-  # models$solver = "L_BFGS"
-  # models$family <- "quasibinomial"
-  # # parameter for running GBM with continuous outcome (default is classification with "bernoulli" and 0/1 outcome):
-  # models$distribution <- "gaussian"
-
-  # if (missing(fit.method)) fit.method <- getopt("fit.method")
-  # if (missing(fold_column)) fold_column <- getopt("fold_column")
-
-  models_control <- list(models = models)
+  sVar.exprs <- capture.exprs(...)
+  models_control <- c(list(models = models), opt_params = list(sVar.exprs))
 
   if (!missing(fit.method)) models_control[["fit.method"]] <- fit.method
   if (!missing(fold_column)) models_control[["fold_column"]] <- fold_column
