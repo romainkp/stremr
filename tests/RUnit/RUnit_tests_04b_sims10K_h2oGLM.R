@@ -34,7 +34,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     # ----------------------------------------------------------------
     # IMPORT DATA
     # ----------------------------------------------------------------
-    options(stremr.verbose = TRUE)
+    # options(stremr.verbose = TRUE)
     set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
     h2o::h2o.init(nthreads = 1)
 
@@ -76,6 +76,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
                     MSM = MSM.IPAW,
                     # AddFUPtables = TRUE,
                     # openFile = FALSE,
+                    # format="pdf",
                     openFile = TRUE,
                     RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                     WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),

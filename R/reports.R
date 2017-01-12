@@ -128,6 +128,13 @@ call. = FALSE)
   model_fits_gN <- OData$modelfit.gN$get.fits()
   model_summaries_gN <- OData$modelfit.gA$get.model.summaries()
 
+  # best_model <- model_fits_gC[[1]]$get_best_models(K=1)[[1]]
+  # str(best_model@model)
+  # str(best_model@model$training_metrics)
+  # best_model@model$training_metrics
+  # GriDiSL:::pander.H2OBinomialMetrics(best_model@model$training_metrics, "train")
+  # GriDiSL::print_tables(best_model)
+
   # str(fitted.coefs.gC[[1]])
   # fitted.coefs.gC[[1]]$show(print_format = FALSE, model_stats = TRUE, all_fits = TRUE)
   # fitted.coefs.gC[[1]]$summary(all_fits = TRUE)
