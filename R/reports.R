@@ -126,7 +126,7 @@ call. = FALSE)
   model_summaries_gA <- OData$modelfit.gA$get.model.summaries()
 
   model_fits_gN <- OData$modelfit.gN$get.fits()
-  model_summaries_gN <- OData$modelfit.gA$get.model.summaries()
+  model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
 
   # best_model <- model_fits_gC[[1]]$get_best_models(K=1)[[1]]
   # str(best_model@model)

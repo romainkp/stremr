@@ -257,15 +257,11 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
       }
 
-      # browser()
-
       assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
       probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
       probA1 <- private$probA1 # [self$getsubset]
 
       # check that predictions P(A=1 | dmat) exist for all obs (not NA)
-      # browser()
-
       if (any(is.na(probA1))) {
       # if (any(is.na(probA1) & !is.nan(probA1))) {
         stop("some of the modeling predictions resulted in NAs, which indicates an error of a prediction routine")

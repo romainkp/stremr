@@ -270,7 +270,9 @@ test.speedglm.allestimators10Kdata <- function() {
   # file.path = report.path,
   # test for opening file in local OS
   if (rmarkdown::pandoc_available(version = "1.12.3"))
-    make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Insert Author Name", openFile = FALSE)
+    make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Insert Author Name",
+                    # openFile = TRUE)
+                    openFile = FALSE)
 
   if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(gcomp_est1, gcomp_est2), TMLE = list(tmle_est_par1, tmle_est_par2),
