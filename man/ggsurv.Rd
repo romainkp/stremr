@@ -4,13 +4,15 @@
 \alias{ggsurv}
 \title{Survival curves with ggplot2}
 \usage{
-ggsurv(estimates, CI = TRUE, CI.step = TRUE, plot.cens = TRUE,
-  surv.col = "gg.def", cens.col = "gg.def", lty.est = 1, lty.ci = 2,
-  size.est = 0.5, size.ci = size.est, cens.size = 2, cens.shape = 3,
-  back.white = TRUE, xlab = "Time", ylab = "Survival", main = "",
-  legend.position = "right", surv.name = "St." \%+\% attr(estimates[[1]],
-  "estimator_short"), SE.name = "SE." \%+\% attr(estimates[[1]],
-  "estimator_short"), order.legend = TRUE, t_int_sel = NULL, ...)
+ggsurv(estimates, CI = TRUE, CI_step = TRUE, plot_cens = TRUE,
+  surv_col = "gg.def", cens_col = "gg.def", lty_est = 1,
+  shape_est = seq_along(estimates), lty_ci = 2, size_est = 0.5,
+  size_ci = size_est, size_pt = size_est + 0.3, cens_size = 2,
+  cens_shape = 3, back_white = TRUE, xlab = "Time", ylab = "Survival",
+  main = "", legend_pos = "right", surv_name = "St." \%+\%
+  attr(estimates[[1]], "estimator_short"), SE_name = "SE." \%+\%
+  attr(estimates[[1]], "estimator_short"), order_legend = TRUE,
+  t_int_sel = NULL, ...)
 }
 \arguments{
 \item{estimates}{A list, one item per regime / intervention. Each list item must be a data.frame containing the
@@ -19,32 +21,37 @@ survival estimates by time for a single regime / intervention.}
 \item{CI}{should a 95% confidence interval be plotted? Defaults to \code{TRUE}.
 Uses the standard error estimates provided as a separate column of the input data.}
 
-\item{CI.step}{When \code{TRUE} the CIs will be plotted as a step function (same as main plot type).
+\item{CI_step}{When \code{TRUE} the CIs will be plotted as a step function (same as main plot type).
 When \code{FALSE} the CIs are plotted using \code{ggplot2::geom_ribbon}.}
 
-\item{plot.cens}{mark the censored observations?}
+\item{plot_cens}{mark the censored observations?}
 
-\item{surv.col}{colour of the survival estimate. Defaults to black for
+\item{surv_col}{colour of the survival estimate. Defaults to black for
 one stratum, and to the default \code{ggplot2} colours for multiple
 strata. Length of vector with colour names should be either 1 or equal
 to the number of strata.}
 
-\item{cens.col}{colour of the points that mark censored observations.}
+\item{cens_col}{colour of the points that mark censored observations.}
 
-\item{lty.est}{linetype of the survival curve(s). Vector length should be
+\item{lty_est}{linetype of the survival curve(s). Vector length should be
 either 1 or equal to the number of strata.}
 
-\item{lty.ci}{linetype of the bounds that mark the 95\% CI.}
+\item{shape_est}{shape type of the survival point estimates. Vector length should be
+either 1 or equal to the number of strata.}
 
-\item{size.est}{line width of the survival curve}
+\item{lty_ci}{linetype of the bounds that mark the 95\% CI.}
 
-\item{size.ci}{line width of the 95\% CI}
+\item{size_est}{line width of the survival curve}
 
-\item{cens.size}{point size of the censoring points}
+\item{size_ci}{line width of the 95\% CI}
 
-\item{cens.shape}{shape of the points that mark censored observations.}
+\item{size_pt}{point size of the survival estimate at each time-point}
 
-\item{back.white}{if \code{TRUE} the background will not be the default
+\item{cens_size}{point size of the censoring points}
+
+\item{cens_shape}{shape of the points that mark censored observations.}
+
+\item{back_white}{if \code{TRUE} the background will not be the default
 grey of \code{ggplot2}, but will be white with borders around the plot. Defaults to \code{TRUE}}
 
 \item{xlab}{the label of the x-axis.}
@@ -53,16 +60,16 @@ grey of \code{ggplot2}, but will be white with borders around the plot. Defaults
 
 \item{main}{the plot label.}
 
-\item{legend.position}{Either the coordinates of the legend position inside the plot
+\item{legend_pos}{Either the coordinates of the legend position inside the plot
 (e.g., (0.9, 0.2)) or
 the character word denoting the legend orientation with respect to the plot
 (e.g., "bottom", "right" or "left").}
 
-\item{surv.name}{The name of the column containing the survival estimates.}
+\item{surv_name}{The name of the column containing the survival estimates.}
 
-\item{SE.name}{The name of the column containing the standard errors (SE) for each time-point estimate of survival.}
+\item{SE_name}{The name of the column containing the standard errors (SE) for each time-point estimate of survival.}
 
-\item{order.legend}{Set to \code{TRUE} to order the legend display by final
+\item{order_legend}{Set to \code{TRUE} to order the legend display by final
 survival time (highest first).}
 
 \item{t_int_sel}{The subset of time-point indices for which survival should be plotted.}

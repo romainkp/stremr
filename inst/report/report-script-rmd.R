@@ -297,7 +297,7 @@ panderOptions('knitr.auto.asis', TRUE)
 
 #' `r ifelse(!missing(GCOMP),'# Survival with Sequential G-Computation','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "G-Computation Survival.\\label{fig:survPlotGCOMP}"
+#+ echo=FALSE, warning = FALSE, fig.width=8, fig.height=5, fig.cap = "G-Computation Survival.\\label{fig:survPlotGCOMP}"
 if (!missing(GCOMP)) {
   est_name <- "GCOMP"
   est_obj <- GCOMP

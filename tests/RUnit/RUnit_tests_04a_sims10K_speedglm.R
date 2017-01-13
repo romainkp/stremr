@@ -279,6 +279,9 @@ test.speedglm.allestimators10Kdata <- function() {
 # 2:     TMLE     1 0.03482876 0.9651712           TRUE              0 stratified 1.588743e-05 0.003985904 stratTMLE.dlow
 # 3:     TMLE     4 0.06549796 0.9345020           TRUE              0 stratified 8.724938e-03 0.093407376 stratTMLE.dlow
 
+  pres <- ggsurv(list(gcomp_est1[["estimates"]], gcomp_est2[["estimates"]]))
+  # pres
+
   # ------------------------------------------------------------------
   # Make a report:
   # ------------------------------------------------------------------
@@ -290,12 +293,14 @@ test.speedglm.allestimators10Kdata <- function() {
                     openFile = TRUE)
                     # openFile = FALSE)
 
+  # tmle_est_par1[["estimates"]]
+
   if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(gcomp_est1, gcomp_est2), TMLE = list(tmle_est_par1, tmle_est_par2),
                   format = "html",
                   FUPtables = get_FUPtimes(MSM.IPAW$wts_data, IDnode = "ID", tnode = "t"),
-                  openFile = TRUE,
-                  # openFile = FALSE,
+                  # openFile = TRUE,
+                  openFile = FALSE,
                   MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                   TMLE.RDtables = get_TMLE_RDs(list(tmle_est_par1, tmle_est_par2), t.periods.RDs = c(1, 4)),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
