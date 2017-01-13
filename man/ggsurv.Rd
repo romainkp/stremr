@@ -4,7 +4,7 @@
 \alias{ggsurv}
 \title{Survival curves with ggplot2}
 \usage{
-ggsurv(estimates, CI = TRUE, CI_line = TRUE, plot_cens = TRUE,
+ggsurv(estimates, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
   surv_col = "gg.def", cens_col = "gg.def", lty_est = 1,
   shape_est = seq_along(estimates), lty_ci = 2, size_est = 0.5,
   size_ci = size_est, size_pt = size_est + 0.3, cens_size = 2,
@@ -20,6 +20,9 @@ survival estimates by time for a single regime / intervention.}
 
 \item{CI}{should a 95% confidence interval be plotted? Defaults to \code{TRUE}.
 Uses the standard error estimates provided as a separate column of the input data.}
+
+\item{CI_line}{When \code{TRUE} the 95% CIs will be plotted as a line function (same as main plot type).
+When \code{FALSE} the 95% CIs are plotted using \code{ggplot2::geom_ribbon}.}
 
 \item{plot_cens}{mark the censored observations?}
 
@@ -72,17 +75,14 @@ survival time (highest first).}
 \item{t_int_sel}{The subset of time-point indices for which survival should be plotted.}
 
 \item{...}{Additional arguments (not used).}
-
-\item{CI_step}{When \code{TRUE} the CIs will be plotted as a step function (same as main plot type).
-When \code{FALSE} the CIs are plotted using \code{ggplot2::geom_ribbon}.}
 }
 \value{
 An object of class \code{ggplot}
 }
 \description{
-This function produces Kaplan-Meier plots using \code{ggplot2}.
-As a first argument it needs a \code{survfit} object, created by the
-\code{survival} package.
+This function produces plots of the survival point estimates using \code{ggplot2}.
+As a first argument it needs a list of estimates created by the one of the estimation function of the \code{stremr} package.
+See http://ggobi.github.io/ggally/#ggallyggsurv for additional modifications of the resulting output plot.
 }
 \author{
 Original R code by Edwin Thoen \email{edwinthoen@gmail.com}, modified by Oleg Sofrygin \email{oleg.sofrygin@gmail.com}

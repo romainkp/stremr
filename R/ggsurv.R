@@ -3,6 +3,7 @@
 ## Functions adapted from GGally R package: https://github.com/ggobi/ggally
 ## Original R code by Edwin Thoen \email{edwinthoen@@gmail.com},
 ## modified by Oleg Sofrygin \email{oleg.sofrygin@@gmail.com}
+## See http://ggobi.github.io/ggally/#ggallyggsurv for additional modifications of the resulting survival plot
 ## -----------------------------------------------------------------------------
 
 if(getRversion() >= "2.15.1") {
@@ -11,17 +12,17 @@ if(getRversion() >= "2.15.1") {
 
 #' Survival curves with ggplot2
 #'
-#' This function produces Kaplan-Meier plots using \code{ggplot2}.
-#' As a first argument it needs a \code{survfit} object, created by the
-#' \code{survival} package.
+#' This function produces plots of the survival point estimates using \code{ggplot2}.
+#' As a first argument it needs a list of estimates created by the one of the estimation function of the \code{stremr} package.
+#' See http://ggobi.github.io/ggally/#ggallyggsurv for additional modifications of the resulting output plot.
 #'
 #' @export
 #' @param estimates A list, one item per regime / intervention. Each list item must be a data.frame containing the
 #' survival estimates by time for a single regime / intervention.
 #' @param CI should a 95% confidence interval be plotted? Defaults to \code{TRUE}.
 #' Uses the standard error estimates provided as a separate column of the input data.
-#' @param CI_step When \code{TRUE} the CIs will be plotted as a step function (same as main plot type).
-#' When \code{FALSE} the CIs are plotted using \code{ggplot2::geom_ribbon}.
+#' @param CI_line When \code{TRUE} the 95% CIs will be plotted as a line function (same as main plot type).
+#' When \code{FALSE} the 95% CIs are plotted using \code{ggplot2::geom_ribbon}.
 #' @param plot_cens mark the censored observations?
 #' @param surv_col colour of the survival estimate. Defaults to black for
 #'    one stratum, and to the default \code{ggplot2} colours for multiple
@@ -58,7 +59,7 @@ if(getRversion() >= "2.15.1") {
 ggsurv <- function(
   estimates,
   CI         = TRUE,
-  CI_line    = TRUE,
+  CI_line    = FALSE,
   plot_cens  = TRUE,
   surv_col   = 'gg.def',
   cens_col   = 'gg.def',
