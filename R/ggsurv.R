@@ -48,6 +48,7 @@ if(getRversion() >= "2.15.1") {
 #' @param SE.name The name of the column containing the standard errors (SE) for each time-point estimate of survival.
 #' @param order.legend Set to \code{TRUE} to order the legend display by final
 #' survival time (highest first).
+#' @param t_int_sel The subset of time-point indices for which survival should be plotted.
 #' @param ... Additional arguments (not used).
 #' @return An object of class \code{ggplot}
 #' @author Original R code by Edwin Thoen \email{edwinthoen@@gmail.com}, modified by Oleg Sofrygin \email{oleg.sofrygin@@gmail.com}
@@ -72,6 +73,7 @@ ggsurv <- function(
   surv.name = "St." %+% attr(estimates[[1]], "estimator_short"),
   SE.name = "SE." %+% attr(estimates[[1]], "estimator_short"),
   order.legend = TRUE,
+  t_int_sel = NULL,
   ...
 ){
 
@@ -157,6 +159,7 @@ ggsurv <- function(
       } else {
         CI <- FALSE
       }
+      if (!is.null(t_int_sel)) gr.df[[i]] <- gr.df[[i]][t_int_sel, ]
   }
 
   dat      <- data.table::rbindlist(gr.df)

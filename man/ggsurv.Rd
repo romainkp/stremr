@@ -10,7 +10,7 @@ ggsurv(estimates, CI = TRUE, CI.step = TRUE, plot.cens = TRUE,
   back.white = TRUE, xlab = "Time", ylab = "Survival", main = "",
   legend.position = "right", surv.name = "St." \%+\% attr(estimates[[1]],
   "estimator_short"), SE.name = "SE." \%+\% attr(estimates[[1]],
-  "estimator_short"), order.legend = TRUE, ...)
+  "estimator_short"), order.legend = TRUE, t_int_sel = NULL, ...)
 }
 \arguments{
 \item{estimates}{A list, one item per regime / intervention. Each list item must be a data.frame containing the
@@ -64,6 +64,8 @@ the character word denoting the legend orientation with respect to the plot
 
 \item{order.legend}{Set to \code{TRUE} to order the legend display by final
 survival time (highest first).}
+
+\item{t_int_sel}{The subset of time-point indices for which survival should be plotted.}
 
 \item{...}{Additional arguments (not used).}
 }
