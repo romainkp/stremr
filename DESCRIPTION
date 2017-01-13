@@ -29,6 +29,7 @@ Depends:
 Imports:
     assertthat,
     data.table,
+    ggplot2,
     GriDiSL,
     methods,
     R6,

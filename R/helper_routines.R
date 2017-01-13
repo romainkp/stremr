@@ -167,7 +167,8 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
     se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx, getSEs)
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
                                                 RDscale = TRUE,
-                                                t.period = t.period.val.idx,
+                                                # t.period = t.period.val.idx,
+                                                t.period = t.periods.RDs[t.idx],
                                                 nobs = MSM$nobs,
                                                 # nobs = nrow(MSM$wts_data),
                                                 esti = MSM$est_name,
@@ -189,7 +190,7 @@ get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
   rule_names <- lapply(TMLE_list, "[[", "rule_name")
   names(TMLE_list) <- rule_names
   new_TMLE_list <- list()
-  new_TMLE_list$St <- lapply(lapply(TMLE_list, "[[", "estimates"), '[[', "surv")
+  new_TMLE_list$St <- lapply(lapply(TMLE_list, "[[", "estimates"), '[[', "St.TMLE")
   new_TMLE_list$IC.Var.S.d <- lapply(TMLE_list, "[[", "IC.Var.S.d")
   new_TMLE_list$periods <- TMLE_list[[1]]$periods
   new_TMLE_list$est_name <- TMLE_list[[1]]$est_name
@@ -205,7 +206,8 @@ get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
     se.RDscale.Sdt.K <- getSE_table_d_by_d(new_TMLE_list$St, new_TMLE_list$IC.Var.S.d, new_TMLE_list$nID, t.period.val.idx, getSEs = TRUE)
     RDs.TMLE.tperiods[[t.idx]] <- make.table.m0(new_TMLE_list$St,
                                                 RDscale = TRUE,
-                                                t.period = t.period.val.idx,
+                                                # t.period = t.period.val.idx,
+                                                t.period = t.periods.RDs[t.idx],
                                                 nobs = nrow(new_TMLE_list$wts_data),
                                                 esti = new_TMLE_list$est_name,
                                                 se.RDscale.Sdt.K = se.RDscale.Sdt.K,

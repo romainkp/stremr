@@ -153,12 +153,12 @@ test.h2oEnsemble <- function() {
         require("magrittr")
         St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
                    survNPMSM(OData)  %$%
-                   IPW_estimates
+                   estimates
         St.dlow
 
         St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
                     survNPMSM(OData) %$%
-                    IPW_estimates
+                    estimates
         St.dhigh
 
         # report.path <- "/set/your/report/path/"

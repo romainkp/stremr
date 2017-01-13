@@ -275,11 +275,11 @@ GetWarningsToSuppress <- function(update.step=FALSE) {
 #   # - BLOCK 4A: Non-parametric MSM for survival, with weight stabilization, input either single weights dataset or a list of weights datasets,
 #   # Each dataset containing weights non-zero weights for single regimen
 #   # ---------------------------------------------------------------------------------------
-#   IPW_estimates <- survNPMSM(wts.DT, OData)
+#   estimates <- survNPMSM(wts.DT, OData)
 #   # ---------------------------------------------------------------------------------------
 #   # - BLOCK 5: Builds a report with weight distributions, survival estimates, etc.
 #   # ---------------------------------------------------------------------------------------
 #   # .... TO DO ....
 
-# return(list(IPW_estimates = IPW_estimates$IPW_estimates, wts_data = IPW_estimates$wts_data, dataDT = OData$dat.sVar, modelfits.g0.R6 = OData$modelfits.g0, OData.R6 = OData))
+# return(list(estimates = estimates$estimates, wts_data = estimates$wts_data, dataDT = OData$dat.sVar, modelfits.g0.R6 = OData$modelfits.g0, OData.R6 = OData))
 # }

@@ -44,12 +44,12 @@ test.directRegressionDefn.10Kdata <- function() {
   require("magrittr")
   St.dlow2 <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
              survNPMSM(OData)  %$%
-             IPW_estimates
+             estimates
   # St.dlow2
 
   St.dhigh2 <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
               survNPMSM(OData) %$%
-              IPW_estimates
+              estimates
   # St.dhigh2
 }
 
@@ -116,11 +116,11 @@ notest.savedSL.10Kdata <- function() {
     require("magrittr")
     St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
                survNPMSM(OData)  %$%
-               IPW_estimates
+               estimates
     St.dlow
     St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
                 survNPMSM(OData) %$%
-                IPW_estimates
+                estimates
     St.dhigh
 
     # ------------------------------------------------------------------
@@ -148,12 +148,12 @@ notest.savedSL.10Kdata <- function() {
     require("magrittr")
     St.dlow2 <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
                survNPMSM(OData)  %$%
-               IPW_estimates
+               estimates
     St.dlow2
 
     St.dhigh2 <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
                 survNPMSM(OData) %$%
-                IPW_estimates
+                estimates
     St.dhigh2
 
     # report.path <- "path/to/report/dir"
@@ -192,12 +192,12 @@ notest.savedSL.10Kdata <- function() {
     require("magrittr")
     St.dlow3 <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
                survNPMSM(OData)  %$%
-               IPW_estimates
+               estimates
     St.dlow3
 
     St.dhigh3 <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
                 survNPMSM(OData) %$%
-                IPW_estimates
+                estimates
     St.dhigh3
 
     # report.path <- "path/to/report/dir"

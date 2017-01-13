@@ -69,6 +69,13 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
                         wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
                         t_breaks = c(1:8,12,16)-1,
                         est_name = "IPAW", getSEs = TRUE)
+
+    # names(MSM.IPAW)
+    # MSM.IPAW[["St"]]
+    MSM.IPAW[["estimates"]]
+    pl <- ggsurv(MSM.IPAW[["estimates"]])
+    pl
+
     # names(MSM.IPAW)
     # MSM.IPAW$St
     if (rmarkdown::pandoc_available(version = "1.12.3"))
@@ -77,7 +84,8 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
                     # AddFUPtables = TRUE,
                     # openFile = FALSE,
                     # format="pdf",
-                    openFile = TRUE,
+                    # openFile = TRUE,
+                    openFile = FALSE,
                     RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                     WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")

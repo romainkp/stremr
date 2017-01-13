@@ -306,7 +306,7 @@ fitSeqGcomp <- function(OData, t_periods,
   # ------------------------------------------------------------------------------------------------
   # RUN GCOMP OR TMLE FOR SEVERAL TIME-POINTS EITHER IN PARALLEL OR SEQUENTIALLY
   # ------------------------------------------------------------------------------------------------
-  est_name <- ifelse(TMLE, "TMLE", ifelse(iterTMLE, "GCOMP & Iter.TMLE", "GCOMP"))
+  est_name <- ifelse(TMLE, "TMLE", ifelse(iterTMLE, "GCOMP & iterTMLE", "GCOMP"))
   tmle.run.res <- try(
     if (parallel) {
       mcoptions <- list(preschedule = FALSE)
@@ -341,13 +341,22 @@ If this error cannot be fixed, consider creating a replicable example and filing
 ", call. = TRUE)
   }
 
-  ICs_byt <- lapply(res_byt, '[[', "IC_i_onet")
+  resultDT <- rbindlist(res_byt)
+
+  ICs_byt <- resultDT[["IC_i_onet"]]
+  resultDT[, ("IC_i_onet") := NULL]
+
+  # ICs_byt <- lapply(res_byt, '[[', "IC_i_onet")
   IC.Var.S.d <- t(do.call("cbind", ICs_byt))
   # IC.Var.S.d <- matrix(NA, nrow = length(ICs_byt), ncol = length(ICs_byt[[1]]))
 
-  ests_byt <- lapply(res_byt, '[[', "resDF_onet")
-  resultDT <- data.table(est_name = est_name, rbindlist(ests_byt))
+  # ests_byt <- lapply(res_byt, '[[', "resDF_onet")
+  resultDT <- cbind(est_name = est_name, resultDT)
   resultDT[, "rule.name" := eval(as.character(rule_name))]
+
+  resultDT <- data.frame(resultDT)
+  attr(resultDT, "estimator_short") <- est_name
+  attr(resultDT, "estimator_long") <- est_name
 
   res_out <- list(
               estimates = resultDT,
@@ -358,6 +367,9 @@ If this error cannot be fixed, consider creating a replicable example and filing
               wts_data = { if (TMLE || iterTMLE) {IPWeights} else {NULL}},
               rule_name = rule_name,
               trunc_weights = trunc_weights)
+
+  attr(res_out, "estimator_short") <- est_name
+  attr(res_out, "estimator_long") <- est_name
 
   return(res_out)
 }
@@ -541,7 +553,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   nFailedUpdates <- sum(!successTMLEupdates)
 
 
-  # 1a. Grab last reg predictions from Q-regression objects:
+  ## 1a. Grab last reg predictions from Q-regression objects:
   lastQ_inx <- Qreg_idx[1] # The index for the last Q-fit (first time-point)
   # Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
@@ -549,12 +561,13 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
 
   if (gvars$verbose) print("Surv est: " %+% (1 - mean_est_t))
 
-  # # 1b. Can instead grab it directly from the data, using the appropriate strata-subsetting expression
+  ## 1b. Can instead grab it directly from the data, using the appropriate strata-subsetting expression
   lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]] ## allQmodels[[lastQ_inx]]$get.fits()
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
   mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+
   ## same as above but with H2OFRAME:
   # mean_est_t_2 <- h2o.mean(OData$H2Oframe[subset_idx, "Q.kplus1"])
   if (gvars$verbose) print("Surv est 2: " %+% (1 - mean_est_t_2))
@@ -562,13 +575,23 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   if (gvars$verbose) print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ))
   if (gvars$verbose) print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
 
-  resDF_onet <- data.frame(t = t_period,
-                    risk = mean_est_t,
-                    surv = 1 - mean_est_t,
-                    ALLsuccessTMLE = ALLsuccessTMLE,
-                    nFailedUpdates = nFailedUpdates,
-                    type = ifelse(stratifyQ_by_rule, "stratified", "pooled")
-                    )
+  resDF_onet <- data.table(time = t_period,
+                           St.GCOMP = NA,
+                           St.TMLE = NA,
+                           St.iterTMLE = NA,
+                           # risk = mean_est_t,
+                           # surv = (1 - mean_est_t),
+                           ALLsuccessTMLE = ALLsuccessTMLE,
+                           nFailedUpdates = nFailedUpdates,
+                           type = ifelse(stratifyQ_by_rule, "stratified", "pooled")
+                          )
+
+  # setnames(resDF_onet,"period",OData$nodes$tnode)
+
+  est_name <- ifelse(TMLE, "St.TMLE", "St.GCOMP")
+  # resDF_onet[[est_name]] <- (1 - mean_est_t)
+  resDF_onet[, (est_name) := (1 - mean_est_t)]
+  # names(resDF_onet)[names(resDF_onet) %in% "surv"] <- "St." %+% est_name
 
   # ------------------------------------------------------------------------------------------------
   # RUN ITERATIVE TMLE (updating all Q's at once):
@@ -588,7 +611,14 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     # res_lastPredQ <- OData$dat.sVar[subset_idx, ][["Q.kplus1"]]
     # mean_est_t  <- mean(res_lastPredQ)
     # print("TMLE surv estimate 2: " %+% (1 - mean_est_t))
-    resDF_onet <- cbind(resDF_onet, iterTMLErisk = mean_est_t, iterTMLEsurv = (1 - mean_est_t))
+
+    # resDF_onet[["St.iterTMLE"]] <- (1 - mean_est_t)
+    # resDF_onet[, ("St.iterTMLE") := (1 - mean_est_t)]
+    resDF_onet[, ("St.TMLE") := (1 - mean_est_t)]
+
+    # resDF_onet <- cbind(resDF_onet,
+    #                     # iterTMLErisk = mean_est_t,
+    #                     St.iterTMLE = (1 - mean_est_t))
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -611,7 +641,19 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     TMLE_SE <- sqrt(TMLE_Var)
     if (gvars$verbose) print("...empirical mean of the estimated EIC: " %+% mean(IC_dt[["EIC_i"]]))
     if (gvars$verbose) print("...estimated TMLE variance: " %+% TMLE_Var)
-    resDF_onet <- cbind(resDF_onet, TMLE_Var = TMLE_Var, TMLE_SE = TMLE_SE)
+
+    # resDF_onet <- cbind(resDF_onet, Var.TMLE = TMLE_Var, SE.TMLE = TMLE_SE)
+    # resDF_onet[, c("SE.TMLE", "SE.iterTMLE") := list(NA, NA)]
+    # est_name <- ifelse(TMLE, "SE.TMLE", "SE.iterTMLE")
+    # resDF_onet[[est_name]] <- TMLE_SE
+    resDF_onet[, ("SE.TMLE") := TMLE_SE]
   }
-  return(list(IC_i_onet = IC_i_onet, resDF_onet = resDF_onet))
+
+  # resDF_onet_fin <- cbind(resDF_onet, IC_i_onet = list(IC_i_onet = IC_i_onet))
+  # resDF_onet[["IC_i_onet"]] <- list(IC_i_onet = IC_i_onet)
+
+  resDF_onet[, ("IC_i_onet") := list(IC_i_onet = list(IC_i_onet))]
+
+  return(resDF_onet)
+  # return(list(IC_i_onet = IC_i_onet, resDF_onet = resDF_onet))
 }

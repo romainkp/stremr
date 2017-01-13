@@ -72,15 +72,22 @@ test.speedglm.allestimators10Kdata <- function() {
   wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
   surv2 <- survNPMSM(wts.St.dhigh, OData)
 
+  surv_by_trt <- list(surv1[['estimates']][["St.NPMSM"]], surv2[['estimates']][["St.NPMSM"]])
+  names(surv_by_trt) <- c(surv1[['estimates']][["rule.name"]][1], surv2[['estimates']][["rule.name"]][1])
+  t_idx <- surv1[['estimates']][['time']]
+
+  f_plot_survest(surv_by_trt, t_idx)
+  pl <- ggsurv(list(surv1[["estimates"]], surv2[["estimates"]]))
+
   # ------------------------------------------------------------------
   # Piping the workflow
   # ------------------------------------------------------------------
   require("magrittr")
   St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly") %>%
              survNPMSM(OData)  %$%
-             IPW_estimates
+             estimates
   St.dlow
-  #     t   sum_Y_IPAW sum_all_IPAW          ht   St.IPTW      ht.KM     St.KM           rule.name
+  #     t   sum_Y_IPAW sum_all_IPAW          ht   St.NPMSM      ht.KM     St.KM           rule.name
   # 1   0 3.978748e+01 1.298290e+03 0.030646065 0.9693539 0.03088578 0.9691142 gTI.dlowgPois3.yrly
   # 2   1 7.117673e+01 4.233691e+03 0.016811981 0.9530572 0.01142514 0.9580420 gTI.dlowgPois3.yrly
   # 3   2 1.228657e+02 1.291770e+04 0.009511416 0.9439923 0.02007299 0.9388112 gTI.dlowgPois3.yrly
@@ -101,9 +108,9 @@ test.speedglm.allestimators10Kdata <- function() {
 
   St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow") %>%
              survNPMSM(OData)  %$%
-             IPW_estimates
+             estimates
   St.dlow
-#       t   sum_Y_IPAW sum_all_IPAW         ht   St.IPTW      ht.KM     St.KM rule.name
+#       t   sum_Y_IPAW sum_all_IPAW         ht   St.NPMSM      ht.KM     St.KM rule.name
 # 1   0 2.497729e+01 9.771720e+02 0.02556079 0.9744392 0.03088578 0.9691142  gTI.dlow
 # 2   1 2.514466e+01 2.450115e+03 0.01026265 0.9644389 0.01142514 0.9580420  gTI.dlow
 # 3   2 1.314491e+02 6.420140e+03 0.02047450 0.9446925 0.02007299 0.9388112  gTI.dlow
@@ -124,9 +131,10 @@ test.speedglm.allestimators10Kdata <- function() {
 
   St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly") %>%
               survNPMSM(OData) %$%
-              IPW_estimates
+              estimates
   St.dhigh
-  #     t   sum_Y_IPAW sum_all_IPAW          ht   St.IPTW       ht.KM     St.KM            rule.name
+
+  #     t   sum_Y_IPAW sum_all_IPAW          ht   St.NPMSM       ht.KM     St.KM            rule.name
   # 1   0 2.289231e+02     38797.58 0.005900449 0.9940996 0.006918386 0.9930816 gTI.dhighgPois3.yrly
   # 2   1 3.421184e+03    167454.05 0.020430586 0.9737895 0.014900450 0.9782843 gTI.dhighgPois3.yrly
   # 3   2 1.975186e+04    658916.11 0.029976293 0.9445989 0.023289455 0.9555005 gTI.dhighgPois3.yrly
@@ -148,9 +156,9 @@ test.speedglm.allestimators10Kdata <- function() {
 
   St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh") %>%
               survNPMSM(OData) %$%
-              IPW_estimates
+              estimates
   St.dhigh
-#     t   sum_Y_IPAW sum_all_IPAW          ht   St.IPTW       ht.KM     St.KM rule.name
+#     t   sum_Y_IPAW sum_all_IPAW          ht   St.NPMSM       ht.KM     St.KM rule.name
 # 1   0 1.473714e+02 2.952989e+04 0.004990583 0.9950094 0.006918386 0.9930816 gTI.dhigh
 # 2   1 1.334365e+03 9.618653e+04 0.013872679 0.9812060 0.014900450 0.9782843 gTI.dhigh
 # 3   2 6.690061e+03 2.919185e+05 0.022917568 0.9587191 0.023289455 0.9555005 gTI.dhigh
@@ -177,6 +185,12 @@ test.speedglm.allestimators10Kdata <- function() {
                       wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
                       t_breaks = c(1:8,12,16)-1,
                       est_name = "IPAW", getSEs = TRUE)
+
+  MSM.IPAW[["estimates"]]
+  attributes(MSM.IPAW[["estimates"]][[1]])
+  pl <- ggsurv(MSM.IPAW[["estimates"]])
+  # pl <- pl + ggplot2::theme(legend.position = "none")
+
   # names(MSM.IPAW)
   # nrow(t(MSM.IPAW$IC.Var.S.d$gTI.dlow$IC.S))
   # nrow(t(MSM.IPAW$IC.Var.S.d$gTI.dhigh$IC.S))
@@ -190,14 +204,15 @@ test.speedglm.allestimators10Kdata <- function() {
   # TMLE / GCOMP
   # ---------------------------------------------------------------------------------------------------------
   # t.surv <- c(4,5)
-  t.surv <- c(10)
+  t.surv <- c(9,10)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   # params = list(fit.package = "speedglm", fit.algorithm = "glm")
   # models = params,
   gcomp_est3 <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  gcomp_est3$estimates[]
+  gcomp_est3[["estimates"]][]
   #    est_name     t      risk      surv ALLsuccessTMLE nFailedUpdates   type rule.name
   # 1:    GCOMP    10 0.6600633 0.3399367          FALSE             11 pooled gTI.dhigh
+  pl <- ggsurv(list(gcomp_est3[["estimates"]]))
 
   # models = params,
   # stratified modeling by rule followers only:
@@ -205,6 +220,7 @@ test.speedglm.allestimators10Kdata <- function() {
   tmle_est3$estimates[]
   #    est_name     t       risk     surv ALLsuccessTMLE nFailedUpdates       type TMLE_Var  TMLE_SE rule.name
   # 1:     TMLE    10 0.04176398 0.958236           TRUE              0 stratified 690061.7 830.6995 gTI.dhigh
+  pl <- ggsurv(list(tmle_est3[["estimates"]]))
 
   # pooling all observations (no stratification):
   # models = params,
@@ -271,21 +287,35 @@ test.speedglm.allestimators10Kdata <- function() {
   # test for opening file in local OS
   if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData, file.name = "sim.data.example.fup2", title = "Custom", author = "Insert Author Name",
-                    # openFile = TRUE)
-                    openFile = FALSE)
+                    openFile = TRUE)
+                    # openFile = FALSE)
 
   if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(gcomp_est1, gcomp_est2), TMLE = list(tmle_est_par1, tmle_est_par2),
                   format = "html",
                   FUPtables = get_FUPtimes(MSM.IPAW$wts_data, IDnode = "ID", tnode = "t"),
-                  # openFile = TRUE,
-                  openFile = FALSE,
+                  openFile = TRUE,
+                  # openFile = FALSE,
                   MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
                   TMLE.RDtables = get_TMLE_RDs(list(tmle_est_par1, tmle_est_par2), t.periods.RDs = c(1, 4)),
                   WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                   file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", x_legend = 9.5, y_legend = 0.99,
                   save_report_data = TRUE
                   )
+
+    make_report_rmd(OData, NPMSM = list(surv1, surv2), MSM = MSM.IPAW, GCOMP = list(gcomp_est1, gcomp_est2), TMLE = list(tmle_est_par1, tmle_est_par2),
+                  format = "html",
+                  FUPtables = get_FUPtimes(MSM.IPAW$wts_data, IDnode = "ID", tnode = "t"),
+                  openFile = TRUE,
+                  # openFile = FALSE,
+                  MSM.RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
+                  TMLE.RDtables = get_TMLE_RDs(list(tmle_est_par1, tmle_est_par2), t.periods.RDs = c(1, 4)),
+                  WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name", x_legend = 9.5, y_legend = 0.99,
+                  save_report_data = TRUE,
+                  use_ggplot = TRUE,
+                  )
+
 
   load(file = file.path(getOption('stremr.file.path'), "sim.data.example.fup") %+% ".Rd")
   names(report_results_list)

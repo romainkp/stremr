@@ -174,7 +174,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gf
 require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
              survNPMSM(OData) %$%
-             IPW_estimates
+             estimates
 AKME.St.1
 ```
 

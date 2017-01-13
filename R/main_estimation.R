@@ -1,7 +1,7 @@
 # adding to appease CRAN check with non-standard eval in data.table:
 utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN", "new.TRT.gstar",
                           "N.risk", "N.follow.rule", "stab.P", "cum.stab.P", "cum.IPAW",
-                          "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht", "ht.KM", "EIC_i_t0", "EIC_i_tplus"))
+                          "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht.NPMSM", "ht.KM", "EIC_i_t0", "EIC_i_tplus"))
 
 # ---------------------------------------------------------------------------------------
 #' Import data, define various nodes, define dummies for factor columns and define OData R6 object
@@ -454,8 +454,19 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   # S.t.n <- 1 - (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
 
   resultDT <- data.table(est_name = "DirectBoundedIPW", merge(numIPW, denomIPW, by = t_name))
-  resultDT[, c("risk", "S.t.n") := list(risk.t[[1]], 1 - risk.t[[1]])]
-  return(resultDT)
+  resultDT[, ("St.DirectIPW") := (1 - risk.t[[1]])]
+  # resultDT[, c("risk.DirectIPW", "St.DirectIPW") := list(risk.t[[1]], (1 - risk.t[[1]]))]
+
+  setnames(resultDT, t_name, "time")
+  resultDT <- data.frame(resultDT)
+  attr(resultDT, "estimator_short") <- "NPMSM"
+  attr(resultDT, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
+
+  result_object <- list(trunc_weights = trunc_weights, estimates = resultDT)
+  # attr(result_object, "estimator_short") <- "DirectIPW"
+  # attr(result_object, "estimator_long") <- "Bounded IPW for Direct Estimate of Survival"
+
+  return(result_object)
 }
 
 # ---------------------------------------------------------------------------------------
@@ -515,12 +526,22 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   # sum_Allwt <- wts_data_used[, .(sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
 
   # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
-  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, ("St.IPTW") := cumprod(1 - ht)]
-  # St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht" := sum_Y_IPAW / sum_all_IPAW][, c("St.IPTW") := .(cumprod(1 - ht))]
+  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht.NPMSM" := sum_Y_IPAW / sum_all_IPAW][, ("St.NPMSM") := cumprod(1 - ht.NPMSM)]
 
-  St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all=TRUE)
+  St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all = TRUE)
   St_ht_IPAW[, "rule.name" := rule.name]
-  return(list(wts_data = wts_data_used, trunc_weights = trunc_weights, IPW_estimates = data.frame(St_ht_IPAW)))
+
+  setnames(St_ht_IPAW,t_name,"time")
+  St_ht_IPAW <- data.frame(St_ht_IPAW)
+  attr(St_ht_IPAW, "estimator_short") <- "NPMSM"
+  attr(St_ht_IPAW, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
+
+  result_object <- list(wts_data = wts_data_used, trunc_weights = trunc_weights, estimates = St_ht_IPAW)
+
+  # attr(result_object, "estimator_short") <- "NPMSM"
+  # attr(result_object, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
+
+  return(result_object)
 }
 
 format_wts_data <- function(wts_data) {
@@ -754,6 +775,22 @@ survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = T
   } else {
     IC.Var.S.d <- NULL
   }
+
+  estimates <- lapply(rules_TRT, function(rule_name) {
+    res <- data.frame(
+      time = periods,
+      ht.MSM = hazard.IPAW[[rule_name]],
+      St.MSM = S2.IPAW[[rule_name]],
+      SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
+      rule.name = rep(rule_name, length(periods))
+      )
+    # names(res)[1] <- t_name
+    attr(res, "estimator_short") <- "MSM"
+    attr(res, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
+    return(res)
+  })
+  names(estimates) <- rules_TRT
+
   MSM_out <- list(
               est_name = est_name,
               periods = periods,
@@ -766,8 +803,13 @@ survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = T
               nobs = nrow(wts_data_used),
               wts_data = wts_data_used,
               use_weights = use_weights,
-              trunc_weights = trunc_weights
+              trunc_weights = trunc_weights,
+              estimates = estimates
             )
+
+  attr(MSM_out, "estimator_short") <- "MSM"
+  attr(MSM_out, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
+
   return(MSM_out)
 }
 

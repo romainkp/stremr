@@ -395,7 +395,7 @@ test.xgboost.grid.10Kdata <- function() {
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     surv1 <- survNPMSM(wts.St.dlow, OData)
     surv1
-    #     t sum_Y_IPAW sum_all_IPAW          ht   St.IPTW       ht.KM     St.KM rule.name
+    #     t sum_Y_IPAW sum_all_IPAW          ht   St.NPMSM       ht.KM     St.KM rule.name
     # 1   0  1.4491222    159.54285 0.009082965 0.9909170 0.041176471 0.9588235  gTI.dlow
     # 2   1  0.0000000    151.61459 0.000000000 0.9909170 0.000000000 0.9588235  gTI.dlow
     # 3   2  8.1574199    151.64520 0.053792798 0.9376128 0.049079755 0.9117647  gTI.dlow
@@ -417,7 +417,7 @@ test.xgboost.grid.10Kdata <- function() {
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
     surv2 <- survNPMSM(wts.St.dhigh, OData)
     surv2
-    # t sum_Y_IPAW sum_all_IPAW          ht   St.IPTW       ht.KM     St.KM rule.name
+    # t sum_Y_IPAW sum_all_IPAW          ht   St.NPMSM       ht.KM     St.KM rule.name
     # 1   0   8.281495     866.8629 0.009553407 0.9904466 0.009324009 0.9906760 gTI.dhigh
     # 2   1  13.018836     780.9117 0.016671328 0.9739345 0.012836970 0.9779587 gTI.dhigh
     # 3   2  18.162327     690.0924 0.026318688 0.9483019 0.023154848 0.9553142 gTI.dhigh

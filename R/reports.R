@@ -60,6 +60,7 @@ openFileInOS <- function(f) {
 #' @param serve_html_rmote Serve the html report as a webpage via R package "rmote".
 # ' Requires prior initialization of the back-end server with rmote::start_rmote()
 #' @param save_report_data Save the data needed for generating this report as a list in a separate 'report_name.Rd' file.
+#' @param use_ggplot Set to \code{TRUE} to enable plotting with ggplot.
 #' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
 #' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}:
@@ -71,7 +72,7 @@ make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP,
                             plotKM = FALSE, printEstimateTables = FALSE,
                             format = c("html", "pdf", "word"), skip.modelfits = FALSE,
                             file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'),
-                            openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, save_report_data = FALSE, ...) {
+                            openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, save_report_data = FALSE, use_ggplot = TRUE, ...) {
   optArgReport <- list(...)
 
   if (!rmarkdown::pandoc_available(version = "1.12.3"))
@@ -148,6 +149,8 @@ call. = FALSE)
   nuniqueIDs <- OData$nuniqueIDs
   nobs <- OData$nobs
   nuniquets <- OData$nuniquets
+  t_name <- OData$nodes$tnode
+  use_ggplot <- use_ggplot
 
   ## -------------------------------------------------------------------------------------
   ## Create report data object (list) to be saved along with the report itself

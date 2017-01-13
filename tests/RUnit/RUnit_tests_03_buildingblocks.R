@@ -40,12 +40,12 @@ test.buildingblocks <- function() {
   require("magrittr")
   AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
                survNPMSM(OData) %$%
-               IPW_estimates
+               estimates
 
   res.test.AMKE.IPTW.1 <- c(0.9564462, 0.9403990, 0.9250282, 0.9250282, 0.9010454, 0.8873632, 0.8850073,
                             0.8678221, 0.8488353, 0.8401469, 0.8401469, 0.8304123, 0.7930334, 0.7752481,
                             0.7752481, 0.7340285, 0.7340285)
-  checkTrue(all(abs(res.test.AMKE.IPTW.1 - AKME.St.1[["St.IPTW"]]) < (10^-5)))
+  checkTrue(all(abs(res.test.AMKE.IPTW.1 - AKME.St.1[["St.NPMSM"]]) < (10^-5)))
 
   res.test.AMKE.KM.1 <- c(0.9526627, 0.9349112, 0.9230769, 0.9230769, 0.8994083, 0.8757396, 0.8639053,
                           0.8520710, 0.8224852, 0.8165680, 0.8165680, 0.8047337, 0.7692308, 0.7573964,
@@ -91,7 +91,7 @@ test.buildingblocks <- function() {
   wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "TI.set1", rule_name = "TI1")
   wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "TI.set0", rule_name = "TI0")
   survNP_res <- survNPMSM(wts.DT.1, OData)
-  survNPIPW_ests <- survNP_res$IPW_estimates
+  survNPIPW_ests <- survNP_res$estimates
   survNPIPW_ests[]
 
   survDirIPW_ests <- survDirectIPW(wts.DT.1, OData)
@@ -133,10 +133,10 @@ test.buildingblocks <- function() {
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
           # noCENScat = 0L)
-  res$IPW_estimates
+  res$estimates
 
-  checkTrue(all.equal(res$IPW_estimates[["St.IPTW"]], survNPIPW_ests[["St.IPTW"]]))
-  checkTrue(all.equal(res$IPW_estimates[["St.KM"]], survNPIPW_ests[["St.KM"]]))
+  checkTrue(all.equal(res$estimates[["St.NPMSM"]], survNPIPW_ests[["St.NPMSM"]]))
+  checkTrue(all.equal(res$estimates[["St.KM"]], survNPIPW_ests[["St.KM"]]))
   # res$dataDT
 
   # --------------------------------
@@ -153,7 +153,7 @@ test.buildingblocks <- function() {
   OData <- fitPropensity(OData = OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
   wts.DT <- getIPWeights(OData = OData) # , gstar_TRT = ..., gstar_MONITOR = ...)
   survNP_res <- survNPMSM(wts.DT, OData)
-  survNPIPW_ests <- survNP_res$IPW_estimates
+  survNPIPW_ests <- survNP_res$estimates
 
   res <- stremr(OdataDT, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
@@ -162,10 +162,10 @@ test.buildingblocks <- function() {
           gform_TRT = gform_TRT,
           gform_MONITOR = gform_MONITOR)
           # noCENScat = 0L)
-  # res$IPW_estimates
+  # res$estimates
   # res$dataDT
-  checkTrue(all.equal(res$IPW_estimates[["St.IPTW"]], survNPIPW_ests[["St.IPTW"]]))
-  checkTrue(all.equal(res$IPW_estimates[["St.KM"]], survNPIPW_ests[["St.KM"]]))
+  checkTrue(all.equal(res$estimates[["St.NPMSM"]], survNPIPW_ests[["St.NPMSM"]]))
+  checkTrue(all.equal(res$estimates[["St.KM"]], survNPIPW_ests[["St.KM"]]))
 
   options(stremr.verbose = FALSE)
 }

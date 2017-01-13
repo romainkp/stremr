@@ -11,47 +11,6 @@ require("pander")
 opts_chunk$set(fig.path = figure.dir)
 panderOptions("table.split.table", Inf)
 
-#+ echo=FALSE, include=FALSE
-f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend, y_legend, cex = 0.7) {
-  # ptsize <- 0.7
-  # ptsize <- 0.4
-  counter <- 0
-  if (missing(y_lab)) y_lab <- ""
-  if (missing(x_lab)) x_lab <- "Follow-up period since study entry"
-  if (missing(t)) t <- seq_along(surv_list[[1]])
-  if (missing(t_int_sel)) t_int_sel <- seq_along(t)
-  if (missing(miny)) miny <- min(unlist(lapply(surv_list, function(x) min(x[t_int_sel], na.rm = TRUE))))
-  # if (missing(x_legend)) x_legend <- (max(t_int_sel, na.rm = TRUE) - min(t_int_sel, na.rm = TRUE)) * 2/3 + min(t_int_sel, na.rm = TRUE)
-  # if (missing(y_legend)) y_legend <- (1 - miny) * 4/5 + miny
-  for(d.j in names(surv_list)){
-    counter <- counter + 1
-    plot(as.integer(t[t_int_sel]), surv_list[[d.j]][t_int_sel], col = counter, type = 'b', cex = cex, ylim = c(miny, 1), ylab = y_lab, xlab = x_lab)
-    par(new=TRUE)
-  }
-  if (missing(y_legend)) {
-    if (missing(x_legend)) {
-      x_legend <- "bottomleft"
-    } else {
-      if (!is.character(x_legend)) stop("x_legend must be a character when y_legend is unspecified")
-    }
-    legend(x_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = cex, pch = 1)
-  } else {
-    legend(x_legend, y_legend, legend = names(surv_list), col = c(1:length(names(surv_list))), cex = cex, pch = 1)
-  }
-}
-f_obtain_TMLE_St <- function(TMLE, optArgReport) {
-  sysArg <- list()
-  if (is.data.table(TMLE)) TMLE <- list(TMLE_res = TMLE)
-  TMLE <- lapply(TMLE, '[[', "estimates")
-  sysArg$surv_list <- lapply(TMLE, '[[', 'surv')
-  rule.names <- unlist(lapply(TMLE, function(tmle_res) tmle_res[['rule.name']][1]))
-  names(sysArg$surv_list) <- rule.names
-  sysArg$t <- TMLE[[1]][["t"]]
-  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  return(sysArg)
-}
-
 #'
 #' Number of unique independent units in the input data:
 {{prettyNum(nuniqueIDs, big.mark = ",", scientific = FALSE)}}
@@ -164,18 +123,52 @@ if (!missing(FUPtables)) {
 #'
 #' `r ifelse(!missing(NPMSM),'# Survival with IPW-Adjusted Kaplan-Meier (Non-Parametric / Saturated MSM for Hazard)','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "Survival with IPW-Adjusted KM.\\label{fig:survPlotGCOMP}"
+#+ echo=FALSE, warning=FALSE, fig.width=8, fig.height=5, fig.cap = "Survival with IPW-Adjusted KM.\\label{fig:survPlotGCOMP}"
 if (!missing(NPMSM)) {
+  est_name <- "NPMSM"
+  est_obj <- NPMSM
+
+  # sysArg <- list()
+  # if ("estimates" %in% names(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
+  # # if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
+  # surv_tables <- lapply(NPMSM, '[[', 'estimates')
+
+  # if (!use_ggplot) {
+
+  #   sysArg[["surv_list"]] <- lapply(surv_tables, '[[', 'St.NPMSM')
+  #   rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
+  #   names(sysArg[["surv_list"]]) <- paste0("St.NPMSM: ", rule.names)
+  #   sysArg$t <- NPMSM[[1]][["time"]]
+  #   userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
+  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  #   do.call(f_plot_survest, sysArg)
+
+  # } else {
+
+  #   sysArg[["estimates"]] <- surv_tables
+  #   userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
+  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  #   do.call(ggsurv, sysArg)
+  # }
+
   sysArg <- list()
-  if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
-  surv_tables <- lapply(NPMSM, '[[', 'IPW_estimates')
-  sysArg$surv_list <- lapply(surv_tables, '[[', 'St.IPTW')
-  rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
-  names(sysArg$surv_list) <- paste0("St.IPTW: ", rule.names)
-  sysArg$t <- NPMSM[[1]][["t"]]
-  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  do.call(f_plot_survest, sysArg)
+  if ("estimates" %in% names(est_obj)) est_obj <- list(res = est_obj)
+  est_obj <- lapply(est_obj, '[[', "estimates")
+
+  if (!use_ggplot) {
+
+    sysArg <- f_obtain_St(est_obj, optArgReport, est_name = "St."%+%est_name, t_name = "time")
+    do.call(f_plot_survest, sysArg)
+
+  } else {
+
+    sysArg[["estimates"]] <- est_obj
+    userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
+    if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+    do.call(ggsurv, sysArg)
+
+  }
+
 }
 
 #+ echo=FALSE, results='asis'
@@ -193,18 +186,53 @@ panderOptions('knitr.auto.asis', TRUE)
 #'
 #' `r ifelse(!missing(NPMSM) && plotKM,'# Survival with Kaplan-Meier','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "Survival with KM.\\label{fig:survPlotGCOMP}"
+#+ echo=FALSE, warning = FALSE, fig.width=8, fig.height=5, fig.cap = "Survival with KM.\\label{fig:survPlotGCOMP}"
 if (!missing(NPMSM) && plotKM) {
+  est_name <- "KM"
+  est_obj <- NPMSM
+
+  # sysArg <- list()
+  # if ("estimates" %in% names(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
+  # # if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
+  # surv_tables <- lapply(NPMSM, '[[', 'estimates')
+
+  # if (!use_ggplot) {
+
+  #   sysArg$surv_list <- lapply(surv_tables, '[[', 'St.KM')
+  #   rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
+  #   names(sysArg$surv_list) <- paste0("St.KM: ", rule.names)
+  #   sysArg$t <- NPMSM[[1]][["time"]]
+  #   userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
+  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  #   do.call(f_plot_survest, sysArg)
+
+  # } else {
+
+  #   sysArg[["estimates"]] <- surv_tables
+  #   sysArg[["surv.name"]] <- "St.KM"
+  #   userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
+  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+  #   do.call(ggsurv, sysArg)
+
+  # }
+
   sysArg <- list()
-  if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
-  surv_tables <- lapply(NPMSM, '[[', 'IPW_estimates')
-  sysArg$surv_list <- lapply(surv_tables, '[[', 'St.KM')
-  rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
-  names(sysArg$surv_list) <- paste0("St.KM: ", rule.names)
-  sysArg$t <- NPMSM[[1]][["t"]]
-  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  do.call(f_plot_survest, sysArg)
+  if ("estimates" %in% names(est_obj)) est_obj <- list(res = est_obj)
+  est_obj <- lapply(est_obj, '[[', "estimates")
+
+  if (!use_ggplot) {
+
+    sysArg <- f_obtain_St(est_obj, optArgReport, est_name = "St."%+%est_name, t_name = "time")
+    do.call(f_plot_survest, sysArg)
+
+  } else {
+
+    sysArg[["estimates"]] <- est_obj
+    userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
+    if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+    do.call(ggsurv, sysArg)
+
+  }
 }
 
 #'\pagebreak
@@ -227,14 +255,30 @@ if (!missing(MSM)) {
 #'
 #' `r ifelse(!missing(MSM),'# Survival with IPW-based Marginal Structural Model (MSM)','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "IPW-MSM Survival.\\label{fig:survPlotIPW}"
+#+ echo=FALSE, warning = FALSE, fig.width=8, fig.height=5, fig.cap = "IPW-MSM Survival.\\label{fig:survPlotIPW}"
 if (!missing(MSM)) {
+  est_name <- "MSM"
+  est_obj <- MSM
+
   sysArg <- list()
-  sysArg$surv_list <- MSM$St
-  sysArg$t <- MSM$periods
-  userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  do.call(f_plot_survest, sysArg)
+
+  if (!use_ggplot) {
+
+    sysArg$surv_list <- lapply(est_obj[["estimates"]], "[[", "St."%+%est_name)
+    sysArg$t <- est_obj[["periods"]]
+    userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
+    if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+    do.call(f_plot_survest, sysArg)
+
+  } else {
+
+    sysArg[["estimates"]] <- est_obj[["estimates"]]
+    userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
+    if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+    do.call(ggsurv, sysArg)
+
+  }
+
 }
 
 #'\pagebreak
@@ -255,8 +299,26 @@ panderOptions('knitr.auto.asis', TRUE)
 
 #+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "G-Computation Survival.\\label{fig:survPlotGCOMP}"
 if (!missing(GCOMP)) {
-  sysArg <- f_obtain_TMLE_St(GCOMP, optArgReport)
-  do.call(f_plot_survest, sysArg)
+  est_name <- "GCOMP"
+  est_obj <- GCOMP
+
+  sysArg <- list()
+  if ("estimates" %in% names(est_obj)) est_obj <- list(res = est_obj)
+  est_obj <- lapply(est_obj, '[[', "estimates")
+
+  if (!use_ggplot) {
+
+    sysArg <- f_obtain_St(est_obj, optArgReport, est_name = "St."%+%est_name, t_name = "time")
+    do.call(f_plot_survest, sysArg)
+
+  } else {
+
+    sysArg[["estimates"]] <- est_obj
+    userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
+    if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+    do.call(ggsurv, sysArg)
+
+  }
 }
 
 #+ echo=FALSE, results='asis'
@@ -274,8 +336,28 @@ panderOptions('knitr.auto.asis', TRUE)
 
 #+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "TMLE Survival.\\label{fig:survPlotTMLE}"
 if (!missing(TMLE)) {
-  sysArg <- f_obtain_TMLE_St(TMLE, optArgReport)
-  do.call(f_plot_survest, sysArg)
+  # sysArg <- f_obtain_St(TMLE, optArgReport, est_name = "St.TMLE", t_name = "time")
+  # do.call(f_plot_survest, sysArg)
+  est_name <- "TMLE"
+  est_obj <- TMLE
+
+  sysArg <- list()
+  if ("estimates" %in% names(est_obj)) est_obj <- list(res = est_obj)
+  est_obj <- lapply(est_obj, '[[', "estimates")
+
+  if (!use_ggplot) {
+
+    sysArg <- f_obtain_St(est_obj, optArgReport, est_name = "St."%+%est_name, t_name = "time")
+    do.call(f_plot_survest, sysArg)
+
+  } else {
+
+    sysArg[["estimates"]] <- est_obj
+    userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
+    if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
+    do.call(ggsurv, sysArg)
+
+  }
 }
 
 #'\pagebreak
