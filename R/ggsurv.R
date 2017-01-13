@@ -88,8 +88,8 @@ ggsurv <- function(
 
   n.grps <- length(estimates)
   # n <- s$strata
-  surv_name <- "St." %+% attr(estimates[[1]], "estimator_short")
-  SE_name <- "SE." %+% attr(estimates[[1]], "estimator_short")
+  # surv_name <- "St." %+% attr(estimates[[1]], "estimator_short")
+  # SE_name <- "SE." %+% attr(estimates[[1]], "estimator_short")
 
   # strataEqualNames <- unlist(strsplit(names(s$strata), '='))
   # ugroups <- strataEqualNames[seq(2, 2*n.grps, by = 2)]

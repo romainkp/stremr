@@ -174,10 +174,25 @@ test.xgboost.10Kdata <- function() {
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
     surv2 <- survNPMSM(wts.St.dhigh, OData)
 
+    # surv1[["estimates"]][["St.KM"]] <- 1
+    pl1 <- ggsurv(list(surv1[["estimates"]], surv2[["estimates"]]))
+    pl2 <- ggsurv(list(surv1[["estimates"]], surv2[["estimates"]]), surv_name = "St."%+%"KM")
+
     if (rmarkdown::pandoc_available(version = "1.12.3"))
         make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
                     AddFUPtables = TRUE,
-                    openFile = FALSE,
+                    openFile = TRUE,
+                    plotKM = TRUE,
+                    # openFile = FALSE,
+                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+
+        make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                    AddFUPtables = TRUE,
+                    openFile = TRUE,
+                    plotKM = TRUE,
+                    use_ggplot = FALSE,
+                    # openFile = FALSE,
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 

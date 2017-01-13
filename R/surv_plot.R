@@ -28,11 +28,11 @@ f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend
   }
 }
 
-f_obtain_St <- function(est_obj, optArgReport, est_name = "St.TMLE", t_name) {
-  sysArg$surv_list <- lapply(est_obj, '[[', est_name)
+f_obtain_St <- function(sysArg, est_obj, optArgReport, est_name = "St.TMLE", t_name) {
+  sysArg[["surv_list"]] <- lapply(est_obj, '[[', est_name)
   rule.names <- unlist(lapply(est_obj, function(est_obj_res) est_obj_res[['rule.name']][1]))
-  names(sysArg$surv_list) <- rule.names
-  sysArg$t <- est_obj[[1]][[t_name]]
+  names(sysArg[["surv_list"]]) <- rule.names
+  sysArg[["t"]] <- est_obj[[1]][[t_name]]
   userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
   return(sysArg)
