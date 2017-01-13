@@ -64,6 +64,8 @@ the character word denoting the legend orientation with respect to the plot
 
 \item{order.legend}{Set to \code{TRUE} to order the legend display by final
 survival time (highest first).}
+
+\item{...}{Additional arguments (not used).}
 }
 \value{
 An object of class \code{ggplot}

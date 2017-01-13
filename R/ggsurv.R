@@ -48,7 +48,7 @@ if(getRversion() >= "2.15.1") {
 #' @param SE.name The name of the column containing the standard errors (SE) for each time-point estimate of survival.
 #' @param order.legend Set to \code{TRUE} to order the legend display by final
 #' survival time (highest first).
-#' @param ...
+#' @param ... Additional arguments (not used).
 #' @return An object of class \code{ggplot}
 #' @author Original R code by Edwin Thoen \email{edwinthoen@@gmail.com}, modified by Oleg Sofrygin \email{oleg.sofrygin@@gmail.com}
 ggsurv <- function(
