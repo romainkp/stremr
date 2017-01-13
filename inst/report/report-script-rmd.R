@@ -334,7 +334,7 @@ panderOptions('knitr.auto.asis', TRUE)
 
 #' `r ifelse(!missing(TMLE),'# Survival with Targeted Maximum Likelihood (TMLE)','')`
 
-#+ echo=FALSE, fig.width=5, fig.height=5, fig.cap = "TMLE Survival.\\label{fig:survPlotTMLE}"
+#+ echo=FALSE, warning = FALSE, fig.width=8, fig.height=5, fig.cap = "TMLE Survival.\\label{fig:survPlotTMLE}"
 if (!missing(TMLE)) {
   # sysArg <- f_obtain_St(TMLE, optArgReport, est_name = "St.TMLE", t_name = "time")
   # do.call(f_plot_survest, sysArg)

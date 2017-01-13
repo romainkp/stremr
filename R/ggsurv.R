@@ -58,7 +58,7 @@ if(getRversion() >= "2.15.1") {
 ggsurv <- function(
   estimates,
   CI         = TRUE,
-  CI_step    = TRUE,
+  CI_line    = TRUE,
   plot_cens  = TRUE,
   surv_col   = 'gg.def',
   cens_col   = 'gg.def',
@@ -183,10 +183,13 @@ ggsurv <- function(
     } else{
       surv_col
     }
-    pl + ggplot2::scale_colour_manual(name = gr.name, values = scaleValues)
-
+    pl +
+      ggplot2::scale_colour_manual(name = gr.name, values = scaleValues) +
+      ggplot2::scale_fill_manual(name = gr.name, values = scaleValues)
   } else {
-    pl + ggplot2::scale_colour_discrete(name = gr.name)
+    pl +
+      ggplot2::scale_colour_discrete(name = gr.name) +
+      ggplot2::scale_fill_discrete(name = gr.name)
   }
 
   lineScaleValues <- if (length(lty_est) == 1) {
@@ -204,7 +207,7 @@ ggsurv <- function(
   pl <- pl + ggplot2::scale_shape_manual(name = gr.name, values = pointShapeValues)
 
   if(identical(CI,TRUE)) {
-    if(length(surv_col) > 1 || length(lty_est) > 1){
+    if(length(surv_col) > 1 && length(lty_est) > 1){
       stop('Either surv_col or lty_est should be of length 1 in order to plot 95% CI with multiple n.grps')
     }
 
@@ -214,7 +217,7 @@ ggsurv <- function(
       surv_col
     }
 
-    if (CI_step) {
+    if (CI_line) {
       pl <- pl +
         # ggplot2::geom_step(ggplot2::aes(y = up, lty = group, col = group), lty = stepLty, size = size_ci) +
         # ggplot2::geom_step(ggplot2::aes(y = low,lty = group, col = group), lty = stepLty, size = size_ci)
@@ -223,7 +226,14 @@ ggsurv <- function(
 
     } else {
       pl <- pl +
-        ggplot2::geom_ribbon(ggplot2::aes(ymin = low, ymax = up, fill = group, linetype = group), alpha = 0.3, size = size_ci, lty = stepLty)
+        ggplot2::geom_ribbon(ggplot2::aes(ymin = low, ymax = up, fill = group, linetype = group), alpha = 0.1, size = size_ci, lty = stepLty)
+
+      # fillValues <- if (length(fill_ci) == 1) {
+      #   rep(fill_ci, n.grps)
+      # } else {
+      #   fill_ci
+      # }
+      # pl <- pl + ggplot2::scale_fill_manual(name = gr.name, values = fillValues)
     }
 
   }
