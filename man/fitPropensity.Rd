@@ -25,14 +25,20 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
 
 \item{stratify_MONITOR}{...}
 
-\item{models_CENS}{Optional parameter specifying the models for fitting the censoring mechanism(s) with \code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.}
+\item{models_CENS}{Optional parameter specifying the models for fitting the censoring mechanism(s) with
+\code{GriDiSL} R package.
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and
+\code{GriDiSL::defGrid} functions.}
 
-\item{models_TRT}{Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s) with \code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.}
+\item{models_TRT}{Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s)
+with \code{GriDiSL} R package.
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
+functions.}
 
-\item{models_MONITOR}{Optional parameter specifying the models for fitting the monitoring mechanism with \code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.}
+\item{models_MONITOR}{Optional parameter specifying the models for fitting the monitoring mechanism with
+\code{GriDiSL} R package.
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
+functions.}
 
 \item{reg_CENS}{...}
 
@@ -41,15 +47,21 @@ Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLe
 \item{reg_MONITOR}{...}
 
 \item{fit.method}{Model selection approach. Can be \code{"none"} - no model selection,
-\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).}
+\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
+(must specify the column name that contains the fold IDs).}
 
-\item{fold_column}{The column (factor) that contains the fold IDs to be used as part of the validation sample. Use the provided function \code{\link{define_CVfolds}} to
+\item{fold_column}{The column (factor) that contains the fold IDs to be used as part of the validation sample.
+Use the provided function \code{\link{define_CVfolds}} to
 define such folds or define the folds using your own method.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
+Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 
-\item{...}{When all or some of the \code{models_...} arguments are NOT specified, these additional arguments will be passed on directly to all \code{GridSL} modeling functions that are called from this routine,
-e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments must be named.}
+\item{...}{When all or some of the \code{models_...} arguments are NOT specified, these additional
+arguments will be passed on directly to all \code{GridSL}
+modeling functions that are called from this routine,
+e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments
+must be named.}
 }
 \value{
 ...

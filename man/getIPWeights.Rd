@@ -11,15 +11,18 @@ getIPWeights(OData, intervened_TRT = NULL, intervened_MONITOR = NULL,
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
 
-\item{intervened_TRT}{Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
+\item{intervened_TRT}{Column name in the input data with the probabilities (or indicators) of counterfactual
+treatment nodes being equal to 1 at each time point.
 Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).}
 
-\item{intervened_MONITOR}{Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
+\item{intervened_MONITOR}{Column name in the input data with probabilities (or indicators) of counterfactual
+monitoring nodes being equal to 1 at each time point.
 Leave the argument unspecified (\code{NULL}) when not intervening on the monitoring node(s).}
 
 \item{useonly_t_TRT}{Use for intervening only on some subset of observation and time-specific treatment nodes.
 Should be a character string with a logical expression that defines the subset of intervention observations.
-For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being equal to zero.
+For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being
+equal to zero.
 The expression can contain any variable name that was defined in the input dataset.
 Leave as \code{NULL} when intervening on all observations/time-points.}
 
@@ -33,9 +36,12 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 \description{
 Evaluate the inverse probability weights for up to 3 intervention nodes: \code{CENS}, \code{TRT} and \code{MONITOR}.
 This is based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
-multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
-Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
-The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero weight are kept
+multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT}
+and \code{intervened_MONITOR}.
+Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each
+node being 1 (for stochastic interventions).
+The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero
+weight are kept
 Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
 Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 }

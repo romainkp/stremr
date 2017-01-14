@@ -7,15 +7,19 @@
 survDirectIPW(wts_data, OData, weights, trunc_weights)
 }
 \arguments{
-\item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.}
+\item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}.
+Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.}
 
-\item{OData}{The object returned by function \code{fitPropensity}. Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
+\item{OData}{The object returned by function \code{fitPropensity}.
+Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
 right-censoring.}
 
-\item{weights}{(NOT IMPLEMENTED) Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+\item{weights}{(NOT IMPLEMENTED) Optional \code{data.table} with additional observation-time-specific weights.
+Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
-\item{trunc_weights}{(NOT IMPLEMENTED) Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
+\item{trunc_weights}{(NOT IMPLEMENTED) Specify the numeric weight truncation value.
+All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 }
 \value{
 A data.table with bounded IPW estimates of risk and survival by time.

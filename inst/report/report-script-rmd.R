@@ -128,31 +128,6 @@ if (!missing(NPMSM) && plotKM) {
   est_name <- "KM"
   est_obj <- NPMSM
 
-  # sysArg <- list()
-  # if ("estimates" %in% names(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
-  # # if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
-  # surv_tables <- lapply(NPMSM, '[[', 'estimates')
-
-  # if (!use_ggplot) {
-
-  #   sysArg$surv_list <- lapply(surv_tables, '[[', 'St.KM')
-  #   rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
-  #   names(sysArg$surv_list) <- paste0("St.KM: ", rule.names)
-  #   sysArg$t <- NPMSM[[1]][["time"]]
-  #   userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  #   do.call(f_plot_survest, sysArg)
-
-  # } else {
-
-  #   sysArg[["estimates"]] <- surv_tables
-  #   sysArg[["surv.name"]] <- "St.KM"
-  #   userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  #   do.call(ggsurv, sysArg)
-
-  # }
-
   sysArg <- list()
   if ("estimates" %in% names(est_obj)) est_obj <- list(res = est_obj)
   est_obj <- lapply(est_obj, '[[', "estimates")
@@ -182,29 +157,6 @@ if (!missing(NPMSM) && plotKM) {
 if (!missing(NPMSM)) {
   est_name <- "NPMSM"
   est_obj <- NPMSM
-
-  # sysArg <- list()
-  # if ("estimates" %in% names(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
-  # # if (is.data.table(NPMSM)) NPMSM <- list(NPMSM_res = NPMSM)
-  # surv_tables <- lapply(NPMSM, '[[', 'estimates')
-
-  # if (!use_ggplot) {
-
-  #   sysArg[["surv_list"]] <- lapply(surv_tables, '[[', 'St.NPMSM')
-  #   rule.names <- unlist(lapply(surv_tables, function(NPMSM_res) NPMSM_res[['rule.name']][1]))
-  #   names(sysArg[["surv_list"]]) <- paste0("St.NPMSM: ", rule.names)
-  #   sysArg$t <- NPMSM[[1]][["time"]]
-  #   userArg <- intersect(names(formals(f_plot_survest)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  #   do.call(f_plot_survest, sysArg)
-
-  # } else {
-
-  #   sysArg[["estimates"]] <- surv_tables
-  #   userArg <- intersect(names(formals(ggsurv)), names(optArgReport)) # captures optional arguments given by user for customizing report
-  #   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
-  #   do.call(ggsurv, sysArg)
-  # }
 
   sysArg <- list()
   if ("estimates" %in% names(est_obj)) est_obj <- list(res = est_obj)

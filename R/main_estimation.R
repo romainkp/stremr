@@ -3,23 +3,98 @@ utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN",
                           "N.risk", "N.follow.rule", "stab.P", "cum.stab.P", "cum.IPAW",
                           "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht.NPMSM", "ht.KM", "EIC_i_t0", "EIC_i_tplus"))
 
+process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
+  if (!is.null(weights)) {
+    if (!is.data.table(weights) || (length(names(weights)) > 3) || !all(c(nodes$IDnode,nodes$tnode) %in% names(weights))) {
+      stop("input 'weights' must be a data.table with 3 columns, two of which must be named as: '" %+%  nodes$IDnode %+% "' and '" %+% nodes$tnode %+% "'.")
+    }
+    wt_col_name <- names(weights)[which(!(names(weights) %in% c(nodes$IDnode,nodes$tnode)))[1]]
+    setkeyv(weights, cols = c(nodes$IDnode, nodes$tnode))
+    wts_data <- merge(wts_data, weights, all.x = TRUE)
+    # Multiply the outcome by additional user-supplied weights:
+    if ("Wt.OUTCOME" %in% names(wts_data) && adjust_outcome) {
+      wts_data[, "Wt.OUTCOME" := Wt.OUTCOME * get(wt_col_name)]
+    } else if (!adjust_outcome) {
+      wts_data[, "cum.IPAW" := cum.IPAW * get(wt_col_name)]
+    }
+  }
+  return(wts_data)
+}
+
+internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPRS, model_contrl, OData, sVar.map, factor.map, censoring) {
+  if (!missing(reg_object)) {
+    assert_that(is.list(reg_object))
+    if (!"ListOfRegressionForms" %in% class(reg_object)) {
+      class(reg_object) <- c(class(reg_object), "ListOfRegressionForms")
+    }
+    if (censoring) {
+      for (reg_idx in seq_along(reg_object)) {
+       reg_object[[reg_idx]]$censoring <- TRUE
+      }
+      reg_object <- stratify_by_uncensored(reg_object)
+    }
+  } else {
+    assert_that(is.list(model_contrl))
+    reg_object <- process_regforms(regforms = regforms,
+                                   default.reg = default.reg,
+                                   stratify.EXPRS = stratify.EXPRS,
+                                   model_contrl = model_contrl,
+                                   OData = OData,
+                                   sVar.map = sVar.map,
+                                   factor.map = factor.map,
+                                   censoring = censoring)
+  }
+  return(reg_object)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Directly specify a single regression model
+#'
+#' This function provides an alternative way to manually define parts of the propsensity score model
+#' with formula/strata and model controls.
+#' This function is for advanced users. It provides explicit and manual control
+#' over every single model fit, e.g., every strata of the exposure propensity score.
+#' @param OData OData Input data object created by \code{importData} function.
+#' @param regforms Regression formula, only main terms are allowed.
+#' @param stratify Expression(s) for creating strata(s) (model will be fit separately on each strata)
+#' @param params Additional modeling controls (for downstream modeling algorithms)
+#' @export
+define_single_regression <- function(OData, regforms, stratify = NULL, params = list()) {
+  nodes <- OData$nodes
+  new.factor.names <- OData$new.factor.names
+  return(process_regforms(regforms = regforms,
+                          stratify.EXPRS = stratify,
+                          model_contrl = params,
+                          OData = OData,
+                          sVar.map = nodes,
+                          factor.map = new.factor.names))
+}
+
+
 # ---------------------------------------------------------------------------------------
 #' Import data, define various nodes, define dummies for factor columns and define OData R6 object
 #'
-#' @param data Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns, containing the time-varying covariates (\code{covars}),
-#'  the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
-#'  and the survival OUTCOME variable (\code{OUTCOME}).
+#' @param data Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns,
+#' containing the time-varying covariates (\code{covars}),
+#' the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}),
+#' the monitoring process variable(s) (\code{MONITOR})
+#' and the survival OUTCOME variable (\code{OUTCOME}).
 #' @param ID Unique subject identifier column name in \code{data}.
 #' @param t_name The name of the time/period variable in \code{data}.
-#' @param covars Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
-#' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.
+#' @param covars Vector of names with time varying and baseline covariates in \code{data}.
+#' This argument does not need to be specified, by default all variables
+#' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME}
+#' will be considered as covariates.
 #' @param CENS Column name of the censoring variable(s) in \code{data}.
 #' Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
-#' For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).
-#' For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of follow-up and other
-#' values indicate different reasons for CENSoring.
-#' Use the argument \code{noCENScat} to change the reference (continuation of follow-up) category from default 0 to any other value.
-#' (NOTE: Changing \code{noCENScat} has zero effect on coding of the binary CENSoring variables, those have to always use 1 to code the CENSoring event).
+#' For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event
+#' (this cannot be changed).
+#' For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of
+#' follow-up and other values indicate different reasons for CENSoring.
+#' Use the argument \code{noCENScat} to change the reference (continuation of follow-up) category from
+#' default 0 to any other value.
+#' (NOTE: Changing \code{noCENScat} has zero effect on coding of the binary CENSoring variables, those
+#' have to always use 1 to code the CENSoring event).
 #' Note that factors are not allowed in \code{CENS}.
 #' @param TRT A column name in \code{data} for the exposure/treatment variable(s).
 #' @param MONITOR A column name in \code{data} for the indicator(s) of monitoring events.
@@ -27,12 +102,22 @@ utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN",
 #' @param noCENScat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 #' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 #' for variables specifed in \code{CENS}.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
+#' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y", noCENScat = 0L, verbose = getOption("stremr.verbose")) {
+importData <- function(data,
+                       ID = "Subject_ID",
+                       t_name = "time_period",
+                       covars,
+                       CENS = "C",
+                       TRT = "A",
+                       MONITOR = "N",
+                       OUTCOME = "Y",
+                       noCENScat = 0L,
+                       verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   gvars$noCENScat <- noCENScat
   if (verbose) {
@@ -45,7 +130,13 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
     covars <- setdiff(colnames(data), c(ID, t_name, CENS, TRT, MONITOR, OUTCOME))
   }
   # The ordering of variables in this list is the assumed temporal order!
-  nodes <- list(Lnodes = covars, Cnodes = CENS, Anodes = TRT, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t_name)
+  nodes <- list(Lnodes = covars,
+                Cnodes = CENS,
+                Anodes = TRT,
+                Nnodes = MONITOR,
+                Ynode = OUTCOME,
+                IDnode = ID,
+                tnode = t_name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENScat = noCENScat)
 
   # --------------------------------------------------------------------------------------------------------
@@ -90,43 +181,6 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   return(OData)
 }
 
-
-# ---------------------------------------------------------------------------------------
-#' Define regression models
-#'
-#' Alternative approach to manually define parts of the propsensity score model with formula/strata and model controls
-#' @param OData OData Input data object created by \code{importData} function.
-#' @param regforms Regression formula, only main terms are allowed.
-#' @param stratify Expression(s) for creating strata(s) (model will be fit separately on each strata)
-#' @param params Additional modeling controls (for downstream modeling algorithms)
-#' @export
-define_single_regression <- function(OData, regforms, stratify = NULL, params = list()) {
-  nodes <- OData$nodes
-  new.factor.names <- OData$new.factor.names
-  return(process_regforms(regforms = regforms, stratify.EXPRS = stratify, model_contrl = params,
-                          OData = OData, sVar.map = nodes, factor.map = new.factor.names))
-}
-
-internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPRS, model_contrl, OData, sVar.map, factor.map, censoring) {
-  if (!missing(reg_object)) {
-    assert_that(is.list(reg_object))
-    if (!"ListOfRegressionForms" %in% class(reg_object)) {
-      class(reg_object) <- c(class(reg_object), "ListOfRegressionForms")
-    }
-    if (censoring) {
-      for (reg_idx in seq_along(reg_object)) {
-       reg_object[[reg_idx]]$censoring <- TRUE
-      }
-      reg_object <- stratify_by_uncensored(reg_object)
-    }
-  } else {
-    assert_that(is.list(model_contrl))
-    reg_object <- process_regforms(regforms = regforms, default.reg = default.reg, stratify.EXPRS = stratify.EXPRS, model_contrl = model_contrl,
-                                   OData = OData, sVar.map = sVar.map, factor.map = factor.map, censoring = censoring)
-  }
-  return(reg_object)
-}
-
 # ---------------------------------------------------------------------------------------
 #' Define and fit propensity score models.
 #'
@@ -139,24 +193,37 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param stratify_CENS ...
 #' @param stratify_TRT ...
 #' @param stratify_MONITOR ...
-#' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s) with \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
-#' @param models_TRT Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s) with \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
-#' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
+#' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s) with
+#' \code{GriDiSL} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and
+#' \code{GriDiSL::defGrid} functions.
+#' @param models_TRT Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s)
+#' with \code{GriDiSL} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
+#' functions.
+#' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with
+#' \code{GriDiSL} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
+#' functions.
 #' @param reg_CENS ...
 #' @param reg_TRT ...
 #' @param reg_MONITOR ...
 #' @param fit.method Model selection approach. Can be \code{"none"} - no model selection,
-#' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
-# \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
+#' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
+#' (must specify the column name that contains the fold IDs).
+# \code{"holdout"} - model selection by splitting the data into training and validation samples according to
+# lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
 # where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
-#' @param fold_column The column (factor) that contains the fold IDs to be used as part of the validation sample. Use the provided function \code{\link{define_CVfolds}} to
+#' @param fold_column The column (factor) that contains the fold IDs to be used as part of the validation sample.
+#' Use the provided function \code{\link{define_CVfolds}} to
 #' define such folds or define the folds using your own method.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
-#' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional arguments will be passed on directly to all \code{GridSL} modeling functions that are called from this routine,
-#' e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments must be named.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
+#' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional
+#' arguments will be passed on directly to all \code{GridSL}
+#' modeling functions that are called from this routine,
+#' e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments
+#' must be named.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
@@ -208,12 +275,32 @@ fitPropensity <- function(OData,
   names(g_CAN_regs_list) <- c("gC", "gA", "gN")
   class(g_CAN_regs_list) <- c(class(g_CAN_regs_list), "ListOfRegressionForms")
 
-  g_CAN_regs_list[["gC"]] <- internal_define_reg(reg_CENS, gform_CENS, default.reg = gform_CENS.default, stratify.EXPRS = stratify_CENS, model_contrl = models_CENS_control,
-                                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = TRUE)
-  g_CAN_regs_list[["gA"]] <- internal_define_reg(reg_TRT, gform_TRT, default.reg = gform_TRT.default, stratify.EXPRS = stratify_TRT, model_contrl = models_TRT_control,
-                                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
-  g_CAN_regs_list[["gN"]] <- internal_define_reg(reg_MONITOR, gform_MONITOR, default.reg = gform_MONITOR.default, stratify.EXPRS = stratify_MONITOR, model_contrl = models_MONITOR_control,
-                                                 OData = OData, sVar.map = nodes, factor.map = new.factor.names, censoring = FALSE)
+  g_CAN_regs_list[["gC"]] <- internal_define_reg(reg_CENS, gform_CENS,
+                                                 default.reg = gform_CENS.default,
+                                                 stratify.EXPRS = stratify_CENS,
+                                                 model_contrl = models_CENS_control,
+                                                 OData = OData,
+                                                 sVar.map = nodes,
+                                                 factor.map = new.factor.names,
+                                                 censoring = TRUE)
+
+  g_CAN_regs_list[["gA"]] <- internal_define_reg(reg_TRT, gform_TRT,
+                                                 default.reg = gform_TRT.default,
+                                                 stratify.EXPRS = stratify_TRT,
+                                                 model_contrl = models_TRT_control,
+                                                 OData = OData,
+                                                 sVar.map = nodes,
+                                                 factor.map = new.factor.names,
+                                                 censoring = FALSE)
+
+  g_CAN_regs_list[["gN"]] <- internal_define_reg(reg_MONITOR, gform_MONITOR,
+                                                 default.reg = gform_MONITOR.default,
+                                                 stratify.EXPRS = stratify_MONITOR,
+                                                 model_contrl = models_MONITOR_control,
+                                                 OData = OData,
+                                                 sVar.map = nodes,
+                                                 factor.map = new.factor.names,
+                                                 censoring = FALSE)
 
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
@@ -288,19 +375,25 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #'
 #' Evaluate the inverse probability weights for up to 3 intervention nodes: \code{CENS}, \code{TRT} and \code{MONITOR}.
 #' This is based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
-#' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
-#' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
-#' The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero weight are kept
+#' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT}
+#' and \code{intervened_MONITOR}.
+#' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each
+#' node being 1 (for stochastic interventions).
+#' The output is person-specific data with evaluated weights, \code{wts.DT}, only observation-times with non-zero
+#' weight are kept
 #' Can be one regimen per single run of this block, which are then combined into a list of output datasets with lapply.
 #' Alternative is to allow input with several rules/regimens, which are automatically combined into a list of output datasets.
 #' @param OData Input data object created by \code{importData} function.
-#' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
+#' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual
+#' treatment nodes being equal to 1 at each time point.
 #' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
-#' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
+#' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual
+#' monitoring nodes being equal to 1 at each time point.
 #' Leave the argument unspecified (\code{NULL}) when not intervening on the monitoring node(s).
 #' @param useonly_t_TRT Use for intervening only on some subset of observation and time-specific treatment nodes.
 #' Should be a character string with a logical expression that defines the subset of intervention observations.
-#' For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being equal to zero.
+#' For example, using \code{"TRT == 0"} will intervene only at observations with the value of \code{TRT} being
+#' equal to zero.
 #' The expression can contain any variable name that was defined in the input dataset.
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
@@ -326,8 +419,10 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   # (2) gstar.TRT: prob of following one treatment rule; and
   # (3) gstar.MONITOR prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
-  if (is.null(OData$modelfits.g0)) stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
-  if (any(!(c("g0.A", "g0.C", "g0.N", "g0.CAN") %in% names(OData$dat.sVar)))) stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")
+  if (is.null(OData$modelfits.g0))
+    stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
+  if (any(!(c("g0.A", "g0.C", "g0.N", "g0.CAN") %in% names(OData$dat.sVar))))
+    stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")
 
 
   # indicator that the person is uncensored at each t (continuation of follow-up)
@@ -348,7 +443,7 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   wts.DT[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
   # -------------------------------------------------------------------------------------------
-  # Weight stabilization - get emp P(followed rule at time t | followed rule up to now)
+  # Calculate weight stabilization factor -- get emp P(followed rule at time t | followed rule up to now)
   # -------------------------------------------------------------------------------------------
   nIDs <- OData$nuniqueIDs
   # THE ENUMERATOR: the total sum of subjects followed the rule gstar.A at t
@@ -359,64 +454,34 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   wts.DT[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
   n.follow.rule.t <- wts.DT[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
   wts.DT[, "rule.follower.gCAN" := NULL]
-  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][, stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 1)][, cum.stab.P := cumprod(stab.P)]
+  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][,
+                    stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 1)][,
+                    cum.stab.P := cumprod(stab.P)]
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols = nodes$tnode)
   wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
-
-  # Multiply the weight by stabilization factor (numerator) (doesn't change the estimand for saturated MSMs, since cum.stab.P cancels out, but makes weights smaller):
-  # if (stabilize) wts.DT[, "cum.IPAW" := cum.stab.P * cum.IPAW]
-  # # Add the observation-specific weights to the weighted outcome, merge in by ID & t
-  # if (!is.null(weights)) {
-  #   if (!is.data.table(weights) || (length(names(weights))>3) || !all(c(nodes$IDnode,nodes$tnode) %in% names(weights))) {
-  #     stop("input 'weights' must be a data.table with 3 columns, two of which must be named as: '" %+%  nodes$IDnode %+% "' and '" %+% nodes$tnode %+% "'.")
-  #   }
-  #   wt_col_name <- names(weights)[which(!(names(weights) %in% c(nodes$IDnode,nodes$tnode)))[1]]
-  #   weights_used <- weights
-  #   setkeyv(weights_used, cols = c(nodes$IDnode, nodes$tnode))
-  #   wts.DT <- merge(wts.DT, weights_used, all.x = TRUE)
-  # }
-  # # Multiply the outcome by the current (cumulative) weight cum.IPAW:
-  # wts.DT[, "Wt.OUTCOME" := get(nodes$Ynode)*cum.IPAW]
-  # # Multiply the outcome by additional user-supplied weights:
-  # if (!is.null(weights)) wts.DT[, "Wt.OUTCOME" := Wt.OUTCOME*get(wt_col_name)]
 
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
 
   attributes(wts.DT)[['getIPWeights_fun_call']] <- getIPWeights_fun_call
   attributes(wts.DT)[['intervened_TRT']] <- intervened_TRT
   attributes(wts.DT)[['intervened_MONITOR']] <- intervened_MONITOR
-  # attributes(wts.DT)[['stabilize']] <- stabilize
   return(wts.DT)
-}
-
-process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
-  if (!is.null(weights)) {
-    if (!is.data.table(weights) || (length(names(weights)) > 3) || !all(c(nodes$IDnode,nodes$tnode) %in% names(weights))) {
-      stop("input 'weights' must be a data.table with 3 columns, two of which must be named as: '" %+%  nodes$IDnode %+% "' and '" %+% nodes$tnode %+% "'.")
-    }
-    wt_col_name <- names(weights)[which(!(names(weights) %in% c(nodes$IDnode,nodes$tnode)))[1]]
-    setkeyv(weights, cols = c(nodes$IDnode, nodes$tnode))
-    wts_data <- merge(wts_data, weights, all.x = TRUE)
-    # Multiply the outcome by additional user-supplied weights:
-    if ("Wt.OUTCOME" %in% names(wts_data) && adjust_outcome) {
-      wts_data[, "Wt.OUTCOME" := Wt.OUTCOME * get(wt_col_name)]
-    } else if (!adjust_outcome) {
-      wts_data[, "cum.IPAW" := cum.IPAW * get(wt_col_name)]
-    }
-  }
-  return(wts_data)
 }
 
 # ---------------------------------------------------------------------------------------
 #' Direct (bounded) IPW estimator of discrete survival function.
-#' @param wts_data \code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.
-#' @param OData The object returned by function \code{fitPropensity}. Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
+#' @param wts_data \code{data.table} returned by a single call to \code{getIPWeights}.
+#' Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.
+#' @param OData The object returned by function \code{fitPropensity}.
+#' Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
 #' right-censoring.
-#' @param weights (NOT IMPLEMENTED) Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' @param weights (NOT IMPLEMENTED) Optional \code{data.table} with additional observation-time-specific weights.
+#' Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
-#' @param trunc_weights (NOT IMPLEMENTED) Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
+#' @param trunc_weights (NOT IMPLEMENTED) Specify the numeric weight truncation value.
+#' All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @return A data.table with bounded IPW estimates of risk and survival by time.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
@@ -425,11 +490,11 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
 
-  ## Extract relevant information
+  ## EXTRACT RELEVANT INFORMATION
   ID.t.IPW.Y <- wts_data[,list(get(nodes$IDnode), get(t_name), cum.IPAW, get(Ynode))]
   names(ID.t.IPW.Y) <- c(nodes$IDnode, t_name, "cum.IPAW", Ynode)
 
-  ## Make sure every patient has an entry for every time point by LVCF
+  ## MAKE SURE EVERY PATIENT HAS AN ENTRY FOR EVERY TIME POINT BY LVCF
   tmax <- wts_data[, max(get(t_name))]
 
   tmax <- tmax - 1
@@ -441,23 +506,32 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE, by = c(nodes$IDnode, t_name))
   all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(cum.IPAW), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
-  ## Numerator of bounded IPW for survival:
+  ## NUMERATOR OF BOUNDED IPW FOR SURVIVAL:
   numIPW <- all.ID.t[, {sum_Y_IPAW = sum(get(Ynode)*cum.IPAW, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
-  # numIPW <- all.ID.t[, .(sum_Y_IPAW = sum(get(Ynode)*eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
-  ## Denominator of bounded IPW for survival:
+  ## DENOMINATOR OF BOUNDED IPW FOR SURVIVAL:
   denomIPW <- all.ID.t[, {sum_IPAW = sum(cum.IPAW, na.rm = TRUE); list(sum_IPAW = sum_IPAW)}, by = eval(t_name)]
-  # denomIPW <- all.ID.t[, .(sum_IPAW = sum(eval(as.name("cum.IPAW")), na.rm = TRUE)), by = eval(t_name)]
 
-  ## Bounded IPW of survival (direct):
+  ## BOUNDED IPW OF SURVIVAL (DIRECT):
   risk.t <- (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
-  # S.t.n <- 1 - (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
 
   resultDT <- data.table(est_name = "DirectBoundedIPW", merge(numIPW, denomIPW, by = t_name))
   resultDT[, ("St.DirectIPW") := (1 - risk.t[[1]])]
-  # resultDT[, c("risk.DirectIPW", "St.DirectIPW") := list(risk.t[[1]], (1 - risk.t[[1]]))]
 
+  ## STANDARDIZE THE NAME OF THE 'time' VARIABLE
   setnames(resultDT, t_name, "time")
+
+  ## FILL IN THE GAP BETWEEN MINIMAL 'time' VALUE FROM OBSERVED DATA (IF THERE IS ANY) BY ADDING EXTRA ROWS IN THE BEGINING
+  if (min(resultDT[["time"]]) > OData$min.t) {
+    t_to_add <- (OData$min.t) : (min(resultDT[["time"]])-1)
+    resultDT_addt <- merge(data.table(time = t_to_add), resultDT, by = "time", all.x = TRUE)[,
+                              c("St.NPMSM", "St.KM") := 1][,
+                              c("ht.NPMSM","ht.KM") := 0][,
+                              "rule.name" := resultDT[["rule.name"]][1]]
+    resultDT <- rbind(resultDT_addt, resultDT)
+    setkeyv(resultDT, cols = "time")
+  }
+
   resultDT <- data.frame(resultDT)
   attr(resultDT, "estimator_short") <- "NPMSM"
   attr(resultDT, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
@@ -469,15 +543,23 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   return(result_object)
 }
 
-# ---------------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------------
+## ***** TO DO *****: rename to survNPMSM_1rule(), internally called to estimate for single rule.
+## ***** TO DO *****: if more then one rule exists in wts_data, then loop over each calling this function, combining results
+## ---------------------------------------------------------------------------------------
 #' Non-parametric (saturated) MSM for survival based on previously evaluated IP weights.
-#' @param wts_data \code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.
-#' @param OData The object returned by function \code{fitPropensity}. Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
+#' @param wts_data \code{data.table} returned by a single call to \code{getIPWeights}.
+#' Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.
+#' @param OData The object returned by function \code{fitPropensity}.
+#' Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
 #' right-censoring.
-#' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' @param weights Optional \code{data.table} with additional observation-time-specific weights.
+#' Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
-#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
-#' @return A data.table with hazard and survival function estimates by time. Also include the unadjusted Kaplan-Maier estimates.
+#' @param trunc_weights Specify the numeric weight truncation value.
+#' All final weights exceeding the value in \code{trunc_weights} will be truncated.
+#' @return A data.table with hazard and survival function estimates by time.
+#' Also include the unadjusted Kaplan-Maier estimates.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
 survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
@@ -485,61 +567,68 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
   rule.name <- unique(wts_data[["rule.name"]])
-  if (length(rule.name)>1) stop("wts_data must contain the weights for a single rule, found more than one unique rule name under in 'rule.name' column")
+  if (length(rule.name)>1)
+    stop("wts_data must contain the weights for a single rule, found more than one unique rule name under in 'rule.name' column")
 
   wts_data_used <- wts_data[,c(nodes$IDnode,nodes$tnode,nodes$Ynode,"cum.stab.P","cum.IPAW"), with = FALSE]
   setkeyv(wts_data_used, cols = c(nodes$IDnode, nodes$tnode))
 
-  # Initialize weighted outcome 'Wt.OUTCOME' to Ynode:
+  ## INITIALIZE WEIGHTED OUTCOME 'Wt.OUTCOME' TO Ynode:
   wts_data_used[, "Wt.OUTCOME" := get(nodes$Ynode)]
 
-  # Add the observation-specific weights to the weighted outcome, merge in by ID & t:
+  ## ADD THE OBSERVATION-SPECIFIC WEIGHTS TO THE WEIGHTED OUTCOME, MERGE IN BY ID & t:
   wts_data_used <- process_opt_wts(wts_data_used, weights, nodes)
 
-  # ------------------------------------------------------------------------
-  # CRUDE HAZARD AND KM ESTIMATE OF SURVIVAL:
-  # ------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------
+  ## CRUDE HAZARD AND KM ESTIMATE OF SURVIVAL:
+  ## ------------------------------------------------------------------------
   ht.crude <- wts_data_used[cum.IPAW > 0, {ht.KM = sum(Wt.OUTCOME, na.rm = TRUE) / .N; list(ht.KM = ht.KM)}, by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
-  # ht.crude2 <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name("Wt.OUTCOME")), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
-  # ht.crude <- wts_data_used[cum.IPAW > 0, .(ht.KM = sum(eval(as.name(Ynode)), na.rm = TRUE) / .N), by = eval(t_name)][, St.KM := cumprod(1 - ht.KM)]
   setkeyv(ht.crude, cols = t_name)
 
-  # ------------------------------------------------------------------------
-  # IPW-ADJUSTED KM (SATURATED MSM):
-  # ------------------------------------------------------------------------
-  # Multiply the weight by stabilization factor (numerator) (doesn't change the estimand in saturated MSMs, but makes weights smaller):
+  ## ------------------------------------------------------------------------
+  ## IPW-ADJUSTED KM (SATURATED MSM):
+  ## ------------------------------------------------------------------------
+  ## MULTIPLY THE WEIGHT BY STABILIZATION FACTOR (NUMERATOR) (DOESN'T CHANGE THE ESTIMAND IN SATURATED MSMs, BUT MAKES WEIGHTS SMALLER):
   wts_data_used[, "cum.IPAW" := cum.stab.P * cum.IPAW]
 
-  # If trunc_weights < Inf then truncate the weights:
+  ## IF trunc_weights < Inf THEN TRUNCATE THE WEIGHTS:
   if (trunc_weights < Inf) wts_data_used[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
 
-  # Multiply the outcome by cumulative weights in cum.IPAW:
+  ## MULTIPLY THE OUTCOME BY CUMULATIVE WEIGHTS IN cum.IPAW:
   wts_data_used[, "Wt.OUTCOME" := Wt.OUTCOME * cum.IPAW]
-  # wts_data_used[, "Wt.OUTCOME" := get(nodes$Ynode)*cum.IPAW]
 
-  # THE ENUMERATOR FOR THE HAZARD AT t: the weighted sum of subjects who had experienced the event at t:
-  sum_Ywt <- wts_data_used[, {sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]; setkeyv(sum_Ywt, cols = t_name)
-  # sum_Ywt <- wts_data_used[, .(sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Ywt, cols = t_name)
+  ## THE ENUMERATOR FOR THE HAZARD AT t: THE WEIGHTED SUM OF SUBJECTS WHO HAD EXPERIENCED THE EVENT AT t:
+  sum_Ywt <- wts_data_used[, {sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
+  setkeyv(sum_Ywt, cols = t_name)
 
-  # THE DENOMINATOR FOR THE HAZARD AT t: The weighted sum of all subjects who WERE AT RISK at t (equivalent to summing cumulative weights cum.IPAW by t):
-  sum_Allwt <- wts_data_used[, {sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE); list(sum_all_IPAW = sum_all_IPAW)}, by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
-  # sum_Allwt <- wts_data_used[, .(sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE)), by = eval(t_name)]; setkeyv(sum_Allwt, cols = t_name)
+  ## THE DENOMINATOR FOR THE HAZARD AT t: THE WEIGHTED SUM OF ALL SUBJECTS WHO WERE AT RISK AT t (EQUIVALENT TO SUMMING CUMULATIVE WEIGHTS cum.IPAW BY t):
+  sum_Allwt <- wts_data_used[, {sum_all_IPAW = sum(cum.IPAW, na.rm = TRUE); list(sum_all_IPAW = sum_all_IPAW)}, by = eval(t_name)]
+  setkeyv(sum_Allwt, cols = t_name)
 
-  # EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
-  St_ht_IPAW <- sum_Ywt[sum_Allwt][, "ht.NPMSM" := sum_Y_IPAW / sum_all_IPAW][, ("St.NPMSM") := cumprod(1 - ht.NPMSM)]
-
+  ## EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
+  St_ht_IPAW <- sum_Ywt[sum_Allwt][, ("ht.NPMSM") := sum_Y_IPAW / sum_all_IPAW][, ("St.NPMSM") := cumprod(1 - ht.NPMSM)]
   St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all = TRUE)
   St_ht_IPAW[, "rule.name" := rule.name]
 
-  setnames(St_ht_IPAW,t_name,"time")
+  ## STANDARDIZE THE NAME OF THE 'time' VARIABLE
+  setnames(St_ht_IPAW, t_name, "time")
+
+  ## FILL IN THE GAP BETWEEN MINIMAL 'time' VALUE FROM OBSERVED DATA (IF THERE IS ANY) BY ADDING EXTRA ROWS IN THE BEGINING
+  if (min(St_ht_IPAW[["time"]]) > OData$min.t) {
+    t_to_add <- (OData$min.t) : (min(St_ht_IPAW[["time"]])-1)
+    St_ht_IPAW_addt <- merge(data.table(time = t_to_add), St_ht_IPAW, by = "time", all.x = TRUE)[,
+                              c("St.NPMSM", "St.KM") := 1][,
+                              c("ht.NPMSM","ht.KM") := 0][,
+                              "rule.name" := St_ht_IPAW[["rule.name"]][1]]
+    St_ht_IPAW <- rbind(St_ht_IPAW_addt, St_ht_IPAW)
+    setkeyv(St_ht_IPAW, cols = "time")
+  }
+
   St_ht_IPAW <- data.frame(St_ht_IPAW)
   attr(St_ht_IPAW, "estimator_short") <- "NPMSM"
   attr(St_ht_IPAW, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
 
   result_object <- list(wts_data = wts_data_used, trunc_weights = trunc_weights, estimates = St_ht_IPAW)
-
-  # attr(result_object, "estimator_short") <- "NPMSM"
-  # attr(result_object, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
 
   return(result_object)
 }
@@ -560,37 +649,57 @@ return(wts_data)
 # ---------------------------------------------------------------------------------------
 #' Estimate Survival with a particular MSM for the survival-hazard function using previously fitted weights.
 #'
-#' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring processes based on
+#' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the
+#' treatment/exposure and monitoring processes based on
 #' the user-specified Marginal Structural Model (MSM) for the counterfactual survival function.
 #'
-#' This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from many regimens, with dummy indicators for each treatment/monitoring
+#' This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
+#' many regimens, with dummy indicators for each treatment/monitoring
 #' regimen available in \code{wts_data} and each follow-up time interval specified in \code{t_breaks}.
-#' When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
-#' in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function \code{fitPropensity}), allowing
-#' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly informative right-censoring.
-#' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
+#' When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the
+#' \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
+#' in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function
+#' \code{fitPropensity}), allowing
+#' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly
+#' informative right-censoring.
+#' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function
+#' \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
 #' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.
-#' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
+#' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the
+#' previously fitted propensity score models for the exposure, monitoring and
 #' right-censoring.
-#' @param t_breaks The vector of integer (or numeric) breaks that defines the dummy indicators of the follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for the survival hazard. See Details.
-#' @param use_weights Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and fit a "crude" MSM that does not adjust for the possible confounding due to non-random
+#' @param t_breaks The vector of integer (or numeric) breaks that defines the dummy indicators of the
+#' follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for
+#' the survival hazard. See Details.
+#' @param use_weights Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and
+#' fit a "crude" MSM that does not adjust for the possible confounding due to non-random
 #' assignment of the exposure/censoring and monitoring indicators.
 #' @param stabilize Set to \code{TRUE} for weight stabilization
-#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
-#' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the
+#' value in \code{trunc_weights} will be truncated.
+#' @param weights Optional \code{data.table} with additional observation-time-specific weights.
+#' Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
-#' @param getSEs A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the estimated survival by using the MSM influence curve.
-#' @param est_name A string naming the current MSM estimator. Ignored by the current routine but is used when generating reports with \code{make_report_rmd}.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
+#' @param getSEs A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the
+#' estimated survival by using the MSM influence curve.
+#' @param est_name A string naming the current MSM estimator. Ignored by the current routine but is
+#' used when generating reports with \code{make_report_rmd}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
+#' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #'
 #' @section Details:
 #' **********************************************************************
 #'
-#' \code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the survival hazard function.
-#' The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
-#' For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ), I(0 < t <= 1) and I(1 < t <= max(t)).
-#' On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
-#' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable for every unique period in the observed data.
+#' \code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
+#' survival hazard function.
+#' The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval,
+#' with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
+#' For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
+#' I(0 < t <= 1) and I(1 < t <= max(t)).
+#' On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy
+#' indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
+#' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
+#' for every unique period in the observed data.
 #'
 #' @section MSM for the hazard:
 #' **********************************************************************
@@ -611,7 +720,16 @@ return(wts_data)
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/4_survMSM_example.R
 #' @export
-survMSM <- function(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = TRUE, trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW", verbose = getOption("stremr.verbose")) {
+survMSM <- function(wts_data,
+                    OData,
+                    t_breaks,
+                    use_weights = TRUE,
+                    stabilize = TRUE,
+                    trunc_weights = 10^6,
+                    weights = NULL,
+                    getSEs = TRUE,
+                    est_name = "IPW",
+                    verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes

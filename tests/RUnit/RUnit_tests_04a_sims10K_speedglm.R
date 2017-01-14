@@ -79,6 +79,22 @@ test.speedglm.allestimators10Kdata <- function() {
   f_plot_survest(surv_by_trt, t_idx)
   pl <- ggsurv(list(surv1[["estimates"]], surv2[["estimates"]]))
 
+
+  # ------------------------------------------------------------------
+  # Testing for bug with no surv at t=0 when no events at t=0 have occurred
+  # ------------------------------------------------------------------
+  wts.St.dlow_test <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+  wts.St.dlow_test[t==0, ("Y.tplus1") := 0]
+  wts.St.dlow_test[t==1, ("Y.tplus1") := 0]
+  wts.St.dlow_test2 <- wts.St.dlow_test[t > 0, ]
+  surv1_test <- survNPMSM(wts.St.dlow_test2, OData)
+  checkEquals(sum(surv1_test[["estimates"]][["time"]] == 0L)==1, TRUE)
+
+  surv1_test2 <- survDirectIPW(wts.St.dlow_test, OData)
+  checkEquals(sum(surv1_test[["estimates"]][["time"]] == 0L)==1, TRUE)
+
+
+
   # ------------------------------------------------------------------
   # Piping the workflow
   # ------------------------------------------------------------------
