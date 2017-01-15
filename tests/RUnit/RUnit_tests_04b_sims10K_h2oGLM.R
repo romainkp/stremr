@@ -35,12 +35,16 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     # IMPORT DATA
     # ----------------------------------------------------------------
     # options(stremr.verbose = TRUE)
-    set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
+    set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
     h2o::h2o.init(nthreads = 1)
 
     OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
     # to see the input data.table:
     # OData$dat.sVar
+    OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
+    OData$dat.sVar[]
+    OData$fold_column <- NULL
+    OData$nfolds <- NULL
 
     # ------------------------------------------------------------------
     # Fit propensity scores for Treatment, Censoring & Monitoring
