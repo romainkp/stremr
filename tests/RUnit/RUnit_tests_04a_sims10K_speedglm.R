@@ -79,6 +79,14 @@ test.speedglm.allestimators10Kdata <- function() {
   f_plot_survest(surv_by_trt, t_idx)
   pl <- ggsurv(list(surv1[["estimates"]], surv2[["estimates"]]))
 
+  if (rmarkdown::pandoc_available(version = "1.12.3"))
+      make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                  AddFUPtables = TRUE,
+                  # openFile = FALSE,
+                  openFile = TRUE,
+                  WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                  file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+
 
   # ------------------------------------------------------------------
   # Testing for bug with no surv at t=0 when no events at t=0 have occurred

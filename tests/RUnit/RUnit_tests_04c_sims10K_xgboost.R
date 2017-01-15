@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 
 ## ---------------------------------------------
-## Runs fine on AWS
+## THIS runs fine on AWS linux
 ## ---------------------------------------------
 test.xgb_parallel <- function() {
     library('foreach')
@@ -44,7 +44,6 @@ test.xgb_parallel <- function() {
     # registerDoParallel(cl)
 
 }
-
 
 test.xgb_parallel_2 <- function() {
     library('foreach')
@@ -90,7 +89,7 @@ test.xgboost.10Kdata <- function() {
   reqxgb <- requireNamespace("xgboost", quietly = TRUE)
   if (reqxgb) {
     `%+%` <- function(a, b) paste0(a, b)
-    library("stremr")
+    # library("stremr")
     options(stremr.verbose = TRUE)
     # options(stremr.verbose = FALSE)
     require("data.table")
@@ -98,7 +97,8 @@ test.xgboost.10Kdata <- function() {
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
     # select only the first 1,000 IDs
-    Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+    # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+
     setkeyv(Odat_DT, cols = c("ID", "t"))
 
     # ---------------------------------------------------------------------------
@@ -136,18 +136,41 @@ test.xgboost.10Kdata <- function() {
     OData$nfolds <- NULL
 
     # ----------------------------------------------------------------
+    # FIT PROPENSITY SCORES WITH xgboost glm and no CV
+    # ----------------------------------------------------------------
+    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "none")
+
+    # set_all_stremr_options(estimator = "xgboost_glm")
+    OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                            family = "quasibinomial", early_stopping_rounds = 10)
+    wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+    surv_dlow <- survNPMSM(wts.St.dlow, OData)
+    wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
+
+    if (rmarkdown::pandoc_available(version = "1.12.3"))
+        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                    AddFUPtables = TRUE,
+                    # openFile = FALSE,
+                    openFile = TRUE,
+                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+
+    # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH xgboost glm and V fold CV
     # ----------------------------------------------------------------
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
 
     # set_all_stremr_options(estimator = "xgboost_glm")
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                            family = "quasibinomial", early_stopping_rounds = 10)
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-    surv1 <- survNPMSM(wts.St.dlow, OData)
+    surv_dlow <- survNPMSM(wts.St.dlow, OData)
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-    surv2 <- survNPMSM(wts.St.dhigh, OData)
+    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
 
     # str(OData)
     # library("GriDiSL")
@@ -155,9 +178,31 @@ test.xgboost.10Kdata <- function() {
     # class(OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]])
 
     if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
                     AddFUPtables = TRUE,
-                    openFile = FALSE,
+                    # openFile = FALSE,
+                    openFile = TRUE,
+                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+
+    # ----------------------------------------------------------------
+    # FIT PROPENSITY SCORES WITH xgboost gbm and no CV
+    # ----------------------------------------------------------------
+    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit.method = "none")
+    # set_all_stremr_options(estimator = "xgboost_gbm")
+    OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                            family = "quasibinomial", early_stopping_rounds = 10)
+
+    wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+    surv_dlow <- survNPMSM(wts.St.dlow, OData)
+    wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
+    if (rmarkdown::pandoc_available(version = "1.12.3"))
+        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                    AddFUPtables = TRUE,
+                    # openFile = FALSE,
+                    openFile = TRUE,
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
@@ -167,43 +212,118 @@ test.xgboost.10Kdata <- function() {
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit.method = "cv", fold_column = "fold_ID")
     # set_all_stremr_options(estimator = "xgboost_gbm")
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                            family = "quasibinomial", early_stopping_rounds = 10)
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-    surv1 <- survNPMSM(wts.St.dlow, OData)
+    surv_dlow <- survNPMSM(wts.St.dlow, OData)
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-    surv2 <- survNPMSM(wts.St.dhigh, OData)
+    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
 
-    # surv1[["estimates"]][["St.KM"]] <- 1
-    pl1 <- ggsurv(list(surv1[["estimates"]], surv2[["estimates"]]))
-    pl2 <- ggsurv(list(surv1[["estimates"]], surv2[["estimates"]]), surv_name = "St."%+%"KM")
+    # surv_dlow[["estimates"]][["St.KM"]] <- 1
+    pl1 <- ggsurv(list(surv_dlow[["estimates"]], surv_dhigh[["estimates"]]))
+    pl2 <- ggsurv(list(surv_dlow[["estimates"]], surv_dhigh[["estimates"]]), surv_name = "St."%+%"KM")
 
     if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
                     AddFUPtables = TRUE,
                     openFile = TRUE,
-                    plotKM = TRUE,
                     # openFile = FALSE,
+                    plotKM = TRUE,
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
-        make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    if (rmarkdown::pandoc_available(version = "1.12.3"))
+        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
                     AddFUPtables = TRUE,
                     openFile = TRUE,
+                    # openFile = FALSE,
                     plotKM = TRUE,
                     use_ggplot = FALSE,
-                    # openFile = FALSE,
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # ---------------------------------------------------------------------------------------------------------
+    # TMLE w/ xgboost glm and CV
+    # ---------------------------------------------------------------------------------------------------------
+    params = list(fit.package = "xgboost", fit.algorithm = "glm", family = "quasibinomial") # , objective = "reg:logistic"
+    checkException(tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE))
+
+    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
+    t.surv <- c(0:10)
+    Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+
+    tmle_est_dlow <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                        family = "quasibinomial", early_stopping_rounds = 10)
+    tmle_est_dlow[["estimates"]]
+
+    tmle_est_dhigh <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                        family = "quasibinomial", early_stopping_rounds = 10)
+    tmle_est_dhigh[["estimates"]]
+
+    gcomp_est_dlow <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
+                             Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                             family = "quasibinomial", early_stopping_rounds = 10)
+    gcomp_est_dlow[["estimates"]]
+
+    gcomp_est_dhigh <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
+                             Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                             family = "quasibinomial", early_stopping_rounds = 10)
+    gcomp_est_dhigh[["estimates"]]
+
+    make_report_rmd(OData,
+                # AddFUPtables = FALSE,
+                openFile = TRUE,
+                # openFile = FALSE,
+                NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
+                TMLE = list(tmle_est_dlow, tmle_est_dhigh)
+                )
+
+   # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ xgboost gbm and CV
     # ---------------------------------------------------------------------------------------------------------
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit.method = "cv", fold_column = "fold_ID")
-    params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-    t.surv <- c(10)
+    t.surv <- c(0:10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    checkException(tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE))
+
+    tmle_est_dlow <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                        family = "quasibinomial", early_stopping_rounds = 10)
+    tmle_est_dlow[["estimates"]]
+
+    tmle_est_dhigh <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                        family = "quasibinomial", early_stopping_rounds = 10)
+    tmle_est_dhigh[["estimates"]]
+
+    gcomp_est_dlow <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
+                             Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                             family = "quasibinomial", early_stopping_rounds = 10)
+    gcomp_est_dlow[["estimates"]]
+
+    gcomp_est_dhigh <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
+                             Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                             family = "quasibinomial", early_stopping_rounds = 10)
+    gcomp_est_dhigh[["estimates"]]
+
+    make_report_rmd(OData,
+                # AddFUPtables = FALSE,
+                openFile = TRUE,
+                # openFile = FALSE,
+                NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
+                TMLE = list(tmle_est_dlow, tmle_est_dhigh)
+                )
+
+    # ---------------------------------------------------------------------------------------------------------
+    # TMLE w/ xgboost gbm and CV (WITH EXPLICIT PARAMETER SPECS FOR GBM)
+    # ---------------------------------------------------------------------------------------------------------
+    set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit.method = "cv", fold_column = "fold_ID")
+    t.surv <- c(0:10)
+    Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
     # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
     params <- GriDiSL::defLearner(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 2,
@@ -215,26 +335,37 @@ test.xgboost.10Kdata <- function() {
                                    early_stopping_rounds = 10,
                                    seed = 23)
 
-    tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
-    tmle_est$estimates[]
+    tmle_est_dlow <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
+    tmle_est_dlow[["estimates"]]
 
-    gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
-    gcomp_est$estimates[]
+    tmle_est_dhigh <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
+    tmle_est_dhigh[["estimates"]]
 
-    # params = list(fit.package = "h2o", fit.algorithm = "gbm", distribution = "bernoulli") # , objective = "reg:logistic"
-    # params = list(fit.package = "h2o", fit.algorithm = "gbm", distribution = "gaussian") # , objective = "reg:logistic"
-    # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-        # ntrees = 20, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
-    # params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+    gcomp_est_dlow <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
+                             Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
+    gcomp_est_dlow[["estimates"]]
+
+    gcomp_est_dhigh <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
+                             Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
+    gcomp_est_dhigh[["estimates"]]
+
+    make_report_rmd(OData,
+                # AddFUPtables = FALSE,
+                openFile = TRUE,
+                # openFile = FALSE,
+                NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
+                TMLE = list(tmle_est_dlow, tmle_est_dhigh)
+                )
 
     # ---------------------------------------------------------------------------------------------------------
     # Parallel TMLE w/ xgboost gbm and CV
     # ---------------------------------------------------------------------------------------------------------
     require("foreach")
     require("doParallel")
-
     registerDoParallel(cores = 20)
-
     # cl <- makeForkCluster(10)
     # registerDoParallel(cl)
     # # cl <- makeCluster(10)
@@ -252,18 +383,7 @@ test.xgboost.10Kdata <- function() {
                                   early_stopping_rounds = 10,
                                   seed = 23)
 
-    # params <- GriDiSL::defLearner(estimator = "speedglm__glm", family = "quasibinomial",
-    #                               # nthread = 1,
-    #                               # nrounds = 500,
-    #                               # learning_rate = 0.05, # learning_rate = 0.01,
-    #                               # max_depth = 5,
-    #                               # min_child_weight = 10,
-    #                               # colsample_bytree = 0.3,
-    #                               # early_stopping_rounds = 10,
-    #                               seed = 23)
-
-    # t.surv <- c(1,2,3,4,5,6,7,8,9,10)
-    t.surv <- c(1,2,3,4,5,6,7,8,9,10)
+    t.surv <- c(0:10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     tmle_est <- fitSeqGcomp(OData, t_periods = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
@@ -319,12 +439,12 @@ test.xgboost.RFs.10Kdata <- function() {
     #                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
     # wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-    # surv1 <- survNPMSM(wts.St.dlow, OData)
+    # surv_dlow <- survNPMSM(wts.St.dlow, OData)
     # wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-    # surv2 <- survNPMSM(wts.St.dhigh, OData)
+    # surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
 
     # if (rmarkdown::pandoc_available(version = "1.12.3"))
-    #     make_report_rmd(OData, NPMSM = list(surv1, surv2), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
     #                 AddFUPtables = TRUE,
     #                 openFile = FALSE,
     #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
@@ -408,8 +528,8 @@ test.xgboost.grid.10Kdata <- function() {
     #                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-    surv1 <- survNPMSM(wts.St.dlow, OData)
-    surv1
+    surv_dlow <- survNPMSM(wts.St.dlow, OData)
+    surv_dlow
     #     t sum_Y_IPAW sum_all_IPAW          ht   St.NPMSM       ht.KM     St.KM rule.name
     # 1   0  1.4491222    159.54285 0.009082965 0.9909170 0.041176471 0.9588235  gTI.dlow
     # 2   1  0.0000000    151.61459 0.000000000 0.9909170 0.000000000 0.9588235  gTI.dlow
@@ -430,8 +550,8 @@ test.xgboost.grid.10Kdata <- function() {
     # 17 16  0.0000000      0.00000         NaN       NaN          NA        NA  gTI.dlow
 
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-    surv2 <- survNPMSM(wts.St.dhigh, OData)
-    surv2
+    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
+    surv_dhigh
     # t sum_Y_IPAW sum_all_IPAW          ht   St.NPMSM       ht.KM     St.KM rule.name
     # 1   0   8.281495     866.8629 0.009553407 0.9904466 0.009324009 0.9906760 gTI.dhigh
     # 2   1  13.018836     780.9117 0.016671328 0.9739345 0.012836970 0.9779587 gTI.dhigh
