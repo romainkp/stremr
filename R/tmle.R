@@ -165,7 +165,7 @@ fitTMLE <- function(...) {
 #' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
 #' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param max_iter For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.

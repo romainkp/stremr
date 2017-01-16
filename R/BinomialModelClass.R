@@ -41,7 +41,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     glm_model[[1]][["fit.package"]] <- "speedglm"
     glm_model[[1]][["fit.algorithm"]] <- "glm"
     class(glm_model) <- c(class(glm_model), "ModelStack")
-    # glm_model <- GriDiSL::defLearner(estimator = "speedglm__glm", family = family, distribution = distribution)
+    # glm_model <- GriDiSL::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
 
     # model.fit <- GriDiSL::fit_model(ID = nodes$IDnode,
     #                                     t_name = nodes$tnode,
@@ -151,7 +151,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         if (!("family" %in% names(opt_params))) opt_params[["family"]] <- "quasibinomial"
         if (!("distribution" %in% names(opt_params))) opt_params[["distribution"]] <- "bernoulli"
 
-        self$models <- do.call(GriDiSL::defLearner, opt_params)
+        self$models <- do.call(GriDiSL::defModel, opt_params)
 
       }
 

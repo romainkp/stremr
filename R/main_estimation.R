@@ -195,16 +195,13 @@ importData <- function(data,
 #' @param stratify_MONITOR ...
 #' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s) with
 #' \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and
-#' \code{GriDiSL::defGrid} functions.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
 #' @param models_TRT Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s)
 #' with \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
-#' functions.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
 #' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with
 #' \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
-#' functions.
+#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
 #' @param reg_CENS ...
 #' @param reg_TRT ...
 #' @param reg_MONITOR ...

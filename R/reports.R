@@ -70,7 +70,7 @@ openFileInOS <- function(f) {
 make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP,
                             WTtables, FUPtables, MSM.RDtables, TMLE.RDtables,
                             plotKM = FALSE, printEstimateTables = FALSE,
-                            format = c("html", "pdf", "word"), skip.modelfits = FALSE,
+                            format = c("html", "pdf", "word"), skip.modelfits = FALSE, skip.Qfits = TRUE,
                             file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'),
                             openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, save_report_data = FALSE, use_ggplot = TRUE, ...) {
   optArgReport <- list(...)
@@ -128,6 +128,12 @@ call. = FALSE)
 
   model_fits_gN <- OData$modelfit.gN$get.fits()
   model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
+
+
+  browser()
+
+  # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
+  # grids <- model_fits_gN[[1]]$get_modelfits_grid()
 
   # best_model <- model_fits_gC[[1]]$get_best_models(K=1)[[1]]
   # str(best_model@model)

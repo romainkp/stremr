@@ -90,8 +90,10 @@ test.xgboost.10Kdata <- function() {
   if (reqxgb) {
     `%+%` <- function(a, b) paste0(a, b)
     # library("stremr")
-    options(stremr.verbose = TRUE)
-    # options(stremr.verbose = FALSE)
+    # options(stremr.verbose = TRUE)
+    options(stremr.verbose = FALSE)
+    # options(GriDiSL.verbose = TRUE)
+    options(GriDiSL.verbose = FALSE)
     require("data.table")
 
     data(OdatDT_10K)
@@ -139,6 +141,7 @@ test.xgboost.10Kdata <- function() {
     # FIT PROPENSITY SCORES WITH xgboost glm and no CV
     # ----------------------------------------------------------------
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "none")
+    # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
 
     # set_all_stremr_options(estimator = "xgboost_glm")
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
@@ -243,6 +246,7 @@ test.xgboost.10Kdata <- function() {
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
+    # OData$Qlearn.fit$get.fits()
     # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ xgboost glm and CV
     # ---------------------------------------------------------------------------------------------------------
@@ -325,7 +329,7 @@ test.xgboost.10Kdata <- function() {
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
     # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-    params <- GriDiSL::defLearner(estimator = "xgboost__glm", family = "quasibinomial", nthread = 2,
+    params <- GriDiSL::defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 2,
                                   nrounds = 500,
                                   early_stopping_rounds = 10)
 
@@ -354,49 +358,62 @@ test.xgboost.10Kdata <- function() {
 
 
     # ---------------------------------------------------------------------------------------------------------
-    # TMLE w/ xgboost gbm and CV (WITH EXPLICIT PARAMETER SPECS FOR GBM)
+    # GCOMP w/ xgboost gbm and CV (WITH EXPLICIT PARAMETER SPECS FOR GBM)
     # ---------------------------------------------------------------------------------------------------------
+    OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+    OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
+    OData$dat.sVar[]
+    OData$fold_column <- NULL
+    OData$nfolds <- NULL
+
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit.method = "cv", fold_column = "fold_ID")
-    t.surv <- c(0:10)
-    Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-
-    # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-    params <- GriDiSL::defLearner(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 2,
-                                   nrounds = 500,
-                                   # learning_rate = 0.05, # learning_rate = 0.01,
-                                   learning_rate = 0.1, # learning_rate = 0.01,
-                                   # max_depth = 5,
-                                   # min_child_weight = 10,
-                                   colsample_bytree = 0.3,
-                                   early_stopping_rounds = 10,
-                                   seed = 23)
-
-    tmle_est_dlow <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
-                        Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
-
-    tmle_est_dhigh <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
-                        Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
-    tmle_est_dlow[["estimates"]]
-    tmle_est_dhigh[["estimates"]]
-
+    # t.surv <- c(0:10)
     t.surv <- c(3)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+
+    params <- GriDiSL::defModel(estimator = "xgboost__gbm",
+                                family = "quasibinomial",
+                                search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
+                                seed = 23,
+                                # learning_rate = 0.1, # learning_rate = 0.01, # learning_rate = 0.05,
+                                # nthread = 1,
+                                nrounds = 500, early_stopping_rounds = 10,
+                                param_grid = list(
+                                    learning_rate = c(.1, .3, .5), # .05,
+                                    max_depth = c(seq(3, 19, 4), 25),
+                                    min_child_weight = c(1, 3, 5, 7),
+                                    gamma = c(.0, .05, seq(.1, .9, by=.2), 1),
+                                    colsample_bytree = c(.4, .6, .8, 1),
+                                    subsample = c(.5, .75, 1),
+                                    lambda = c(.1, .5, 2, 5), # lambda = c(1,2,5),
+                                    alpha = c(0, .1, .5),
+                                    ## Maximum delta step we allow each tree’s weight estimation to be.
+                                    ## If the value is set to 0, it means there is no constraint.
+                                    ## If it is set to a positive value, it can help making the update step more conservative.
+                                    ## Might help in logistic regression when class is extremely imbalanced.
+                                    ## Set it to value of 1-10 to help control the update
+                                    max_delta_step = c(0, 1, 2, 5, 10)
+                                    )
+                                )
 
     gcomp_est_dlow <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
 
     #   est_name time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type rule.name
     # 1    GCOMP    3 0.9210713      NA          NA          FALSE              4 pooled  gTI.dlow
+    # [1] "Surv est: 0.920427939757705"
+    # [1] "Surv est 2: 0.920427939757705"
+    # [1] "No. of obs for last prediction of Q: 10000"
+    # [1] "EY^* estimate at t=3: 0.07957"
 
     gcomp_est_dhigh <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE, models = params)
 
     gcomp_est_dlow[["estimates"]]
     gcomp_est_dhigh[["estimates"]]
-    #   est_name time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type rule.name
-    # 1    GCOMP    3 0.9210713      NA          NA          FALSE              4 pooled gTI.dhigh
 
-
+#   est_name time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type rule.name
+# 1    GCOMP    3 0.9210713      NA          NA          FALSE              4 pooled gTI.dhigh
 # > gcomp_est_dlow[["estimates"]]
 #   est_name time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type rule.name
 # 1    GCOMP   10 0.7403922      NA          NA          FALSE             11 pooled  gTI.dlow
@@ -427,7 +444,7 @@ test.xgboost.10Kdata <- function() {
 
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
     # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-    params <- GriDiSL::defLearner(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+    params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
                                   nrounds = 500,
                                   learning_rate = 0.05, # learning_rate = 0.01,
                                   max_depth = 5,
@@ -556,7 +573,7 @@ test.xgboost.grid.10Kdata <- function() {
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
     # set_all_stremr_options(estimator = "xgboost_glm")
 
-    model_Grid <- GriDiSL::defGrid(estimator = "xgboost__gbm", family = "quasibinomial",
+    model_Grid <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial",
                                     search_criteria = list(strategy = "RandomDiscrete", max_models = 10),
                                     nrounds = 500, early_stopping_rounds = 10, seed = 123456,
                                     param_grid = list(

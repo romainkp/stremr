@@ -11,6 +11,25 @@ require("pander")
 opts_chunk$set(fig.path = figure.dir)
 panderOptions("table.split.table", Inf)
 
+print_model_info <- function(model_summary, model_stack) {
+  cat("\n\n"); cat("###"); cat("Summary of All Models"); cat("\n\n");
+  pander::pander(model_summary)
+  MSEtab <- model_stack$getMSEtab
+  try(pander::pander(MSEtab, caption = "Overall Performance by Model"))
+
+  grids <- model_stack$get_modelfits_grid()
+
+  for (grid in grids) {
+    if (is.data.frame(grid))
+      grid <- grid[ , names(grid)[!(names(grid) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
+    try(pander::pander(grid, caption = "Grid Details"))
+  }
+
+  cat("\n\n"); cat("###"); cat("Best Model Summary"); cat("\n\n");
+  best_model <- model_stack$get_best_models(K=1)[[1]]
+  GriDiSL::print_tables(best_model)
+}
+
 #'
 #' Number of unique independent units in the input data:
 {{prettyNum(nuniqueIDs, big.mark = ",", scientific = FALSE)}}
@@ -25,42 +44,46 @@ panderOptions("table.split.table", Inf)
 #'
 #' ## Model(s) for censoring variable(s):
 
-#+ echo=FALSE, results='asis'
+#+ echo=FALSE, warning=FALSE, results='asis'
 panderOptions('knitr.auto.asis', FALSE)
 set.alignment('left', row.names = 'right')
 if (!skip.modelfits) {
   for (reg.model.idx in seq_along(model_fits_gC)) {
-    cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
-    pander::pander(model_summaries_gC[[reg.model.idx]])
-    best_model <- model_fits_gC[[reg.model.idx]]$get_best_models(K=1)[[1]]
-    GriDiSL::print_tables(best_model)
-    # print(reg.model$get_best_models(), only.coefs = only.coefs)
+    model_summary <- model_summaries_gC[[reg.model.idx]]
+    model_stack <- model_fits_gC[[reg.model.idx]]
+    print_model_info(model_summary, model_stack)
   }
 }
 
 #' ## Model(s) for exposure variable(s):
 
-#+ echo=FALSE, results='asis'
+#+ echo=FALSE, warning=FALSE, results='asis'
 if (!skip.modelfits) {
   for (reg.model.idx in seq_along(model_fits_gA)) {
-    cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
-    pander::pander(model_summaries_gA[[reg.model.idx]])
-    best_model <- model_fits_gA[[reg.model.idx]]$get_best_models(K=1)[[1]]
-    GriDiSL::print_tables(best_model)
-    # print(reg.model$get_best_models(), only.coefs = only.coefs)
+    # cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
+    # pander::pander(model_summaries_gA[[reg.model.idx]])
+    # best_model <- model_fits_gA[[reg.model.idx]]$get_best_models(K=1)[[1]]
+    # GriDiSL::print_tables(best_model)
+    # # print(reg.model$get_best_models(), only.coefs = only.coefs)
+    model_summary <- model_summaries_gA[[reg.model.idx]]
+    model_stack <- model_fits_gA[[reg.model.idx]]
+    print_model_info(model_summary, model_stack)
   }
 }
 
 #' ## Model(s) for monitoring variable(s):
 
-#+ echo=FALSE, results='asis'
+#+ echo=FALSE, warning=FALSE, results='asis'
 if (!skip.modelfits) {
   for (reg.model.idx in seq_along(model_fits_gN)) {
-    cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
-    pander::pander(model_summaries_gN[[reg.model.idx]])
-    best_model <- model_fits_gN[[reg.model.idx]]$get_best_models(K=1)[[1]]
-    GriDiSL::print_tables(best_model)
-    # print(reg.model$get_best_models(), only.coefs = only.coefs)
+    # cat("\n\n"); cat("###"); cat("Model Summary"); cat("\n\n");
+    # pander::pander(model_summaries_gN[[reg.model.idx]])
+    # best_model <- model_fits_gN[[reg.model.idx]]$get_best_models(K=1)[[1]]
+    # GriDiSL::print_tables(best_model)
+    # # print(reg.model$get_best_models(), only.coefs = only.coefs)
+    model_summary <- model_summaries_gN[[reg.model.idx]]
+    model_stack <- model_fits_gN[[reg.model.idx]]
+    print_model_info(model_summary, model_stack)
   }
 }
 

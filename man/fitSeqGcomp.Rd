@@ -55,7 +55,7 @@ Must set \code{TMLE}=\code{FALSE} when setting this to \code{TRUE}.}
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 
 \item{models}{Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid} functions.}
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
 
 \item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}

@@ -27,18 +27,15 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
 
 \item{models_CENS}{Optional parameter specifying the models for fitting the censoring mechanism(s) with
 \code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and
-\code{GriDiSL::defGrid} functions.}
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
 
 \item{models_TRT}{Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s)
 with \code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
-functions.}
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
 
 \item{models_MONITOR}{Optional parameter specifying the models for fitting the monitoring mechanism with
 \code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defLearner} and \code{GriDiSL::defGrid}
-functions.}
+Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
 
 \item{reg_CENS}{...}
 
