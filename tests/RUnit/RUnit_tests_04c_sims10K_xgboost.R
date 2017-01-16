@@ -188,6 +188,15 @@ test.xgboost.10Kdata <- function() {
                     WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                     file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
+    if (rmarkdown::pandoc_available(version = "1.12.3"))
+        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                    AddFUPtables = TRUE,
+                    # openFile = FALSE,
+                    openFile = TRUE,
+                    ymin = 0.8,
+                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH xgboost gbm and no CV
     # ----------------------------------------------------------------

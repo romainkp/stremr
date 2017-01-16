@@ -53,6 +53,8 @@ if(getRversion() >= "2.15.1") {
 #' @param order_legend Set to \code{TRUE} to order the legend display by final
 #' survival time (highest first).
 #' @param t_int_sel The subset of time-point indices for which survival should be plotted.
+#' @param ymin The minimum value of the y axis. The default (\code{ymin=NULL}) is to use \code{ggplot}
+#' to automatically adjust the limits of the y-axis.
 #' @param ... Additional arguments (not used).
 #' @return An object of class \code{ggplot}
 #' @author Original R code by Edwin Thoen \email{edwinthoen@@gmail.com}, modified by Oleg Sofrygin \email{oleg.sofrygin@@gmail.com}
@@ -80,6 +82,7 @@ ggsurv <- function(
   SE_name = "SE." %+% attr(estimates[[1]], "estimator_short"),
   order_legend = TRUE,
   t_int_sel = NULL,
+  ymin = NULL,
   ...
 ){
 
@@ -327,6 +330,9 @@ ggsurv <- function(
   if(identical(back_white, TRUE)) pl <- pl + ggplot2::theme_bw()
 
   pl <- pl + ggplot2::theme(legend.position = legend_pos)
+
+  # pl <- pl + ggplot2::coord_cartesian(xlim = c(0, 80), ylim = c(0.45, 1))
+  if (!is.null(ymin)) pl <- pl + ggplot2::coord_cartesian(ylim = c(ymin, 1))
 
   return(pl)
 }

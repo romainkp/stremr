@@ -12,7 +12,7 @@ ggsurv(estimates, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
   main = "", legend_pos = "right", surv_name = "St." \%+\%
   attr(estimates[[1]], "estimator_short"), SE_name = "SE." \%+\%
   attr(estimates[[1]], "estimator_short"), order_legend = TRUE,
-  t_int_sel = NULL, ...)
+  t_int_sel = NULL, ymin = NULL, ...)
 }
 \arguments{
 \item{estimates}{A list, one item per regime / intervention. Each list item must be a data.frame containing the
@@ -73,6 +73,9 @@ the character word denoting the legend orientation with respect to the plot
 survival time (highest first).}
 
 \item{t_int_sel}{The subset of time-point indices for which survival should be plotted.}
+
+\item{ymin}{The minimum value of the y axis. The default (\code{ymin=NULL}) is to use \code{ggplot}
+to automatically adjust the limits of the y-axis.}
 
 \item{...}{Additional arguments (not used).}
 }
