@@ -129,8 +129,13 @@ call. = FALSE)
   model_fits_gN <- OData$modelfit.gN$get.fits()
   model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
 
-  # browser()
   # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
+  # model_fits_gC[[1]]$get_modelfits_grid()
+  # model_fits_gC[[1]]$get_modelfits_grid()
+  # model_fits_gC[[1]]$get_best_models()
+
+  # model_fits_gC[[1]]$OData_train
+  # model_fits_gC[[1]]$OData_valid
   # grids <- model_fits_gN[[1]]$get_modelfits_grid()
 
   # best_model <- model_fits_gC[[1]]$get_best_models(K=1)[[1]]
