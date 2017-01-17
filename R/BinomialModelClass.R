@@ -63,6 +63,12 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
 
   }
 
+  ## Remove all modeling grid obj for xgboost (all the CV / training set models)
+  ## This will only keep the best re-trained model object
+  ## Don't need to store these if only doing predictions from the best re-trained model
+  ## However, we will need these models if doing out-of-sample predictions
+  model.fit$wipe.allmodels
+
   return(model.fit)
 }
 
