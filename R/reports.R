@@ -120,14 +120,16 @@ call. = FALSE)
   ## -------------------------------------------------------------------------------------
   ## MODEL FITS:
   ## -------------------------------------------------------------------------------------
-  model_fits_gC <- OData$modelfit.gC$get.fits()
-  model_summaries_gC <- OData$modelfit.gC$get.model.summaries()
+  if (!skip.modelfits) {
+    model_fits_gC <- OData$modelfit.gC$get.fits()
+    model_summaries_gC <- OData$modelfit.gC$get.model.summaries()
 
-  model_fits_gA <- OData$modelfit.gA$get.fits()
-  model_summaries_gA <- OData$modelfit.gA$get.model.summaries()
+    model_fits_gA <- OData$modelfit.gA$get.fits()
+    model_summaries_gA <- OData$modelfit.gA$get.model.summaries()
 
-  model_fits_gN <- OData$modelfit.gN$get.fits()
-  model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
+    model_fits_gN <- OData$modelfit.gN$get.fits()
+    model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
+  }
 
   # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
   # model_fits_gC[[1]]$get_modelfits_grid()
