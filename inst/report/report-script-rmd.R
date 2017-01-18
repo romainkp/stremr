@@ -32,7 +32,8 @@ print_model_info <- function(model_summary, model_stack) {
   }
 
   cat("\n\n"); cat("###"); cat("Best Model"); cat("\n\n");
-  best_model <- model_stack$get_best_models(K=1)[[1]]
+  # best_model <- model_stack$get_best_models(K=1)[[1]]
+  best_model <- model_stack$get_overall_best_model()[[1]]
   GriDiSL::print_tables(best_model)
 }
 

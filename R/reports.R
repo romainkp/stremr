@@ -131,7 +131,8 @@ call. = FALSE)
     model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
   }
 
-  # browser()
+  # model_fits_gC[[1]]$get_overall_best_model()[[1]]
+  # model_fits_gC[[1]]$get_best_models(K=1)
   # # # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
   # h2o_gridobj <- model_fits_gC[[1]]$get_modelfits_grid()[[1]]
   # capture.output(print(h2o_gridobj))
