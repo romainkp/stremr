@@ -12,7 +12,7 @@ if(FALSE) {
   # stremr:::debug_set() # SET TO DEBUG MODE
 
   setwd("..");
-  install("stremr", build_vignettes = FALSE) # INSTALL W/ devtools:
+  install("stremr", build_vignettes = FALSE, dependencies = FALSE) # INSTALL W/ devtools:
   library("stremr")
   # system("echo $PATH") # see the current path env var
   # system("R CMD Rd2pdf stremr")  # just create the pdf manual from help files
@@ -49,6 +49,7 @@ if(FALSE) {
   # options(stremr.verbose = FALSE)
   # devtools::install_github('osofr/GriDiSL', dependencies = FALSE)
   # devtools::install_github('osofr/stremr', ref = "h2oSuperLearner", build_vignettes = FALSE, dependencies = FALSE)
+  # devtools::install_github('osofr/stremr', ref = "h2oSuperLearner")
   # devtools::install_github('osofr/stremr', build_vignettes = FALSE, dependencies = FALSE)
 
   # To use drat repo:

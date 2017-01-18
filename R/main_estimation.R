@@ -205,7 +205,16 @@ importData <- function(data,
 #' @param reg_CENS ...
 #' @param reg_TRT ...
 #' @param reg_MONITOR ...
-#' @param fit.method Model selection approach. Can be \code{"none"} - no model selection,
+#' @param estimator Specify the default estimator to use for model fitting.
+#' This argument will only have an effect when some of the propensity score models were not explicitly defined
+#' with their corresponding arguments:
+#' \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
+#' To put it another way: when all three of these arguments are specified,
+#' the argument \code{estimator} is completely ignored.
+#' Should be a character string in the format 'PackageName__Algorithm',
+#' where PackageName can be: c("speedglm", "glm", "h2o", "xgboost") and Algorithm can be
+#' c("glm", "gbm", "randomForest", "drf", "deeplearning").
+#' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 #' (must specify the column name that contains the fold IDs).
 # \code{"holdout"} - model selection by splitting the data into training and validation samples according to
@@ -230,14 +239,16 @@ fitPropensity <- function(OData,
                           stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
                           models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
                           reg_CENS, reg_TRT, reg_MONITOR,
-                          fit.method = c("none", "cv", "holdout"), fold_column = NULL,
+                          estimator = c("speedglm__glm", "glm__glm", "h2o__glm", "xgboost__glm"),
+                          fit_method = c("none", "cv", "holdout"),
+                          fold_column = NULL,
                           verbose = getOption("stremr.verbose"), ...) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  # fit.method <- getopt("fit.method")
+  # fit_method <- getopt("fit_method")
   # nfolds <- getopt("nfolds")}
   # fold_column <- getopt("fold_column")
 
@@ -251,12 +262,9 @@ fitPropensity <- function(OData,
   models_TRT_control <- c(list(    models = models_TRT),     opt_params = list(sVar.exprs))
   models_MONITOR_control <- c(list(models = models_MONITOR), opt_params = list(sVar.exprs))
 
-  if (!missing(fit.method)) {
-    models_CENS_control[["fit.method"]] <- models_TRT_control[["fit.method"]] <- models_MONITOR_control[["fit.method"]] <- fit.method
-  }
-  if (!missing(fold_column)) {
-    models_CENS_control[["fold_column"]] <- models_TRT_control[["fold_column"]] <- models_MONITOR_control[["fold_column"]] <- fold_column
-  }
+  models_CENS_control[["estimator"]] <- models_TRT_control[["estimator"]] <- models_MONITOR_control[["estimator"]] <- estimator[1L]
+  models_CENS_control[["fit_method"]] <- models_TRT_control[["fit_method"]] <- models_MONITOR_control[["fit_method"]] <- fit_method[1L]
+  models_CENS_control[["fold_column"]] <- models_TRT_control[["fold_column"]] <- models_MONITOR_control[["fold_column"]] <- fold_column
   # if (!missing(nfolds)) {
   #   models_CENS[["nfolds"]] <- models_TRT[["nfolds"]] <- models_MONITOR[["nfolds"]] <- nfolds
   # }

@@ -1,6 +1,14 @@
 fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx) {
-  if (is.null(model_contrl[["fit.method"]])) method <- getopt("fit.method") else method <- model_contrl[["fit.method"]]
-  if (is.null(model_contrl[["fold_column"]])) fold_column <- getopt("fold_column") else fold_column <- model_contrl[["fold_column"]]
+
+  if (is.null(model_contrl[["fit_method"]]))
+    stop("'fit_method' must be specified")
+
+  method <- model_contrl[["fit_method"]]
+  fold_column <- model_contrl[["fold_column"]]
+
+  # if (is.null(model_contrl[["fit_method"]]))
+  # method <- getopt("fit_method") else method <- model_contrl[["fit_method"]]
+  # if (is.null(model_contrl[["fold_column"]])) fold_column <- getopt("fold_column") else fold_column <- model_contrl[["fold_column"]]
   # if (is.null(model_contrl[["nfolds"]])) nfolds <- getopt("nfolds") else nfolds <- model_contrl[["nfolds"]]
 
   if ((method %in% "cv") && is.null(fold_column) && is.null(data$fold_column)) {
@@ -33,6 +41,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
 
   if (inherits(model.fit, "try-error")) {
     message("running " %+% paste0(model_contrl$fit.package, model_contrl$fit.algorithm, collapse=",") %+% " has failed, trying to run speedglm as a backup...")
+    method <- "none"
     # browser()
     # model_contrl[["fit.package"]] <- "speedglm"
     # model_contrl[["fit.algorithm"]] <- "glm"
@@ -53,7 +62,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     #                                     verbose = gvars$verbose
     #                                     )
     model.fit <- GriDiSL::fit(glm_model,
-                               method = "none",
+                               method = method,
                                ID = nodes$IDnode, t_name = nodes$tnode,
                                x = predvars, y = outvar,
                                data = data,
@@ -67,7 +76,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   ## This will only keep the best re-trained model object
   ## Don't need to store these if only doing predictions from the best re-trained model
   ## However, we will need these models if doing out-of-sample predictions
-  model.fit$wipe.allmodels
+  if (!(method %in% "none")) model.fit$wipe.allmodels
 
   return(model.fit)
 }
@@ -153,7 +162,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         opt_params <- model_contrl[["opt_params"]]
         model_contrl[["opt_params"]] <- NULL
 
-        if (!("estimator" %in% names(opt_params))) opt_params[["estimator"]] <- getopt("fit.package") %+% "__" %+% getopt("fit.algorithm")
+        if (!("estimator" %in% names(opt_params))) opt_params[["estimator"]] <- model_contrl[["estimator"]]
+        # if (!("estimator" %in% names(opt_params))) opt_params[["estimator"]] <- getopt("fit.package") %+% "__" %+% getopt("fit.algorithm")
         if (!("family" %in% names(opt_params))) opt_params[["family"]] <- "quasibinomial"
         if (!("distribution" %in% names(opt_params))) opt_params[["distribution"]] <- "bernoulli"
 

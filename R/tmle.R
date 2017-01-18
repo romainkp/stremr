@@ -183,7 +183,13 @@ fitTMLE <- function(...) {
 #' The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}
 #' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
 #' requires a previously defined parallel back-end cluster)
-#' @param fit.method Model selection approach. Can be \code{"none"} - no model selection,
+#' @param estimator Specify the default estimator to use for model fitting.
+#' This argument will only have an effect when the models were not explicitly defined
+#' with the corresponding argument \code{models}.
+#' Should be a character string in the format 'PackageName__Algorithm',
+#' where PackageName can be: c("speedglm", "glm", "h2o", "xgboost") and Algorithm can be
+#' c("glm", "gbm", "randomForest", "drf", "deeplearning").
+#' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
 # \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
 # where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
@@ -198,25 +204,31 @@ fitTMLE <- function(...) {
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-fitSeqGcomp <- function(OData, t_periods,
-                        Qforms, Qstratify = NULL,
-                        intervened_TRT = NULL, intervened_MONITOR = NULL,
-                        useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
+fitSeqGcomp <- function(OData,
+                        t_periods,
+                        Qforms,
+                        intervened_TRT = NULL,
+                        intervened_MONITOR = NULL,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                        stratifyQ_by_rule = FALSE,
+                        estimator = c("speedglm__glm", "glm__glm", "h2o__glm", "xgboost__glm"),
+                        fit_method = c("none", "cv", "holdout"),
+                        models = NULL,
+                        fold_column = NULL,
                         TMLE = FALSE,
+                        stratifyQ_by_rule = FALSE,
+                        Qstratify = NULL,
+                        useonly_t_TRT = NULL,
+                        useonly_t_MONITOR = NULL,
                         iterTMLE = FALSE,
                         IPWeights = NULL,
                         stabilize = FALSE,
                         trunc_weights = 10^6,
-                        models = NULL,
                         weights = NULL,
                         max_iter = 15,
                         adapt_stop = TRUE,
                         adapt_stop_factor = 10,
                         tol_eps = 0.001,
                         parallel = FALSE,
-                        fit.method = c("none", "cv", "holdout"), fold_column = NULL,
                         verbose = getOption("stremr.verbose"), ...) {
 
   gvars$verbose <- verbose
@@ -244,8 +256,9 @@ fitSeqGcomp <- function(OData, t_periods,
   sVar.exprs <- capture.exprs(...)
   models_control <- c(list(models = models), opt_params = list(sVar.exprs))
 
-  if (!missing(fit.method)) models_control[["fit.method"]] <- fit.method
-  if (!missing(fold_column)) models_control[["fold_column"]] <- fold_column
+  models_control[["estimator"]] <- estimator[1L]
+  models_control[["fit_method"]] <- fit_method[1L]
+  models_control[["fold_column"]] <- fold_column
 
   # ------------------------------------------------------------------------------------------------
   # **** Add weights if TMLE=TRUE and if weights were defined

@@ -375,6 +375,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         if (missing(subset_idx)) {
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
+
         # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
         # browser()
 # newdata$dat.sVar[subset_idx, ][1:5]
@@ -399,7 +400,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 # 9503: 0.02875428
 # 9504: 0.02875428
 # 9505: 0.04605023
-
 
 # SL.preds
 #            <num>

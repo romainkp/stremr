@@ -11,10 +11,10 @@ gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$toler
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
-allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost")
-allowed.fit.algorithm <- c("glm", "gbm", "randomForest", "deeplearning")
-allowed.fit.method <- c("none", "cv", "holdout")
-allowed.bin.method <- c("equal.mass", "equal.len", "dhist")
+allowed.fit_package <- c("speedglm", "glm", "h2o", "xgboost")
+allowed.fit_algorithm <- c("glm", "gbm", "randomForest", "deeplearning")
+allowed.fit_method <- c("none", "cv", "holdout")
+allowed.bin_method <- c("equal.mass", "equal.len", "dhist")
 
 #' Querying/setting a single \code{stremr} option
 #'
@@ -28,8 +28,8 @@ allowed.bin.method <- c("equal.mass", "equal.len", "dhist")
 #' @seealso \code{\link{set_all_stremr_options}}
 #' @examples \dontrun{
 #' stremrOptions()
-#' stremrOptions('fit.package')
-#' stremrOptions('fit.package', 'h2o')
+#' stremrOptions('fit_package')
+#' stremrOptions('fit_package', 'h2o')
 #' }
 stremrOptions <- function (o, value)  {
   res <- getOption("stremr")
@@ -71,11 +71,11 @@ print_stremr_opts <- function() {
 #' \strong{Will reset all unspecified options (omitted arguments) to their default values}.
 #' The preferred way to set options for \code{stremr} is to use \code{\link{stremrOptions}}, which allows specifying individual options without having to reset all other options.
 #' To reset all options to their defaults simply run \code{set_all_stremr_options()} without any parameters/arguments.
-#' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
-#' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning")
-#' @param fit.method ...
+#' @param fit_package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o", "xgboost").
+#' @param fit_algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning")
+#' @param fit_method ...
 #' @param fold_column ...
-#' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
+#' @param bin_method The method for choosing bins when discretizing and fitting the conditional continuous summary
 #'  exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 #'  into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
 #'  based on equal mass (equal number of observations), i.e., each bin is defined so that it contains an approximately
@@ -89,7 +89,7 @@ print_stremr_opts <- function() {
 #  using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
 #  \code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".
 #' @param nbins Set the default number of bins when discretizing a continous outcome variable under setting
-#'  \code{bin.method = "equal.len"}.
+#'  \code{bin_method = "equal.len"}.
 #'  If left as \code{NA} the total number of equal intervals (bins) is determined by the nearest integer of
 #'  \code{nobs}/\code{maxNperBin}, where \code{nobs} is the total number of observations in the input data.
 #' @param maxncats Max number of unique categories a categorical variable \code{sA[j]} can have.
@@ -98,7 +98,7 @@ print_stremr_opts <- function() {
 # When fitting a model for binirized continuous outcome, set to \code{TRUE}
 # for pooling bin indicators across several bins into one outcome regression?
 #' @param maxNperBin Max number of observations per 1 bin for a continuous outcome (applies directly when
-#'  \code{bin.method="equal.mass"} and indirectly when \code{bin.method="equal.len"}, but \code{nbins = NA}).
+#'  \code{bin_method="equal.mass"} and indirectly when \code{bin_method="equal.len"}, but \code{nbins = NA}).
 #' @param lower_bound_zero_Q Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
 #' Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.
 #' @param skip_update_zero_Q Set to \code{FALSE} to perform TMLE update with glm even when all of the Q's are zero.
@@ -107,11 +107,11 @@ print_stremr_opts <- function() {
 #' @seealso \code{\link{stremrOptions}}, \code{\link{print_stremr_opts}}
 #' @export
 set_all_stremr_options <- function(
-                            fit.package = c("speedglm", "glm", "h2o", "xgboost"),
-                            fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning"),
-                            fit.method = c("none", "cv", "holdout"),
+                            fit_package = c("speedglm", "glm", "h2o", "xgboost"),
+                            fit_algorithm = c("glm", "gbm", "randomForest", "drf", "deeplearning"),
+                            fit_method = c("none", "cv", "holdout"),
                             fold_column = NULL,
-                            bin.method = c("equal.mass", "equal.len", "dhist"),
+                            bin_method = c("equal.mass", "equal.len", "dhist"),
                             nbins = 10,
                             maxncats = 20,
                             # poolContinVar = FALSE,
@@ -122,23 +122,23 @@ set_all_stremr_options <- function(
 
   old.opts <- gvars$opts
 
-  fit.package <- fit.package[1L]
-  fit.algorithm <- fit.algorithm[1L]
-  fit.method <- fit.method[1L]
-  bin.method <- bin.method[1]
+  fit_package <- fit_package[1L]
+  fit_algorithm <- fit_algorithm[1L]
+  fit_method <- fit_method[1L]
+  bin_method <- bin_method[1]
 
-  if (!(fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
-  if (!(fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
-  if (!(fit.method %in% allowed.fit.method)) stop("fit.method must be one of: " %+% paste0(allowed.fit.method, collapse=", "))
-  if (!(bin.method %in% allowed.bin.method)) stop("bin.method must be one of: " %+% paste0(allowed.bin.method, collapse=", "))
+  if (!(fit_package %in% allowed.fit_package)) stop("fit_package must be one of: " %+% paste0(allowed.fit_package, collapse=", "))
+  if (!(fit_algorithm %in% allowed.fit_algorithm)) stop("fit_algorithm must be one of: " %+% paste0(allowed.fit_algorithm, collapse=", "))
+  if (!(fit_method %in% allowed.fit_method)) stop("fit_method must be one of: " %+% paste0(allowed.fit_method, collapse=", "))
+  if (!(bin_method %in% allowed.bin_method)) stop("bin_method must be one of: " %+% paste0(allowed.bin_method, collapse=", "))
 
   opts <- list(
-    fit.package = fit.package,
-    fit.algorithm = fit.algorithm,
-    fit.method = fit.method,
+    fit_package = fit_package,
+    fit_algorithm = fit_algorithm,
+    fit_method = fit_method,
     fold_column = fold_column,
 
-    bin.method = bin.method,
+    bin_method = bin_method,
     # parfit = parfit,
     nbins = nbins,
     maxncats = maxncats,

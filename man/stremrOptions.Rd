@@ -20,8 +20,8 @@ The arguments of \code{\link{set_all_stremr_options}} list all available \code{s
 \examples{
 \dontrun{
 stremrOptions()
-stremrOptions('fit.package')
-stremrOptions('fit.package', 'h2o')
+stremrOptions('fit_package')
+stremrOptions('fit_package', 'h2o')
 }
 }
 \seealso{

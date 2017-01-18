@@ -7,7 +7,8 @@
 fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
   stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
   models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL, reg_CENS,
-  reg_TRT, reg_MONITOR, fit.method = c("none", "cv", "holdout"),
+  reg_TRT, reg_MONITOR, estimator = c("speedglm__glm", "glm__glm", "h2o__glm",
+  "xgboost__glm"), fit_method = c("none", "cv", "holdout"),
   fold_column = NULL, verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
@@ -43,7 +44,17 @@ Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defMo
 
 \item{reg_MONITOR}{...}
 
-\item{fit.method}{Model selection approach. Can be \code{"none"} - no model selection,
+\item{estimator}{Specify the default estimator to use for model fitting.
+This argument will only have an effect when some of the propensity score models were not explicitly defined
+with their corresponding arguments:
+\code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
+To put it another way: when all three of these arguments are specified,
+the argument \code{estimator} is completely ignored.
+Should be a character string in the format 'PackageName__Algorithm',
+where PackageName can be: c("speedglm", "glm", "h2o", "xgboost") and Algorithm can be
+c("glm", "gbm", "randomForest", "drf", "deeplearning").}
+
+\item{fit_method}{Model selection approach. Can be \code{"none"} - no model selection,
 \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 (must specify the column name that contains the fold IDs).}
 
