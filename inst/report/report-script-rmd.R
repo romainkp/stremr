@@ -26,7 +26,7 @@ print_model_info <- function(model_summary, model_stack) {
       # cat(paste(capture.output(print(grid)), collapse = '\n\n'))
     } else {
       # cat(paste(capture.output(print(grid))[-2], collapse = '\n\n'))
-      try(pander::pander(h2o_gridobj))
+      try(pander::pander(grid))
       # try(pander::pander(paste(capture.output(print(grid))[-2], collapse = '\n')))
     }
   }
