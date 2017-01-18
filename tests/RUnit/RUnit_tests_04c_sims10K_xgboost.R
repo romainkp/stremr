@@ -63,23 +63,120 @@ test.xgb_parallel_2 <- function() {
         tempModel <- xgb.train(params=param, data=xgb_dat, nrounds=5)
         return (tempModel)
     }
-
     registerDoParallel(cores = 32)
     # cl <- makeCluster(20)
     # cl <- makeForkCluster(32)
     # registerDoParallel(cl)
-
     # registerDoSEQ()
-
     models <- foreach (i=(1:100), .packages=c('xgboost')) %dopar% {
       BootStrappedModels(i)
     }
-
-
     stopCluster(cl)
     stopImplicitCluster()
-
     preds <- predict(models[[1]],x) ####This is where failure occurs
+}
+
+# ---------------------------------------------------------------------------
+# Test reporting with a mix of h2o / xgb models, using CV
+# ---------------------------------------------------------------------------
+test.GRID.h2o.xgboost.10Kdata <- function() {
+  reqxgb <- requireNamespace("xgboost", quietly = TRUE)
+  reqh2o <- requireNamespace("h2o", quietly = TRUE)
+  if (reqxgb && reqh2o) {
+    `%+%` <- function(a, b) paste0(a, b)
+    # library("stremr")
+    options(stremr.verbose = TRUE)
+    # options(stremr.verbose = FALSE)
+    options(GriDiSL.verbose = TRUE)
+    # options(GriDiSL.verbose = FALSE)
+    library("data.table")
+    library("h2o")
+
+    data(OdatDT_10K)
+    Odat_DT <- OdatDT_10K
+    # select only the first 1,000 IDs
+    # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+    setkeyv(Odat_DT, cols = c("ID", "t"))
+    # ---------------------------------------------------------------------------
+    # Define some summaries (lags C[t-1], A[t-1], N[t-1])
+    # ---------------------------------------------------------------------------
+    ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
+    lagnodes <- c("C", "TI", "N")
+    newVarnames <- lagnodes %+% ".tminus1"
+    Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
+    # indicator that the person has never been on treatment up to current t
+    Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
+    Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
+
+    # ------------------------------------------------------------------
+    # Propensity score models for Treatment, Censoring & Monitoring
+    # ------------------------------------------------------------------
+    gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
+    stratify_TRT <- list(
+      TI=c("t == 0L",                                            # MODEL TI AT t=0
+           "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
+           "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
+           "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
+          ))
+
+    gform_CENS <- c("C ~ highA1c + t")
+    gform_MONITOR <- "N ~ 1"
+
+    # ----------------------------------------------------------------
+    # IMPORT DATA
+    # ----------------------------------------------------------------
+    OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+    OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
+    OData$dat.sVar[]
+    OData$fold_column <- NULL
+    OData$nfolds <- NULL
+
+    # library("h2o")
+    h2o::h2o.init(nthreads = 1)
+
+    params_g <-  GriDiSL::defModel(estimator = "h2o__glm",
+                                   family = "binomial",
+                                   alpha = 0,
+                                   lambda = 0,
+                                   lambda_search = FALSE) +
+                  GriDiSL::defModel(estimator = "h2o__glm",
+                                    family = "binomial",
+                                    lambda_search = TRUE,
+                                    param_grid = list(
+                                      alpha = c(0, 0.5, 1)
+                                    )) +
+                  GriDiSL::defModel(estimator = "xgboost__glm",
+                                    family = "binomial",
+                                    nrounds = 1000,
+                                    early_stopping_rounds = 25)
+
+    OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                            models_CENS = params_g, models_TRT = params_g, models_MONITOR = params_g,
+                            fit_method = "cv", fold_column = "fold_ID")
+
+    wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+    surv_dlow <- survNPMSM(wts.St.dlow, OData)
+    wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
+
+    MSM.IPAW <- survMSM(OData,
+                        wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
+                        t_breaks = c(1:8,12,16)-1,
+                        est_name = "IPAW", getSEs = TRUE)
+
+    if (rmarkdown::pandoc_available(version = "1.12.3"))
+        make_report_rmd(OData,
+                        NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                        # MSM = MSM.IPAW,
+                        AddFUPtables = TRUE,
+                        # openFile = FALSE,
+                        openFile = TRUE,
+                        WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+                        file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+
+  }
+
 }
 
 # ---------------------------------------------------------------------------
@@ -140,10 +237,6 @@ test.xgboost.10Kdata <- function() {
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH xgboost glm and no CV
     # ----------------------------------------------------------------
-    # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit_method = "none")
-    # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit_method = "cv", fold_column = "fold_ID")
-
-    # set_all_stremr_options(estimator = "xgboost_glm")
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                             estimator = "xgboost__gbm", fit_method = "none",
@@ -299,7 +392,7 @@ test.xgboost.10Kdata <- function() {
     make_report_rmd(OData,
                     # AddFUPtables = FALSE,
                     openFile = TRUE,
-                    openFile = FALSE,
+                    # openFile = FALSE,
                     NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
                     GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
                     TMLE = list(tmle_est_dlow, tmle_est_dhigh)

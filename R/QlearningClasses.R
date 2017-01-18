@@ -38,49 +38,49 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_ze
 }
 
 ## ---------------------------------------------------------------------
-#' R6 Class for Q-Learning
-#'
-#'  R6 class for controlling the internal implementation of Q-learning functionality.
-#'  Supports sequential (recursive) G-computation and longitudinal TMLE.
-#'  Inherits from \code{BinaryOutcomeModel} R6 Class.
-#'
-#' @docType class
-#' @format An \code{\link{R6Class}} generator object
-#' @keywords R6 class
-#' @details
-#' \itemize{
-#'    \item{\code{regimen_names}} - \code{character}. Note used. For future pooling across regimens.
-#'    \item{\code{classify}} - ... \code{logical}
-#'    \item{\code{TMLE}} - ... \code{logical}
-#'    \item{\code{nIDs}} - ... \code{integer}
-#'    \item{\code{stratifyQ_by_rule}} - ... \code{logical}
-#'    \item{\code{lower_bound_zero_Q}} - ... \code{logical}
-#'    \item{\code{skip_update_zero_Q}} - ... \code{logical}
-#'    \item{\code{Qreg_counter}} - ... \code{integer}
-#'    \item{\code{t_period}} - ... \code{integer}
-#'    \item{\code{idx_used_to_fit_initQ}} - ... \code{integer}
-#' }
-#' @section Methods:
-#' \describe{
-#'   \item{\code{new(reg, ...)}}{...}
-#'   \item{\code{define.subset.idx(data, subset_vars, subset_exprs)}}{...}
-#'   \item{\code{define_idx_to_fit_initQ(data)}}{...}
-#'   \item{\code{define_idx_to_predictQ(data)}}{...}
-#'   \item{\code{fit(overwrite = FALSE, data, ...)}}{...}
-#'   \item{\code{Propagate_TMLE_fit(overwrite = TRUE, data, new.TMLE.fit, ...)}}{...}
-#'   \item{\code{predict(newdata, subset_idx, ...)}}{...}
-#'   \item{\code{predictStatic(data, g0, gstar, subset_idx)}}{...}
-#'   \item{\code{predictStochastic(data, g0, gstar, subset_idx, stoch_indicator)}}{...}
-#'   \item{\code{predictAeqa(newdata, ...)}}{...}
-#'   \item{\code{get.fits()}}{...}
-#' }
-#' @section Active Bindings:
-#' \describe{
-#'    \item{\code{wipe.alldat}}{...}
-#'    \item{\code{getfit}}{...}
-#'    \item{\code{getTMLEfit}}{...}
-#' }
-#' @export
+## R6 Class for Q-Learning (Iterative G-COMP or TMLE)
+## ---------------------------------------------------------------------
+##  R6 class for controlling the internal implementation of Q-learning functionality.
+##  Supports sequential (recursive) G-computation and longitudinal TMLE.
+##  Inherits from \code{BinaryOutcomeModel} R6 Class.
+##
+## @docType class
+## @format An \code{\link{R6Class}} generator object
+## @keywords R6 class
+## @details
+## \itemize{
+##    \item{\code{regimen_names}} - \code{character}. Note used. For future pooling across regimens.
+##    \item{\code{classify}} - ... \code{logical}
+##    \item{\code{TMLE}} - ... \code{logical}
+##    \item{\code{nIDs}} - ... \code{integer}
+##    \item{\code{stratifyQ_by_rule}} - ... \code{logical}
+##    \item{\code{lower_bound_zero_Q}} - ... \code{logical}
+##    \item{\code{skip_update_zero_Q}} - ... \code{logical}
+##    \item{\code{Qreg_counter}} - ... \code{integer}
+##    \item{\code{t_period}} - ... \code{integer}
+##    \item{\code{idx_used_to_fit_initQ}} - ... \code{integer}
+## }
+## @section Methods:
+## \describe{
+##   \item{\code{new(reg, ...)}}{...}
+##   \item{\code{define.subset.idx(data, subset_vars, subset_exprs)}}{...}
+##   \item{\code{define_idx_to_fit_initQ(data)}}{...}
+##   \item{\code{define_idx_to_predictQ(data)}}{...}
+##   \item{\code{fit(overwrite = FALSE, data, ...)}}{...}
+##   \item{\code{Propagate_TMLE_fit(overwrite = TRUE, data, new.TMLE.fit, ...)}}{...}
+##   \item{\code{predict(newdata, subset_idx, ...)}}{...}
+##   \item{\code{predictStatic(data, g0, gstar, subset_idx)}}{...}
+##   \item{\code{predictStochastic(data, g0, gstar, subset_idx, stoch_indicator)}}{...}
+##   \item{\code{predictAeqa(newdata, ...)}}{...}
+##   \item{\code{get.fits()}}{...}
+## }
+## @section Active Bindings:
+## \describe{
+##    \item{\code{wipe.alldat}}{...}
+##    \item{\code{getfit}}{...}
+##    \item{\code{getTMLEfit}}{...}
+## }
+## @export
 QlearnModel  <- R6Class(classname = "QlearnModel",
   inherit = BinaryOutcomeModel,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits

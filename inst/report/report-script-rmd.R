@@ -20,9 +20,12 @@ print_model_info <- function(model_summary, model_stack) {
   grids <- model_stack$get_modelfits_grid()
 
   for (grid in grids) {
-    if (is.data.frame(grid))
+    if (is.data.frame(grid)) {
       grid <- grid[ , names(grid)[!(names(grid) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
-    try(pander::pander(grid, caption = "Grid Details"))
+      try(pander::pander(grid, caption = "Grid Details"))
+    } else {
+      cat(paste(grid, collapse = '\n'))
+    }
   }
 
   cat("\n\n"); cat("###"); cat("Best Model Summary"); cat("\n\n");

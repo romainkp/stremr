@@ -1,3 +1,8 @@
+
+## ----------------------------------------------------------------------------------
+## Call \code{GriDiSL} and fit a single regression model.
+## All model fitting in stremr is performed via this function.
+## ----------------------------------------------------------------------------------
 fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx) {
 
   if (is.null(model_contrl[["fit_method"]]))
@@ -5,11 +10,6 @@ fit_single_regression <- function(data, nodes, models, model_contrl, predvars, o
 
   method <- model_contrl[["fit_method"]]
   fold_column <- model_contrl[["fold_column"]]
-
-  # if (is.null(model_contrl[["fit_method"]]))
-  # method <- getopt("fit_method") else method <- model_contrl[["fit_method"]]
-  # if (is.null(model_contrl[["fold_column"]])) fold_column <- getopt("fold_column") else fold_column <- model_contrl[["fold_column"]]
-  # if (is.null(model_contrl[["nfolds"]])) nfolds <- getopt("nfolds") else nfolds <- model_contrl[["nfolds"]]
 
   if ((method %in% "cv") && is.null(fold_column) && is.null(data$fold_column)) {
 
@@ -75,50 +75,11 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   return(model.fit)
 }
 
-#----------------------------------------------------------------------------------
-# Classes for modelling regression models with binary outcome Bin ~ Xmat
-#----------------------------------------------------------------------------------
-
-## ---------------------------------------------------------------------
-#' R6 class for fitting and making predictions for a single binary outcome regression model P(B | PredVars)
-#'
-#' This R6 class can request, store and manage the design matrix Xmat, as well as the binary outcome Bin for the
-#'  logistic regression P(Bin|Xmat).
-#'  Can also be used for converting data in wide format to long when requested,
-#'  e.g., when pooling across binary indicators (fitting one pooled logistic regression model for several indicators)
-#'  The class has methods that perform queries to data storage R6 class DataStorageClass to get appropriate data columns & row subsets
-#'
-#' @docType class
-#' @format An \code{\link{R6Class}} generator object
-#' @keywords R6 class
-#' @details
-#' \itemize{
-#' \item{cont.sVar.flag} - Is the original outcome variable continuous?
-#' \item{bw.j} - Bin width (interval length) for an outcome that is a bin indicator of a discretized continous outcome.
-#' \item{GLMpackage} - Controls which package will be used for performing model fits (\code{glm} or \code{speedglm}).
-#' }
-#' @section Methods:
-#' \describe{
-#'   \item{\code{new(reg)}}{Uses \code{reg} R6 \code{\link{RegressionClass}} object to instantiate a new model for a
-#'   logistic regression with binary outcome.}
-#'   \item{\code{show()}}{Print information on outcome and predictor names used in this regression model}
-#'   \item{\code{fit()}}{...}
-#'   \item{\code{copy.fit()}}{...}
-#'   \item{\code{predict()}}{...}
-#'   \item{\code{copy.predict()}}{...}
-#'   \item{\code{predictAeqa()}}{...}
-#' }
-#' @section Active Bindings:
-#' \describe{
-#'   \item{\code{getoutvarnm}}{...}
-#'   \item{\code{getoutvarval}}{...}
-#'   \item{\code{getsubset}}{...}
-#'   \item{\code{getprobA1}}{...}
-#'   \item{\code{getfit}}{...}
-#'   \item{\code{wipe.alldat}}{...}
-#' }
-#' @importFrom assertthat assert_that is.flag
-#' @export
+## ----------------------------------------------------------------------------------
+## Class for defining, fitting and predicting for a single regression model E(Y|X) (univariate outcome).
+## R6 class for fitting and making predictions for a single outcome regression model.
+## This R6 class can request, store and manage the design matrix Xmat, as well as the outcome Y.
+## ----------------------------------------------------------------------------------
 BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
@@ -157,7 +118,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         model_contrl[["opt_params"]] <- NULL
 
         if (!("estimator" %in% names(opt_params))) opt_params[["estimator"]] <- model_contrl[["estimator"]]
-        # if (!("estimator" %in% names(opt_params))) opt_params[["estimator"]] <- getopt("fit.package") %+% "__" %+% getopt("fit.algorithm")
         if (!("family" %in% names(opt_params))) opt_params[["family"]] <- "quasibinomial"
         if (!("distribution" %in% names(opt_params))) opt_params[["distribution"]] <- "bernoulli"
 
@@ -386,6 +346,9 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
   )
 )
 
+## ----------------------------------------------------------------------------------
+## A trivial class for dealing with deterministic outcome modeling
+## ----------------------------------------------------------------------------------
 DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutcomeModel",
   inherit = BinaryOutcomeModel,
   cloneable = TRUE,

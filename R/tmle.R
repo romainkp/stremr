@@ -183,17 +183,16 @@ fitTMLE <- function(...) {
 #' The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}
 #' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
 #' requires a previously defined parallel back-end cluster)
-#' @param estimator Specify the default estimator to use for model fitting.
-#' This argument will only have an effect when the models were not explicitly defined
-#' with the corresponding argument \code{models}.
-#' Should be a character string in the format 'PackageName__Algorithm',
-#' where PackageName can be: c("speedglm", "glm", "h2o", "xgboost") and Algorithm can be
-#' c("glm", "gbm", "randomForest", "drf", "deeplearning").
-#' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
+#' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
+#' Should be a character string in the format 'Package__Algorithm'.
+#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
+#' This argument is ignored when the fitting procedures are already defined via the argument \code{models}.
+#' @param fit_method Model selection approach. Can be either \code{"none"} - no model selection or
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
 # \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
 # where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
-#' @param fold_column The column (factor) that contains the fold IDs to be used as part of the validation sample. Use the provided function \code{\link{define_CVfolds}} to
+#' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+#' Use the provided function \code{\link{define_CVfolds}} to
 #' define such folds or define the folds using your own method.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
@@ -210,10 +209,10 @@ fitSeqGcomp <- function(OData,
                         intervened_TRT = NULL,
                         intervened_MONITOR = NULL,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                        estimator = c("speedglm__glm", "glm__glm", "h2o__glm", "xgboost__glm"),
-                        fit_method = c("none", "cv", "holdout"),
                         models = NULL,
-                        fold_column = NULL,
+                        estimator = stremrOptions("estimator"),
+                        fit_method = stremrOptions("fit_method"),
+                        fold_column = stremrOptions("fold_column"),
                         TMLE = FALSE,
                         stratifyQ_by_rule = FALSE,
                         Qstratify = NULL,

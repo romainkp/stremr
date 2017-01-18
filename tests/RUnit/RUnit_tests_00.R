@@ -136,19 +136,13 @@ test.GenericModelPredict <- function() {
 
 test.options <- function() {
   stremrOptions()
-  stremrOptions("fit.algorithm")
-
+  stremrOptions("estimator")
   checkException(stremrOptions("blahblah"))
   checkException(stremrOptions("blahblah", 5))
-
-  checkException(stremrOptions("fit.algorithm", NULL))
-  stremrOptions("fit.algorithm", "gbm")
-  checkException(stremrOptions("fit.algorithm", "blahblah"))
-  stremrOptions("fit.algorithm", "glm")
-
-  checkException(stremrOptions("fit.package", "blahblah"))
-  stremrOptions("fit.package", "speedglm")
-  checkException(stremrOptions("bin.method", "blah"))
+  checkException(stremrOptions("estimator", NULL))
+  stremrOptions("estimator", "xgboost__gbm")
+  checkException(stremrOptions("estimator", "blahblah"))
+  checkException(stremrOptions("bin_method", "blah"))
 
   print_stremr_opts()
   stremr:::.onLoad()

@@ -6,9 +6,10 @@
 \usage{
 fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
   intervened_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
-  intervened_MONITOR), collapse = ""), estimator = c("speedglm__glm",
-  "glm__glm", "h2o__glm", "xgboost__glm"), fit_method = c("none", "cv",
-  "holdout"), models = NULL, fold_column = NULL, TMLE = FALSE,
+  intervened_MONITOR), collapse = ""), models = NULL,
+  estimator = stremrOptions("estimator"),
+  fit_method = stremrOptions("fit_method"),
+  fold_column = stremrOptions("fold_column"), TMLE = FALSE,
   stratifyQ_by_rule = FALSE, Qstratify = NULL, useonly_t_TRT = NULL,
   useonly_t_MONITOR = NULL, iterTMLE = FALSE, IPWeights = NULL,
   stabilize = FALSE, trunc_weights = 10^6, weights = NULL,
@@ -31,20 +32,19 @@ Leave the argument unspecified (\code{NULL}) when not intervening on the monitor
 
 \item{rule_name}{Optional name for the treatment/monitoring regimen.}
 
-\item{estimator}{Specify the default estimator to use for model fitting.
-This argument will only have an effect when the models were not explicitly defined
-with the corresponding argument \code{models}.
-Should be a character string in the format 'PackageName__Algorithm',
-where PackageName can be: c("speedglm", "glm", "h2o", "xgboost") and Algorithm can be
-c("glm", "gbm", "randomForest", "drf", "deeplearning").}
-
-\item{fit_method}{Model selection approach. Can be \code{"none"} - no model selection,
-\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).}
-
 \item{models}{Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
 
-\item{fold_column}{The column (factor) that contains the fold IDs to be used as part of the validation sample. Use the provided function \code{\link{define_CVfolds}} to
+\item{estimator}{Specify the default estimator to use for fitting the iterative g-computation formula.
+Should be a character string in the format 'Package__Algorithm'.
+See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
+This argument is ignored when the fitting procedures are already defined via the argument \code{models}.}
+
+\item{fit_method}{Model selection approach. Can be either \code{"none"} - no model selection or
+\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).}
+
+\item{fold_column}{The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+Use the provided function \code{\link{define_CVfolds}} to
 define such folds or define the folds using your own method.}
 
 \item{TMLE}{Set to \code{TRUE} to run the usual longitudinal TMLE algorithm (with a separate TMLE update of Q for every sequential regression).}

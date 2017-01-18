@@ -545,13 +545,13 @@ ContinModel <- R6Class(classname = "ContinModel",
         assert_that(is.DataStorageClass(DataStorageClass.g0))
         self$intrvls <- DataStorageClass.g0$detect.sVar.intrvls(reg$outvar,
                                                       # nbins = self$reg$nbins,
-                                                      nbins = getopt("nbins"),
+                                                      nbins = stremrOptions("nbins"),
                                                       # bin_bymass = self$reg$bin_bymass,
-                                                      bin_bymass = (getopt("bin.method") %in% "equal.mass"),
+                                                      bin_bymass = (stremrOptions("bin_method") %in% "equal.mass"),
                                                       # bin_bydhist = self$reg$bin_bydhist,
-                                                      bin_bydhist = (getopt("bin.method") %in% "dhist"),
+                                                      bin_bydhist = (stremrOptions("bin_method") %in% "dhist"),
                                                       # max_nperbin = self$reg$max_nperbin
-                                                      max_nperbin = as.integer(getopt("maxNperBin"))
+                                                      max_nperbin = as.integer(stremrOptions("maxNperBin"))
                                                       )
 
         # if (!missing(DataStorageClass.gstar)) {

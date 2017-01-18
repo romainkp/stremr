@@ -6,10 +6,11 @@
 \usage{
 fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
   stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
-  models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL, reg_CENS,
-  reg_TRT, reg_MONITOR, estimator = c("speedglm__glm", "glm__glm", "h2o__glm",
-  "xgboost__glm"), fit_method = c("none", "cv", "holdout"),
-  fold_column = NULL, verbose = getOption("stremr.verbose"), ...)
+  models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
+  estimator = stremrOptions("estimator"),
+  fit_method = stremrOptions("fit_method"),
+  fold_column = stremrOptions("fold_column"), reg_CENS, reg_TRT, reg_MONITOR,
+  verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -38,29 +39,29 @@ Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defMo
 \code{GriDiSL} R package.
 Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
 
-\item{reg_CENS}{...}
-
-\item{reg_TRT}{...}
-
-\item{reg_MONITOR}{...}
-
-\item{estimator}{Specify the default estimator to use for model fitting.
+\item{estimator}{Specify the default estimator to use for fitting propensity scores.
+Should be a character string in the format 'Package__Algorithm'.
+See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
 This argument will only have an effect when some of the propensity score models were not explicitly defined
 with their corresponding arguments:
 \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
-To put it another way: when all three of these arguments are specified,
-the argument \code{estimator} is completely ignored.
-Should be a character string in the format 'PackageName__Algorithm',
-where PackageName can be: c("speedglm", "glm", "h2o", "xgboost") and Algorithm can be
-c("glm", "gbm", "randomForest", "drf", "deeplearning").}
+To put it another way:
+this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
+are specified.}
 
 \item{fit_method}{Model selection approach. Can be \code{"none"} - no model selection,
 \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 (must specify the column name that contains the fold IDs).}
 
-\item{fold_column}{The column (factor) that contains the fold IDs to be used as part of the validation sample.
+\item{fold_column}{The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
 Use the provided function \code{\link{define_CVfolds}} to
 define such folds or define the folds using your own method.}
+
+\item{reg_CENS}{...}
+
+\item{reg_TRT}{...}
+
+\item{reg_MONITOR}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}

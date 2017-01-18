@@ -77,8 +77,10 @@ detect.col.types <- function(sVar_mat){
       sVartypes$cont
     }
   }
-  assert_that(is.integerish(getopt("maxncats")) && getopt("maxncats") > 1)
-  maxncats <- getopt("maxncats")
+
+  assert_that(is.integerish(stremrOptions("maxncats")) && stremrOptions("maxncats") > 1)
+
+  maxncats <- stremrOptions("maxncats")
   sVartypes <- gvars$sVartypes
   if (is.matrix(sVar_mat)) { # for matrix:
     return(as.list(apply(sVar_mat, 2, detect_vec_type)))

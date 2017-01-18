@@ -19,10 +19,10 @@ if(getRversion() >= "2.15.1") {
 #' @export
 #' @param estimates A list, one item per regime / intervention. Each list item must be a data.frame containing the
 #' survival estimates by time for a single regime / intervention.
-#' @param CI should a 95% confidence interval be plotted? Defaults to \code{TRUE}.
+#' @param CI should a 95\% confidence interval be plotted? Defaults to \code{TRUE}.
 #' Uses the standard error estimates provided as a separate column of the input data.
-#' @param CI_line When \code{TRUE} the 95% CIs will be plotted as a line function (same as main plot type).
-#' When \code{FALSE} the 95% CIs are plotted using \code{ggplot2::geom_ribbon}.
+#' @param CI_line When \code{TRUE} the 95\% CIs will be plotted as a line function (same as main plot type).
+#' When \code{FALSE} the 95\% CIs are plotted using \code{ggplot2::geom_ribbon}.
 #' @param plot_cens mark the censored observations?
 #' @param surv_col colour of the survival estimate. Defaults to black for
 #'    one stratum, and to the default \code{ggplot2} colours for multiple
@@ -336,5 +336,3 @@ ggsurv <- function(
 
   return(pl)
 }
-
-

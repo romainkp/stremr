@@ -6,7 +6,7 @@
 \usage{
 survMSM(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = TRUE,
   trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW",
-  verbose = getOption("stremr.verbose"))
+  glm_package = c("speedglm", "h2o"), verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function
@@ -40,23 +40,17 @@ estimated survival by using the MSM influence curve.}
 \item{est_name}{A string naming the current MSM estimator. Ignored by the current routine but is
 used when generating reports with \code{make_report_rmd}.}
 
+\item{glm_package}{Which R package should be used for fitting the weighted logistic regression
+model (MSM) for the survival hazard?
+Currently available options are \code{"speedglm"} and \code{"h2o"}.
+\code{h2o} can provided better performance
+when fitting MSM with many observations and large number of time-points.}
+
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 }
 \value{
-A named list with items containing the MSM estimation results:
- \itemize{
- \item \code{est_name} - .
- \item \code{St} - .
- \item \code{ht} - .
- \item \code{MSM.fit} - .
- \item \code{MSM.intervals} - .
- \item \code{IC.Var.S.d} - .
- \item \code{nID} - .
- \item \code{wts_data} - .
- \item \code{use_weights} - .
- \item \code{trunc_weights} - .
-}
+A named list with items containing the MSM estimation results.
 }
 \description{
 Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the
@@ -201,6 +195,6 @@ make_report_rmd(OData, MSM = IPW_MSM_res,
 }
 }
 \seealso{
-\code{\link{stremr-package}} for the general overview of the package,
+\code{\link{fitPropensity}}, \code{\link{getIPWeights}}.
 }
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{print_stremr_opts}
 \alias{print_stremr_opts}
-\title{Print Current Option Settings for \code{stremr}}
+\title{Show all current option settings}
 \usage{
 print_stremr_opts()
 }
@@ -10,7 +10,7 @@ print_stremr_opts()
 Invisibly returns a list of \code{stremr} options.
 }
 \description{
-Print Current Option Settings for \code{stremr}
+Show all current option settings
 }
 \seealso{
 \code{\link{set_all_stremr_options}}

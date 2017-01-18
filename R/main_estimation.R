@@ -202,27 +202,27 @@ importData <- function(data,
 #' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with
 #' \code{GriDiSL} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
-#' @param reg_CENS ...
-#' @param reg_TRT ...
-#' @param reg_MONITOR ...
-#' @param estimator Specify the default estimator to use for model fitting.
+#' @param estimator Specify the default estimator to use for fitting propensity scores.
+#' Should be a character string in the format 'Package__Algorithm'.
+#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
 #' This argument will only have an effect when some of the propensity score models were not explicitly defined
 #' with their corresponding arguments:
 #' \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
-#' To put it another way: when all three of these arguments are specified,
-#' the argument \code{estimator} is completely ignored.
-#' Should be a character string in the format 'PackageName__Algorithm',
-#' where PackageName can be: c("speedglm", "glm", "h2o", "xgboost") and Algorithm can be
-#' c("glm", "gbm", "randomForest", "drf", "deeplearning").
+#' To put it another way:
+#' this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
+#' are specified.
 #' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 #' (must specify the column name that contains the fold IDs).
 # \code{"holdout"} - model selection by splitting the data into training and validation samples according to
 # lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
 # where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
-#' @param fold_column The column (factor) that contains the fold IDs to be used as part of the validation sample.
+#' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
 #' Use the provided function \code{\link{define_CVfolds}} to
 #' define such folds or define the folds using your own method.
+#' @param reg_CENS ...
+#' @param reg_TRT ...
+#' @param reg_MONITOR ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional
@@ -235,22 +235,26 @@ importData <- function(data,
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
 fitPropensity <- function(OData,
-                          gform_CENS, gform_TRT, gform_MONITOR,
-                          stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
-                          models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
-                          reg_CENS, reg_TRT, reg_MONITOR,
-                          estimator = c("speedglm__glm", "glm__glm", "h2o__glm", "xgboost__glm"),
-                          fit_method = c("none", "cv", "holdout"),
-                          fold_column = NULL,
+                          gform_CENS,
+                          gform_TRT,
+                          gform_MONITOR,
+                          stratify_CENS = NULL,
+                          stratify_TRT = NULL,
+                          stratify_MONITOR = NULL,
+                          models_CENS = NULL,
+                          models_TRT = NULL,
+                          models_MONITOR = NULL,
+                          estimator = stremrOptions("estimator"),
+                          fit_method = stremrOptions("fit_method"),
+                          fold_column = stremrOptions("fold_column"),
+                          reg_CENS,
+                          reg_TRT,
+                          reg_MONITOR,
                           verbose = getOption("stremr.verbose"), ...) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-
-  # fit_method <- getopt("fit_method")
-  # nfolds <- getopt("nfolds")}
-  # fold_column <- getopt("fold_column")
 
   if (!is.null(models_CENS)) assert_that(is.ModelStack(models_CENS))
   if (!is.null(models_TRT)) assert_that(is.ModelStack(models_TRT))
@@ -689,6 +693,11 @@ return(wts_data)
 #' estimated survival by using the MSM influence curve.
 #' @param est_name A string naming the current MSM estimator. Ignored by the current routine but is
 #' used when generating reports with \code{make_report_rmd}.
+#' @param glm_package Which R package should be used for fitting the weighted logistic regression
+#' model (MSM) for the survival hazard?
+#' Currently available options are \code{"speedglm"} and \code{"h2o"}.
+#' \code{h2o} can provided better performance
+#' when fitting MSM with many observations and large number of time-points.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #'
@@ -709,20 +718,8 @@ return(wts_data)
 #' @section MSM for the hazard:
 #' **********************************************************************
 #'
-#' @return A named list with items containing the MSM estimation results:
-#'  \itemize{
-#'  \item \code{est_name} - .
-#'  \item \code{St} - .
-#'  \item \code{ht} - .
-#'  \item \code{MSM.fit} - .
-#'  \item \code{MSM.intervals} - .
-#'  \item \code{IC.Var.S.d} - .
-#'  \item \code{nID} - .
-#'  \item \code{wts_data} - .
-#'  \item \code{use_weights} - .
-#'  \item \code{trunc_weights} - .
-#' }
-#' @seealso \code{\link{stremr-package}} for the general overview of the package,
+#' @return A named list with items containing the MSM estimation results.
+#' @seealso \code{\link{fitPropensity}}, \code{\link{getIPWeights}}.
 #' @example tests/examples/4_survMSM_example.R
 #' @export
 survMSM <- function(wts_data,
@@ -734,7 +731,9 @@ survMSM <- function(wts_data,
                     weights = NULL,
                     getSEs = TRUE,
                     est_name = "IPW",
+                    glm_package = c("speedglm", "h2o"),
                     verbose = getOption("stremr.verbose")) {
+
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
   nodes <- OData$nodes
@@ -743,6 +742,9 @@ survMSM <- function(wts_data,
 
   wts_data <- format_wts_data(wts_data)
   rules_TRT <- sort(unique(wts_data[["rule.name"]]))
+
+  glm_package <- glm_package[1L]
+  if (!(glm_package %in% c("speedglm", "h2o"))) stop("glm_package must be either 'speedglm' or 'h2o'")
 
   if (verbose) print("performing estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
 
@@ -835,7 +837,7 @@ survMSM <- function(wts_data,
                         }))
 
   # Fit the hazard MSM
-  resglmMSM <- runglmMSM(OData, wts_data_used, all_dummies, Ynode, verbose)
+  resglmMSM <- runglmMSM(OData, wts_data_used, all_dummies, Ynode, glm_package, verbose)
   wts_data_used[, glm.IPAW.predictP1 := resglmMSM$glm.IPAW.predictP1]
   m.fit <- resglmMSM$m.fit
 
@@ -936,7 +938,7 @@ survMSM <- function(wts_data,
   return(MSM_out)
 }
 
-runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
+runglmMSM <- function(OData, wts_data, all_dummies, Ynode, glm_package, verbose) {
   # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
   # Does not handle cases with deterministic Anodes in the original data.
   logispredict = function(m.fit, X_mat) {
@@ -944,7 +946,8 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
     pAout <- match.fun(FUN = m.fit$linkfun)(eta)
     return(pAout)
   }
-  if (getopt("fit.package") %in% c("h2o", "h2oglm")) {
+
+  if (glm_package %in% "h2o") {
     if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
     loadframe_t <- system.time(
       MSM.designmat.H2O <- OData$fast.load.to.H2O(wts_data,
@@ -974,7 +977,7 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
     m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
     glm.IPAW.predictP1 <- as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])
     # wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
-  } else {
+  } else if (glm_package %in% "speedglm") {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
     Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
     m.fit <- try(speedglm::speedglm.wfit(
@@ -1001,7 +1004,8 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, verbose) {
     }
     glm.IPAW.predictP1 <- logispredict(m.fit, Xdesign.mat)
     # wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
+  } else {
+    stop("glm_package can be either 'h2o' or 'speedglm'")
   }
   return(list(glm.IPAW.predictP1 = glm.IPAW.predictP1, m.fit = m.fit))
-  # return(list(wts_data = wts_data, m.fit = m.fit))
 }
