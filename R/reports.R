@@ -132,8 +132,21 @@ call. = FALSE)
   }
 
   # browser()
-  # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
-  # model_fits_gC[[1]]$get_modelfits_grid()
+  # # # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
+  # h2o_gridobj <- model_fits_gC[[1]]$get_modelfits_grid()[[1]]
+  # capture.output(print(h2o_gridobj))
+  # xgb_gridobj <- model_fits_gC[[1]]$get_modelfits_grid()[[3]]
+  # # capture.output(print(xgb_gridobj))
+  # # # class(xgb_gridobj)
+  # # # is.data.frame(xgb_gridobj)
+  # xgb_gridobj <- xgb_gridobj[ , names(xgb_gridobj)[!(names(xgb_gridobj) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
+  # try(pander::pander_return(xgb_gridobj, caption = "Grid Details"))
+
+  # # class(model_fits_gC[[1]]$get_modelfits_grid()[[1]])
+  # # str(model_fits_gC[[1]]$get_modelfits_grid()[[1]])
+  # # showMethods(class = "H2OGrid", printTo = FALSE )
+  # pander::pander(capture.output(print(h2o_gridobj))[-2])
+
   # model_fits_gC[[1]]$get_modelfits_grid()
   # model_fits_gC[[1]]$get_best_models()
 

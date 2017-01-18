@@ -12,23 +12,26 @@ opts_chunk$set(fig.path = figure.dir)
 panderOptions("table.split.table", Inf)
 
 print_model_info <- function(model_summary, model_stack) {
-  cat("\n\n"); cat("###"); cat("Summary of All Models"); cat("\n\n");
+  cat("\n\n"); cat("###"); cat("Model Performance"); cat("\n\n");
+
   pander::pander(model_summary)
   MSEtab <- model_stack$getMSEtab
   try(pander::pander(MSEtab, caption = "Overall Performance by Model"))
 
   grids <- model_stack$get_modelfits_grid()
-
   for (grid in grids) {
-    if (is.data.frame(grid)) {
+    if (is.data.frame(grid) || is.data.table(grid)) {
       grid <- grid[ , names(grid)[!(names(grid) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
-      try(pander::pander(grid, caption = "Grid Details"))
+      try(pander::pander(grid, caption = "XGB Grid"))
+      # cat(paste(capture.output(print(grid)), collapse = '\n\n'))
     } else {
-      cat(paste(grid, collapse = '\n'))
+      # cat(paste(capture.output(print(grid))[-2], collapse = '\n\n'))
+      try(pander::pander(h2o_gridobj))
+      # try(pander::pander(paste(capture.output(print(grid))[-2], collapse = '\n')))
     }
   }
 
-  cat("\n\n"); cat("###"); cat("Best Model Summary"); cat("\n\n");
+  cat("\n\n"); cat("###"); cat("Best Model"); cat("\n\n");
   best_model <- model_stack$get_best_models(K=1)[[1]]
   GriDiSL::print_tables(best_model)
 }

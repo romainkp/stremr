@@ -13,7 +13,6 @@ test.xgb_parallel <- function() {
     library('foreach')
     library('doParallel')
     library('xgboost')
-
     Models <- function(seed){
         data(agaricus.train, package='xgboost')
         data(agaricus.test, package='xgboost')
@@ -27,29 +26,22 @@ test.xgb_parallel <- function() {
         bst <- xgb.train(param, dtrain, nrounds = 2, watchlist)
         return(bst)
     }
-
     registerDoParallel(cores = 20)
-
     r <- foreach(n=seq.int(200), .packages=c('xgboost')) %dopar% {
         Models(n)
     }
-
     stopCluster(cl)
     stopImplicitCluster()
-
     # cl <- makeCluster(20)
     # registerDoParallel(cl)
-
     # cl <- makeForkCluster(32)
     # registerDoParallel(cl)
-
 }
 
 test.xgb_parallel_2 <- function() {
     library('foreach')
     library('doParallel')
     library('xgboost')
-
     BootStrappedModels <- function(seed){
         x = matrix(rnorm(1:1000),200,5)
         target = sample(0:2,200,replace = TRUE)
@@ -126,7 +118,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     # IMPORT DATA
     # ----------------------------------------------------------------
     OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
-    OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
+    OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
     OData$dat.sVar[]
     OData$fold_column <- NULL
     OData$nfolds <- NULL
@@ -143,17 +135,19 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                                     family = "binomial",
                                     lambda_search = TRUE,
                                     param_grid = list(
-                                      alpha = c(0, 0.5, 1)
+                                      alpha = c(0.5)
                                     )) +
                   GriDiSL::defModel(estimator = "xgboost__glm",
                                     family = "binomial",
-                                    nrounds = 1000,
-                                    early_stopping_rounds = 25)
+                                    nrounds = 200,
+                                    early_stopping_rounds = 10)
 
-    OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+    OData <- fitPropensity(OData,
+                            gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                             models_CENS = params_g, models_TRT = params_g, models_MONITOR = params_g,
-                            fit_method = "cv", fold_column = "fold_ID")
+                            fit_method = "cv",
+                            fold_column = "fold_ID")
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     surv_dlow <- survNPMSM(wts.St.dlow, OData)
@@ -163,12 +157,15 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     MSM.IPAW <- survMSM(OData,
                         wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
                         t_breaks = c(1:8,12,16)-1,
-                        est_name = "IPAW", getSEs = TRUE)
+                        est_name = "IPAW",
+                        getSEs = TRUE,
+                        glm_package = "speedglm")
 
     if (rmarkdown::pandoc_available(version = "1.12.3"))
         make_report_rmd(OData,
-                        NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                        # MSM = MSM.IPAW,
+                        NPMSM = list(surv_dlow, surv_dhigh),
+                        wts_data = list(wts.St.dlow, wts.St.dhigh),
+                        MSM = MSM.IPAW,
                         AddFUPtables = TRUE,
                         # openFile = FALSE,
                         openFile = TRUE,
