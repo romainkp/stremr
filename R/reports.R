@@ -131,6 +131,9 @@ call. = FALSE)
     model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
   }
 
+  model_fits_gC[[1]]$get_best_models(K=1)
+
+  # browser()
   # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
   # model_fits_gC[[1]]$get_modelfits_grid()
   # model_fits_gC[[1]]$get_modelfits_grid()

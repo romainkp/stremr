@@ -376,10 +376,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
 
-        # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = subset_idx)
-        # browser()
-# newdata$dat.sVar[subset_idx, ][1:5]
-
         probA1 <- GriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                      add_subject_data = FALSE,
                                      subset_idx = subset_idx,
@@ -388,33 +384,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                      force_data.table = TRUE, # force_data.table = FALSE,
                                      verbose = gvars$verbose)
 
-#         SL.preds
-#            <num>
-#    1: 0.02875428
-#    2: 0.02875428
-#    3: 0.02875428
-#    4: 0.04605023
-#   ---
-# 9501: 0.04605023
-# 9502: 0.02875428
-# 9503: 0.02875428
-# 9504: 0.02875428
-# 9505: 0.04605023
-
-# SL.preds
-#            <num>
-#    1: 0.02875428
-#    2: 0.02875428
-#    3: 0.02875428
-#    4: 0.04605023
-#   ---
-# 9501: 0.04605023
-# 9502: 0.02875428
-# 9503: 0.02875428
-# 9504: 0.02875428
-# 9505: 0.04605023
-
-
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
         ## check that predictions P(A=1 | dmat) exist for all obs
@@ -422,6 +391,13 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # if (any(is.na(private$probA1) )) { # & !is.nan(private$probA1)
           stop("some of the predicted probabilities during seq Gcomp resulted in NAs, which indicates an error of a prediction routine")
         }
+
+        ## Remove all modeling grid obj for xgboost (all the CV / training set models)
+        ## This will still keep the best re-trained model object if method=="cv"/"holdout"
+        ## Don't need to store these models, since we already made the prediction
+        ## However, we will need these models if want to report
+        if (!(self$model_contrl[["fit_method"]] %in% "none")) private$model.fit$wipe.allmodels
+
         return(private$probA1)
       }
     },

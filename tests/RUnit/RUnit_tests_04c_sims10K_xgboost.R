@@ -297,13 +297,13 @@ test.xgboost.10Kdata <- function() {
     gcomp_est_dhigh[["estimates"]]
 
     make_report_rmd(OData,
-                # AddFUPtables = FALSE,
-                openFile = TRUE,
-                # openFile = FALSE,
-                NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
-                TMLE = list(tmle_est_dlow, tmle_est_dhigh)
-                )
+                    # AddFUPtables = FALSE,
+                    openFile = TRUE,
+                    openFile = FALSE,
+                    NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+                    GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
+                    TMLE = list(tmle_est_dlow, tmle_est_dhigh)
+                    )
 
    # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ xgboost gbm and CV
@@ -498,7 +498,7 @@ test.xgboost.10Kdata <- function() {
     tmle.model <- "xgb.glm"
     params <- GriDiSL::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
-                                nthread = 2,
+                                nthread = 10,
                                 nrounds = 1000,
                                 early_stopping_rounds = 20)
 
