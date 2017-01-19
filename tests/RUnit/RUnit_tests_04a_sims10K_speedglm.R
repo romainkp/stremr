@@ -38,7 +38,8 @@ test.speedglm.allestimators10Kdata <- function() {
   # ----------------------------------------------------------------
   # options(stremr.verbose = TRUE)
   # set_all_stremr_options(fit.package = "glm", fit.algorithm = "glm")
-  set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
+  # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
+  set_all_stremr_options(estimator = "speedglm__glm")
   OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   # To inspect the input data.table:
   # OData$dat.sVar

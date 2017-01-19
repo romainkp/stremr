@@ -126,17 +126,17 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     # library("h2o")
     h2o::h2o.init(nthreads = 1)
 
-    params_g <-  GriDiSL::defModel(estimator = "h2o__glm",
-                                   family = "binomial",
-                                   alpha = 0,
-                                   lambda = 0,
-                                   lambda_search = FALSE) +
-                  GriDiSL::defModel(estimator = "h2o__glm",
-                                    family = "binomial",
-                                    lambda_search = TRUE,
-                                    param_grid = list(
-                                      alpha = c(0.5)
-                                    )) +
+    params_g <-  #GriDiSL::defModel(estimator = "h2o__glm",
+                  #                  family = "binomial",
+                  #                  alpha = 0,
+                  #                  lambda = 0,
+                  #                  lambda_search = FALSE) +
+                  # GriDiSL::defModel(estimator = "h2o__glm",
+                  #                   family = "binomial",
+                  #                   lambda_search = TRUE,
+                  #                   param_grid = list(
+                  #                     alpha = c(0.5)
+                  #                   )) +
                   GriDiSL::defModel(estimator = "xgboost__glm",
                                     family = "binomial",
                                     nrounds = 200,
@@ -149,17 +149,121 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                             fit_method = "cv",
                             fold_column = "fold_ID")
 
-    wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-    surv_dlow <- survNPMSM(wts.St.dlow, OData)
-    wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
+    require("magrittr")
+    require("dplyr")
+    require("purrr")
 
-    MSM.IPAW <- survMSM(OData,
-                        wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
-                        t_breaks = c(1:8,12,16)-1,
-                        est_name = "IPAW",
-                        getSEs = TRUE,
-                        glm_package = "speedglm")
+    ## ----------------------------------------------------------------------------------------------------
+    ## Analysis by intervention
+    ## ----------------------------------------------------------------------------------------------------
+    t_periods <- 0:8
+    Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t_periods)+1))
+
+    analysis <- list(
+                intervened_TRT = c("gTI.dlow", "gTI.dhigh")) %>%
+                cross_d() %>%
+
+                mutate(wts_data = map(intervened_TRT, getIPWeights,
+                                      OData = OData)) %>%
+
+                mutate(NPMSM = map(wts_data, survNPMSM,
+                                   OData = OData)) %>%
+                mutate(NPMSM = map(NPMSM, "estimates")) %>%
+
+                mutate(t_breaks = rep(list(c(1:8,12,16)-1), length(intervened_TRT))) %>%
+
+                mutate(MSM = map2(wts_data, t_breaks, survMSM,
+                                   OData = OData)) %>%
+                mutate(MSM = map(MSM, "estimates")) %>%
+
+                mutate(GCOMP = map(intervened_TRT, fitSeqGcomp,
+                                   t_periods = t_periods,
+                                   OData = OData,
+                                   Qforms = Qforms)) %>%
+                mutate(GCOMP = map(GCOMP, "estimates")) %>%
+
+                mutate(TMLE = map(intervened_TRT, fitTMLE,
+                                   t_periods = t_periods,
+                                   OData = OData,
+                                   Qforms = Qforms)) %>%
+                mutate(TMLE = map(TMLE, "estimates"))
+
+    analysis[["t_breaks"]]
+    analysis[["NPMSM"]]
+    analysis[["MSM"]]
+    analysis[["GCOMP"]]
+    analysis[["TMLE"]]
+    setDT(analysis)
+
+    attributes(analysis[["MSM"]][[1]])
+
+    MSM.RDtables2 = get_RDs(analysis[["MSM"]], "St.MSM", getSEs = TRUE)
+    TMLE.RDtables2 = get_RDs(analysis[["TMLE"]], "St.TMLE", getSEs = TRUE)
+
+    pl <- ggsurv(estimates = analysis[["NPMSM"]])
+    pl2 <- ggsurv(estimates = analysis[["MSM"]])
+    pl3 <- ggsurv(estimates = analysis[["GCOMP"]])
+    pl4 <- ggsurv(estimates = analysis[["TMLE"]])
+
+
+    ## ----------------------------------------------------------------------------------------------------
+    ## Analysis by intervention and stratification
+    ## ----------------------------------------------------------------------------------------------------
+
+    analysis2 <- list(
+                intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
+                stratifyQ_by_rule = c(TRUE, FALSE)) %>%
+
+                cross_d() %>%
+
+                mutate(wts_data = map(intervened_TRT, getIPWeights,
+                                      OData = OData)) %>%
+
+                mutate(NPMSM = map(wts_data, survNPMSM, OData = OData)) %>%
+
+                mutate(t_breaks = rep(list(c(1:8,12,16)-1), length(intervened_TRT))) %>%
+
+                mutate(MSM = map2(wts_data, t_breaks, survMSM, OData = OData)) %>%
+
+                mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
+                    ~ fitSeqGcomp(intervened_TRT = .x,
+                                  stratifyQ_by_rule = .y,
+                                  t_periods = t_periods,
+                                  OData = OData,
+                                  Qforms = Qforms))) %>%
+
+                mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
+                    ~ fitTMLE(intervened_TRT = .x,
+                              stratifyQ_by_rule = .y,
+                              t_periods = t_periods,
+                              OData = OData,
+                              Qforms = Qforms)))
+
+    analysis2[["NPMSM"]]
+    analysis2[["t_breaks"]]
+    analysis2[["MSM"]]
+    analysis2[["GCOMP"]]
+    setDT(analysis2)
+
+    Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.periods.RDs)+1))
+    # set_all_stremr_options(estimator = "speedglm__glm")
+    tmle_est_dlow <- fitTMLE(OData, t_periods = t.periods.RDs, intervened_TRT = "gTI.dlow",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                        estimator = "speedglm__glm",
+                        family = "quasibinomial")
+
+    tmle_est_dlow[["estimates"]]
+
+    tmle_est_dhigh <- fitTMLE(OData, t_periods = t.periods.RDs, intervened_TRT = "gTI.dhigh",
+                        Qforms = Qforms, stratifyQ_by_rule = FALSE,
+                        estimator = "speedglm__glm",
+                        family = "quasibinomial")
+    tmle_est_dhigh[["estimates"]]
+
+    names(tmle_est_dhigh)
+
+    MSM.RDtables2 = get_RDs(list(tmle_est_dlow[["estimates"]], tmle_est_dhigh[["estimates"]]), "St.MSM", getSEs = TRUE)
+    MSM.RDtables2
 
     if (rmarkdown::pandoc_available(version = "1.12.3"))
         make_report_rmd(OData,
@@ -174,6 +278,49 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   }
 
+
+
+
+    wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
+    surv_dlow <- survNPMSM(wts.St.dlow, OData)
+    wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
+    surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
+
+    MSM.IPAW.both <- survMSM(OData,
+                        wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
+                        t_breaks = c(1:8,12,16)-1,
+                        est_name = "IPAW",
+                        getSEs = TRUE,
+                        glm_package = "speedglm")
+
+    names(MSM.IPAW.both)
+    lapply(MSM.IPAW.both, '[[', 'estimates')
+
+    MSM.IPAW_dlow <- survMSM(OData,
+                             wts_data = wts.St.dlow,
+                             t_breaks = c(1:8,12,16)-1,
+                             est_name = "IPAW",
+                             getSEs = TRUE,
+                             glm_package = "speedglm")
+    names(MSM.IPAW_dlow)
+
+    MSM.IPAW_dhigh <- survMSM(OData,
+                              wts_data = wts.St.dhigh,
+                              t_breaks = c(1:8,12,16)-1,
+                              est_name = "IPAW",
+                              getSEs = TRUE,
+                              glm_package = "speedglm")
+
+
+    MSM.IPAW.both[["estimates"]]
+    MSM.IPAW_dlow[["estimates"]]
+    MSM.IPAW_dhigh[["estimates"]]
+
+    t.periods.RDs <- 0:10
+    MSM.RDtables = get_MSM_RDs(MSM.IPAW.both, t.periods.RDs, getSEs = TRUE)
+    MSM.RDtables2 = get_RDs(MSM.IPAW.both, "St.MSM", getSEs = TRUE)
+    MSM.RDtables
+    MSM.RDtables2
 }
 
 # ---------------------------------------------------------------------------

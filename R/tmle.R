@@ -194,6 +194,9 @@ fitTMLE <- function(...) {
 #' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
 #' Use the provided function \code{\link{define_CVfolds}} to
 #' define such folds or define the folds using your own method.
+#' @param return_wts Applies only when \code{TMLE = TRUE}.
+#' Return the data.table with subject-specific IP weights as part of the output.
+#' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -228,6 +231,7 @@ fitSeqGcomp <- function(OData,
                         adapt_stop_factor = 10,
                         tol_eps = 0.001,
                         parallel = FALSE,
+                        return_wts = FALSE,
                         verbose = getOption("stremr.verbose"), ...) {
 
   gvars$verbose <- verbose
@@ -301,7 +305,6 @@ fitSeqGcomp <- function(OData,
   # Define the intervention nodes
   # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx
   # ------------------------------------------------------------------------------------------------
-
   gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
   gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
@@ -354,11 +357,10 @@ If this error cannot be fixed, consider creating a replicable example and filing
   }
 
   resultDT <- rbindlist(res_byt)
+  ICs_byt <- resultDT[["IC.St"]]
+  # resultDT[, ("IC.St") := NULL]
 
-  ICs_byt <- resultDT[["IC_i_onet"]]
-  resultDT[, ("IC_i_onet") := NULL]
-
-  # ICs_byt <- lapply(res_byt, '[[', "IC_i_onet")
+  # ICs_byt <- lapply(res_byt, '[[', "IC.St")
   IC.Var.S.d <- t(do.call("cbind", ICs_byt))
   # IC.Var.S.d <- matrix(NA, nrow = length(ICs_byt), ncol = length(ICs_byt[[1]]))
 
@@ -366,19 +368,24 @@ If this error cannot be fixed, consider creating a replicable example and filing
   resultDT <- cbind(est_name = est_name, resultDT)
   resultDT[, "rule.name" := eval(as.character(rule_name))]
 
-  resultDT <- data.frame(resultDT)
+  # resultDT <- data.frame(resultDT)
   attr(resultDT, "estimator_short") <- est_name
   attr(resultDT, "estimator_long") <- est_name
+  attr(resultDT, "nID") <- OData$nuniqueIDs
+  attr(resultDT, "rule_name") <- rule_name
+  attr(resultDT, "trunc_weights") <- trunc_weights
+  attr(resultDT, "time") <- resultDT[["time"]]
 
   res_out <- list(
-              estimates = resultDT,
-              est_name = est_name,
-              periods = t_periods,
+              # est_name = est_name,
+              # periods = t_periods,
               IC.Var.S.d = list(IC.S = IC.Var.S.d),
-              nID = OData$nuniqueIDs,
-              wts_data = { if (TMLE || iterTMLE) {IPWeights} else {NULL}},
-              rule_name = rule_name,
-              trunc_weights = trunc_weights)
+              # nID = OData$nuniqueIDs,
+              wts_data = { if ((TMLE || iterTMLE) && return_wts) {IPWeights} else {NULL}},
+              # rule_name = rule_name,
+              # trunc_weights = trunc_weights
+              estimates = resultDT
+              )
 
   attr(res_out, "estimator_short") <- est_name
   attr(res_out, "estimator_long") <- est_name
@@ -664,8 +671,8 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   # resDF_onet_fin <- cbind(resDF_onet, IC_i_onet = list(IC_i_onet = IC_i_onet))
   # resDF_onet[["IC_i_onet"]] <- list(IC_i_onet = IC_i_onet)
 
-  resDF_onet[, ("IC_i_onet") := list(IC_i_onet = list(IC_i_onet))]
+  resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
 
   return(resDF_onet)
-  # return(list(IC_i_onet = IC_i_onet, resDF_onet = resDF_onet))
+  # return(list(IC.St = IC_i_onet, resDF_onet = resDF_onet))
 }

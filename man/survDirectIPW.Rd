@@ -4,7 +4,7 @@
 \alias{survDirectIPW}
 \title{Direct (bounded) IPW estimator of discrete survival function.}
 \usage{
-survDirectIPW(wts_data, OData, weights, trunc_weights)
+survDirectIPW(wts_data, OData, weights, trunc_weights, return_wts = FALSE)
 }
 \arguments{
 \item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}.
@@ -20,6 +20,9 @@ The column named \code{weight} is merged back into the original data according t
 
 \item{trunc_weights}{(NOT IMPLEMENTED) Specify the numeric weight truncation value.
 All final weights exceeding the value in \code{trunc_weights} will be truncated.}
+
+\item{return_wts}{Return the data.table with subject-specific IP weights as part of the output.
+Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 }
 \value{
 A data.table with bounded IPW estimates of risk and survival by time.

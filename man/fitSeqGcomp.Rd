@@ -14,7 +14,7 @@ fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
   useonly_t_MONITOR = NULL, iterTMLE = FALSE, IPWeights = NULL,
   stabilize = FALSE, trunc_weights = 10^6, weights = NULL,
   max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10,
-  tol_eps = 0.001, parallel = FALSE,
+  tol_eps = 0.001, parallel = FALSE, return_wts = FALSE,
   verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
@@ -94,6 +94,10 @@ The iterative TMLE algorithm will stop when the absolute value of the TMLE inter
 
 \item{parallel}{Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
 requires a previously defined parallel back-end cluster)}
+
+\item{return_wts}{Applies only when \code{TMLE = TRUE}.
+Return the data.table with subject-specific IP weights as part of the output.
+Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 

@@ -1,3 +1,47 @@
+#' @importFrom magrittr %>%
+NULL
+
+
+
+get_RDs <- function(St_data, St_name, getSEs = TRUE) {
+  nIDs <- attr(St_data[[1]], "nID")
+  periods_idx <- seq_along(attr(St_data[[1]], "time"))
+  if (!all(unlist(lapply(St_data, function(surv) St_name %in% names(surv)))))
+    stop("name of the survival estimates column cannot be found in one of the input datasets: " %+% St_name)
+
+  tx_idx <- seq_along(St_data)
+  tx_names <- unlist(lapply(St_data, function(one_surv) attr(one_surv, "rule_name")))
+  # tx_names <- unlist(lapply(surv, function(one_surv) one_surv[["estimates"]][["rule.name"]][1]))
+
+  eval_RDs_two_tx <- function(dx1, dx2, time, St_name, ...) {
+    St_data[[dx1]][[St_name]][time] - St_data[[dx2]][[St_name]][time]
+  }
+
+  eval_SEs_two_tx <- function(dx1, dx2, time, ...) {
+    sqrt(sum((St_data[[dx1]][["IC.St"]][[time]] - St_data[[dx2]][["IC.St"]][[time]])^2) / nIDs^2)
+  }
+
+  gs <- list(dx1 = tx_idx,
+             dx2 = tx_idx,
+             time = periods_idx) %>%
+        purrr::cross_d()
+
+  gs <- gs %>%
+        dplyr::mutate(RD = purrr::pmap_dbl(., eval_RDs_two_tx, St_name))
+
+  if (getSEs)
+    gs <- gs %>%
+          dplyr::mutate(RD.SE = purrr::pmap_dbl(., eval_SEs_two_tx))
+
+  gs <- gs %>%
+        dplyr::mutate(dx1_name = purrr::map_chr(dx1, function(dx) tx_names[dx])) %>%
+        dplyr::mutate(dx2_name = purrr::map_chr(dx2, function(dx) tx_names[dx]))
+
+  return(gs)
+}
+
+
+
 # ---------------------------------------------------------------------------------------------
 # (OLD) Helper routine to obtain the follow-up time -> Needs to be re-written
 # # ---------------------------------------------------------------------------------------------
@@ -141,12 +185,12 @@ getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx, getSE
                                                                  IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
                                                                  IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
 
+
       }
     }
   }
   return(se.RDscale.Sdt.K)
 }
-
 
 #' Risk Difference Estimates and SEs for IPW-MSM
 #'
@@ -167,8 +211,8 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
     se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx, getSEs)
     RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
                                                 RDscale = TRUE,
-                                                # t.period = t.period.val.idx,
-                                                t.period = t.periods.RDs[t.idx],
+                                                t.period = t.period.val.idx,
+                                                t.value = t.periods.RDs[t.idx],
                                                 nobs = MSM$nobs,
                                                 # nobs = nrow(MSM$wts_data),
                                                 esti = MSM$est_name,
@@ -187,6 +231,7 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
 #' @seealso \code{\link{survMSM}} for estimation with MSM.
 #' @export
 get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
+  browser()
   rule_names <- lapply(TMLE_list, "[[", "rule_name")
   names(TMLE_list) <- rule_names
   new_TMLE_list <- list()
@@ -197,7 +242,6 @@ get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
   new_TMLE_list$wts_data <- rbindlist(lapply(TMLE_list, "[[", "wts_data"))
   new_TMLE_list$nID <- TMLE_list[[1]]$nID
 
-
   RDs.TMLE.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
   periods_idx <- seq_along(new_TMLE_list$periods)
   names(RDs.TMLE.tperiods) <- "RDs_for_t" %+% t.periods.RDs
@@ -206,8 +250,8 @@ get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
     se.RDscale.Sdt.K <- getSE_table_d_by_d(new_TMLE_list$St, new_TMLE_list$IC.Var.S.d, new_TMLE_list$nID, t.period.val.idx, getSEs = TRUE)
     RDs.TMLE.tperiods[[t.idx]] <- make.table.m0(new_TMLE_list$St,
                                                 RDscale = TRUE,
-                                                # t.period = t.period.val.idx,
-                                                t.period = t.periods.RDs[t.idx],
+                                                t.period = t.period.val.idx,
+                                                t.value = t.periods.RDs[t.idx],
                                                 nobs = nrow(new_TMLE_list$wts_data),
                                                 esti = new_TMLE_list$est_name,
                                                 se.RDscale.Sdt.K = se.RDscale.Sdt.K,
@@ -503,7 +547,7 @@ makeFreqTable <- function(rawFreq){
   return(fineFreq)
 }
 
-make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.period, se.RDscale.Sdt.K, TMLE = FALSE){
+make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.period, t.value, se.RDscale.Sdt.K, TMLE = FALSE){
   if (missing(se.RDscale.Sdt.K)) {
     se.RDscale.Sdt.K <- matrix(NA, nrow = length(S.IPAW), ncol = length(S.IPAW))
     colnames(se.RDscale.Sdt.K) <- names(S.IPAW)
@@ -555,7 +599,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.peri
 
   MSM_text <- paste0("The risk contrasts are derived from a logistic ", model, " for the discrete-time hazards fitted based on ", nobs, " observations. ")
   caption <- paste0(estimates, " estimates of the (cumulative) risk ",
-                    captionText2,", $d_1$", captionText3,"$d_2$, over ", t.period," periods. ",
+                    captionText2,", $d_1$", captionText3,"$d_2$, evaluated at the time indicator value = ", t.value, ". ",
                     ifelse(!TMLE, MSM_text, ""),
                     "Variance estimates are derived based on the influence curve of the estimator.")
   rownames(RDtable) <- NULL

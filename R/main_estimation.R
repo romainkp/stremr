@@ -491,13 +491,18 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param trunc_weights (NOT IMPLEMENTED) Specify the numeric weight truncation value.
 #' All final weights exceeding the value in \code{trunc_weights} will be truncated.
+#' @param return_wts Return the data.table with subject-specific IP weights as part of the output.
+#' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
 #' @return A data.table with bounded IPW estimates of risk and survival by time.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
+survDirectIPW <- function(wts_data, OData, weights, trunc_weights, return_wts = FALSE) {
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
+  rule.name <- unique(wts_data[["rule.name"]])
+  if (length(rule.name)>1)
+    stop("wts_data must contain the weights for a single rule, found more than one unique rule name under in 'rule.name' column")
 
   ## EXTRACT RELEVANT INFORMATION
   ID.t.IPW.Y <- wts_data[,list(get(nodes$IDnode), get(t_name), cum.IPAW, get(Ynode))]
@@ -544,10 +549,13 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
   resultDT <- data.frame(resultDT)
   attr(resultDT, "estimator_short") <- "NPMSM"
   attr(resultDT, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
+  attr(resultDT, "trunc_weights") <- trunc_weights
+  attr(resultDT, "rule_name") <- rule.name
+  attr(resultDT, "time") <- St_ht_IPAW[["time"]]
 
-  result_object <- list(trunc_weights = trunc_weights, estimates = resultDT)
-  # attr(result_object, "estimator_short") <- "DirectIPW"
-  # attr(result_object, "estimator_long") <- "Bounded IPW for Direct Estimate of Survival"
+  result_object <- list(estimates = resultDT)
+
+  if (return_wts) result_object[["wts_data"]] <- wts_data
 
   return(result_object)
 }
@@ -567,11 +575,17 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights) {
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param trunc_weights Specify the numeric weight truncation value.
 #' All final weights exceeding the value in \code{trunc_weights} will be truncated.
+#' @param return_wts Return the data.table with subject-specific IP weights as part of the output.
+#' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
 #' @return A data.table with hazard and survival function estimates by time.
 #' Also include the unadjusted Kaplan-Maier estimates.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
+survNPMSM <- function(wts_data,
+                      OData,
+                      weights = NULL,
+                      trunc_weights = 10^6,
+                      return_wts = FALSE) {
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
@@ -633,11 +647,19 @@ survNPMSM <- function(wts_data, OData, weights = NULL, trunc_weights = 10^6) {
     setkeyv(St_ht_IPAW, cols = "time")
   }
 
-  St_ht_IPAW <- data.frame(St_ht_IPAW)
+  # St_ht_IPAW <- data.frame(St_ht_IPAW)
+
   attr(St_ht_IPAW, "estimator_short") <- "NPMSM"
   attr(St_ht_IPAW, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
+  attr(St_ht_IPAW, "trunc_weights") <- trunc_weights
+  attr(St_ht_IPAW, "rule_name") <- rule.name
+  attr(St_ht_IPAW, "time") <- St_ht_IPAW[["time"]]
+  # estimates <- St_ht_IPAW
+  # names(estimates) <- rule.name
 
-  result_object <- list(wts_data = wts_data_used, trunc_weights = trunc_weights, estimates = St_ht_IPAW)
+  result_object <- list(estimates = St_ht_IPAW)
+
+  if (return_wts) result_object[["wts_data"]] <- wts_data_used
 
   return(result_object)
 }
@@ -698,6 +720,8 @@ return(wts_data)
 #' Currently available options are \code{"speedglm"} and \code{"h2o"}.
 #' \code{h2o} can provided better performance
 #' when fitting MSM with many observations and large number of time-points.
+#' @param return_wts Return the data.table with subject-specific IP weights as part of the output.
+#' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #'
@@ -732,6 +756,7 @@ survMSM <- function(wts_data,
                     getSEs = TRUE,
                     est_name = "IPW",
                     glm_package = c("speedglm", "h2o"),
+                    return_wts = FALSE,
                     verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
@@ -863,6 +888,7 @@ survMSM <- function(wts_data,
   }
 
   if (verbose) message("...evaluating SEs based on MSM hazard fit and the estimated IC...")
+
   #### For variance (SEs), GET IC and SE FOR BETA's
   #### GET IC and SE FOR Sd(t)
   # S.d.t.predict - MSM survival estimates for one regimen
@@ -901,41 +927,62 @@ survMSM <- function(wts_data,
     IC.Var.S.d <- NULL
   }
 
-  estimates <- lapply(rules_TRT, function(rule_name) {
-    res <- data.frame(
-      time = periods,
-      ht.MSM = hazard.IPAW[[rule_name]],
-      St.MSM = S2.IPAW[[rule_name]],
-      SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
-      rule.name = rep(rule_name, length(periods))
-      )
-    # names(res)[1] <- t_name
-    attr(res, "estimator_short") <- "MSM"
-    attr(res, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
-    return(res)
-  })
-  names(estimates) <- rules_TRT
+  MSM_out <- lapply(rules_TRT, function(rule_name) {
+      estimates <- data.table(time = periods,
+                        ht.MSM = hazard.IPAW[[rule_name]],
+                        St.MSM = S2.IPAW[[rule_name]],
+                        SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
+                        rule.name = rep(rule_name, length(periods)))
+      n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
 
-  MSM_out <- list(
-              est_name = est_name,
-              periods = periods,
-              St = S2.IPAW,
-              ht = hazard.IPAW,
-              MSM.fit = m.fit,
-              MSM.intervals = MSM.intervals,
-              IC.Var.S.d = IC.Var.S.d,
-              nID = nID,
-              nobs = nrow(wts_data_used),
-              wts_data = wts_data_used,
-              use_weights = use_weights,
-              trunc_weights = trunc_weights,
-              estimates = estimates
-            )
+      for (i in 1:n_ts)
+        estimates[i, ("IC.St") := list(list(IC.Var.S.d[[rule_name]][["IC.S"]][i, ]))]
 
-  attr(MSM_out, "estimator_short") <- "MSM"
-  attr(MSM_out, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
+      attr(estimates, "estimator_short") <- "MSM"
+      attr(estimates, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
+      attr(estimates, "nID") <- nID
+      attr(estimates, "rule_name") <- rule_name
+      attr(estimates, "time") <- estimates[["time"]]
+      attr(estimates, "trunc_weights") <- trunc_weights
 
-  return(MSM_out)
+      return(list(est_name = est_name,
+                  periods = periods,
+                  St = S2.IPAW[[rule_name]],
+                  ht = hazard.IPAW[[rule_name]],
+                  MSM.fit = m.fit,
+                  MSM.intervals = MSM.intervals,
+                  IC.Var.S.d = IC.Var.S.d[[rule_name]],
+                  nID = nID,
+                  nobs = nrow(wts_data_used),
+                  wts_data = { if (return_wts) {wts_data_used} else {NULL} },
+                  use_weights = use_weights,
+                  trunc_weights = trunc_weights,
+                  estimates = estimates
+                  ))
+    }
+  )
+
+  names(MSM_out) <- rules_TRT
+
+  # MSM_out <- list(
+  #             est_name = est_name,
+  #             periods = periods,
+  #             St = S2.IPAW,
+  #             ht = hazard.IPAW,
+  #             MSM.fit = m.fit,
+  #             MSM.intervals = MSM.intervals,
+  #             IC.Var.S.d = IC.Var.S.d,
+  #             nID = nID,
+  #             nobs = nrow(wts_data_used),
+  #             wts_data = { if (return_wts) {wts_data_used} else {NULL} },
+  #             use_weights = use_weights,
+  #             trunc_weights = trunc_weights,
+  #             estimates = estimates
+  #           )
+  # attr(MSM_out, "estimator_short") <- "MSM"
+  # attr(MSM_out, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
+
+  if (length(MSM_out) == 1L) return(MSM_out[[1L]]) else  return(MSM_out)
 }
 
 runglmMSM <- function(OData, wts_data, all_dummies, Ynode, glm_package, verbose) {

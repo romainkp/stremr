@@ -6,7 +6,8 @@
 \usage{
 survMSM(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = TRUE,
   trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW",
-  glm_package = c("speedglm", "h2o"), verbose = getOption("stremr.verbose"))
+  glm_package = c("speedglm", "h2o"), return_wts = FALSE,
+  verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function
@@ -45,6 +46,9 @@ model (MSM) for the survival hazard?
 Currently available options are \code{"speedglm"} and \code{"h2o"}.
 \code{h2o} can provided better performance
 when fitting MSM with many observations and large number of time-points.}
+
+\item{return_wts}{Return the data.table with subject-specific IP weights as part of the output.
+Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
