@@ -420,6 +420,7 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   if (!is.null(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
 
+  print("CALLING IP WEIGHTS NOW"); print("intervened_TRT"); print(intervened_TRT)
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
@@ -589,6 +590,9 @@ survNPMSM <- function(wts_data,
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
+
+  print("trunc_weights"); print(trunc_weights)
+
   rule.name <- unique(wts_data[["rule.name"]])
   if (length(rule.name)>1)
     stop("wts_data must contain the weights for a single rule, found more than one unique rule name under in 'rule.name' column")

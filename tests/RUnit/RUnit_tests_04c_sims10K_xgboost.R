@@ -38,12 +38,18 @@ test.xgb_parallel <- function() {
     # registerDoParallel(cl)
 }
 
+## -----------------------------------------------------------------
+## The bug with xgboost has been narrowed down to data.table / xgboost interactions.
+## Only appears on systems where data.table has been compliled with OMP nthreads.
+## -----------------------------------------------------------------
 test.xgb_parallel_2 <- function() {
     library('foreach')
     library('doParallel')
     library('xgboost')
     BootStrappedModels <- function(seed){
-        x = matrix(rnorm(1:1000),200,5)
+        data.table::setDTthreads(2)
+        x = data.table(x1 = rnorm(500), x2 = rnorm(500))
+        # x = matrix(rnorm(1:1000),200,5)
         target = sample(0:2,200,replace = TRUE)
 
         xgb_dat <- xgb.DMatrix(x, label = target)
@@ -55,7 +61,7 @@ test.xgb_parallel_2 <- function() {
         tempModel <- xgb.train(params=param, data=xgb_dat, nrounds=5)
         return (tempModel)
     }
-    registerDoParallel(cores = 32)
+    registerDoParallel(cores = 4)
     # cl <- makeCluster(20)
     # cl <- makeForkCluster(32)
     # registerDoParallel(cl)
@@ -77,8 +83,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   if (reqxgb && reqh2o) {
     `%+%` <- function(a, b) paste0(a, b)
     # library("stremr")
-    options(stremr.verbose = TRUE)
-    # options(stremr.verbose = FALSE)
+    # options(stremr.verbose = TRUE)
+    options(stremr.verbose = FALSE)
     options(GriDiSL.verbose = TRUE)
     # options(GriDiSL.verbose = FALSE)
     library("data.table")
@@ -141,6 +147,30 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                                     family = "binomial",
                                     nrounds = 200,
                                     early_stopping_rounds = 10)
+                  # GriDiSL::defModel(estimator = "xgboost__gbm",
+                  #               family = "binomial",
+                  #               search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
+                  #               seed = 23,
+                  #               # learning_rate = 0.1, # learning_rate = 0.01, # learning_rate = 0.05,
+                  #               # nthread = 1,
+                  #               nrounds = 200, early_stopping_rounds = 10,
+                  #               param_grid = list(
+                  #                   learning_rate = c(.1, .3, .5), # .05,
+                  #                   max_depth = c(seq(3, 19, 4), 25),
+                  #                   min_child_weight = c(1, 3, 5, 7),
+                  #                   gamma = c(.0, .05, seq(.1, .9, by=.2), 1),
+                  #                   colsample_bytree = c(.6, .8, 1), # .4,
+                  #                   subsample = c(.5, .75, 1),
+                  #                   lambda = c(.1, .5, 2, 5), # lambda = c(1,2,5),
+                  #                   alpha = c(0, .1, .5),
+                  #                   ## Maximum delta step we allow each tree’s weight estimation to be.
+                  #                   ## If the value is set to 0, it means there is no constraint.
+                  #                   ## If it is set to a positive value, it can help making the update step more conservative.
+                  #                   ## Might help in logistic regression when class is extremely imbalanced.
+                  #                   ## Set it to value of 1-10 to help control the update
+                  #                   max_delta_step = c(0, 1, 2, 5, 10)
+                  #                   )
+                  #               )
 
     OData <- fitPropensity(OData,
                             gform_CENS = gform_CENS, gform_TRT = gform_TRT,
@@ -149,102 +179,135 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                             fit_method = "cv",
                             fold_column = "fold_ID")
 
-    require("magrittr")
-    require("dplyr")
-    require("purrr")
 
-    ## ----------------------------------------------------------------------------------------------------
-    ## Analysis by intervention
-    ## ----------------------------------------------------------------------------------------------------
-    t_periods <- 0:8
-    Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t_periods)+1))
+## ----------------------------------------------------------------------------------------------------
+## Analysis by intervention
+## **** 1) As a first step define a grid of all possible parameter combinations (for all estimators)
+## **** 2) This dataset is to be saved and will be later merged in with all analysis
+## **** 3) For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
+## **** 4) Join in all analysis together with main dataset
+## **** 5) This makes it easier to read the individual analysis
+## ----------------------------------------------------------------------------------------------------
+require("magrittr")
+require("dplyr")
+require("purrr")
 
-    analysis <- list(
-                intervened_TRT = c("gTI.dlow", "gTI.dhigh")) %>%
+t_periods <- 0:8
+t_breaks = c(1:8,12,16)-1
+Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t_periods)+1))
+
+analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
+                trunc_wt = c(FALSE, TRUE),
+                # trunc_weights = c(Inf, 50),
+                stratifyQ_by_rule = c(TRUE, FALSE)) %>%
                 cross_d() %>%
+                # map(lift(cross2)) %>% simplify_all() %>% dplyr::as_data_frame() transpose() %>%
+                arrange(stratifyQ_by_rule) %>%
+                mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, 50, Inf))) %>%
+                mutate(trunc_TMLE = trunc_MSM*10)
 
-                mutate(wts_data = map(intervened_TRT, getIPWeights,
-                                      OData = OData)) %>%
+## ------------------------------------------------------------
+## IPW ANALYSIS
+## ------------------------------------------------------------
+IPW <-  analysis %>%
+        rename(trunc_weight = trunc_MSM) %>%
+        distinct(intervened_TRT, trunc_weight) %>%
 
-                mutate(NPMSM = map(wts_data, survNPMSM,
-                                   OData = OData)) %>%
-                mutate(NPMSM = map(NPMSM, "estimates")) %>%
+        group_by(intervened_TRT) %>%
+        mutate(wts_data = map(first(intervened_TRT), getIPWeights, OData = OData)) %>%
 
-                mutate(t_breaks = rep(list(c(1:8,12,16)-1), length(intervened_TRT))) %>%
+        ## IPW-Adjusted KM (Non-Parametric or Saturated MSM):
+        mutate(NPMSM = map2(wts_data, trunc_weight,
+            ~ survNPMSM(wts_data = .x,
+                        trunc_weights = .y,
+                        OData = OData))) %>%
+        mutate(NPMSM = map(NPMSM, "estimates")) %>%
 
-                mutate(MSM = map2(wts_data, t_breaks, survMSM,
-                                   OData = OData)) %>%
-                mutate(MSM = map(MSM, "estimates")) %>%
+        ## Crude MSM for hazard (w/out IPW):
+        mutate(MSM.crude = map(wts_data,
+            ~ survMSM(wts_data = .x,
+                        OData = OData,
+                        t_breaks = t_breaks,
+                        use_weights = FALSE,
+                        glm_package = "speedglm"))) %>%
+        mutate(MSM.crude = map(MSM.crude, "estimates")) %>%
 
-                mutate(GCOMP = map(intervened_TRT, fitSeqGcomp,
-                                   t_periods = t_periods,
-                                   OData = OData,
-                                   Qforms = Qforms)) %>%
-                mutate(GCOMP = map(GCOMP, "estimates")) %>%
+        ## IPW-MSM for hazard (smoothing over time-intervals in t_breaks):
+        mutate(MSM = map2(wts_data, trunc_weight,
+            ~ survMSM(wts_data = .x,
+                        trunc_weights = .y,
+                        OData = OData,
+                        t_breaks = t_breaks,
+                        glm_package = "speedglm"))) %>%
+        mutate(MSM = map(MSM, "estimates")) %>%
+        rename(trunc_MSM = trunc_weight)
+        # %>% data.table()
 
-                mutate(TMLE = map(intervened_TRT, fitTMLE,
-                                   t_periods = t_periods,
-                                   OData = OData,
-                                   Qforms = Qforms)) %>%
-                mutate(TMLE = map(TMLE, "estimates"))
+## ------------------------------------------------------------
+## GCOMP ANALYSIS
+## ------------------------------------------------------------
+GCOMP <-analysis %>%
+        distinct(intervened_TRT, stratifyQ_by_rule) %>%
 
-    analysis[["t_breaks"]]
-    analysis[["NPMSM"]]
-    analysis[["MSM"]]
-    analysis[["GCOMP"]]
-    analysis[["TMLE"]]
-    setDT(analysis)
+        mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
+            ~ fitSeqGcomp(intervened_TRT = .x,
+                          stratifyQ_by_rule = .y,
+                          t_periods = t_periods,
+                          OData = OData,
+                          Qforms = Qforms)
+                        )) %>%
+        mutate(GCOMP = map(GCOMP, "estimates"))
+        # %>% data.table()
 
-    attributes(analysis[["MSM"]][[1]])
+# GCOMP <-GCOMP %>%
+#         mutate(plotGCOMP = map(GCOMP, ~ ggsurv(estimates = .x))) %>%
 
-    MSM.RDtables2 = get_RDs(analysis[["MSM"]], "St.MSM", getSEs = TRUE)
-    TMLE.RDtables2 = get_RDs(analysis[["TMLE"]], "St.TMLE", getSEs = TRUE)
+## ------------------------------------------------------------
+## TMLE ANALYSIS
+## ------------------------------------------------------------
+TMLE <- analysis %>%
+        rename(trunc_weight = trunc_TMLE) %>%
+        distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
-    pl <- ggsurv(estimates = analysis[["NPMSM"]])
-    pl2 <- ggsurv(estimates = analysis[["MSM"]])
-    pl3 <- ggsurv(estimates = analysis[["GCOMP"]])
-    pl4 <- ggsurv(estimates = analysis[["TMLE"]])
+TMLE <- TMLE %>%
+        mutate(TMLE = pmap(TMLE, fitTMLE,
+                           t_periods = t_periods,
+                           OData = OData,
+                           Qforms = Qforms)) %>%
+        mutate(TMLE = map(TMLE, "estimates")) %>%
+        rename(trunc_TMLE = trunc_weight)
+        # %>% data.table()
 
+results <-  analysis %>%
+            left_join(IPW) %>%
+            left_join(GCOMP) %>%
+            left_join(TMLE) %>%
+            data.table()
+
+results[["TMLE"]]
+str(lapply(results[["TMLE"]], attributes))
+ggsurv(results[["TMLE"]])
+
+results[["t_breaks"]]
+results[["NPMSM"]]
+results[["MSM"]]
+results[["GCOMP"]]
+results[["TMLE"]]
+setDT(results)
+attributes(results[["MSM"]][[1]])
+
+MSM.RDtables2 = get_RDs(results[["MSM"]], "St.MSM", getSEs = TRUE)
+TMLE.RDtables2 = get_RDs(results[["TMLE"]], "St.TMLE", getSEs = TRUE)
+
+    pl <- ggsurv(estimates = results[["NPMSM"]])
+    pl2 <- ggsurv(estimates = results[["MSM"]])
+    pl3 <- ggsurv(estimates = results[["GCOMP"]])
+    pl4 <- ggsurv(estimates = results[["TMLE"]])
+    pl4 <- ggsurv(estimates = results[["TMLE"]][[1]])
 
     ## ----------------------------------------------------------------------------------------------------
     ## Analysis by intervention and stratification
     ## ----------------------------------------------------------------------------------------------------
-
-    analysis2 <- list(
-                intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
-                stratifyQ_by_rule = c(TRUE, FALSE)) %>%
-
-                cross_d() %>%
-
-                mutate(wts_data = map(intervened_TRT, getIPWeights,
-                                      OData = OData)) %>%
-
-                mutate(NPMSM = map(wts_data, survNPMSM, OData = OData)) %>%
-
-                mutate(t_breaks = rep(list(c(1:8,12,16)-1), length(intervened_TRT))) %>%
-
-                mutate(MSM = map2(wts_data, t_breaks, survMSM, OData = OData)) %>%
-
-                mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-                    ~ fitSeqGcomp(intervened_TRT = .x,
-                                  stratifyQ_by_rule = .y,
-                                  t_periods = t_periods,
-                                  OData = OData,
-                                  Qforms = Qforms))) %>%
-
-                mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
-                    ~ fitTMLE(intervened_TRT = .x,
-                              stratifyQ_by_rule = .y,
-                              t_periods = t_periods,
-                              OData = OData,
-                              Qforms = Qforms)))
-
-    analysis2[["NPMSM"]]
-    analysis2[["t_breaks"]]
-    analysis2[["MSM"]]
-    analysis2[["GCOMP"]]
-    setDT(analysis2)
-
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.periods.RDs)+1))
     # set_all_stremr_options(estimator = "speedglm__glm")
     tmle_est_dlow <- fitTMLE(OData, t_periods = t.periods.RDs, intervened_TRT = "gTI.dlow",
@@ -277,9 +340,6 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                         file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
   }
-
-
-
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     surv_dlow <- survNPMSM(wts.St.dlow, OData)

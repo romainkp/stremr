@@ -234,6 +234,10 @@ fitSeqGcomp <- function(OData,
                         return_wts = FALSE,
                         verbose = getOption("stremr.verbose"), ...) {
 
+  print("intervened_TRT: "); print(intervened_TRT)
+  print("stratifyQ_by_rule: "); print(stratifyQ_by_rule)
+  print("trunc_weights: "); print(trunc_weights)
+
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names

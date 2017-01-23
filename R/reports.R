@@ -103,6 +103,7 @@ call. = FALSE)
   } else {
     author <- "Insert Author"
   }
+
   if ("title" %in% names(optArgReport)) {
     title <- optArgReport[['title']]
     assert_that(is.character(author))
