@@ -160,8 +160,8 @@ call. = FALSE)
   # str(best_model@model)
   # str(best_model@model$training_metrics)
   # best_model@model$training_metrics
-  # GriDiSL:::pander.H2OBinomialMetrics(best_model@model$training_metrics, "train")
-  # GriDiSL::print_tables(best_model)
+  # gridisl:::pander.H2OBinomialMetrics(best_model@model$training_metrics, "train")
+  # gridisl::print_tables(best_model)
 
   # str(fitted.coefs.gC[[1]])
   # fitted.coefs.gC[[1]]$show(print_format = FALSE, model_stats = TRUE, all_fits = TRUE)

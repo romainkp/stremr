@@ -85,8 +85,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     # library("stremr")
     # options(stremr.verbose = TRUE)
     options(stremr.verbose = FALSE)
-    options(GriDiSL.verbose = TRUE)
-    # options(GriDiSL.verbose = FALSE)
+    options(gridisl.verbose = TRUE)
+    # options(gridisl.verbose = FALSE)
     library("data.table")
     library("h2o")
 
@@ -132,22 +132,23 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     # library("h2o")
     h2o::h2o.init(nthreads = 1)
 
-    params_g <-  #GriDiSL::defModel(estimator = "h2o__glm",
-                  #                  family = "binomial",
-                  #                  alpha = 0,
-                  #                  lambda = 0,
-                  #                  lambda_search = FALSE) +
-                  # GriDiSL::defModel(estimator = "h2o__glm",
+    params_g <-
+                  gridisl::defModel(estimator = "h2o__glm",
+                                   family = "binomial",
+                                   alpha = 0,
+                                   lambda = 0,
+                                   lambda_search = FALSE) +
+                  # gridisl::defModel(estimator = "h2o__glm",
                   #                   family = "binomial",
                   #                   lambda_search = TRUE,
                   #                   param_grid = list(
                   #                     alpha = c(0.5)
                   #                   )) +
-                  GriDiSL::defModel(estimator = "xgboost__glm",
+                  gridisl::defModel(estimator = "xgboost__glm",
                                     family = "binomial",
                                     nrounds = 200,
                                     early_stopping_rounds = 10)
-                  # GriDiSL::defModel(estimator = "xgboost__gbm",
+                  # gridisl::defModel(estimator = "xgboost__gbm",
                   #               family = "binomial",
                   #               search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
                   #               seed = 23,
@@ -201,6 +202,7 @@ analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                 # trunc_weights = c(Inf, 50),
                 stratifyQ_by_rule = c(TRUE, FALSE)) %>%
                 cross_d() %>%
+
                 # map(lift(cross2)) %>% simplify_all() %>% dplyr::as_data_frame() transpose() %>%
                 arrange(stratifyQ_by_rule) %>%
                 mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, 50, Inf))) %>%
@@ -393,8 +395,8 @@ test.xgboost.10Kdata <- function() {
     # library("stremr")
     options(stremr.verbose = TRUE)
     # options(stremr.verbose = FALSE)
-    options(GriDiSL.verbose = TRUE)
-    # options(GriDiSL.verbose = FALSE)
+    options(gridisl.verbose = TRUE)
+    # options(gridisl.verbose = FALSE)
     require("data.table")
 
     data(OdatDT_10K)
@@ -476,7 +478,7 @@ test.xgboost.10Kdata <- function() {
     surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
 
     # str(OData)
-    # library("GriDiSL")
+    # library("gridisl")
     # OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]]
     # class(OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]])
 
@@ -650,7 +652,7 @@ test.xgboost.10Kdata <- function() {
     t.surv <- c(0:10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    params <- GriDiSL::defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 2,
+    params <- gridisl::defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 2,
                                   nrounds = 500,
                                   early_stopping_rounds = 10)
 
@@ -696,7 +698,7 @@ test.xgboost.10Kdata <- function() {
     t.surv <- c(3)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    params <- GriDiSL::defModel(estimator = "xgboost__gbm",
+    params <- gridisl::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
                                 search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
                                 seed = 23,
@@ -763,7 +765,25 @@ test.xgboost.10Kdata <- function() {
     # ----------------------------------------------------------------
     # IMPORT DATA
     # ----------------------------------------------------------------
-    OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+    `%+%` <- function(a, b) paste0(a, b)
+    library("data.table")
+    data.table::setDTthreads(1)
+
+    data(OdatDT_10K)
+    Odat_DT <- OdatDT_10K
+    # select only the first 1,000 IDs
+    # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+    ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
+    lagnodes <- c("C", "TI", "N")
+    newVarnames <- lagnodes %+% ".tminus1"
+    Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
+    # indicator that the person has never been on treatment up to current t
+    Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
+    Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
+
+    setkeyv(Odat_DT, cols = c("ID", "t"))
+
+    OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1")
     OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
     OData$dat.sVar[]
     OData$fold_column <- NULL
@@ -771,7 +791,8 @@ test.xgboost.10Kdata <- function() {
 
     require("foreach")
     require("doParallel")
-    registerDoParallel(cores = 5)
+    stopImplicitCluster()
+    registerDoParallel(cores = 4)
     # cl <- makeForkCluster(10)
     # registerDoParallel(cl)
     # cl <- makeCluster(10)
@@ -779,11 +800,12 @@ test.xgboost.10Kdata <- function() {
     # data.table::setDTthreads(1)
     # stopCluster(cl)
 
+
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit_method = "cv", fold_column = "fold_ID")
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit_method = "none")
 
     # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
-    # params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+    # params <- gridisl::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
     #                               nrounds = 500,
     #                               learning_rate = 0.05, # learning_rate = 0.01,
     #                               max_depth = 5,
@@ -793,9 +815,9 @@ test.xgboost.10Kdata <- function() {
     #                               seed = 23)
 
     tmle.model <- "xgb.glm"
-    params <- GriDiSL::defModel(estimator = "xgboost__gbm",
+    params <- gridisl::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
-                                nthread = 10,
+                                nthread = 2,
                                 nrounds = 1000,
                                 early_stopping_rounds = 20)
 
@@ -920,7 +942,7 @@ test.xgboost.grid.10Kdata <- function() {
     set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit_method = "cv", fold_column = "fold_ID")
     # set_all_stremr_options(estimator = "xgboost_glm")
 
-    model_Grid <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial",
+    model_Grid <- gridisl::defModel(estimator = "xgboost__gbm", family = "quasibinomial",
                                     search_criteria = list(strategy = "RandomDiscrete", max_models = 10),
                                     nrounds = 500, early_stopping_rounds = 10, seed = 123456,
                                     param_grid = list(

@@ -33,7 +33,7 @@ Leave the argument unspecified (\code{NULL}) when not intervening on the monitor
 \item{rule_name}{Optional name for the treatment/monitoring regimen.}
 
 \item{models}{Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
 \item{estimator}{Specify the default estimator to use for fitting the iterative g-computation formula.
 Should be a character string in the format 'Package__Algorithm'.

@@ -47,7 +47,7 @@ if(FALSE) {
 
   # To install a specific branch:
   # options(stremr.verbose = FALSE)
-  # devtools::install_github('osofr/GriDiSL', dependencies = FALSE)
+  # devtools::install_github('osofr/gridisl', dependencies = FALSE)
   # devtools::install_github('osofr/stremr', ref = "h2oSuperLearner", build_vignettes = FALSE, dependencies = FALSE)
   # devtools::install_github('osofr/stremr', ref = "h2oSuperLearner")
   # devtools::install_github('osofr/stremr', build_vignettes = FALSE, dependencies = FALSE)

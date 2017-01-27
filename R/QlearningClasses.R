@@ -360,7 +360,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         return(private$probA1)
       } else if (missing(newdata) && is.null(private$probA1)) {
         # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
-        probA1 <- GriDiSL::predict_SL(modelfit = private$model.fit,
+        probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                           add_subject_data = FALSE,
                                           subset_idx = subset_idx,
                                           # use_best_retrained_model = TRUE,
@@ -376,7 +376,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
 
-        probA1 <- GriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
+        probA1 <- gridisl::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                      add_subject_data = FALSE,
                                      subset_idx = subset_idx,
                                      # use_best_retrained_model = TRUE,

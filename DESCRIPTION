@@ -5,20 +5,20 @@ Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
     person("Romain", "Neugebauer", role="aut", email="Romain.S.Neugebauer@kp.org"))
-Description: Analysis of longitudinal time-to-event or time-to-failure data. 
-    Estimates the counterfactual discrete survival curve under static, dynamic and 
-    stochastic interventions on treatment (exposure) and monitoring events over time. 
+Description: Analysis of longitudinal time-to-event or time-to-failure data.
+    Estimates the counterfactual discrete survival curve under static, dynamic and
+    stochastic interventions on treatment (exposure) and monitoring events over time.
     Adjusts for measured time-varying confounding and informative right-censoring.
-    Possible estimators are: bounded IPW, hazard-based IPW (AKME), MSM-IPW, GCOMP, 
-    standard LTMLE and iterative LTMLE. 
-    Nuisance parameters can be modeled with machine learning algorithms implemented in 
+    Possible estimators are: bounded IPW, hazard-based IPW (AKME), MSM-IPW, GCOMP,
+    standard LTMLE and iterative LTMLE.
+    Nuisance parameters can be modeled with machine learning algorithms implemented in
     xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets).
-    Simple syntax for specifying large grids of tuning parameters, including random 
-    grid search over parameter space. 
+    Simple syntax for specifying large grids of tuning parameters, including random
+    grid search over parameter space.
     Model selection can be performed via V-fold cross-validation or random validation splits.
-    The exposure, monitoring and censoring variables can be coded as either binary, 
-    categorical or continuous. Each can be multivariate (e.g., can use more than one 
-    column of dummy indicators for different censoring events). 
+    The exposure, monitoring and censoring variables can be coded as either binary,
+    categorical or continuous. Each can be multivariate (e.g., can use more than one
+    column of dummy indicators for different censoring events).
     The input data needs to be in long format.
 URL: https://github.com/osofr/stremr
 BugReports: https://github.com/osofr/stremr/issues
@@ -30,7 +30,7 @@ Imports:
     assertthat,
     data.table,
     ggplot2,
-    GriDiSL,
+    gridisl,
     methods,
     R6,
     Rcpp,

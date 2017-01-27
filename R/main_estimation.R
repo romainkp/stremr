@@ -194,14 +194,14 @@ importData <- function(data,
 #' @param stratify_TRT ...
 #' @param stratify_MONITOR ...
 #' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s) with
-#' \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
+#' \code{gridisl} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
 #' @param models_TRT Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s)
-#' with \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
+#' with \code{gridisl} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
 #' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with
-#' \code{GriDiSL} R package.
-#' Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.
+#' \code{gridisl} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
 #' @param estimator Specify the default estimator to use for fitting propensity scores.
 #' Should be a character string in the format 'Package__Algorithm'.
 #' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.

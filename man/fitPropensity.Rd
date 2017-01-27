@@ -28,16 +28,16 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
 \item{stratify_MONITOR}{...}
 
 \item{models_CENS}{Optional parameter specifying the models for fitting the censoring mechanism(s) with
-\code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
+\code{gridisl} R package.
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
 \item{models_TRT}{Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s)
-with \code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
+with \code{gridisl} R package.
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
 \item{models_MONITOR}{Optional parameter specifying the models for fitting the monitoring mechanism with
-\code{GriDiSL} R package.
-Must be an object of class \code{ModelStack} specified with \code{GriDiSL::defModel} function.}
+\code{gridisl} R package.
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
 \item{estimator}{Specify the default estimator to use for fitting propensity scores.
 Should be a character string in the format 'Package__Algorithm'.

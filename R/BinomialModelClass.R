@@ -1,6 +1,6 @@
 
 ## ----------------------------------------------------------------------------------
-## Call \code{GriDiSL} and fit a single regression model.
+## Call \code{gridisl} and fit a single regression model.
 ## All model fitting in stremr is performed via this function.
 ## ----------------------------------------------------------------------------------
 fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx) {
@@ -29,7 +29,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   ## Use the existing fold ID column (previously defined by calling define_CVfolds())
   } else if ((method %in% "cv") && is.null(fold_column)) fold_column <- data$fold_column
 
-  model.fit <- try({model.fit <- GriDiSL::fit(models,
+  model.fit <- try({model.fit <- gridisl::fit(models,
                                               method = method,
                                               ID = nodes$IDnode, t_name = nodes$tnode,
                                               x = predvars, y = outvar,
@@ -50,9 +50,9 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     glm_model[[1]][["fit.package"]] <- "speedglm"
     glm_model[[1]][["fit.algorithm"]] <- "glm"
     class(glm_model) <- c(class(glm_model), "ModelStack")
-    # glm_model <- GriDiSL::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
+    # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
 
-    # model.fit <- GriDiSL::fit_model(ID = nodes$IDnode,
+    # model.fit <- gridisl::fit_model(ID = nodes$IDnode,
     #                                     t_name = nodes$tnode,
     #                                     x = predvars, y = outvar,
     #                                     train_data = data,
@@ -61,7 +61,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     #                                     # useH2Oframe = TRUE
     #                                     verbose = gvars$verbose
     #                                     )
-    model.fit <- GriDiSL::fit(glm_model,
+    model.fit <- gridisl::fit(glm_model,
                                method = method,
                                ID = nodes$IDnode, t_name = nodes$tnode,
                                x = predvars, y = outvar,
@@ -121,7 +121,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         if (!("family" %in% names(opt_params))) opt_params[["family"]] <- "quasibinomial"
         if (!("distribution" %in% names(opt_params))) opt_params[["distribution"]] <- "bernoulli"
 
-        self$models <- do.call(GriDiSL::defModel, opt_params)
+        self$models <- do.call(gridisl::defModel, opt_params)
 
       }
 
@@ -189,7 +189,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       assert_that(self$is.fitted)
       if (missing(newdata) && is.null(private$probA1)) {
         # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
-        private$probA1 <- GriDiSL::predict_SL(modelfit = private$model.fit,
+        private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
                                                  # use_best_retrained_model = TRUE,
@@ -200,7 +200,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
         # private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
-        private$probA1 <- GriDiSL::predict_SL(modelfit = private$model.fit, newdata = newdata,
+        private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit, newdata = newdata,
                                                  add_subject_data = FALSE,
                                                  subset_idx = self$subset_idx,
                                                  # use_best_retrained_model = TRUE,
