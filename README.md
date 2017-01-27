@@ -7,7 +7,7 @@ stremr
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg)](https://coveralls.io/github/osofr/stremr)
 
 Analysis of longitudinal time-to-event or time-to-failure data.
-Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Adjusts for measured time-varying confounding and informative right-censoring. 
+Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Adjusts for *measured* time-varying confounding and informative right-censoring. 
 Currently implemented estimators are: 
 
     bounded IPW, 
