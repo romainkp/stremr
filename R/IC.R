@@ -80,7 +80,6 @@ getSE.S <- function(nID, S.d.t.predict, h.d.t.predict, design.d.t, IC.O){
 ##############################################################
 ### IC.S.d1 and IC.S.d2 are the first output of previous function above applied to two different d's:
 getSE.RD.d1.minus.d2 <- function(nID, IC.S.d1, IC.S.d2){
-  # browser()
   IC.RD <- IC.S.d2 - IC.S.d1 # note that we do IC.d2 minus IC.d1 here even though this if for the RD defined as d1 minus d2 ( we flip the order)
   var.RD <- (IC.RD %*% t(IC.RD)) / (nID^2)
   se.RD <- sqrt(diag(var.RD))

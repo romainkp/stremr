@@ -57,7 +57,7 @@ test.model.fits.stratify <- function() {
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
-  # res$IPW_estimates
+  # res$estimates
   # res$dataDT
   # res$wts_data
   # res$OData.R6
@@ -87,7 +87,7 @@ test.model.fits.stratify <- function() {
                 gform_MONITOR = gform_MONITOR)
                 # noCENScat = 0L)
 
-  # res$IPW_estimates
+  # res$estimates
   # res$dataDT
   # res$wts_data
   # res$OData.R6
@@ -109,7 +109,7 @@ test.model.fits.stratify <- function() {
                 stratify_CENS = stratify_CENS,
                 gform_TRT = gform_TRT,
                 gform_MONITOR = gform_MONITOR)
-  # res$IPW_estimates
+  # res$estimates
   # res$dataDT
   # res$wts_data
   # res$OData.R6
@@ -136,7 +136,7 @@ test.model.fits.stratify <- function() {
                 gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
                 gform_MONITOR = gform_MONITOR)
 
-  # res$IPW_estimates
+  # res$estimates
   # res$dataDT
   # res$wts_data
   # res$OData.R6

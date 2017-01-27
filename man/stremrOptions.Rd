@@ -4,24 +4,30 @@
 \alias{stremrOptions}
 \title{Querying/setting a single \code{stremr} option}
 \usage{
-stremrOptions(o, value)
+stremrOptions(o, value, showvals = FALSE)
 }
 \arguments{
 \item{o}{Option name (string). See \code{\link{set_all_stremr_options}}.}
 
 \item{value}{Value to assign (optional)}
+
+\item{showvals}{Set to \code{TRUE} (optional) to show the possible range of values or the required type for a specific option name.}
 }
 \description{
-To list all \code{stremr} options, just run this function without any parameters provided. To query only one value, pass the first parameter. To set that, use the \code{value} parameter too.
+To list all \code{stremr} options, just run this function without any parameters provided.
+To query only one value, pass the first parameter. To set that, use the \code{value} parameter.
+To see the available range of values or the required type for a specific option, use the flag \code{showvals = TRUE}.
 }
 \details{
-The arguments of \code{\link{set_all_stremr_options}} list all available \code{stremr} options.
+The signature of the function \code{\link{set_all_stremr_options}} also lists all available \code{stremr} options.
 }
 \examples{
 \dontrun{
 stremrOptions()
-stremrOptions('fit.package')
-stremrOptions('fit.package', 'h2o')
+stremrOptions('estimator')
+stremrOptions('estimator', showvals = TRUE)
+stremrOptions('estimator', 'xgboost__gbm')
+stremrOptions('fit_method', 'cv')
 }
 }
 \seealso{

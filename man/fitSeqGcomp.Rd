@@ -4,15 +4,18 @@
 \alias{fitSeqGcomp}
 \title{Fit sequential GCOMP and TMLE for survival}
 \usage{
-fitSeqGcomp(OData, t_periods, Qforms, Qstratify = NULL,
-  intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL,
-  useonly_t_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
-  intervened_MONITOR), collapse = ""), stratifyQ_by_rule = FALSE,
-  TMLE = FALSE, iterTMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
-  trunc_weights = 10^6, params_Q = list(), weights = NULL,
+fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
+  intervened_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
+  intervened_MONITOR), collapse = ""), models = NULL,
+  estimator = stremrOptions("estimator"),
+  fit_method = stremrOptions("fit_method"),
+  fold_column = stremrOptions("fold_column"), TMLE = FALSE,
+  stratifyQ_by_rule = FALSE, Qstratify = NULL, useonly_t_TRT = NULL,
+  useonly_t_MONITOR = NULL, iterTMLE = FALSE, IPWeights = NULL,
+  stabilize = FALSE, trunc_weights = 10^6, weights = NULL,
   max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10,
-  tol_eps = 0.001, parallel = FALSE,
-  verbose = getOption("stremr.verbose"))
+  tol_eps = 0.001, parallel = FALSE, return_wts = FALSE,
+  verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -21,13 +24,35 @@ fitSeqGcomp(OData, t_periods, Qforms, Qstratify = NULL,
 
 \item{Qforms}{Regression formulas, one formula per Q. Only main-terms are allowed.}
 
-\item{Qstratify}{Placeholder for future user-defined model stratification for all Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR)}
-
 \item{intervened_TRT}{Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
 Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).}
 
 \item{intervened_MONITOR}{Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
 Leave the argument unspecified (\code{NULL}) when not intervening on the monitoring node(s).}
+
+\item{rule_name}{Optional name for the treatment/monitoring regimen.}
+
+\item{models}{Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
+
+\item{estimator}{Specify the default estimator to use for fitting the iterative g-computation formula.
+Should be a character string in the format 'Package__Algorithm'.
+See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
+This argument is ignored when the fitting procedures are already defined via the argument \code{models}.}
+
+\item{fit_method}{Model selection approach. Can be either \code{"none"} - no model selection or
+\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).}
+
+\item{fold_column}{The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+Use the provided function \code{\link{define_CVfolds}} to
+define such folds or define the folds using your own method.}
+
+\item{TMLE}{Set to \code{TRUE} to run the usual longitudinal TMLE algorithm (with a separate TMLE update of Q for every sequential regression).}
+
+\item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
+Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).}
+
+\item{Qstratify}{Placeholder for future user-defined model stratification for all Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR)}
 
 \item{useonly_t_TRT}{Use for intervening only on some subset of observation and time-specific treatment nodes.
 Should be a character string with a logical expression that defines the subset of intervention observations.
@@ -36,13 +61,6 @@ The expression can contain any variable name that was defined in the input datas
 Leave as \code{NULL} when intervening on all observations/time-points.}
 
 \item{useonly_t_MONITOR}{Same as \code{useonly_t_TRT}, but for monitoring nodes.}
-
-\item{rule_name}{Optional name for the treatment/monitoring regimen.}
-
-\item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
-Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).}
-
-\item{TMLE}{Set to \code{TRUE} to run the usual longitudinal TMLE algorithm (with a separate TMLE update of Q for every sequential regression).}
 
 \item{iterTMLE}{Set to \code{TRUE} to run the iterative univariate TMLE instead of the usual longitudinal TMLE.
 When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.
@@ -53,8 +71,6 @@ Must set \code{TMLE}=\code{FALSE} when setting this to \code{TRUE}.}
 \item{stabilize}{Set to \code{TRUE} to use stabilized weights for the TMLE}
 
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
-
-\item{params_Q}{Optional parameters to be passed to the specific fitting algorithm for Q-learning}
 
 \item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
@@ -68,16 +84,27 @@ N is the total number of unique subjects in data and \code{adapt_stop_factor} is
 When \code{TRUE}, the argument \code{tol_eps} is ignored and TMLE stops when either \code{max_iter} has been reached or this criteria has been satisfied.
 When \code{FALSE}, the stopping criteria is determined by values of \code{max_iter} and \code{tol_eps}.}
 
-\item{adapt_stop_factor}{For iterative TMLE only: The adaptive factor to choose the stopping criteria for iterative TMLE when \code{adapt_stop} is set to \code{TRUE}. Default is 10.
+\item{adapt_stop_factor}{For iterative TMLE only: The adaptive factor to choose the stopping criteria for iterative TMLE when
+\code{adapt_stop} is set to \code{TRUE}. Default is 10.
 TMLE will keep iterative until
 the mean estimate of the efficient influence curve is less than 1 / (\code{adapt_stop_factor}*sqrt(\code{N})) or when the number of iterations is \code{max_iter}.}
 
 \item{tol_eps}{For iterative TMLE only: Numeric error tolerance for the iterative TMLE update.
 The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}}
 
-\item{parallel}{Set to \code{TRUE} to run the sequential Gcomp or TMLE in parallel (uses \code{foreach} with \code{dopar} and requires a previously defined parallel back-end cluster)}
+\item{parallel}{Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
+requires a previously defined parallel back-end cluster)}
 
-\item{verbose}{...}
+\item{return_wts}{Applies only when \code{TMLE = TRUE}.
+Return the data.table with subject-specific IP weights as part of the output.
+Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
+
+\item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
+
+\item{...}{When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
+modeling functions that are called from this routine,
+e.g., \code{family = "binomial"} can be used to specify the model family.
+Note that all such arguments must be named.}
 }
 \value{
 ...
@@ -137,7 +164,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS,
 require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") \%>\%
              survNPMSM(OData) \%$\%
-             IPW_estimates
+             estimates
 AKME.St.1
 
 # ----------------------------------------------------------------------
@@ -164,7 +191,7 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
 gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                          Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+                          Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
 # ----------------------------------------------------------------------
@@ -172,7 +199,7 @@ gcomp_est[]
 # ----------------------------------------------------------------------
 \dontrun{
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                    Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+                    Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
 
@@ -234,22 +261,22 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
 
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }
 

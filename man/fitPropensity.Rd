@@ -6,8 +6,11 @@
 \usage{
 fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
   stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
-  params_CENS = list(), params_TRT = list(), params_MONITOR = list(),
-  reg_CENS, reg_TRT, reg_MONITOR, verbose = getOption("stremr.verbose"))
+  models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
+  estimator = stremrOptions("estimator"),
+  fit_method = stremrOptions("fit_method"),
+  fold_column = stremrOptions("fold_column"), reg_CENS, reg_TRT, reg_MONITOR,
+  verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -24,11 +27,35 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
 
 \item{stratify_MONITOR}{...}
 
-\item{params_CENS}{...}
+\item{models_CENS}{Optional parameter specifying the models for fitting the censoring mechanism(s) with
+\code{gridisl} R package.
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
-\item{params_TRT}{...}
+\item{models_TRT}{Optional parameter specifying the models for fitting the treatment (exposure) mechanism(s)
+with \code{gridisl} R package.
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
-\item{params_MONITOR}{...}
+\item{models_MONITOR}{Optional parameter specifying the models for fitting the monitoring mechanism with
+\code{gridisl} R package.
+Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
+
+\item{estimator}{Specify the default estimator to use for fitting propensity scores.
+Should be a character string in the format 'Package__Algorithm'.
+See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
+This argument will only have an effect when some of the propensity score models were not explicitly defined
+with their corresponding arguments:
+\code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
+To put it another way:
+this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
+are specified.}
+
+\item{fit_method}{Model selection approach. Can be \code{"none"} - no model selection,
+\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
+(must specify the column name that contains the fold IDs).}
+
+\item{fold_column}{The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+Use the provided function \code{\link{define_CVfolds}} to
+define such folds or define the folds using your own method.}
 
 \item{reg_CENS}{...}
 
@@ -36,7 +63,14 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
 
 \item{reg_MONITOR}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
+Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
+
+\item{...}{When all or some of the \code{models_...} arguments are NOT specified, these additional
+arguments will be passed on directly to all \code{GridSL}
+modeling functions that are called from this routine,
+e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments
+must be named.}
 }
 \value{
 ...
@@ -93,7 +127,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS,
 require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") \%>\%
              survNPMSM(OData) \%$\%
-             IPW_estimates
+             estimates
 AKME.St.1
 
 # ----------------------------------------------------------------------
@@ -120,7 +154,7 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
 gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                          Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+                          Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
 # ----------------------------------------------------------------------
@@ -128,7 +162,7 @@ gcomp_est[]
 # ----------------------------------------------------------------------
 \dontrun{
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                    Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+                    Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
 
@@ -190,22 +224,22 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
 
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }
 

@@ -29,7 +29,7 @@ test.model.fits.categorCENSOR <- function() {
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
           # noCENScat = 0L)
-  res$IPW_estimates
+  res$estimates
   # res$dataDT
 
   # --------------------------------
@@ -49,7 +49,7 @@ test.model.fits.categorCENSOR <- function() {
           gform_TRT = gform_TRT,
           gform_MONITOR = gform_MONITOR)
           # noCENScat = 0L)
-  res$IPW_estimates
+  res$estimates
   # res$dataDT
 
   # --------------------------------
@@ -67,7 +67,7 @@ test.model.fits.categorCENSOR <- function() {
           gform_MONITOR = gform_MONITOR,
           noCENScat = 1L)
     # )
-  res$IPW_estimates
+  res$estimates
   # res$dataDT
 
   # --------------------------------
@@ -91,7 +91,7 @@ test.model.fits.categorCENSOR <- function() {
           gform_MONITOR = gform_MONITOR,
           noCENScat = 0L)
     # )
-  res$IPW_estimates
+  res$estimates
   # res$dataDT
 
 }
@@ -158,6 +158,6 @@ test.model.fits.categorCENSOR2 <- function() {
                 TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
                 MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")
 
-  res$IPW_estimates
+  res$estimates
   res$dataDT
 }

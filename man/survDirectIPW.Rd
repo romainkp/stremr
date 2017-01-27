@@ -4,18 +4,25 @@
 \alias{survDirectIPW}
 \title{Direct (bounded) IPW estimator of discrete survival function.}
 \usage{
-survDirectIPW(wts_data, OData, weights, trunc_weights)
+survDirectIPW(wts_data, OData, weights, trunc_weights, return_wts = FALSE)
 }
 \arguments{
-\item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}. Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.}
+\item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}.
+Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.}
 
-\item{OData}{The object returned by function \code{fitPropensity}. Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
+\item{OData}{The object returned by function \code{fitPropensity}.
+Contains the input data and the previously fitted propensity score models for the exposure, monitoring and
 right-censoring.}
 
-\item{weights}{(NOT IMPLEMENTED) Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+\item{weights}{(NOT IMPLEMENTED) Optional \code{data.table} with additional observation-time-specific weights.
+Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
-\item{trunc_weights}{(NOT IMPLEMENTED) Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
+\item{trunc_weights}{(NOT IMPLEMENTED) Specify the numeric weight truncation value.
+All final weights exceeding the value in \code{trunc_weights} will be truncated.}
+
+\item{return_wts}{Return the data.table with subject-specific IP weights as part of the output.
+Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 }
 \value{
 A data.table with bounded IPW estimates of risk and survival by time.
@@ -72,7 +79,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS,
 require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") \%>\%
              survNPMSM(OData) \%$\%
-             IPW_estimates
+             estimates
 AKME.St.1
 
 # ----------------------------------------------------------------------
@@ -99,7 +106,7 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
 gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                          Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+                          Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
 # ----------------------------------------------------------------------
@@ -107,7 +114,7 @@ gcomp_est[]
 # ----------------------------------------------------------------------
 \dontrun{
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                    Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+                    Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
 
@@ -169,22 +176,22 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
 
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }
 

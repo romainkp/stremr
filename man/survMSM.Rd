@@ -6,68 +6,86 @@
 \usage{
 survMSM(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = TRUE,
   trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW",
+  glm_package = c("speedglm", "h2o"), return_wts = FALSE,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
-\item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
+\item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function
+\code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
 This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.}
 
-\item{OData}{The object returned by function \code{fitPropensity}. Contains the input dat and the previously fitted propensity score models for the exposure, monitoring and
+\item{OData}{The object returned by function \code{fitPropensity}. Contains the input dat and the
+previously fitted propensity score models for the exposure, monitoring and
 right-censoring.}
 
-\item{t_breaks}{The vector of integer (or numeric) breaks that defines the dummy indicators of the follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for the survival hazard. See Details.}
+\item{t_breaks}{The vector of integer (or numeric) breaks that defines the dummy indicators of the
+follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for
+the survival hazard. See Details.}
 
-\item{use_weights}{Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and fit a "crude" MSM that does not adjust for the possible confounding due to non-random
+\item{use_weights}{Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and
+fit a "crude" MSM that does not adjust for the possible confounding due to non-random
 assignment of the exposure/censoring and monitoring indicators.}
 
 \item{stabilize}{Set to \code{TRUE} for weight stabilization}
 
-\item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
+\item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the
+value in \code{trunc_weights} will be truncated.}
 
-\item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+\item{weights}{Optional \code{data.table} with additional observation-time-specific weights.
+Must contain columns \code{ID}, \code{t} and \code{weight}.
 The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
 
-\item{getSEs}{A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the estimated survival by using the MSM influence curve.}
+\item{getSEs}{A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the
+estimated survival by using the MSM influence curve.}
 
-\item{est_name}{A string naming the current MSM estimator. Ignored by the current routine but is used when generating reports with \code{make_report_rmd}.}
+\item{est_name}{A string naming the current MSM estimator. Ignored by the current routine but is
+used when generating reports with \code{make_report_rmd}.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
+\item{glm_package}{Which R package should be used for fitting the weighted logistic regression
+model (MSM) for the survival hazard?
+Currently available options are \code{"speedglm"} and \code{"h2o"}.
+\code{h2o} can provided better performance
+when fitting MSM with many observations and large number of time-points.}
+
+\item{return_wts}{Return the data.table with subject-specific IP weights as part of the output.
+Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
+
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
+Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 }
 \value{
-A named list with items containing the MSM estimation results:
- \itemize{
- \item \code{est_name} - .
- \item \code{St} - .
- \item \code{ht} - .
- \item \code{MSM.fit} - .
- \item \code{MSM.intervals} - .
- \item \code{IC.Var.S.d} - .
- \item \code{nID} - .
- \item \code{wts_data} - .
- \item \code{use_weights} - .
- \item \code{trunc_weights} - .
-}
+A named list with items containing the MSM estimation results.
 }
 \description{
-Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the treatment/exposure and monitoring processes based on
+Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the
+treatment/exposure and monitoring processes based on
 the user-specified Marginal Structural Model (MSM) for the counterfactual survival function.
 }
 \details{
-This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from many regimens, with dummy indicators for each treatment/monitoring
+This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
+many regimens, with dummy indicators for each treatment/monitoring
 regimen available in \code{wts_data} and each follow-up time interval specified in \code{t_breaks}.
-When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
-in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function \code{fitPropensity}), allowing
-adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly informative right-censoring.
+When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the
+\strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
+in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function
+\code{fitPropensity}), allowing
+adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly
+informative right-censoring.
 }
 \section{Details}{
 
 **********************************************************************
 
-\code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the survival hazard function.
-The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval, with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
-For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ), I(0 < t <= 1) and I(1 < t <= max(t)).
-On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
-If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable for every unique period in the observed data.
+\code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
+survival hazard function.
+The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval,
+with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
+For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
+I(0 < t <= 1) and I(1 < t <= max(t)).
+On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy
+indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
+If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
+for every unique period in the observed data.
 }
 
 \section{MSM for the hazard}{
@@ -181,6 +199,6 @@ make_report_rmd(OData, MSM = IPW_MSM_res,
 }
 }
 \seealso{
-\code{\link{stremr-package}} for the general overview of the package,
+\code{\link{fitPropensity}}, \code{\link{getIPWeights}}.
 }
 

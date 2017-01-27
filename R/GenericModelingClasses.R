@@ -182,7 +182,17 @@ GenericModel <- R6Class(classname = "GenericModel",
         if (is.list(res)) res_models <- c(res_models, res)
       }
       return(res_models)
+    },
+    # call itself until reaches a terminal model fit with coefficients + regression returned with show()
+    get.model.summaries = function() {
+      res_models <- NULL
+      for (k_i in seq_along(private$PsAsW.models)) {
+        res <- private$PsAsW.models[[k_i]]$get.model.summaries()
+        if (is.list(res)) res_models <- c(res_models, res)
+      }
+      return(res_models)
     }
+
   ),
   active = list(
     # recursively call all saved daughter model fits and wipe out any traces of saved data
@@ -535,13 +545,13 @@ ContinModel <- R6Class(classname = "ContinModel",
         assert_that(is.DataStorageClass(DataStorageClass.g0))
         self$intrvls <- DataStorageClass.g0$detect.sVar.intrvls(reg$outvar,
                                                       # nbins = self$reg$nbins,
-                                                      nbins = getopt("nbins"),
+                                                      nbins = stremrOptions("nbins"),
                                                       # bin_bymass = self$reg$bin_bymass,
-                                                      bin_bymass = (getopt("bin.method") %in% "equal.mass"),
+                                                      bin_bymass = (stremrOptions("bin_method") %in% "equal.mass"),
                                                       # bin_bydhist = self$reg$bin_bydhist,
-                                                      bin_bydhist = (getopt("bin.method") %in% "dhist"),
+                                                      bin_bydhist = (stremrOptions("bin_method") %in% "dhist"),
                                                       # max_nperbin = self$reg$max_nperbin
-                                                      max_nperbin = as.integer(getopt("maxNperBin"))
+                                                      max_nperbin = as.integer(stremrOptions("maxNperBin"))
                                                       )
 
         # if (!missing(DataStorageClass.gstar)) {

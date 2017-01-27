@@ -11,32 +11,54 @@ gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$toler
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
-allowed.fit.package <- c("speedglm", "glm", "h2o")
-allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning")
-allowed.bin.method = c("equal.mass", "equal.len", "dhist")
+# allowed.fit_package <- c("speedglm", "glm", "h2o", "xgboost")
+# allowed.fit_algorithm <- c("glm", "gbm", "randomForest", "drf", "deeplearning")
+
+gvars$opts.allowedVals <- list(estimator = c("speedglm__glm", "glm__glm",
+                                             "xgboost__glm", "xgboost__gbm", "xgboost__randomForest",
+                                             "h2o__glm", "h2o__gbm", "h2o__randomForest", "h2o__deeplearning"),
+                               fit_method = c("none", "cv"), # holdout
+                               fold_column = "_character_",
+                               bin_method = c("equal.mass", "equal.len", "dhist"),
+                               nbins = "_positive_integer_",
+                               maxncats = "_positive_integer_",
+                               maxNperBin = "_positive_integer_",
+                               lower_bound_zero_Q = c(TRUE, FALSE),
+                               skip_update_zero_Q = c(TRUE, FALSE)
+  )
+
+getopt <- function(optname) return(stremrOptions(o = optname))
 
 #' Querying/setting a single \code{stremr} option
 #'
-#' To list all \code{stremr} options, just run this function without any parameters provided. To query only one value, pass the first parameter. To set that, use the \code{value} parameter too.
+#' To list all \code{stremr} options, just run this function without any parameters provided.
+#' To query only one value, pass the first parameter. To set that, use the \code{value} parameter.
+#' To see the available range of values or the required type for a specific option, use the flag \code{showvals = TRUE}.
 #'
-#' The arguments of \code{\link{set_all_stremr_options}} list all available \code{stremr} options.
+#' The signature of the function \code{\link{set_all_stremr_options}} also lists all available \code{stremr} options.
 #'
 #' @param o Option name (string). See \code{\link{set_all_stremr_options}}.
 #' @param value Value to assign (optional)
+#' @param showvals Set to \code{TRUE} (optional) to show the possible range of values or the required type for a specific option name.
 #' @export
 #' @seealso \code{\link{set_all_stremr_options}}
 #' @examples \dontrun{
 #' stremrOptions()
-#' stremrOptions('fit.package')
-#' stremrOptions('fit.package', 'h2o')
+#' stremrOptions('estimator')
+#' stremrOptions('estimator', showvals = TRUE)
+#' stremrOptions('estimator', 'xgboost__gbm')
+#' stremrOptions('fit_method', 'cv')
 #' }
-stremrOptions <- function (o, value)  {
+stremrOptions <- function (o, value, showvals = FALSE)  {
   res <- getOption("stremr")
+  allowedVals <- gvars[["opts.allowedVals"]]
+
   if (missing(value)) {
-    if (missing(o))
-        return(res)
-    if (o %in% names(res))
-        return(res[[o]])
+    if (missing(o)) return(res)
+    if (o %in% names(res)) {
+      if (!showvals) return(res[[o]]) else return(allowedVals[[o]])
+    }
+
     print("Possible `stremr` options:")
     print(names(res))
     stop(o %+% ": this options does not exist")
@@ -53,28 +75,33 @@ stremrOptions <- function (o, value)  {
   }
 }
 
-getopt <- function(optname) {
-  return(stremrOptions(o = optname))
-}
-
-#' Print Current Option Settings for \code{stremr}
+#' Show all current option settings
 #' @return Invisibly returns a list of \code{stremr} options.
 #' @seealso \code{\link{set_all_stremr_options}}
 #' @export
 print_stremr_opts <- function() {
-  print(gvars$opts)
+  str(gvars$opts)
   invisible(gvars$opts)
 }
 
-#' Setting \code{stremr} Options
+#' Setting all possible \code{stremr} options at once.
 #'
 #' Options that control \code{stremr} package.
-#' \strong{Will reset all unspecified options (omitted arguments) to their default values}.
+#' \strong{Calling this function will reset all unspecified options (omitted arguments) to their default values}!
 #' The preferred way to set options for \code{stremr} is to use \code{\link{stremrOptions}}, which allows specifying individual options without having to reset all other options.
 #' To reset all options to their defaults simply run \code{set_all_stremr_options()} without any parameters/arguments.
-#' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
-#' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")
-#' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
+#' @param estimator Specify default estimator for model fitting.
+#' To see the range of possible choices run \code{stremrOptions("estimator", showvals = TRUE)}.
+# @param fit_package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o", "xgboost").
+# @param fit_algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning")
+#' @param fit_method Specify the default method for model selection.
+#' Possible options are \code{"none"} - no model selection and no cross-validation (when using only a single model, e.g., \code{speedglm__glm})
+#' or \code{"cv"} - perform V-fold cross-validation to select the best model based on lowest MSE.
+#' Note that when code{fit_method = "cv"}, the argument \code{fold_column} also needs to be specified.
+#' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+#' Use the provided function \code{\link{define_CVfolds}} to
+#' define such folds or define the folds using your own method.
+#' @param bin_method The method for choosing bins when discretizing and fitting the conditional continuous summary
 #'  exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 #'  into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
 #'  based on equal mass (equal number of observations), i.e., each bin is defined so that it contains an approximately
@@ -87,17 +114,17 @@ print_stremr_opts <- function() {
 #  requires registering a parallel backend prior to running \code{stremr} function, e.g.,
 #  using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
 #  \code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".
-#' @param nbins Set the default number of bins when discretizing a continous outcome variable under setting
-#'  \code{bin.method = "equal.len"}.
+#' @param nbins Set the default number of bins when discretizing a continuous outcome variable under setting
+#'  \code{bin_method = "equal.len"}.
 #'  If left as \code{NA} the total number of equal intervals (bins) is determined by the nearest integer of
 #'  \code{nobs}/\code{maxNperBin}, where \code{nobs} is the total number of observations in the input data.
-#' @param maxncats Max number of unique categories a categorical variable \code{sA[j]} can have.
-#' If \code{sA[j]} has more it is automatically considered continuous.
+#' @param maxncats Max number of unique categories that a categorical exposure / censoring or monitoring variable can have.
+#' If the variable has more unique values than \code{maxncats}, it is automatically determined to be a continuous variable.
 # @param poolContinVar Set to \code{TRUE} for fitting a pooled regression which pools bin indicators across all bins.
 # When fitting a model for binirized continuous outcome, set to \code{TRUE}
 # for pooling bin indicators across several bins into one outcome regression?
-#' @param maxNperBin Max number of observations per 1 bin for a continuous outcome (applies directly when
-#'  \code{bin.method="equal.mass"} and indirectly when \code{bin.method="equal.len"}, but \code{nbins = NA}).
+#' @param maxNperBin Max number of observations for a single bin of a discretized continuous variable (applies directly when
+#'  \code{bin_method="equal.mass"} and indirectly when \code{bin_method="equal.len"}, but \code{nbins = NA}).
 #' @param lower_bound_zero_Q Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
 #' Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.
 #' @param skip_update_zero_Q Set to \code{FALSE} to perform TMLE update with glm even when all of the Q's are zero.
@@ -105,12 +132,19 @@ print_stremr_opts <- function() {
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{stremrOptions}}, \code{\link{print_stremr_opts}}
 #' @export
-set_all_stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
-                            fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
-                            bin.method = c("equal.mass", "equal.len", "dhist"),
+# fit_package = c("speedglm", "glm", "xgboost", "h2o"),
+# fit_algorithm = c("glm", "gbm", "randomForest", "drf", "deeplearning"),
+# poolContinVar = FALSE,
+# , "holdout"
+set_all_stremr_options <- function(
+                            estimator = c("speedglm__glm", "glm__glm",
+                                          "xgboost__glm", "xgboost__gbm", "xgboost__randomForest",
+                                          "h2o__glm", "h2o__gbm", "h2o__randomForest", "h2o__deeplearning"),
+                            fit_method = c("none", "cv"),
+                            fold_column = NULL,
+                            bin_method = c("equal.mass", "equal.len", "dhist"),
                             nbins = 10,
                             maxncats = 20,
-                            # poolContinVar = FALSE,
                             maxNperBin = 500,
                             lower_bound_zero_Q = TRUE,
                             skip_update_zero_Q = TRUE
@@ -118,17 +152,25 @@ set_all_stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
 
   old.opts <- gvars$opts
 
-  fit.package <- fit.package[1L]
-  fit.algorithm <- fit.algorithm[1L]
-  bin.method <- bin.method[1]
-  if (!(fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
-  if (!(fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
-  if (!(bin.method %in% allowed.bin.method)) stop("bin.method must be one of: " %+% paste0(allowed.bin.method, collapse=", "))
+  # fit_package <- fit_package[1L]
+  # fit_algorithm <- fit_algorithm[1L]
+  estimator <- estimator[1L]
+  fit_method <- fit_method[1L]
+  bin_method <- bin_method[1]
+
+  if (!(estimator %in% gvars$opts.allowedVals[["estimator"]])) stop("estimator must be one of: " %+% paste0(gvars$opts.allowedVals[["estimator"]], collapse=", "))
+  # if (!(fit_package %in% allowed.fit_package)) stop("fit_package must be one of: " %+% paste0(allowed.fit_package, collapse=", "))
+  # if (!(fit_algorithm %in% allowed.fit_algorithm)) stop("fit_algorithm must be one of: " %+% paste0(allowed.fit_algorithm, collapse=", "))
+  if (!(fit_method %in% gvars$opts.allowedVals[["fit_method"]])) stop("fit_method must be one of: " %+% paste0(gvars$opts.allowedVals[["fit_method"]], collapse=", "))
+  if (!(bin_method %in% gvars$opts.allowedVals[["bin_method"]])) stop("bin_method must be one of: " %+% paste0(gvars$opts.allowedVals[["bin_method"]], collapse=", "))
 
   opts <- list(
-    fit.package = fit.package,
-    fit.algorithm = fit.algorithm,
-    bin.method = bin.method,
+    estimator = estimator,
+    # fit_package = fit_package,
+    # fit_algorithm = fit_algorithm,
+    fit_method = fit_method,
+    fold_column = fold_column,
+    bin_method = bin_method,
     # parfit = parfit,
     nbins = nbins,
     maxncats = maxncats,
@@ -137,6 +179,7 @@ set_all_stremr_options <- function( fit.package = c("speedglm", "glm", "h2o"),
     lower_bound_zero_Q = lower_bound_zero_Q,
     skip_update_zero_Q = skip_update_zero_Q
   )
+
   gvars$opts <- opts
   options(stremr = opts)
   invisible(old.opts)
@@ -170,8 +213,16 @@ gvars$misfun <- testmisfun()
 
 # Allows stremr functions to use e.g., getOption("stremr.verbose") to get verbose printing status
 .onLoad <- function(libname, pkgname) {
-  # reset all options to their defaults on load:
-  set_all_stremr_options()
+  ## First test if getOption("stremr") exists already -> then we need to re-use these existing options
+  prev.op <- getOption("stremr")
+
+  ## reset all options to their defaults on load if no options have been previously defined:
+  if (is.null(prev.op)) {
+    set_all_stremr_options()
+  } else {
+    gvars$opts <- prev.op
+  }
+
   op <- options()
   op.stremr <- list(
     stremr.verbose = gvars$verbose,

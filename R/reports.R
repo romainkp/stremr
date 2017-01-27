@@ -60,6 +60,7 @@ openFileInOS <- function(f) {
 #' @param serve_html_rmote Serve the html report as a webpage via R package "rmote".
 # ' Requires prior initialization of the back-end server with rmote::start_rmote()
 #' @param save_report_data Save the data needed for generating this report as a list in a separate 'report_name.Rd' file.
+#' @param use_ggplot Set to \code{TRUE} to enable plotting with ggplot.
 #' @param ... Additional arguments may specify the report title (\code{author}), author (\code{title}).
 #' Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.
 #' Additional set of arguments control the survival plotting, these are passed on to the function \code{f_plot_survest}:
@@ -69,9 +70,9 @@ openFileInOS <- function(f) {
 make_report_rmd <- function(OData, MSM, NPMSM, TMLE, GCOMP,
                             WTtables, FUPtables, MSM.RDtables, TMLE.RDtables,
                             plotKM = FALSE, printEstimateTables = FALSE,
-                            format = c("html", "pdf", "word"), skip.modelfits = FALSE,
+                            format = c("html", "pdf", "word"), skip.modelfits = FALSE, skip.Qfits = TRUE,
                             file.name = getOption('stremr.file.name'), file.path = getOption('stremr.file.path'),
-                            openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, save_report_data = FALSE, ...) {
+                            openFile = TRUE, serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE, save_report_data = FALSE, use_ggplot = TRUE, ...) {
   optArgReport <- list(...)
 
   if (!rmarkdown::pandoc_available(version = "1.12.3"))
@@ -102,6 +103,7 @@ call. = FALSE)
   } else {
     author <- "Insert Author"
   }
+
   if ("title" %in% names(optArgReport)) {
     title <- optArgReport[['title']]
     assert_that(is.character(author))
@@ -119,15 +121,63 @@ call. = FALSE)
   ## -------------------------------------------------------------------------------------
   ## MODEL FITS:
   ## -------------------------------------------------------------------------------------
-  fitted.coefs.gC <- OData$modelfit.gC$get.fits()
-  fitted.coefs.gA <- OData$modelfit.gA$get.fits()
-  fitted.coefs.gN <- OData$modelfit.gN$get.fits()
+  if (!skip.modelfits) {
+    model_fits_gC <- OData$modelfit.gC$get.fits()
+    model_summaries_gC <- OData$modelfit.gC$get.model.summaries()
+
+    model_fits_gA <- OData$modelfit.gA$get.fits()
+    model_summaries_gA <- OData$modelfit.gA$get.model.summaries()
+
+    model_fits_gN <- OData$modelfit.gN$get.fits()
+    model_summaries_gN <- OData$modelfit.gN$get.model.summaries()
+  }
+
+  # model_fits_gC[[1]]$get_overall_best_model()[[1]]
+  # model_fits_gC[[1]]$get_best_models(K=1)
+  # # # try(pander::pander(model_fits_gN[[1]]$getMSEtab, caption = "Overall Performance by Model"))
+  # h2o_gridobj <- model_fits_gC[[1]]$get_modelfits_grid()[[1]]
+  # capture.output(print(h2o_gridobj))
+  # xgb_gridobj <- model_fits_gC[[1]]$get_modelfits_grid()[[3]]
+  # # capture.output(print(xgb_gridobj))
+  # # # class(xgb_gridobj)
+  # # # is.data.frame(xgb_gridobj)
+  # xgb_gridobj <- xgb_gridobj[ , names(xgb_gridobj)[!(names(xgb_gridobj) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
+  # try(pander::pander_return(xgb_gridobj, caption = "Grid Details"))
+
+  # # class(model_fits_gC[[1]]$get_modelfits_grid()[[1]])
+  # # str(model_fits_gC[[1]]$get_modelfits_grid()[[1]])
+  # # showMethods(class = "H2OGrid", printTo = FALSE )
+  # pander::pander(capture.output(print(h2o_gridobj))[-2])
+
+  # model_fits_gC[[1]]$get_modelfits_grid()
+  # model_fits_gC[[1]]$get_best_models()
+
+  # model_fits_gC[[1]]$OData_train
+  # model_fits_gC[[1]]$OData_valid
+  # grids <- model_fits_gN[[1]]$get_modelfits_grid()
+
+  # best_model <- model_fits_gC[[1]]$get_best_models(K=1)[[1]]
+  # str(best_model@model)
+  # str(best_model@model$training_metrics)
+  # best_model@model$training_metrics
+  # gridisl:::pander.H2OBinomialMetrics(best_model@model$training_metrics, "train")
+  # gridisl::print_tables(best_model)
+
+  # str(fitted.coefs.gC[[1]])
+  # fitted.coefs.gC[[1]]$show(print_format = FALSE, model_stats = TRUE, all_fits = TRUE)
+  # fitted.coefs.gC[[1]]$summary(all_fits = TRUE)
+  # str(fitted.coefs.gC[[1]]$get_best_models()[[1]])
+  # fitted.coefs.gC[[1]]$get_best_models()[[1]]
+  # print(fitted.coefs.gC[[1]]$get_best_models(), only.coefs = TRUE)
 
   ## -------------------------------------------------------------------------------------
   ## Number of unique ID and number of person time obs
   ## -------------------------------------------------------------------------------------
   nuniqueIDs <- OData$nuniqueIDs
   nobs <- OData$nobs
+  nuniquets <- OData$nuniquets
+  t_name <- OData$nodes$tnode
+  use_ggplot <- use_ggplot
 
   ## -------------------------------------------------------------------------------------
   ## Create report data object (list) to be saved along with the report itself

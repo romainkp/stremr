@@ -9,24 +9,31 @@ importData(data, ID = "Subject_ID", t_name = "time_period", covars,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
-\item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns, containing the time-varying covariates (\code{covars}),
-the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}), the monitoring process variable(s) (\code{MONITOR})
+\item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns,
+containing the time-varying covariates (\code{covars}),
+the right-censoring event indicator(s) (\code{CENS}), the exposure variable(s) (\code{TRT}),
+the monitoring process variable(s) (\code{MONITOR})
 and the survival OUTCOME variable (\code{OUTCOME}).}
 
 \item{ID}{Unique subject identifier column name in \code{data}.}
 
 \item{t_name}{The name of the time/period variable in \code{data}.}
 
-\item{covars}{Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
-that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.}
+\item{covars}{Vector of names with time varying and baseline covariates in \code{data}.
+This argument does not need to be specified, by default all variables
+that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME}
+will be considered as covariates.}
 
 \item{CENS}{Column name of the censoring variable(s) in \code{data}.
 Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
-For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event (this cannot be changed).
-For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of follow-up and other
-values indicate different reasons for CENSoring.
-Use the argument \code{noCENScat} to change the reference (continuation of follow-up) category from default 0 to any other value.
-(NOTE: Changing \code{noCENScat} has zero effect on coding of the binary CENSoring variables, those have to always use 1 to code the CENSoring event).
+For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event
+(this cannot be changed).
+For categorical CENSoring variables, by default the value of 0 indicates no CENSoring / continuation of
+follow-up and other values indicate different reasons for CENSoring.
+Use the argument \code{noCENScat} to change the reference (continuation of follow-up) category from
+default 0 to any other value.
+(NOTE: Changing \code{noCENScat} has zero effect on coding of the binary CENSoring variables, those
+have to always use 1 to code the CENSoring event).
 Note that factors are not allowed in \code{CENS}.}
 
 \item{TRT}{A column name in \code{data} for the exposure/treatment variable(s).}
@@ -39,7 +46,8 @@ Note that factors are not allowed in \code{CENS}.}
 Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 for variables specifed in \code{CENS}.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
+Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 }
 \value{
 ...
@@ -96,7 +104,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS,
 require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") \%>\%
              survNPMSM(OData) \%$\%
-             IPW_estimates
+             estimates
 AKME.St.1
 
 # ----------------------------------------------------------------------
@@ -123,7 +131,7 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
 gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                          Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+                          Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
 # ----------------------------------------------------------------------
@@ -131,7 +139,7 @@ gcomp_est[]
 # ----------------------------------------------------------------------
 \dontrun{
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-                    Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+                    Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
 
@@ -193,22 +201,22 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
 
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest",
+models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
-            Qforms = Qforms, params_Q = params_Q,
+            Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }
 

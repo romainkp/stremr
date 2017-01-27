@@ -2,20 +2,30 @@
 % Please edit documentation in R/zzz.R
 \name{set_all_stremr_options}
 \alias{set_all_stremr_options}
-\title{Setting \code{stremr} Options}
+\title{Setting all possible \code{stremr} options at once.}
 \usage{
-set_all_stremr_options(fit.package = c("speedglm", "glm", "h2o"),
-  fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning",
-  "SuperLearner"), bin.method = c("equal.mass", "equal.len", "dhist"),
-  nbins = 10, maxncats = 20, maxNperBin = 500,
-  lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE)
+set_all_stremr_options(estimator = c("speedglm__glm", "glm__glm",
+  "xgboost__glm", "xgboost__gbm", "xgboost__randomForest", "h2o__glm",
+  "h2o__gbm", "h2o__randomForest", "h2o__deeplearning"),
+  fit_method = c("none", "cv"), fold_column = NULL,
+  bin_method = c("equal.mass", "equal.len", "dhist"), nbins = 10,
+  maxncats = 20, maxNperBin = 500, lower_bound_zero_Q = TRUE,
+  skip_update_zero_Q = TRUE)
 }
 \arguments{
-\item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}
+\item{estimator}{Specify default estimator for model fitting.
+To see the range of possible choices run \code{stremrOptions("estimator", showvals = TRUE)}.}
 
-\item{fit.algorithm}{Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner")}
+\item{fit_method}{Specify the default method for model selection.
+Possible options are \code{"none"} - no model selection and no cross-validation (when using only a single model, e.g., \code{speedglm__glm})
+or \code{"cv"} - perform V-fold cross-validation to select the best model based on lowest MSE.
+Note that when code{fit_method = "cv"}, the argument \code{fold_column} also needs to be specified.}
 
-\item{bin.method}{The method for choosing bins when discretizing and fitting the conditional continuous summary
+\item{fold_column}{The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+Use the provided function \code{\link{define_CVfolds}} to
+define such folds or define the folds using your own method.}
+
+\item{bin_method}{The method for choosing bins when discretizing and fitting the conditional continuous summary
 exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
 into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
 based on equal mass (equal number of observations), i.e., each bin is defined so that it contains an approximately
@@ -23,16 +33,16 @@ the same number of observations across all bins. The maximum number of observati
 by parameter \code{maxNperBin}. Method \code{"dhist"} uses a mix of the above two approaches,
 see Denby and Mallows "Variations on the Histogram" (2009) for more detail.}
 
-\item{nbins}{Set the default number of bins when discretizing a continous outcome variable under setting
-\code{bin.method = "equal.len"}.
+\item{nbins}{Set the default number of bins when discretizing a continuous outcome variable under setting
+\code{bin_method = "equal.len"}.
 If left as \code{NA} the total number of equal intervals (bins) is determined by the nearest integer of
 \code{nobs}/\code{maxNperBin}, where \code{nobs} is the total number of observations in the input data.}
 
-\item{maxncats}{Max number of unique categories a categorical variable \code{sA[j]} can have.
-If \code{sA[j]} has more it is automatically considered continuous.}
+\item{maxncats}{Max number of unique categories that a categorical exposure / censoring or monitoring variable can have.
+If the variable has more unique values than \code{maxncats}, it is automatically determined to be a continuous variable.}
 
-\item{maxNperBin}{Max number of observations per 1 bin for a continuous outcome (applies directly when
-\code{bin.method="equal.mass"} and indirectly when \code{bin.method="equal.len"}, but \code{nbins = NA}).}
+\item{maxNperBin}{Max number of observations for a single bin of a discretized continuous variable (applies directly when
+\code{bin_method="equal.mass"} and indirectly when \code{bin_method="equal.len"}, but \code{nbins = NA}).}
 
 \item{lower_bound_zero_Q}{Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
 Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.}
@@ -45,7 +55,7 @@ Invisibly returns a list with old option settings.
 }
 \description{
 Options that control \code{stremr} package.
-\strong{Will reset all unspecified options (omitted arguments) to their default values}.
+\strong{Calling this function will reset all unspecified options (omitted arguments) to their default values}!
 The preferred way to set options for \code{stremr} is to use \code{\link{stremrOptions}}, which allows specifying individual options without having to reset all other options.
 To reset all options to their defaults simply run \code{set_all_stremr_options()} without any parameters/arguments.
 }

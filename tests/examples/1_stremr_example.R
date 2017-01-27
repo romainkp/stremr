@@ -59,6 +59,6 @@ IPW_KM_res <- stremr(OdataDT, intervened_TRT = "dhigh", intervened_MONITOR = "gs
               MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")
 
 # Survival estimates by time:
-IPW_KM_res$IPW_estimates
+IPW_KM_res$estimates
 # Input data:
 IPW_KM_res$dataDT

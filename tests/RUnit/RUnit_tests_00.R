@@ -3,7 +3,6 @@
 if(FALSE) {
   # to automatically enter browser when error shows up:
   # options(error=recover)
-
   library("RUnit")
   library("roxygen2")
   library("devtools")
@@ -13,7 +12,7 @@ if(FALSE) {
   # stremr:::debug_set() # SET TO DEBUG MODE
 
   setwd("..");
-  install("stremr", build_vignettes = FALSE) # INSTALL W/ devtools:
+  install("stremr", build_vignettes = FALSE, dependencies = FALSE) # INSTALL W/ devtools:
   library("stremr")
   # system("echo $PATH") # see the current path env var
   # system("R CMD Rd2pdf stremr")  # just create the pdf manual from help files
@@ -47,8 +46,10 @@ if(FALSE) {
   # stremr:::debug_off() # SET DEBUG MODE OFF
 
   # To install a specific branch:
-  # devtools::install_github('osofr/stremr', ref = "simnet", build_vignettes = FALSE)
   # options(stremr.verbose = FALSE)
+  # devtools::install_github('osofr/gridisl', dependencies = FALSE)
+  # devtools::install_github('osofr/stremr', ref = "h2oSuperLearner", build_vignettes = FALSE, dependencies = FALSE)
+  # devtools::install_github('osofr/stremr', ref = "h2oSuperLearner")
   # devtools::install_github('osofr/stremr', build_vignettes = FALSE, dependencies = FALSE)
 
 }
@@ -133,19 +134,13 @@ test.GenericModelPredict <- function() {
 
 test.options <- function() {
   stremrOptions()
-  stremrOptions("fit.algorithm")
-
+  stremrOptions("estimator")
   checkException(stremrOptions("blahblah"))
   checkException(stremrOptions("blahblah", 5))
-
-  checkException(stremrOptions("fit.algorithm", NULL))
-  stremrOptions("fit.algorithm", "gbm")
-  checkException(stremrOptions("fit.algorithm", "blahblah"))
-  stremrOptions("fit.algorithm", "glm")
-
-  checkException(stremrOptions("fit.package", "blahblah"))
-  stremrOptions("fit.package", "speedglm")
-  checkException(stremrOptions("bin.method", "blah"))
+  checkException(stremrOptions("estimator", NULL))
+  stremrOptions("estimator", "xgboost__gbm")
+  checkException(stremrOptions("estimator", "blahblah"))
+  checkException(stremrOptions("bin_method", "blah"))
 
   print_stremr_opts()
   stremr:::.onLoad()

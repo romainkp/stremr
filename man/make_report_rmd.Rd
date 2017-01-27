@@ -7,10 +7,10 @@
 make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, WTtables, FUPtables,
   MSM.RDtables, TMLE.RDtables, plotKM = FALSE, printEstimateTables = FALSE,
   format = c("html", "pdf", "word"), skip.modelfits = FALSE,
-  file.name = getOption("stremr.file.name"),
+  skip.Qfits = TRUE, file.name = getOption("stremr.file.name"),
   file.path = getOption("stremr.file.path"), openFile = TRUE,
   serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE,
-  save_report_data = FALSE, ...)
+  save_report_data = FALSE, use_ggplot = TRUE, ...)
 }
 \arguments{
 \item{OData}{Input data object returned by the function \code{\link{importData}}.}
@@ -54,6 +54,8 @@ Note that the html report file is always produced in addition to any other selec
 \item{keep_tex}{Keep the source .tex files for pdf output?}
 
 \item{save_report_data}{Save the data needed for generating this report as a list in a separate 'report_name.Rd' file.}
+
+\item{use_ggplot}{Set to \code{TRUE} to enable plotting with ggplot.}
 
 \item{...}{Additional arguments may specify the report title (\code{author}), author (\code{title}).
 Specifying the logical flag \code{only.coefs=TRUE} disables printing of all h2o-specific model summaries.

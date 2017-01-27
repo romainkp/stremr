@@ -2,7 +2,7 @@
 % Please edit documentation in R/main_estimation.R
 \name{define_single_regression}
 \alias{define_single_regression}
-\title{Define regression models}
+\title{Directly specify a single regression model}
 \usage{
 define_single_regression(OData, regforms, stratify = NULL, params = list())
 }
@@ -16,6 +16,9 @@ define_single_regression(OData, regforms, stratify = NULL, params = list())
 \item{params}{Additional modeling controls (for downstream modeling algorithms)}
 }
 \description{
-Alternative approach to manually define parts of the propsensity score model with formula/strata and model controls
+This function provides an alternative way to manually define parts of the propsensity score model
+with formula/strata and model controls.
+This function is for advanced users. It provides explicit and manual control
+over every single model fit, e.g., every strata of the exposure propensity score.
 }
 

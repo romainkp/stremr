@@ -6,7 +6,7 @@ stremr
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg)](https://coveralls.io/github/osofr/stremr)
 
-Streamlined analysis of longitudinal time-to-event or time-to-failure data. Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or [`H2O-3`](https://github.com/h2oai/h2o-3)machine learning libraries, including Ensemble Learning ([**SuperLearner**](https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble)).
+Streamlined analysis of longitudinal time-to-event or time-to-failure data. Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or [`H2O-3`](https://github.com/h2oai/h2o-3)machine learning libraries.
 
 Currently implemented **estimators** include:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
@@ -35,7 +35,7 @@ Currently implemented **estimators** include:
  -  By default, all models are fit using `GLM` with `binomial` family (logistic regression). 
  -  Alternatively, model fitting can be also performed with any machine learning algorithm implemented in `H2O-3` (faster distributed penalized `GLM`, `Random Forest`, `Gradient Boosting Machines` and `Deep Neural Network`).
  -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (`h2o.grid`) allows for user-friendly model specification and fitting over multi-dimensional parameter space with various stopping criteria (random, discrete, max number of models, max time allocated, etc).
- -  The ensemble of many models can be combined into a single (more powerful) model with **SuperLearner** (`h2oEmsemble`). 
+ -  The ensemble of many models can be combined into a single (more powerful) model with Grid **SuperLearner** (`gridisl`). 
 
 **Overview**:
 * [Installing `stremr` and Documentation](#Installation)
@@ -43,6 +43,7 @@ Currently implemented **estimators** include:
 * [Example with Simulated Data](#Example1)
 * [Sequential G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data](#GCOMPTMLE)
 * [Machine Learning Algorithms](#H2OML)
+* [Ensemble Learning with SuperLearner (based on `h2oEnsemble` R package)](#SuperLearner)
 
 <a name="Installation"></a>
 ### Installation and Documentation
@@ -74,6 +75,12 @@ new.pkgs <- setdiff(pkgs, rownames(installed.packages()))
 if (length(new.pkgs)) install.packages(new.pkgs)
 # Download and install the H2O package for R:
 install.packages("h2o", type="source", repos=(c("https://s3.amazonaws.com/h2o-release/h2o/master/3636/R")))
+```
+
+For ensemble learning with SuperLearner we recommend installing the latest development version of the `gridisl` R package
+
+```R
+devtools::install_github('osofr/gridisl', build_vignettes = FALSE)
 ```
 
 Documentation with general overview of the package functions and datasets:
@@ -168,7 +175,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gf
 require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
              survNPMSM(OData) %$%
-             IPW_estimates
+             estimates
 AKME.St.1
 ```
 
@@ -199,12 +206,12 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 G-Computation (pooled):
 ```R
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = FALSE)
+gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 ```
 
 Targeted Maximum Likelihood Estimation (TMLE) (stratified):
 ```R
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 ```
 
@@ -213,7 +220,7 @@ To parallelize estimation over several time-points (`t.surv`) for either GCOMP o
 require("doParallel")
 registerDoParallel(cores = 40)
 data.table::setthreads(1)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
 ```
 
 <a name="H2OML"></a>
@@ -231,7 +238,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gf
 
 Other available algorithms are `H2O-3` Gradient Boosting Machines (`fit.algorithm = "gbm"`), distributed GLM (including LASSO and Ridge) (`fit.algorithm = "glm"`) and Deep Neural Nets (`fit.algorithm = "deeplearning"`).
 
-Use arguments `params_...` in `fitPropensity()` and `params_Q` in `fitSeqGcomp()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
+Use arguments `params_...` in `fitPropensity()` and `models` in `fitSeqGcomp()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
 ```R
 params_TRT = list(fit.package = "h2o", fit.algorithm = "gbm", ntrees = 50, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
@@ -244,12 +251,111 @@ OData <- fitPropensity(OData,
 
 Running TMLE based on the previous fit of the propensity scores. Also applying Random Forest to estimate the sequential outcome model:
 ```R
-params_Q = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+models = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, params_Q = params_Q, stratifyQ_by_rule = TRUE)
+tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = models, stratifyQ_by_rule = TRUE)
+```
+
+<a name="SuperLearner"></a>
+###Ensemble Learning with SuperLearner (based on `gridisl` R package)
+
+```R
+require('gridisl')
 ```
 
 
+Easy specification of large ensembles with grid search:
+
+1. Define a learning algorithm (e.g., `glm`)
+2. Define the search criteria (e.g., 120 second maximum). Increase parameters `max_runtime_secs` or `max_models` to cover larger number of models from tuning parameter space.
+3. Define the space of tuning parameters (hyper-parameters) by specifying their learner-specific names and values for grid search (e.g., `alpha` and `lambda` for glm).
+
+
+When running the SuperLearner with grid search, `stremr` calls the following outside functions:
+
+1. Runs `h2o.grid` in the background for each individual learner and saves cross-validated risks.
+2. Calls `h2o.stack` from `h2oEnsemble` package to evaluate the final SuperLearner fit on a combination of all learners returned by different grid searches and individually specified learners.
+
+
+Here is an example defining the grid search criteria and search space of tuning parameters for h2o glm (`h2o.glm`):
+```R
+GLM_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
+                         alpha = c(0,1,seq(0.1,0.9,0.1)),
+                         lambda = c(0,1e-7,1e-5,1e-3,1e-1))
+```
+
+Another example with grid search for Random Forest (`h2o.randomForest`) (will be combined with above in a single SuperLearner ensemble):
+```R
+search_criteria <- list(strategy = "RandomDiscrete", max_models = 5, max_runtime_secs = 60*60)
+RF_hyper_params <- list(search_criteria = search_criteria,
+                        ntrees = c(100, 200, 300, 500),
+                        mtries = 1:4,
+                        max_depth = c(5, 10, 15, 20, 25),
+                        sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                        col_sample_rate_per_tree = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                        balance_classes = c(TRUE, FALSE))
+```
+
+Final example with grid search for Gradient Boosting Machines (`h2o.gbm`) (will be also combined with above grid searches):
+```R
+GBM_hyper_params <- list(search_criteria = search_criteria,
+                         ntrees = c(100, 200, 300, 500),
+                         learn_rate = c(0.005, 0.01, 0.03, 0.06),
+                         max_depth = c(3, 4, 5, 6, 9),
+                         sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                         col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                         balance_classes = c(TRUE, FALSE))
+```
+
+In addition, we can specify individual learners that we may want to include in the SuperLearner library:
+```R
+h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
+h2o.glm.2 <- function(..., x = "highA1c", alpha = 0.0) h2o.glm.wrapper(..., x = x, alpha = alpha)
+h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
+```
+
+The SuperLearner ensemble is now defined with a single list of parameters that includes the above models.  We also define additional SuperLearner-specific parameters here (such as, `nfolds` - number of folds for cross-validation, `metalearner` and `seed`):
+```R
+SLparams = list(fit.package = "h2o", fit.algorithm = "SuperLearner",
+                 grid.algorithm = c("glm", "randomForest", "gbm"),
+                 learner = c("h2o.glm.1", "h2o.glm.2", "h2o.glm.3"),
+                 metalearner = "h2o.glm_nn",
+                 nfolds = 10,
+                 seed = 23,
+                 glm = GLM_hyper_params,
+                 randomForest = RF_hyper_params,
+                 gbm = GBM_hyper_params)
+```
+
+
+We can also save the SuperLearner fits by adding parameters `save.ensemble` and `ensemble.dir.path`. This will save the entire ensemble of models that were used by the SuperLearner. Separate directories are required for different SuperLearner models (for example a separate directory for censoring model and a separate directory for treatment model). These pre-saved fits can be loaded at a later time to avoid the lengthy refitting process by using the argument `load.ensemble = TRUE`.
+
+```R
+params_TRT = c(SLparams, save.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
+```
+
+The following example fits the propensity score using above SuperLearner to model the exposure mechanism and using `speedglm` logistic regressions for censoring and monitoring:
+```R
+params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
+params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
+
+OData <- fitPropensity(OData,
+            gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
+            gform_TRT = gform_TRT, params_TRT = params_TRT,
+            gform_MONITOR = gform_MONITOR, params_MONITOR = params_MONITOR)
+```
+
+The following example loads the previously saved fits of the SuperLearner for the exposure. The only models fit during this call to `fitPropensity` are for the monitoring and censoring.
+```R
+params_TRT = c(SLparams, load.ensemble = TRUE, ensemble.dir.path = "./h2o-ensemble-model-TRT")
+
+OData <- fitPropensity(OData,
+            gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
+            gform_TRT = gform_TRT, params_TRT = params_TRT,
+            gform_MONITOR = gform_MONITOR, params_MONITOR = params_MONITOR)
+```
+
+The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One needs to specify the relevant parameters and the ensemble models as part of the `models` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
 
 ### Citation
 

@@ -9,6 +9,59 @@
   # *) creating binary indicator matrix for continous/categorical sVar (binirize.sVar, binirize.cat.sVar)
   # *) creating design matrix (Xmat) based on predvars and row subsets (evalsubst)
 
+#' Define fold ID column for cross-validation
+#'
+#' @param data Object of class \code{DataStorageClass} (returned by calling \code{importData} function).
+#' @param nfolds The number of folds to use in V fold cross-validation.
+#' @param fold_column The name for the column that will contain the fold IDs.
+#' @param seed Fix the seed for random generator.
+#' @export
+define_CVfolds = function(data, nfolds = 5, fold_column = "fold_ID", seed = NULL) {
+  data$define_CVfolds(nfolds = nfolds, fold_column = fold_column, seed = seed)
+  return(data)
+}
+
+# -----------------------------------------------------------------------------
+# Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
+# -----------------------------------------------------------------------------
+fast.load.to.H2O <- function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
+  tmpf <- tempfile(fileext = ".csv")
+  assertthat::assert_that(is.data.table(dat.sVar))
+
+  # devDTvs <- exists("fwrite", where = "package:data.table")
+
+  if (!use_DTfwrite) {
+    message("For optimal performance please install the most recent version of data.table package.")
+    H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
+  } else {
+    data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
+
+    types <- sapply(dat.sVar, class)
+    types <- gsub("integer64", "numeric", types)
+    types <- gsub("integer", "numeric", types)
+    types <- gsub("double", "numeric", types)
+    types <- gsub("complex", "numeric", types)
+    types <- gsub("logical", "enum", types)
+    types <- gsub("factor", "enum", types)
+    types <- gsub("character", "string", types)
+    types <- gsub("Date", "Time", types)
+
+    # replace all irregular characters to conform with destination_frame regular exprs format:
+    tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
+    tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
+    tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+
+    H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
+                                        header = TRUE,
+                                        col.types = types,
+                                        na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
+                                        destination_frame = destination_frame)
+
+    file.remove(tmpf)
+  }
+  return(invisible(H2O.dat.sVar))
+}
+
 ## ---------------------------------------------------------------------
 # Detecting vector types: sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 ## ---------------------------------------------------------------------
@@ -24,8 +77,10 @@ detect.col.types <- function(sVar_mat){
       sVartypes$cont
     }
   }
-  assert_that(is.integerish(getopt("maxncats")) && getopt("maxncats") > 1)
-  maxncats <- getopt("maxncats")
+
+  assert_that(is.integerish(stremrOptions("maxncats")) && stremrOptions("maxncats") > 1)
+
+  maxncats <- stremrOptions("maxncats")
   sVartypes <- gvars$sVartypes
   if (is.matrix(sVar_mat)) { # for matrix:
     return(as.list(apply(sVar_mat, 2, detect_vec_type)))
@@ -197,6 +252,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     curr_data_A_g0 = TRUE,  # is the current data in OdataDT generated under observed (g0)? If FALSE, current data is under g.star (intervention)
     fold_column = NULL,
     nfolds = NULL,
+    H2Oframe = NULL,
+    H2Oframe_ID = NULL,
 
     initialize = function(Odata, nodes, YnodeVals, det.Y, noCENScat,...) {
       assert_that(is.data.frame(Odata) | is.data.table(Odata))
@@ -238,40 +295,71 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     # Could also do evaluation in a special env with a custom subsetting fun '[' that will dynamically find the correct dataset that contains
     # sVar.name (dat.sVar or dat.bin.sVar) and will return sVar vector
+    # evalsubst = function(subset_vars, subset_exprs = NULL) {
+    #   res <- rep.int(TRUE, self$nobs)
+    #   if (!missing(subset_vars)) {
+    #     assert_that(is.character(subset_vars))
+    #     for (subsetvar in subset_vars) {
+    #       # *) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
+    #       sVar.vec <- self$get.outvar(var = subsetvar)
+    #       assert_that(!is.null(sVar.vec))
+    #       # *) reconstruct correct expression that tests for missing values
+    #       res <- res & (!gvars$misfun(sVar.vec))
+    #     }
+    #   }
+    #   if (!is.null(subset_exprs)) {
+    #     if (is.logical(subset_exprs)) {
+    #       res <- res & subset_exprs
+    #     } else if (is.character(subset_exprs)){
+    #       # ******************************************************
+    #       # data.table evaluation of the logical subset expression
+    #       # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_exprs))
+    #       # ******************************************************
+    #       res.tmp <- self$dat.sVar[, eval(parse(text = subset_exprs)), by = get(self$nodes$ID)][["V1"]]
+    #       assert_that(is.logical(res.tmp))
+    #       res <- res & res.tmp
+    #       # ******************************************************
+    #       # THIS WAS A BOTTLENECK: for 500K w/ 1000 bins: 4-5sec
+    #       # REPLACING WITH env that is made of data.frames instead of matrices
+    #       # ******************************************************
+    #       # eval.env <- c(data.frame(self$dat.sVar), data.frame(self$dat.bin.sVar), as.list(gvars))
+    #       # res <- try(eval(subset_exprs, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
+    #       # self$dat.sVar[eval(),]
+    #       # stop("disabled for memory/speed efficiency")
+    #     }
+    #   }
+    #   return(res)
+    # },
+
     evalsubst = function(subset_vars, subset_exprs = NULL) {
       res <- rep.int(TRUE, self$nobs)
       if (!missing(subset_vars)) {
         assert_that(is.character(subset_vars))
         for (subsetvar in subset_vars) {
-          # *) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
+          # (*) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
           sVar.vec <- self$get.outvar(var = subsetvar)
           assert_that(!is.null(sVar.vec))
-          # *) reconstruct correct expression that tests for missing values
+          # (*) reconstruct correct expression that tests for missing values
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }
       if (!is.null(subset_exprs)) {
         if (is.logical(subset_exprs)) {
-          res <- res & subset_exprs
-        } else if (is.character(subset_exprs)){
-          # ******************************************************
-          # data.table evaluation of the logical subset expression
-          # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_exprs))
-          # ******************************************************
+          return(which(res & subset_exprs))
+        } else if (is.character(subset_exprs)) {
+          ## ******************************************************
+          ## data.table evaluation of the logical subset expression
+          ## Note: This can be made faster by using keys in data.table on variables in eval(parse(text = subset_exprs))
+          ## ******************************************************
           res.tmp <- self$dat.sVar[, eval(parse(text = subset_exprs)), by = get(self$nodes$ID)][["V1"]]
           assert_that(is.logical(res.tmp))
-          res <- res & res.tmp
-          # ******************************************************
-          # THIS WAS A BOTTLENECK: for 500K w/ 1000 bins: 4-5sec
-          # REPLACING WITH env that is made of data.frames instead of matrices
-          # ******************************************************
-          # eval.env <- c(data.frame(self$dat.sVar), data.frame(self$dat.bin.sVar), as.list(gvars))
-          # res <- try(eval(subset_exprs, envir = eval.env, enclos = baseenv())) # to evaluate vars not found in data in baseenv()
-          # self$dat.sVar[eval(),]
-          # stop("disabled for memory/speed efficiency")
+          return(which(res & res.tmp))
+        } else if (is.integer(subset_exprs)) {
+          ## The expression is already a row index, hence should be returned unchanged
+          return(subset_exprs)
         }
       }
-      return(res)
+      return(which(res))
     },
 
     # ---------------------------------------------------------------------
@@ -481,50 +569,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       invisible(return(self))
     },
 
-    # ## ---------------------------------------------------------------------
-    # # Swap re-saved Anodes and summaries sA with those in main data.table
-    # ## ---------------------------------------------------------------------
-    # swapAnodes = function(Anodes) {
-    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
-    #   # 1) Save the current values of Anodes and sA in the data:
-    #   temp.Anodes <- self$dat.sVar[, Anodes, with = FALSE]
-    #   if (!is.null(private$.sA_g0_DT) && !is.null(self$save_sA_Vars)) {
-    #     temp.sA <- self$dat.sVar[, self$save_sA_Vars, with = FALSE]
-    #   } else {
-    #     temp.sA <- NULL
-    #   }
-    #   # 2) Restore previously saved Anodes / sA into the data:
-    #   self$restoreAnodes()
-    #   # 3) Over-write the back-up values with new ones:
-    #   private$.A_g0_DT <- temp.Anodes
-    #   private$.sA_g0_DT <- temp.sA
-    #   # 4) Reverse the indicator of current data Anodes:
-    #   self$curr_data_A_g0 <- !self$curr_data_A_g0
-    #   invisible(self)
-    # },
-    # replaceOneNode = function(NodeName, newNodeVal) {
-    #   self$set.sVar(NodeName, newNodeVal)
-    #   invisible(self)
-    # },
-    # replaceManyNodes = function(Nodes, newNodesMat) {
-    #   assert_that(is.matrix(newNodesMat))
-    #   assert_that(ncol(newNodesMat) == length(Nodes))
-    #   for (col in Nodes) {
-    #     idx <- which(Nodes %in% col)
-    #     assert_that(col %in% colnames(newNodesMat))
-    #     assert_that(col %in% colnames(self$dat.sVar))
-    #     self$dat.sVar[, (col) := newNodesMat[, idx]]
-    #   }
-    #   invisible(self)
-    # },
-    # # Replace a column or columns in private$Xmat with new values
-    # replaceCols = function(subset_idx, colnames) {
-    #   for (colname in colnames) {
-    #     private$Xmat[, colname]  <- self$get.dat.sVar(subset_idx, colname)
-    #   }
-    #   return(invisible(self))
-    # },
-
     # swap node names in the data.table: current -> target and target -> current
     swapNodes = function(current, target) {
       # if current and target have the same node names, will result in error, so exclude
@@ -535,6 +579,12 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       data.table::setnames(self$dat.sVar, old = current, new = current %+% ".temp.current")
       data.table::setnames(self$dat.sVar, old = target, new = current)
       data.table::setnames(self$dat.sVar, old = current %+% ".temp.current", new = target)
+
+      # if (!is.null(self$H2Oframe)) {
+      #   names(self$H2Oframe)[names(self$H2Oframe) %in% current] <- current %+% ".temp.current"
+      #   names(self$H2Oframe)[names(self$H2Oframe) %in% target] <- current
+      #   names(self$H2Oframe)[names(self$H2Oframe) %in% (current %+% ".temp.current")] <- target
+      # }
     },
 
     eval_rule_followers = function(NodeName, gstar.NodeName) {
@@ -602,20 +652,40 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       return(odata_wide)
     },
 
-    define_CVfolds = function(nfolds = 5, fold_column = "fold_id", seed = 1) {
-      if (fold_column %in% names(self$dat.sVar)) {
-        self$dat.sVar[, (fold_column) := NULL]
+    define_CVfolds = function(nfolds = 5, fold_column = "fold_ID", seed = NULL) {
+
+      ## Means that fold column is already defined in the input data, just copy the information and perform few checks
+      if (missing(nfolds)) {
+        if (missing(fold_column)) stop("fold_column must be specified when nfolds is missing")
+        if (!fold_column %in% names(self$dat.sVar)) stop("fold_column could not be located in the input data")
+        if (!is.integerish(self$dat.sVar[[fold_column]]) && !(is.factor(self$dat.sVar[[fold_column]])))
+          stop("'fold_column must be either an integer or a factor")
+        nfolds <- length(unique(self$dat.sVar[[fold_column]]))
+
+        self$fold_column <- fold_column
+        ## evaluate the number of unique folds:
+        self$nfolds <- nfolds
+        return(invisible(self))
+
+      } else {
+
+        if (fold_column %in% names(self$dat.sVar)) self$dat.sVar[, (fold_column) := NULL]
+        nuniqueIDs <- self$nuniqueIDs
+        if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
+
+
+        fold_IDs <- sprintf("%02d", seq(nfolds))
+        fold_id <- as.factor(sample(rep(fold_IDs, ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
+        # fold_id <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]  # Cross-validation folds (stratified folds not yet supported)
+
+        foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
+        setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
+        setkeyv(foldsDT, cols = self$nodes$IDnode)
+        self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
+        self$fold_column <- fold_column
+        self$nfolds <- nfolds
+        return(invisible(self))
       }
-      nuniqueIDs <- self$nuniqueIDs
-      if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
-      fold_id <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]  # Cross-validation folds (stratified folds not yet supported)
-      foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
-      setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
-      setkeyv(foldsDT, cols = self$nodes$IDnode)
-      self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
-      self$fold_column <- fold_column
-      self$nfolds <- nfolds
-      return(invisible(self))
     },
 
     # -----------------------------------------------------------------------------
@@ -633,55 +703,13 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------
     fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
-      if (missing(dat.sVar)) {
-        dat.sVar <- self$dat.sVar
+      if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
+      H2Oframe <- fast.load.to.H2O(dat.sVar, destination_frame = destination_frame)
+      if (saveH2O) {
+        self$H2Oframe <- H2Oframe
+        self$H2Oframe_ID <- h2o::h2o.getId(H2Oframe)
       }
-      assert_that(is.data.table(dat.sVar))
-
-      devDTvs <- exists("fwrite", where = "package:data.table")
-
-      if (!devDTvs) {
-
-        message(
-"For optimal performance with h2o ML, please install the development version of data.table package.
-It can be done by typing this into R terminal:
-    library(devtools)
-    install_github(\"Rdatatable/data.table\")")
-
-        H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
-
-      } else {
-
-        types <- sapply(dat.sVar, class)
-        types <- gsub("integer64", "numeric", types)
-        types <- gsub("integer", "numeric", types)
-        types <- gsub("double", "numeric", types)
-        types <- gsub("complex", "numeric", types)
-        types <- gsub("logical", "enum", types)
-        types <- gsub("factor", "enum", types)
-        types <- gsub("character", "string", types)
-        types <- gsub("Date", "Time", types)
-
-        # Temp file to write to:
-        tmpf <- tempfile(fileext = ".csv")
-        data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
-        H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
-                                            header = TRUE,
-                                            col.types = types,
-                                            na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
-                                            destination_frame = destination_frame)
-        # replace all irregular characters to conform with destination_frame regular exprs format:
-        # tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
-        # tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
-        # tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
-        # destination_frame = tmpf.dest3)
-        # H2O.dat.sVar <- h2o::h2o.uploadFile(path = tmpf, parse_type = "CSV", destination_frame = "H2O.dat.sVar")
-        file.remove(tmpf)
-
-      }
-      if (saveH2O) self$H2O.dat.sVar <- H2O.dat.sVar
-      return(invisible(H2O.dat.sVar))
-      # return(invisible(self))
+      return(invisible(H2Oframe))
     }
   ),
 
@@ -701,14 +729,14 @@ It can be done by typing this into R terminal:
         private$.mat.sVar <- dat.sVar
       }
     },
-   H2O.dat.sVar = function(dat.sVar) {
-      if (missing(dat.sVar)) {
-        return(private$.H2O.mat.sVar)
-      } else {
-        assert_that(is.H2OFrame(dat.sVar))
-        private$.H2O.mat.sVar <- dat.sVar
-      }
-    },
+   # H2O.dat.sVar = function(dat.sVar) {
+   #    if (missing(dat.sVar)) {
+   #      return(private$.H2O.mat.sVar)
+   #    } else {
+   #      assert_that(is.H2OFrame(dat.sVar))
+   #      private$.H2O.mat.sVar <- dat.sVar
+   #    }
+   #  },
     dat.bin.sVar = function(dat.bin.sVar) {
       if (missing(dat.bin.sVar)) {
         return(private$.mat.bin.sVar)
@@ -760,6 +788,15 @@ It can be done by typing this into R terminal:
         private$.IPwts <- IPwts
       }
     },
+    IPwts_by_regimen_h2o = function(IPwts) {
+      if (missing(IPwts)) {
+        return(private$.IPwts_h2o)
+      } else {
+        # assert_that(is.data.table(IPwts))
+        private$.IPwts_h2o <- IPwts
+      }
+    },
+
     active.bin.sVar = function() { private$.active.bin.sVar },
     ord.sVar = function() { private$.ord.sVar },
     type.sVar = function() { private$.type.sVar }
@@ -770,7 +807,7 @@ It can be done by typing this into R terminal:
     .nodes = list(),              # names of the nodes in the data (Anode, Ynode, etc..)
     .protected.YnodeVals = NULL,  # Actual observed values of the binary outcome (Ynode), along with deterministic vals
     .mat.sVar = NULL,             # pointer to data.table object storing the entire dataset (including all summaries sVars)
-    .H2O.mat.sVar = NULL,         # pointer to H2OFrame object that stores equivalent data to private$.mat.sVar
+    # .H2O.mat.sVar = NULL,         # pointer to H2OFrame object that stores equivalent data to private$.mat.sVar
     .active.bin.sVar = NULL,      # Name of active binarized cont sVar, changes as fit/predict is called (bin indicators are temp. stored in mat.bin.sVar)
     .mat.bin.sVar = NULL,         # Temporary storage mat for bin indicators on currently binarized continous sVar (from private$.active.bin.sVar)
     .ord.sVar = NULL,             # Ordinal (cat) transform for continous sVar
@@ -779,6 +816,7 @@ It can be done by typing this into R terminal:
     .uncensored_idx = NULL,       # logical vector for all observation indices that are not censored at current t
     .rule_followers_idx = NULL,   # logical vector for all observation indices that are following the current rule of interest at current t
     .IPwts = NULL,
+    .IPwts_h2o = NULL,
     # Replace all missing (NA) values with a default integer (0) for matrix
     fixmiss_sVar_mat = function() {
       self$dat.sVar[gvars$misfun(self$dat.sVar)] <- gvars$misXreplace
@@ -821,3 +859,47 @@ It can be done by typing this into R terminal:
     }
   )
 )
+
+    # ## ---------------------------------------------------------------------
+    # # Swap re-saved Anodes and summaries sA with those in main data.table
+    # ## ---------------------------------------------------------------------
+    # swapAnodes = function(Anodes) {
+    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
+    #   # 1) Save the current values of Anodes and sA in the data:
+    #   temp.Anodes <- self$dat.sVar[, Anodes, with = FALSE]
+    #   if (!is.null(private$.sA_g0_DT) && !is.null(self$save_sA_Vars)) {
+    #     temp.sA <- self$dat.sVar[, self$save_sA_Vars, with = FALSE]
+    #   } else {
+    #     temp.sA <- NULL
+    #   }
+    #   # 2) Restore previously saved Anodes / sA into the data:
+    #   self$restoreAnodes()
+    #   # 3) Over-write the back-up values with new ones:
+    #   private$.A_g0_DT <- temp.Anodes
+    #   private$.sA_g0_DT <- temp.sA
+    #   # 4) Reverse the indicator of current data Anodes:
+    #   self$curr_data_A_g0 <- !self$curr_data_A_g0
+    #   invisible(self)
+    # },
+    # replaceOneNode = function(NodeName, newNodeVal) {
+    #   self$set.sVar(NodeName, newNodeVal)
+    #   invisible(self)
+    # },
+    # replaceManyNodes = function(Nodes, newNodesMat) {
+    #   assert_that(is.matrix(newNodesMat))
+    #   assert_that(ncol(newNodesMat) == length(Nodes))
+    #   for (col in Nodes) {
+    #     idx <- which(Nodes %in% col)
+    #     assert_that(col %in% colnames(newNodesMat))
+    #     assert_that(col %in% colnames(self$dat.sVar))
+    #     self$dat.sVar[, (col) := newNodesMat[, idx]]
+    #   }
+    #   invisible(self)
+    # },
+    # # Replace a column or columns in private$Xmat with new values
+    # replaceCols = function(subset_idx, colnames) {
+    #   for (colname in colnames) {
+    #     private$Xmat[, colname]  <- self$get.dat.sVar(subset_idx, colname)
+    #   }
+    #   return(invisible(self))
+    # },
