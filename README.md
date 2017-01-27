@@ -6,7 +6,12 @@ stremr
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg)](https://coveralls.io/github/osofr/stremr)
 
-Streamlined analysis of longitudinal time-to-event or time-to-failure data. Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or [`H2O-3`](https://github.com/h2oai/h2o-3)machine learning libraries.
+Analysis of longitudinal time-to-event or time-to-failure data.
+Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Adjusts for measured time-varying confounding and informative right-censoring. Possible estimators are: bounded IPW, hazard-based IPW (AKME), MSM-IPW, GCOMP, standard LTMLE and iterative LTMLE.
+    
+    Nuisance parameters can be modeled with machine learning algorithms implemented in xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits. The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events).
+    The input data needs to be in long format.
+
 
 Currently implemented **estimators** include:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
