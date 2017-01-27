@@ -6,7 +6,7 @@ stremr
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg)](https://coveralls.io/github/osofr/stremr)
 
-Streamlined analysis of longitudinal time-to-event or time-to-failure data. Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or [`H2O-3`](https://github.com/h2oai/h2o-3)machine learning libraries, including Ensemble Learning ([**SuperLearner**](https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble)).
+Streamlined analysis of longitudinal time-to-event or time-to-failure data. Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Estimators (IPW, GCOMP, TMLE) adjust for *measured* time-varying confounding and informative right-censoring. Model fitting can be performed either with `glm` or [`H2O-3`](https://github.com/h2oai/h2o-3)machine learning libraries.
 
 Currently implemented **estimators** include:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
@@ -35,7 +35,7 @@ Currently implemented **estimators** include:
  -  By default, all models are fit using `GLM` with `binomial` family (logistic regression). 
  -  Alternatively, model fitting can be also performed with any machine learning algorithm implemented in `H2O-3` (faster distributed penalized `GLM`, `Random Forest`, `Gradient Boosting Machines` and `Deep Neural Network`).
  -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (`h2o.grid`) allows for user-friendly model specification and fitting over multi-dimensional parameter space with various stopping criteria (random, discrete, max number of models, max time allocated, etc).
- -  The ensemble of many models can be combined into a single (more powerful) model with **SuperLearner** (`h2oEmsemble`). 
+ -  The ensemble of many models can be combined into a single (more powerful) model with Grid **SuperLearner** (`gridisl`). 
 
 **Overview**:
 * [Installing `stremr` and Documentation](#Installation)
@@ -77,9 +77,10 @@ if (length(new.pkgs)) install.packages(new.pkgs)
 install.packages("h2o", type="source", repos=(c("https://s3.amazonaws.com/h2o-release/h2o/master/3636/R")))
 ```
 
-For ensemble learning with SuperLearner we recommend installing the latest development version of the `h2oEnsemble` R package ([can also see the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r/ensemble#install-development-version)):
+For ensemble learning with SuperLearner we recommend installing the latest development version of the `gridisl` R package
+
 ```R
-devtools::install_github("h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package")
+devtools::install_github('osofr/gridisl', build_vignettes = FALSE)
 ```
 
 Documentation with general overview of the package functions and datasets:
@@ -256,10 +257,10 @@ tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qform
 ```
 
 <a name="SuperLearner"></a>
-###Ensemble Learning with SuperLearner (based on `h2oEnsemble` R package)
+###Ensemble Learning with SuperLearner (based on `gridisl` R package)
 
 ```R
-require('h2oEnsemble')
+require('gridisl')
 ```
 
 
