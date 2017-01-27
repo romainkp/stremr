@@ -7,10 +7,18 @@ stremr
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg)](https://coveralls.io/github/osofr/stremr)
 
 Analysis of longitudinal time-to-event or time-to-failure data.
-Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Adjusts for measured time-varying confounding and informative right-censoring. Possible estimators are: bounded IPW, hazard-based IPW (AKME), MSM-IPW, GCOMP, standard LTMLE and iterative LTMLE.
+Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Adjusts for measured time-varying confounding and informative right-censoring. 
+Currently implemented estimators are: 
+
+    bounded IPW, 
+    adjusted Kaplan-Meier (AKME), 
+    hazard MSM-IPW, 
+    GCOMP, 
+    standard LTMLE and 
+    iterative LTMLE.
+
     
-    Nuisance parameters can be modeled with machine learning algorithms implemented in xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits. The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events).
-    The input data needs to be in long format.
+Nuisance parameters can be modeled with machine learning algorithms implemented in xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits. The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events). The input data needs to be in long format.
 
 
 Currently implemented **estimators** include:
