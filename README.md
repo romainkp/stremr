@@ -18,7 +18,7 @@ Currently implemented estimators are:
     iterative L-TMLE.
 
     
-Nuisance parameters can be modeled with machine learning algorithms implemented in 'xgboost' or 'h2o' (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits. The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events). The input data needs to be in long format.
+Nuisance parameters can be modeled with machine learning algorithms implemented in `xgboost` or `h2o` (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits. The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events). The input data needs to be in long format.
 
 
 Currently implemented **estimators** include:
