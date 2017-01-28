@@ -41,6 +41,7 @@ Imports:
     purrr,
     speedglm,
     stats,
+    tibble,
     tidyr,
     zoo
 LinkingTo: Rcpp
