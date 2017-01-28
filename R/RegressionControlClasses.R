@@ -41,7 +41,8 @@ stratify_by_uncensored <- function(regs) {
     if (length(prev_outvars_to_condition) > 0) {
       strat.C <- paste0(prev_outvars_to_condition %+% " == " %+% gvars$noCENScat, collapse=" & ")
       if (!is.null(curr_exprs)) {
-        reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = stringr::str_c(curr_exprs, " & ", strat.C))
+        reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = paste0(curr_exprs, " & ", strat.C))
+        # reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = stringr::str_c(curr_exprs, " & ", strat.C))
       } else {
         reg.obj <- set_subset_exprs(regs, idx = Var_indx + 1, subset_exprs = strat.C)
       }

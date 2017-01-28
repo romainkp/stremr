@@ -1,6 +1,6 @@
 Package: stremr
 Title: Streamlined Estimation of Survival for Static, Dynamic and Stochastic Treatment and Monitoring Regimes
-Version: 0.5.99
+Version: 0.6.99
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
@@ -29,23 +29,25 @@ Depends:
 Imports:
     assertthat,
     data.table,
+    dplyr,
     ggplot2,
     gridisl,
+    magrittr,
     methods,
     R6,
     Rcpp,
     rmarkdown,
     pander,
+    purrr,
     speedglm,
     stats,
-    stringr,
-    zoo,
-    xgboost
+    tidyr,
+    zoo
 LinkingTo: Rcpp
 Suggests:
-    devtools,
     doParallel,
     foreach,
+    ggiraph,
     h2o,
     knitr,
     magrittr,

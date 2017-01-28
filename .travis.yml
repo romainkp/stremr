@@ -34,21 +34,27 @@ before_install:
 r_binary_packages:
   - assertthat
   - doParallel
+  - data.table
+  - dplyr
   - foreach
+  - ggplot2
+  - ggiraph
+  - magrittr
   - knitr
   - R6
   - Rcpp
+  - rmarkdown
   - RUnit
   - speedglm
-  - stringr
-  - rmarkdown
-  - magrittr
+  - tidyr
   - pander
+  - purrr
+  - xgboost
+  - zoo
 
 r_github_packages:
   - jimhester/covr
-  - Rdatatable/data.table
-  - h2oai/h2o-3/h2o-r/ensemble/h2oEnsemble-package
+  - osofr/gridisl
 
 r_packages:
   - h2o

@@ -2,7 +2,7 @@
 % Please edit documentation in R/helper_routines.R
 \name{get_RDs}
 \alias{get_RDs}
-\title{Produce a long format dataset of risk differences}
+\title{Evaluate a long format dataset of risk differences over estimated survival time-points}
 \usage{
 get_RDs(St_data, St_name, getSEs = TRUE)
 }
@@ -17,6 +17,6 @@ column of subject-specific influence curve (IC) based estimates. The
 column containing these ICs should be named \code{"IC.St"}.}
 }
 \description{
-Produce a long format dataset of risk differences
+Evaluate a long format dataset of risk differences over estimated survival time-points
 }
 

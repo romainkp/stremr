@@ -499,13 +499,15 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   Qreg_idx <- rev(seq_along(Qperiods))
   Qstratas_by_t <- as.list(nodes[['tnode']] %+% " == " %+% (Qperiods))
   names(Qstratas_by_t) <- rep.int("Q.kplus1", length(Qstratas_by_t))
-  # Adding user-specified stratas to each t Q-regression:
+
+  # Adding user-specified stratas to each Q(t) regression:
   all_Q_stratify <- Qstratas_by_t
   if (!is.null(Qstratify)) {
     assert_that(is.vector(Qstratify))
     assert_that(is.character(Qstratify))
     for (idx in seq_along(all_Q_stratify)) {
-      all_Q_stratify[[idx]] <- stringr::str_c(all_Q_stratify[[idx]], " & ", Qstratify)
+      all_Q_stratify[[idx]] <- paste0(all_Q_stratify[[idx]], " & ", Qstratify)
+      # all_Q_stratify[[idx]] <- stringr::str_c(all_Q_stratify[[idx]], " & ", Qstratify)
     }
   }
 
