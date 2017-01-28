@@ -194,7 +194,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
                                                  subset_idx = self$subset_idx,
                                                  # use_best_retrained_model = TRUE,
                                                  holdout = FALSE,
-                                                 force_data.table = TRUE,
                                                  verbose = gvars$verbose)
       } else {
         self$n <- newdata$nobs
@@ -205,7 +204,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
                                                  subset_idx = self$subset_idx,
                                                  # use_best_retrained_model = TRUE,
                                                  holdout = FALSE,
-                                                 force_data.table = TRUE,
                                                  verbose = gvars$verbose)
       }
       return(invisible(self))

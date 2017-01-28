@@ -377,6 +377,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
   attr(resultDT, "estimator_long") <- est_name
   attr(resultDT, "nID") <- OData$nuniqueIDs
   attr(resultDT, "rule_name") <- rule_name
+  attr(resultDT, "stratifyQ_by_rule") <- stratifyQ_by_rule
   attr(resultDT, "trunc_weights") <- trunc_weights
   attr(resultDT, "time") <- resultDT[["time"]]
 

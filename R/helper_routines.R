@@ -1,9 +1,29 @@
 #' @importFrom magrittr %>%
 NULL
 
-
-
+#' Produce a long format dataset of risk differences
+#' @param St_data A list containing \code{data.table} survival estimates for each regimen to be contrasted.
+#' @param St_name The name of the column containing the survival estimates.
+#' @param getSEs Should standard errors of risk difference also be estimates? Note that
+#' the estimates will only be available when the data.table for each regimen contains a
+#' column of subject-specific influence curve (IC) based estimates. The
+#' column containing these ICs should be named \code{"IC.St"}.
+#' @export
 get_RDs <- function(St_data, St_name, getSEs = TRUE) {
+  # lapply(St_data, attributes)
+  # attributes(St_data[[1]])
+  # browser()
+  estimator_short <- attr(St_data[[1]], "estimator_short")
+
+  ## Use default name for the column with survival estimates
+  if (missing(St_name))
+    St_name <- "St." %+% estimator_short
+
+  ## check that the influence curve column exists in all survival datasets
+  ## if not, automatically set getSEs to FALSE
+  if (!all(unlist(purrr::map( St_data, ~ "IC.St" %in% names(.x) ))))
+    getSEs <- FALSE
+
   nIDs <- attr(St_data[[1]], "nID")
   periods_idx <- seq_along(attr(St_data[[1]], "time"))
   if (!all(unlist(lapply(St_data, function(surv) St_name %in% names(surv)))))
@@ -13,12 +33,13 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE) {
   tx_names <- unlist(lapply(St_data, function(one_surv) attr(one_surv, "rule_name")))
   # tx_names <- unlist(lapply(surv, function(one_surv) one_surv[["estimates"]][["rule.name"]][1]))
 
+  ## TO EVALUATE RD (dx1 - dx2) IS THE SAME AS EVALUATING S.t_dx2 - S.t_dx1
   eval_RDs_two_tx <- function(dx1, dx2, time, St_name, ...) {
-    St_data[[dx1]][[St_name]][time] - St_data[[dx2]][[St_name]][time]
+    St_data[[dx2]][[St_name]][time] - St_data[[dx1]][[St_name]][time]
   }
 
   eval_SEs_two_tx <- function(dx1, dx2, time, ...) {
-    sqrt(sum((St_data[[dx1]][["IC.St"]][[time]] - St_data[[dx2]][["IC.St"]][[time]])^2) / nIDs^2)
+    sqrt(sum(( St_data[[dx2]][["IC.St"]][[time]] - St_data[[dx1]][["IC.St"]][[time]] )^2) / nIDs^2)
   }
 
   gs <- list(dx1 = tx_idx,
@@ -37,7 +58,18 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE) {
         dplyr::mutate(dx1_name = purrr::map_chr(dx1, function(dx) tx_names[dx])) %>%
         dplyr::mutate(dx2_name = purrr::map_chr(dx2, function(dx) tx_names[dx]))
 
-  return(gs)
+  gs <- gs %>% dplyr::mutate(estimator = St_name)
+
+  # gs <- gs %>%
+  #   nest(gs, -estimator) %>% select(-estimator)
+
+  # browser()
+
+  attr(gs, "tx") <- tx_names
+  attr(gs, "stratifyQ_by_rule") <- attr(St_data[[1]], "stratifyQ_by_rule")
+  attr(gs, "trunc_weights") <- attr(St_data[[1]], "trunc_weights")
+
+  return(list(gs))
 }
 
 
@@ -231,7 +263,7 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
 #' @seealso \code{\link{survMSM}} for estimation with MSM.
 #' @export
 get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
-  browser()
+  # browser()
   rule_names <- lapply(TMLE_list, "[[", "rule_name")
   names(TMLE_list) <- rule_names
   new_TMLE_list <- list()

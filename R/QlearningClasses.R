@@ -365,7 +365,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                           subset_idx = subset_idx,
                                           # use_best_retrained_model = TRUE,
                                           holdout = FALSE,
-                                          force_data.table = TRUE, # force_data.table = FALSE,
                                           verbose = gvars$verbose)
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
@@ -381,7 +380,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                      subset_idx = subset_idx,
                                      # use_best_retrained_model = TRUE,
                                      holdout = FALSE,
-                                     force_data.table = TRUE, # force_data.table = FALSE,
                                      verbose = gvars$verbose)
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
