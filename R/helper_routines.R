@@ -1,6 +1,12 @@
 #' @importFrom magrittr %>%
 NULL
 
+
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c(".", "dx1", "dx2"))
+}
+
+
 #' Evaluate a long format dataset of risk differences over estimated survival time-points
 #' @param St_data A list containing \code{data.table} survival estimates for each regimen to be contrasted.
 #' @param St_name The name of the column containing the survival estimates.

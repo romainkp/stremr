@@ -51,7 +51,6 @@ Suggests:
     ggiraph,
     h2o,
     knitr,
-    magrittr,
     RUnit,
     xgboost
 Additional_repositories: https://osofr.github.io/drat/

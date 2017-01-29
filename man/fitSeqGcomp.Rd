@@ -35,7 +35,7 @@ Leave the argument unspecified (\code{NULL}) when not intervening on the monitor
 \item{models}{Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
-\item{estimator}{Specify the default estimator to use for fitting the iterative g-computation formula.
+\item{estimator}{Specify the default estimator to use for fitting the iterative g-computation formula.
 Should be a character string in the format 'Package__Algorithm'.
 See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
 This argument is ignored when the fitting procedures are already defined via the argument \code{models}.}
@@ -101,7 +101,7 @@ Note: for large datasets setting this to \code{TRUE} may lead to extremely large
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 
-\item{...}{When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
+\item{...}{When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 modeling functions that are called from this routine,
 e.g., \code{family = "binomial"} can be used to specify the model family.
 Note that all such arguments must be named.}

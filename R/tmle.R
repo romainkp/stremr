@@ -183,7 +183,7 @@ fitTMLE <- function(...) {
 #' The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}
 #' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
 #' requires a previously defined parallel back-end cluster)
-#' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
+#' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
 #' Should be a character string in the format 'Package__Algorithm'.
 #' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
 #' This argument is ignored when the fitting procedures are already defined via the argument \code{models}.
@@ -198,7 +198,7 @@ fitTMLE <- function(...) {
 #' Return the data.table with subject-specific IP weights as part of the output.
 #' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
-#' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
+#' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
 #' e.g., \code{family = "binomial"} can be used to specify the model family.
 #' Note that all such arguments must be named.

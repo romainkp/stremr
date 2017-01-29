@@ -17,7 +17,7 @@ This R6 class Class for defining, fitting and predicting the probability model
  figures out the correct joint probability factorization into univariate conditional
  probabilities based on name ordering provided by (\code{A_nms}, \code{W_nms}).
  When the outcome variable \code{A[j]} is binary, this class will automatically call
- a new instance of \code{\link{BinaryOutcomeModel}} class.
+ a new instance of \code{BinaryOutcomeModel} class.
  Provide \code{self$fit()} function argument \code{data} as a \code{\link{DataStorageClass}} class object.
  This data will be used for fitting the model \code{P(A|W)}.
  Provide \code{self$fit()} function argument \code{newdata} (also as \code{DataStorageClass} class) for predictions of the type

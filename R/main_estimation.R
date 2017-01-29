@@ -1,7 +1,11 @@
 # adding to appease CRAN check with non-standard eval in data.table:
-utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN", "new.TRT.gstar",
-                          "N.risk", "N.follow.rule", "stab.P", "cum.stab.P", "cum.IPAW",
-                          "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME", "ht.NPMSM", "ht.KM", "EIC_i_t0", "EIC_i_tplus"))
+
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN", "new.TRT.gstar",
+                            "N.risk", "N.follow.rule", "stab.P", "cum.stab.P", "cum.IPAW",
+                            "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME",
+                            "St_ht_IPAW", "ht.NPMSM", "ht.KM", "EIC_i_t0", "EIC_i_tplus"))
+}
 
 process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
   if (!is.null(weights)) {
@@ -202,7 +206,7 @@ importData <- function(data,
 #' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with
 #' \code{gridisl} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param estimator Specify the default estimator to use for fitting propensity scores.
+#' @param estimator Specify the default estimator to use for fitting propensity scores.
 #' Should be a character string in the format 'Package__Algorithm'.
 #' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
 #' This argument will only have an effect when some of the propensity score models were not explicitly defined
@@ -226,7 +230,7 @@ importData <- function(data,
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional
-#' arguments will be passed on directly to all \code{GridSL}
+#' arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
 #' e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments
 #' must be named.
@@ -1040,8 +1044,8 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, glm_package, verbose)
                                        trace = FALSE),
                         silent = TRUE)
     if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
-      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", m.fit)
-      ctrl <- glm_control(trace = FALSE)
+      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats::glm.fit; ", m.fit)
+      ctrl <- stats::glm.control(trace = FALSE)
       SuppressGivenWarnings({
         m.fit <- stats::glm.fit(x = Xdesign.mat,
                                 y = as.numeric(wts_data[[Ynode]]),

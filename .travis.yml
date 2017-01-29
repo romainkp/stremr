@@ -54,6 +54,7 @@ r_binary_packages:
 r_github_packages:
   - jimhester/covr
   - osofr/gridisl
+  - schloerke/travisDrat
 
 r_packages:
   - h2o
@@ -67,7 +68,10 @@ env:
    - CRAN: http://cran.rstudio.com
 
 after_success:
+  - Rscript -e "packagedocs::deploy_travis()"
   - Rscript -e 'covr::coveralls()'
+
+# - Rscript -e "travisDrat::deploy_drat()"
 
 on_failure:
   - ./travis-tool.sh dump_logs

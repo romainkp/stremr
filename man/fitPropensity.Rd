@@ -39,7 +39,7 @@ Must be an object of class \code{ModelStack} specified with \code{gridisl::defMo
 \code{gridisl} R package.
 Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
 
-\item{estimator}{Specify the default estimator to use for fitting propensity scores.
+\item{estimator}{Specify the default estimator to use for fitting propensity scores.
 Should be a character string in the format 'Package__Algorithm'.
 See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
 This argument will only have an effect when some of the propensity score models were not explicitly defined
@@ -67,7 +67,7 @@ define such folds or define the folds using your own method.}
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 
 \item{...}{When all or some of the \code{models_...} arguments are NOT specified, these additional
-arguments will be passed on directly to all \code{GridSL}
+arguments will be passed on directly to all \code{GridSL}
 modeling functions that are called from this routine,
 e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments
 must be named.}

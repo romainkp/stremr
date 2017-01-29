@@ -10,7 +10,8 @@ ggRD(RDests, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
   size_ci = size_est, size_pt = size_est + 0.3, cens_size = 2,
   cens_shape = 3, back_white = TRUE, xlab = "Time",
   ylab = "Risk Difference", main = "", legend_pos = "right",
-  order_legend = TRUE, t_int_sel = NULL, ymin = NULL, ...)
+  RD_name = "RD", SE_name = "RD.SE", order_legend = TRUE,
+  t_int_sel = NULL, ymin = NULL, ...)
 }
 \arguments{
 \item{RDests}{A table in long format with a single column containing names of two contrasting regimens.
@@ -64,6 +65,10 @@ grey of \code{ggplot2}, but will be white with borders around the plot. Defaults
 the character word denoting the legend orientation with respect to the plot
 (e.g., "bottom", "right" or "left").}
 
+\item{RD_name}{The name of the column containing the risk differences.}
+
+\item{SE_name}{The name of the column containing the standard errors (SE) for each risk difference.}
+
 \item{order_legend}{Set to \code{TRUE} to order the legend display by final
 survival time (highest first).}
 
@@ -73,10 +78,6 @@ survival time (highest first).}
 to automatically adjust the limits of the y-axis.}
 
 \item{...}{Additional arguments (not used).}
-
-\item{surv_name}{The name of the column containing the survival RDests.}
-
-\item{SE_name}{The name of the column containing the standard errors (SE) for each time-point estimate of survival.}
 }
 \value{
 An object of class \code{ggplot}

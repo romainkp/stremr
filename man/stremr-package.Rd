@@ -21,10 +21,7 @@ such as, treatment-specific survival curves and the average risk difference over
 
 \section{Routines}{
 
-The following routines will be generally invoked by a user, in the same order as presented below.
-\describe{
-\item{\code{\link{stremr}}}{One function for performing estimation}
-}
+...
 }
 
 \section{Data structures}{

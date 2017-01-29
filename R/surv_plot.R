@@ -1,8 +1,23 @@
 
+#' Plot survival estimates using base R graphics
+#' @param surv_list A list with survival estimates, one per regimen.
+#' @param t The vector of time values for plotting.
+#' @param t_int_sel Optional vector of indices that subsets \code{t}.
+#' If omitted the survival for all t values will be plotted.
+#' @param y_lab y-axis title.
+#' @param x_lab x-axis title.
+#' @param miny Minimum y value to plot
+#' @param x_legend y-coordinate for legend location.
+#' @param y_legend x-coordinate for legend location.
+#' @param cex Same as R plot function.
+#' @param ... Additional arguments to be passed on to base R plot function.
 #' @export
+#'
 f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend, y_legend, cex = 0.7, ...) {
   # ptsize <- 0.7
   # ptsize <- 0.4
+  warning("Deprecated: f_plot_survest is now considered deprecated and will be removed from stremr in the forthcoming releases.
+Consider using ggsurv and ggRD functions instead.")
   counter <- 0
   if (missing(y_lab)) y_lab <- ""
   if (missing(x_lab)) x_lab <- "Follow-up period since study entry"

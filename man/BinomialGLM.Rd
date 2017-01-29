@@ -27,7 +27,7 @@ This R6 class can request, store and manage the design matrix Xmat, as well as t
 \section{Methods}{
 
 \describe{
-  \item{\code{new(reg)}}{Uses \code{reg} R6 \code{\link{RegressionClass}} object to instantiate a new storage container for a
+  \item{\code{new(reg)}}{Uses \code{reg} R6 \code{RegressionClass} object to instantiate a new storage container for a
   design matrix and binary outcome.}
   \item{\code{setdata()}}{...}
 }

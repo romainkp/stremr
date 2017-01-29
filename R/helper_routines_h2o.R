@@ -27,9 +27,9 @@ reassign_rows_cols <- function(data, newsubset_idx, subset_frame, col_name = "Q.
   # set the colum in subset frame:
   copy_rows_to_set[, "Q.kplus1"] <- subset_frame
   # add the subset frame back into the frame with rbind
-  data$H2Oframe <- h2o.rbind(data$H2Oframe, copy_rows_to_set)
+  data$H2Oframe <- h2o::h2o.rbind(data$H2Oframe, copy_rows_to_set)
   # sort by t:
-  data$H2Oframe <- h2o.arrange(data$H2Oframe, ID, t)
+  data$H2Oframe <- h2o::h2o.arrange(data$H2Oframe, ID, t)
   return(invisible(NULL))
 }
 
@@ -59,11 +59,11 @@ tmle.update.h2o <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_boun
     off_TMLE <- h2o.qlogis(init_Q_fitted_only)
 
     # Create a column (h2o frame) with consant vector of 1
-    # fit_h2oframe <- h2o.rep_len(1L, nrow(prev_Q.kplus1))
-    # fit_h2oframe <- h2o.cbind(fit_h2oframe, prev_Q.kplus1, off_TMLE, IPWts)
+    # fit_h2oframe <- h2o::h2o.rep_len(1L, nrow(prev_Q.kplus1))
+    # fit_h2oframe <- h2o::h2o.cbind(fit_h2oframe, prev_Q.kplus1, off_TMLE, IPWts)
     # names(fit_h2oframe) <- c("Intercept", "y", "offset_column", "weights_column")
 
-    fit_h2oframe <- h2o.cbind(prev_Q.kplus1, off_TMLE, IPWts)
+    fit_h2oframe <- h2o::h2o.cbind(prev_Q.kplus1, off_TMLE, IPWts)
     # fit_h2oframe <- cbind(prev_Q.kplus1, off_TMLE, IPWts)
     names(fit_h2oframe) <- c("y", "offset_column", "weights_column")
     # x = "Intercept",

@@ -51,14 +51,14 @@ OdataDT <- defineIntervedTRT(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "h
                             CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1",
                             new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
 
-# Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
-IPW_KM_res <- stremr(OdataDT, intervened_TRT = "dhigh", intervened_MONITOR = "gstar.N",
-              ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
-              CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-              TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
-              MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")
+# # Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
+# IPW_KM_res <- stremr(OdataDT, intervened_TRT = "dhigh", intervened_MONITOR = "gstar.N",
+#               ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
+#               CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+#               TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
+#               MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")
 
-# Survival estimates by time:
-IPW_KM_res$estimates
-# Input data:
-IPW_KM_res$dataDT
+# # Survival estimates by time:
+# IPW_KM_res$estimates
+# # Input data:
+# IPW_KM_res$dataDT

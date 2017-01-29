@@ -14,7 +14,7 @@ This R6 class defines and fits a conditional probability model \code{P(A[j]|W,..
  Defines the fitting algorithm for a regression model \code{A[j] ~ W + ...}.
  Reconstructs the likelihood \code{P(A[j]=a[j]|W,...)} afterwards.
  Continuous \code{A[j]} is discretized using either of the 3 interval cutoff methods,
- defined via \code{\link{RegressionClass}} object \code{reg} passed to this class constructor.
+ defined via \code{RegressionClass} object \code{reg} passed to this class constructor.
  The fitting algorithm estimates the binary regressions for hazard \code{Bin_A[j][i] ~ W},
  i.e., the probability that continuous \code{A[j]} falls into bin \code{i}, \code{Bin_A[j]_i},
  given that \code{A[j]} does not belong to any prior bins \code{Bin_A[j]_1, ..., Bin_A[j]_{i-1}}.

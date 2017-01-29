@@ -13,10 +13,7 @@
 #' }
 #'
 #' @section Routines:
-#' The following routines will be generally invoked by a user, in the same order as presented below.
-#' \describe{
-#' \item{\code{\link{stremr}}}{One function for performing estimation}
-#' }
+#' ...
 #'
 #' @section Data structures:
 #' The following most common types of output are produced by the package:

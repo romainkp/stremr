@@ -7,7 +7,9 @@
 ## -----------------------------------------------------------------------------
 
 if(getRversion() >= "2.15.1") {
-  utils::globalVariables(c("cens", "surv", "up", "low"))
+  utils::globalVariables(c("cens", "surv", "up", "low", "time", "group",
+                           "dx1", "dx2", "dx1_name", "dx2_name", "RD",
+                           "RD.SE", "time", "contrast"))
 }
 
 #' Survival curves with ggplot2
@@ -210,8 +212,8 @@ ggsurv <- function(
 #' (e.g., (0.9, 0.2)) or
 #' the character word denoting the legend orientation with respect to the plot
 #' (e.g., "bottom", "right" or "left").
-#' @param surv_name The name of the column containing the survival RDests.
-#' @param SE_name The name of the column containing the standard errors (SE) for each time-point estimate of survival.
+#' @param RD_name The name of the column containing the risk differences.
+#' @param SE_name The name of the column containing the standard errors (SE) for each risk difference.
 #' @param order_legend Set to \code{TRUE} to order the legend display by final
 #' survival time (highest first).
 #' @param t_int_sel The subset of time-point indices for which survival should be plotted.
@@ -240,6 +242,8 @@ ggRD <- function(
   ylab       = 'Risk Difference',
   main       = '',
   legend_pos = "right",
+  RD_name = "RD",
+  SE_name = "RD.SE",
   order_legend = TRUE,
   t_int_sel = NULL,
   ymin = NULL,
@@ -247,11 +251,12 @@ ggRD <- function(
 ){
 
   if (!"RD.SE" %in% names(RDests)) {
-    RDests <- RDests %>% mutate(RD.SE = NA)
+    RDests <- RDests %>% dplyr::mutate(RD.SE = NA)
   }
 
   dat <-    RDests %>%
-            filter(dx1 < dx2) %>%
+            dplyr::rename_(RD = RD_name, RD.SE = SE_name) %>%
+            dplyr::filter(dx1 < dx2) %>%
             tidyr::unite("contrast", dx1_name, dx2_name) %>%
             dplyr::mutate(up = RD + 1.96*RD.SE) %>%
             dplyr::mutate(low = RD - 1.96*RD.SE)
