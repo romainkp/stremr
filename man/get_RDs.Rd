@@ -2,21 +2,45 @@
 % Please edit documentation in R/helper_routines.R
 \name{get_RDs}
 \alias{get_RDs}
-\title{Evaluate a long format dataset of risk differences over estimated survival time-points}
+\title{Evaluate the long format dataset of risk differences over estimated survival time-points}
 \usage{
-get_RDs(St_data, St_name, getSEs = TRUE)
+get_RDs(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
 }
 \arguments{
-\item{St_data}{A list containing \code{data.table} survival estimates for each regimen to be contrasted.}
+\item{St_data}{A list containing \code{data.table} survival estimates for
+each regimen to be contrasted.}
 
 \item{St_name}{The name of the column containing the survival estimates.}
 
-\item{getSEs}{Should standard errors of risk difference also be estimates? Note that
-the estimates will only be available when the data.table for each regimen contains a
-column of subject-specific influence curve (IC) based estimates. The
-column containing these ICs should be named \code{"IC.St"}.}
+\item{getSEs}{Should standard errors of risk difference also be estimates?
+Note that the estimates will only be available when the data.table for
+each regimen contains a column of subject-specific influence curve (IC)
+based estimates. The column containing these ICs should be named \code{"IC.St"}.}
+
+\item{order}{In which order should the RD contrasts be evaluated?
+For example, suppose the input data contains
+the survival estimates for 3 regimens, where \code{dx1}, \code{dx2}, \code{dx3}
+denote these three regimens and \code{S_1(t)}, \code{S_2(t)}, \code{S_3(t)}
+denote the corresponding  survival estimates at time-point \code{t}.
+By default, the following three contrasts will be evaluated in this order:
+RD(dx1,dx2) = \code{S_2(t)-S_1(t)}, RD(dx1,dx3)=\code{S_3(t)-S_1(t)} and
+RD(dx2,dx3)=\code{S_3(t)-S_2(t)}.
+However, the argument \code{order} can be used to change which of the possible
+three contrasts are evaluated.
+For example, when setting \code{order=c(3,2,1)}, the following 3 RDs are evaluated instead:
+RD(dx3,dx2), RD(dx3,dx1) and RD(dx2,dx1).}
+}
+\value{
+A long format dataset (\code{tibble}) with risk differences.
 }
 \description{
-Evaluate a long format dataset of risk differences over estimated survival time-points
+The risk difference (RD) of regimens 1 (dx1) and 2 (dx2) at time-point \code{t} is
+calculated as \code{S_2(t) - S_1(t)},
+where \code{S_2(t)} and \code{S_1(t)} are the corresponding survival estimates
+at \code{t} for regimens 2 and 1, respectively.
+The RDs are evaluated for all intersecting time-points in the input data
+\code{St_data}. When the input data contains survival estimates for more
+than 2 regimens the RDs between all regimens are evaluated in their order
+of appearance. This order can be controlled with the argument \code{order}.
 }
 

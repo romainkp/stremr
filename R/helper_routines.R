@@ -7,15 +7,39 @@ if(getRversion() >= "2.15.1") {
 }
 
 
-#' Evaluate a long format dataset of risk differences over estimated survival time-points
-#' @param St_data A list containing \code{data.table} survival estimates for each regimen to be contrasted.
+#' Evaluate the long format dataset of risk differences over estimated survival time-points
+#'
+#' The risk difference (RD) of regimens 1 (dx1) and 2 (dx2) at time-point \code{t} is
+#' calculated as \code{S_2(t) - S_1(t)},
+#' where \code{S_2(t)} and \code{S_1(t)} are the corresponding survival estimates
+#' at \code{t} for regimens 2 and 1, respectively.
+#' The RDs are evaluated for all intersecting time-points in the input data
+#' \code{St_data}. When the input data contains survival estimates for more
+#' than 2 regimens the RDs between all regimens are evaluated in their order
+#' of appearance. This order can be controlled with the argument \code{order}.
+#' @param St_data A list containing \code{data.table} survival estimates for
+#' each regimen to be contrasted.
 #' @param St_name The name of the column containing the survival estimates.
-#' @param getSEs Should standard errors of risk difference also be estimates? Note that
-#' the estimates will only be available when the data.table for each regimen contains a
-#' column of subject-specific influence curve (IC) based estimates. The
-#' column containing these ICs should be named \code{"IC.St"}.
+#' @param getSEs Should standard errors of risk difference also be estimates?
+#' Note that the estimates will only be available when the data.table for
+#' each regimen contains a column of subject-specific influence curve (IC)
+#' based estimates. The column containing these ICs should be named \code{"IC.St"}.
+#' @param order In which order should the RD contrasts be evaluated?
+#' For example, suppose the input data contains
+#' the survival estimates for 3 regimens, where \code{dx1}, \code{dx2}, \code{dx3}
+#' denote these three regimens and \code{S_1(t)}, \code{S_2(t)}, \code{S_3(t)}
+#' denote the corresponding  survival estimates at time-point \code{t}.
+#' By default, the following three contrasts will be evaluated in this order:
+#' RD(dx1,dx2) = \code{S_2(t)-S_1(t)}, RD(dx1,dx3)=\code{S_3(t)-S_1(t)} and
+#' RD(dx2,dx3)=\code{S_3(t)-S_2(t)}.
+#' However, the argument \code{order} can be used to change which of the possible
+#' three contrasts are evaluated.
+#' For example, when setting \code{order=c(3,2,1)}, the following 3 RDs are evaluated instead:
+#' RD(dx3,dx2), RD(dx3,dx1) and RD(dx2,dx1).
+#' @return A long format dataset (\code{tibble}) with risk differences.
 #' @export
-get_RDs <- function(St_data, St_name, getSEs = TRUE) {
+get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data)) {
+  ## apply identical to any number of vectors (> 2):
   ident <- function(...){
     args <- c(...)
     if( length( args ) > 2L ){
@@ -40,19 +64,28 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE) {
 
   nIDs <- attr(St_data[[1]], "nID")
 
-  time_bydx <- lapply(St_data, function(St) attr(St, "time"))
-  if (!ident(time_bydx)) stop("Some of the survival estimate tables have unequal 'time' values.
-  Evaluating risk differences is only possible when all 'time' values match exactly across all survival constrasts.")
+  ## Grab all available follow-up time-points by regimen:
+  time_bydx_obs <- lapply(St_data, function(St) attr(St, "time"))
 
-  time <- attr(St_data[[1]], "time")
-  time_idx <- seq_along(attr(St_data[[1]], "time"))
+  ## Find the intersection of follow-up time-points across all regimens
+  ## Will evaluate all RDs only at these intersected f-up time-points
+  time <- Reduce(intersect, time_bydx_obs)
+  time_idx <- seq_along(time)
+
+  ## NO LONGER USED:
+    # ## minimum across all regimen/tx-specific maximum follow-up time-points
+    # min_max_t_val <- min(unlist(lapply(time_bydx_obs, max)))
+    # ## Subset the data selecting only the min-max of all follow-up time-points
+    # St_data_use <- lapply(St_data, function(St) St[St[["time"]]<=min_max_t_val, ])
+    # time_bydx_obs <- lapply(St_data_use, function(St) St[["time"]])
+    # if (!ident(time_bydx_obs)) stop("Some of the survival estimate tables have unequal 'time' values.
+    # Evaluating risk differences is only possible when all 'time' values match exactly across all survival constrasts.")
 
   if (!all(unlist(lapply(St_data, function(surv) St_name %in% names(surv)))))
     stop("name of the survival estimates column cannot be found in one of the input datasets: " %+% St_name)
 
   tx_idx <- seq_along(St_data)
-  tx_names <- unlist(lapply(St_data, function(one_surv) attr(one_surv, "rule_name")))
-  # tx_names <- unlist(lapply(surv, function(one_surv) one_surv[["estimates"]][["rule.name"]][1]))
+  tx_names <- unlist(lapply(St_data, function(St) attr(St, "rule_name")))
 
   ## TO EVALUATE RD (dx1 - dx2) IS THE SAME AS EVALUATING S.t_dx2 - S.t_dx1
   eval_RDs_two_tx <- function(dx1, dx2, time_idx, St_name, ...) {
@@ -67,20 +100,30 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE) {
              dx2 = tx_idx,
              time_idx = time_idx) %>%
         purrr::cross_d() %>%
-        mutate(time = map_int(time_idx, ~ time[.x]))
+        dplyr::mutate(rank1 = order[dx1]) %>%
+        dplyr::mutate(rank2 = order[dx2]) %>%
+        dplyr::filter(rank1 < rank2) %>%
+        dplyr::arrange(rank1, rank2) %>%
+        dplyr::select(-rank1, -rank2) %>%
+        dplyr::mutate(time = time[time_idx])
 
   gs <- gs %>%
-        dplyr::mutate(RD = purrr::pmap_dbl(., eval_RDs_two_tx, St_name))
+        dplyr::mutate(RD = purrr::pmap_dbl(., eval_RDs_two_tx, St_name)) %>%
+        dplyr::mutate(RD.SE = NA_real_)
 
   if (getSEs)
     gs <- gs %>%
           dplyr::mutate(RD.SE = purrr::pmap_dbl(., eval_SEs_two_tx))
 
-  gs <- gs %>%
-        dplyr::mutate(dx1_name = purrr::map_chr(dx1, function(dx) tx_names[dx])) %>%
-        dplyr::mutate(dx2_name = purrr::map_chr(dx2, function(dx) tx_names[dx]))
+    gs <- gs %>%
+          dplyr::mutate(up = RD + 1.96*RD.SE) %>%
+          dplyr::mutate(low = RD - 1.96*RD.SE)
 
-  gs <- gs %>% dplyr::mutate(estimator = St_name)
+  gs <- gs %>%
+        dplyr::mutate(dx1_name = purrr::map_chr(dx1, ~ tx_names[.x])) %>%
+        dplyr::mutate(dx2_name = purrr::map_chr(dx2, ~ tx_names[.x])) %>%
+        tidyr::unite("contrast", dx1_name, dx2_name, remove = FALSE) %>%
+        dplyr::mutate(estimator = St_name)
 
   attr(gs, "tx") <- tx_names
   attr(gs, "stratifyQ_by_rule") <- attr(St_data[[1]], "stratifyQ_by_rule")
@@ -222,7 +265,6 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
 #' @seealso \code{\link{survMSM}} for estimation with MSM.
 #' @export
 get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
-  # browser()
   rule_names <- lapply(TMLE_list, "[[", "rule_name")
   names(TMLE_list) <- rule_names
   new_TMLE_list <- list()

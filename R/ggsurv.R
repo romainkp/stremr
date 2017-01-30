@@ -264,12 +264,12 @@ ggRD <- function(
     RDests <- RDests %>% dplyr::mutate(RD.SE = NA)
   }
 
-  dat <-    RDests %>%
-            dplyr::rename_(RD = RD_name, RD.SE = SE_name) %>%
-            dplyr::filter(dx1 < dx2) %>%
-            tidyr::unite("contrast", dx1_name, dx2_name) %>%
-            dplyr::mutate(up = RD + 1.96*RD.SE) %>%
-            dplyr::mutate(low = RD - 1.96*RD.SE)
+  dat <-  RDests %>%
+          dplyr::rename_(RD = RD_name, RD.SE = SE_name)
+          # dplyr::filter(dx1 < dx2) %>%
+          # tidyr::unite("contrast", dx1_name, dx2_name) %>%
+          # dplyr::mutate(up = RD + 1.96*RD.SE) %>%
+          # dplyr::mutate(low = RD - 1.96*RD.SE)
 
   if (!is.null(t_int_sel))
     dat <- dat %>% dplyr::filter(time_idx %in% t_int_sel)
