@@ -16,6 +16,17 @@ if(getRversion() >= "2.15.1") {
 #' column containing these ICs should be named \code{"IC.St"}.
 #' @export
 get_RDs <- function(St_data, St_name, getSEs = TRUE) {
+  ident <- function(...){
+    args <- c(...)
+    if( length( args ) > 2L ){
+       #  recursively call ident()
+       out <- c( identical( args[1] , args[2] ) , ident(args[-1]))
+    }else{
+        out <- identical( args[1] , args[2] )
+    }
+    return( all( out ) )
+  }
+
   estimator_short <- attr(St_data[[1]], "estimator_short")
 
   ## Use default name for the column with survival estimates
@@ -28,7 +39,14 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE) {
     getSEs <- FALSE
 
   nIDs <- attr(St_data[[1]], "nID")
-  periods_idx <- seq_along(attr(St_data[[1]], "time"))
+
+  time_bydx <- lapply(St_data, function(St) attr(St, "time"))
+  if (!ident(time_bydx)) stop("Some of the survival estimate tables have unequal 'time' values.
+  Evaluating risk differences is only possible when all 'time' values match exactly across all survival constrasts.")
+
+  time <- attr(St_data[[1]], "time")
+  time_idx <- seq_along(attr(St_data[[1]], "time"))
+
   if (!all(unlist(lapply(St_data, function(surv) St_name %in% names(surv)))))
     stop("name of the survival estimates column cannot be found in one of the input datasets: " %+% St_name)
 
@@ -37,18 +55,19 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE) {
   # tx_names <- unlist(lapply(surv, function(one_surv) one_surv[["estimates"]][["rule.name"]][1]))
 
   ## TO EVALUATE RD (dx1 - dx2) IS THE SAME AS EVALUATING S.t_dx2 - S.t_dx1
-  eval_RDs_two_tx <- function(dx1, dx2, time, St_name, ...) {
-    St_data[[dx2]][[St_name]][time] - St_data[[dx1]][[St_name]][time]
+  eval_RDs_two_tx <- function(dx1, dx2, time_idx, St_name, ...) {
+    St_data[[dx2]][[St_name]][time_idx] - St_data[[dx1]][[St_name]][time_idx]
   }
 
-  eval_SEs_two_tx <- function(dx1, dx2, time, ...) {
-    sqrt(sum(( St_data[[dx2]][["IC.St"]][[time]] - St_data[[dx1]][["IC.St"]][[time]] )^2) / nIDs^2)
+  eval_SEs_two_tx <- function(dx1, dx2, time_idx, ...) {
+    sqrt(sum(( St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] )^2) / nIDs^2)
   }
 
   gs <- list(dx1 = tx_idx,
              dx2 = tx_idx,
-             time = periods_idx) %>%
-        purrr::cross_d()
+             time_idx = time_idx) %>%
+        purrr::cross_d() %>%
+        mutate(time = map_int(time_idx, ~ time[.x]))
 
   gs <- gs %>%
         dplyr::mutate(RD = purrr::pmap_dbl(., eval_RDs_two_tx, St_name))

@@ -271,6 +271,9 @@ ggRD <- function(
             dplyr::mutate(up = RD + 1.96*RD.SE) %>%
             dplyr::mutate(low = RD - 1.96*RD.SE)
 
+  if (!is.null(t_int_sel))
+    dat <- dat %>% dplyr::filter(time_idx %in% t_int_sel)
+
   n.grps <- length(unique(dat[["contrast"]]))
   gr.name <- "contrast"
 

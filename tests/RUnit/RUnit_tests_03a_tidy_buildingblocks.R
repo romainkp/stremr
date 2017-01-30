@@ -252,8 +252,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## PLOTTING RDs
   ## ------------------------------------------------------------
   ests <- "TMLE"
-  RDplot <-   fin_results[["RDs"]][[1]][[estimator]][[1]] %>%
-              ggRD %>%
+  RDplot <-   fin_results[["RDs"]][[1]][[ests]][[1]] %>%
+              ggRD(t_int_sel = 1:5) %>%
               print
 
   ## across all scenarios for two estimators
