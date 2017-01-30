@@ -87,6 +87,16 @@ ggsurv <- function(
   ymin = NULL,
   ...
 ){
+
+  if ("data.frame" %in% class(estimates)) {
+    estimates <- estimates[[1]]
+    shape_est <- seq_along(estimates)
+    surv_name <- "St." %+% attr(estimates[[1]], "estimator_short")
+    SE_name <- "SE." %+% attr(estimates[[1]], "estimator_short")
+  }
+  # if ("data.frame" %in% class(estimates)) estimates <- data.table::rbindlist(estimates[[1]])
+
+
   n.grps <- length(estimates)
   gr.name <- "regime"
   gr.df <- vector('list', n.grps)

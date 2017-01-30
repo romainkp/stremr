@@ -1,14 +1,3 @@
-h2o.arrange <- function (x, ...)  {
-    by = as.character(list(...))
-    print(by)
-    if (!length(by))
-        stop("Please provide at least one column to sort by")
-    by = h2o:::checkMatch(by, names(x))
-    if (anyDuplicated(by))
-        stop("Some duplicate column names have been provided")
-    h2o:::.newExpr("sort", x, by - 1L)
-}
-
 # helper function for h2o frames
 h2o.plogis <- function(x) {
   h2o_exp_x <- h2o::h2o.exp(x)
