@@ -90,9 +90,9 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                           fold_column = "fold_ID")
 
   tvals <- 0:8
-  tmax <- 10
+  tmax <- 13
   # tbreaks = c(1:8,12,16)-1
-  tbreaks = c(1:8,11)-1
+  tbreaks = c(1:8,11,14)-1
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
 
   ## ------------------------------------------------------------
@@ -117,6 +117,9 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
           group_by(intervened_TRT) %>%
           mutate(wts_data = map(first(intervened_TRT), getIPWeights, OData = OData, tmax = tmax)) %>%
+          mutate(wts_tabs = map(wts_data,
+              ~ get_wtsummary(.x, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE))) %>%
+          ungroup() %>%
 
           ## IPW-Adjusted KM (Non-Parametric or Saturated MSM):
           mutate(NPMSM = map2(wts_data, trunc_weight,
@@ -188,7 +191,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ------------------------------------------------------------
   results <- results %>%
               select(-wts_data) %>%
-              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
+              nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates") # GCOMP, TMLE,
+              # nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
 
   ## ------------------------------------------------------------
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator)

@@ -231,6 +231,7 @@ ggsurv <- function(
 #' to automatically adjust the limits of the y-axis.
 #' @param ymax The maximum value of the y axis. The default (\code{ymax=NULL}) is to use \code{ggplot}
 #' to automatically adjust the limits of the y-axis.
+#' @param facet Set to \code{TRUE} to create a facet of plots by first / last tx name
 #' @param ... Additional arguments (not used).
 #' @return An object of class \code{ggplot}
 #' @author Original R code by Edwin Thoen \email{edwinthoen@@gmail.com}, modified by Oleg Sofrygin \email{oleg.sofrygin@@gmail.com}
@@ -260,6 +261,7 @@ ggRD <- function(
   t_int_sel = NULL,
   ymin = NULL,
   ymax = NULL,
+  facet = FALSE,
   ...
 ){
 
@@ -341,10 +343,10 @@ ggRD <- function(
   pl <- pl + ggplot2::theme(legend.position = legend_pos)
   if (!is.null(ymin) && !is.null(ymax)) pl <- pl + ggplot2::coord_cartesian(ylim = c(ymin, ymax))
 
-  # browser()
   # str(pl) <-
-  # pl <- pl + ggplot2::facet_wrap(~ dx1_name)
-  # pl <- pl + ggplot2::facet_wrap(~ dx2_name)
+  # pl <- pl + ggplot2::facet_wrap(~ dx2_name + dx1_name)
+  if (facet)
+    pl <- pl + ggplot2::facet_wrap(c("dx2_name", "dx1_name"))
 
   return(pl)
 }

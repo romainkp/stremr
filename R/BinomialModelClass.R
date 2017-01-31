@@ -42,7 +42,6 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   if (inherits(model.fit, "try-error")) {
     message("running " %+% paste0(model_contrl$fit.package, model_contrl$fit.algorithm, collapse=",") %+% " has failed, trying to run speedglm as a backup...")
     method <- "none"
-    # browser()
     # model_contrl[["fit.package"]] <- "speedglm"
     # model_contrl[["fit.algorithm"]] <- "glm"
 

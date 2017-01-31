@@ -40,16 +40,16 @@ if(getRversion() >= "2.15.1") {
 #' @export
 get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data)) {
   ## apply identical to any number of vectors (> 2):
-  ident <- function(...){
-    args <- c(...)
-    if( length( args ) > 2L ){
-       #  recursively call ident()
-       out <- c( identical( args[1] , args[2] ) , ident(args[-1]))
-    }else{
-        out <- identical( args[1] , args[2] )
-    }
-    return( all( out ) )
-  }
+  # ident <- function(...){
+  #   args <- c(...)
+  #   if( length( args ) > 2L ){
+  #      #  recursively call ident()
+  #      out <- c( identical( args[1] , args[2] ) , ident(args[-1]))
+  #   }else{
+  #       out <- identical( args[1] , args[2] )
+  #   }
+  #   return( all( out ) )
+  # }
 
   estimator_short <- attr(St_data[[1]], "estimator_short")
 

@@ -11,7 +11,7 @@ ggRD(RDests, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
   cens_shape = 3, back_white = TRUE, xlab = "Time",
   ylab = "Risk Difference", main = "", legend_pos = "right",
   RD_name = "RD", SE_name = "RD.SE", order_legend = TRUE,
-  t_int_sel = NULL, ymin = NULL, ymax = NULL, ...)
+  t_int_sel = NULL, ymin = NULL, ymax = NULL, facet = FALSE, ...)
 }
 \arguments{
 \item{RDests}{A table in long format with a single column containing names of two contrasting regimens.
@@ -79,6 +79,8 @@ to automatically adjust the limits of the y-axis.}
 
 \item{ymax}{The maximum value of the y axis. The default (\code{ymax=NULL}) is to use \code{ggplot}
 to automatically adjust the limits of the y-axis.}
+
+\item{facet}{Set to \code{TRUE} to create a facet of plots by first / last tx name}
 
 \item{...}{Additional arguments (not used).}
 }
