@@ -11,7 +11,7 @@ ggRD(RDests, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
   cens_shape = 3, back_white = TRUE, xlab = "Time",
   ylab = "Risk Difference", main = "", legend_pos = "right",
   RD_name = "RD", SE_name = "RD.SE", order_legend = TRUE,
-  t_int_sel = NULL, ymin = NULL, ...)
+  t_int_sel = NULL, ymin = NULL, ymax = NULL, ...)
 }
 \arguments{
 \item{RDests}{A table in long format with a single column containing names of two contrasting regimens.
@@ -75,6 +75,9 @@ survival time (highest first).}
 \item{t_int_sel}{The subset of time-point indices for which survival should be plotted.}
 
 \item{ymin}{The minimum value of the y axis. The default (\code{ymin=NULL}) is to use \code{ggplot}
+to automatically adjust the limits of the y-axis.}
+
+\item{ymax}{The maximum value of the y axis. The default (\code{ymax=NULL}) is to use \code{ggplot}
 to automatically adjust the limits of the y-axis.}
 
 \item{...}{Additional arguments (not used).}

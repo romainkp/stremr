@@ -196,7 +196,7 @@ test.h2oEnsemble <- function() {
         #               learn_rate = 0.05, sample_rate = 0.8,
         #               col_sample_rate = 0.8, balance_classes = TRUE)
         Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-        tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+        tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
         tmle_est$estimates[]
 
         h2o::h2o.shutdown(prompt = FALSE)

@@ -4,7 +4,7 @@
 \alias{fitSeqGcomp}
 \title{Fit sequential GCOMP and TMLE for survival}
 \usage{
-fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
+fitSeqGcomp(OData, tvals, Qforms, intervened_TRT = NULL,
   intervened_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
   intervened_MONITOR), collapse = ""), models = NULL,
   estimator = stremrOptions("estimator"),
@@ -20,7 +20,7 @@ fitSeqGcomp(OData, t_periods, Qforms, intervened_TRT = NULL,
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
 
-\item{t_periods}{Specify the vector of time-points for which the survival function (and risk) should be estimated}
+\item{tvals}{Specify the vector of time-points for which the survival function (and risk) should be estimated}
 
 \item{Qforms}{Regression formulas, one formula per Q. Only main-terms are allowed.}
 
@@ -179,7 +179,7 @@ IPW.St.1[]
 # ----------------------------------------------------------------------
 wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "TI.set1", rule_name = "TI1")
 wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "TI.set0", rule_name = "TI0")
-survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, t_breaks = c(1:8,12,16)-1,)
+survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1,)
 survMSM_res$St
 
 # ----------------------------------------------------------------------
@@ -190,7 +190,7 @@ Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (
 params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
-gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
+gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                           Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
@@ -198,7 +198,7 @@ gcomp_est[]
 # TMLE
 # ----------------------------------------------------------------------
 \dontrun{
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                     Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
@@ -264,7 +264,7 @@ Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (
 models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
@@ -275,7 +275,7 @@ Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (
 models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
-tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }

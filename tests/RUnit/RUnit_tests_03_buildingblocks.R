@@ -67,7 +67,7 @@ test.buildingblocks <- function() {
   # ----------------------------------------------------------------------
   wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "TI.set1", rule_name = "TI1")
   wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "TI.set0", rule_name = "TI0")
-  survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, t_breaks = c(1:8,12,16)-1,)
+  survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1,)
   # survMSM_res$St
   res.test <- list()
   res.test$TI0 <- c(0.9957857, 0.9827720, 0.9653188, 0.9653188, 0.9653188, 0.9653188, 0.9641698,
@@ -97,7 +97,7 @@ test.buildingblocks <- function() {
   survDirIPW_ests <- survDirectIPW(wts.DT.1, OData)
   survDirIPW_ests[]
 
-  survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, t_breaks = c(1:8,12,16)-1,)
+  survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1,)
   names(survMSM_res)
   survMSM_res$St
 
@@ -117,15 +117,15 @@ test.buildingblocks <- function() {
   t.surv <- c(0:4)
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  gcomp_est <- fitSeqGcomp(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est[]
 
   # stratified modeling by rule followers only:
-  tmle_est <- fitTMLE(OData, t_periods = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est[]
 
-  tmle_est3 <- fitTMLE(OData, t_periods = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, stabilize = TRUE)
-  tmle_est4 <- fitTMLE(OData, t_periods = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, trunc_weights = 2)
+  tmle_est3 <- fitTMLE(OData, tvals = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, stabilize = TRUE)
+  tmle_est4 <- fitTMLE(OData, tvals = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, trunc_weights = 2)
 
   # --------------------------------
   res <- stremr(OdataDT, ID = "ID", t = "t",

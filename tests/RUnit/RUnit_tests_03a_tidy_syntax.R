@@ -89,9 +89,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                           fit_method = "cv",
                           fold_column = "fold_ID")
 
-  t_periods <- 0:8
-  t_breaks = c(1:8,12,16)-1
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t_periods)+1))
+  tvals <- 0:8
+  tmax <- 10
+  # tbreaks = c(1:8,12,16)-1
+  tbreaks = c(1:8,11)-1
+  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
 
   ## ------------------------------------------------------------
   ## **** 1) As a first step define a grid of all possible parameter combinations (for all estimators)
@@ -114,7 +116,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
           distinct(intervened_TRT, trunc_weight) %>%
 
           group_by(intervened_TRT) %>%
-          mutate(wts_data = map(first(intervened_TRT), getIPWeights, OData = OData)) %>%
+          mutate(wts_data = map(first(intervened_TRT), getIPWeights, OData = OData, tmax = tmax)) %>%
 
           ## IPW-Adjusted KM (Non-Parametric or Saturated MSM):
           mutate(NPMSM = map2(wts_data, trunc_weight,
@@ -127,17 +129,17 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
           mutate(MSM.crude = map(wts_data,
             ~ survMSM(wts_data = .x,
                       OData = OData,
-                      t_breaks = t_breaks,
+                      tbreaks = tbreaks,
                       use_weights = FALSE,
                       glm_package = "speedglm"))) %>%
           mutate(MSM.crude = map(MSM.crude, "estimates")) %>%
 
-          ## IPW-MSM for hazard (smoothing over time-intervals in t_breaks):
+          ## IPW-MSM for hazard (smoothing over time-intervals in tbreaks):
           mutate(MSM = map2(wts_data, trunc_weight,
             ~ survMSM(wts_data = .x,
                       trunc_weights = .y,
                       OData = OData,
-                      t_breaks = t_breaks,
+                      tbreaks = tbreaks,
                       glm_package = "speedglm"))) %>%
           mutate(MSM = map(MSM, "estimates")) %>%
           rename(trunc_MSM = trunc_weight)
@@ -150,7 +152,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
           mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
             ~ fitSeqGcomp(intervened_TRT = .x,
                           stratifyQ_by_rule = .y,
-                          t_periods = t_periods,
+                          tvals = tvals,
                           OData = OData,
                           Qforms = Qforms))) %>%
           mutate(GCOMP = map(GCOMP, "estimates"))
@@ -164,7 +166,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   TMLE <- TMLE %>%
           mutate(TMLE = pmap(TMLE, fitTMLE,
-                             t_periods = t_periods,
+                             tvals = tvals,
                              OData = OData,
                              Qforms = Qforms)) %>%
           mutate(TMLE = map(TMLE, "estimates")) %>%
@@ -208,6 +210,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
           ~ map(.x,
             ~ suppressWarnings(.x[, ("IC.St") := NULL]))))
   rm(res)
+
   ## equivalent RD function above but with explicitely defined inside function::
   # fin_results_2 <- results %>%
   #     mutate(RDs = map(estimates, function(.df) {

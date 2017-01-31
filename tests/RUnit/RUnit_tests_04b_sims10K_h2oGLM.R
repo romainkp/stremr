@@ -71,7 +71,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     # ------------------------------------------------------------------
     MSM.IPAW <- survMSM(OData,
                         wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
-                        t_breaks = c(1:8,12,16)-1,
+                        tbreaks = c(1:8,12,16)-1,
                         est_name = "IPAW", getSEs = TRUE)
 
     # names(MSM.IPAW)

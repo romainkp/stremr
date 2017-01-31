@@ -141,7 +141,7 @@ fitTMLE <- function(...) {
 #' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
 #' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
 #' @param OData Input data object created by \code{importData} function.
-#' @param t_periods Specify the vector of time-points for which the survival function (and risk) should be estimated
+#' @param tvals Specify the vector of time-points for which the survival function (and risk) should be estimated
 #' @param Qforms Regression formulas, one formula per Q. Only main-terms are allowed.
 #' @param Qstratify Placeholder for future user-defined model stratification for all Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR)
 #' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
@@ -207,7 +207,7 @@ fitTMLE <- function(...) {
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
 fitSeqGcomp <- function(OData,
-                        t_periods,
+                        tvals,
                         Qforms,
                         intervened_TRT = NULL,
                         intervened_MONITOR = NULL,
@@ -269,7 +269,7 @@ fitSeqGcomp <- function(OData,
 
   # ------------------------------------------------------------------------------------------------
   # **** Add weights if TMLE=TRUE and if weights were defined
-  # NOTE: This needs to be done only once if evaluating survival over several t_periods
+  # NOTE: This needs to be done only once if evaluating survival over several tvals
   # ------------------------------------------------------------------------------------------------
   if (TMLE || iterTMLE) {
     if (is.null(IPWeights)) {
@@ -297,7 +297,7 @@ fitSeqGcomp <- function(OData,
     # IPWeights <- process_opt_wts(IPWeights, weights, nodes, adjust_outcome = FALSE)
   }
 
-  if (missing(t_periods)) stop("must specify survival 't_periods' of interest (time period values from column " %+% nodes$tnode %+% ")")
+  if (missing(tvals)) stop("must specify survival 'tvals' of interest (time period values from column " %+% nodes$tnode %+% ")")
 
   # ------------------------------------------------------------------------------------------
   # Create a back-up of the observed input gstar nodes (created by user in input data):
@@ -330,16 +330,16 @@ fitSeqGcomp <- function(OData,
     if (parallel) {
       mcoptions <- list(preschedule = FALSE)
       '%dopar%' <- foreach::'%dopar%'
-      res_byt <- foreach::foreach(t_idx = seq_along(t_periods), .options.multicore = mcoptions) %dopar% {
-        t_period <- t_periods[t_idx]
+      res_byt <- foreach::foreach(t_idx = seq_along(tvals), .options.multicore = mcoptions) %dopar% {
+        t_period <- tvals[t_idx]
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
         return(res)
       }
     } else {
-      res_byt <- vector(mode = "list", length = length(t_periods))
-      for (t_idx in seq_along(t_periods)) {
-        t_period <- t_periods[t_idx]
+      res_byt <- vector(mode = "list", length = length(tvals))
+      for (t_idx in seq_along(tvals)) {
+        t_period <- tvals[t_idx]
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
         res_byt[[t_idx]] <- res
@@ -383,7 +383,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
 
   res_out <- list(
               # est_name = est_name,
-              # periods = t_periods,
+              # periods = tvals,
               IC.Var.S.d = list(IC.S = IC.Var.S.d),
               # nID = OData$nuniqueIDs,
               wts_data = { if ((TMLE || iterTMLE) && return_wts) {IPWeights} else {NULL}},

@@ -75,7 +75,7 @@ wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "dhigh")
 # 3. Smoothing with one hazard coefficient over time-points 12 to 15
 # ------------------------------------------------------------------
 IPW_MSM_res <- survMSM(OData, wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
-                      t_breaks = c(1:8,12,16)-1,
+                      tbreaks = c(1:8,12,16)-1,
                       est_name = "IPAW", getSEs = TRUE)
 names(IPW_MSM_res)
 # Survival estimates over time

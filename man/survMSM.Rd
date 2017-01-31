@@ -4,9 +4,9 @@
 \alias{survMSM}
 \title{Estimate Survival with a particular MSM for the survival-hazard function using previously fitted weights.}
 \usage{
-survMSM(wts_data, OData, t_breaks, use_weights = TRUE, stabilize = TRUE,
+survMSM(wts_data, OData, tbreaks, use_weights = TRUE, stabilize = TRUE,
   trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW",
-  glm_package = c("speedglm", "h2o"), return_wts = FALSE,
+  glm_package = c("speedglm", "h2o"), return_wts = FALSE, tmax = NULL,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
@@ -18,7 +18,7 @@ This argument can be also a single \code{data.table} obtained with \code{data.ta
 previously fitted propensity score models for the exposure, monitoring and
 right-censoring.}
 
-\item{t_breaks}{The vector of integer (or numeric) breaks that defines the dummy indicators of the
+\item{tbreaks}{The vector of integer (or numeric) breaks that defines the dummy indicators of the
 follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for
 the survival hazard. See Details.}
 
@@ -50,6 +50,9 @@ when fitting MSM with many observations and large number of time-points.}
 \item{return_wts}{Return the data.table with subject-specific IP weights as part of the output.
 Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 
+\item{tmax}{Maximum value of the follow-up period.
+All person-time observations above this value will be excluded from the MSM model.}
+
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 }
@@ -64,7 +67,7 @@ the user-specified Marginal Structural Model (MSM) for the counterfactual surviv
 \details{
 This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
 many regimens, with dummy indicators for each treatment/monitoring
-regimen available in \code{wts_data} and each follow-up time interval specified in \code{t_breaks}.
+regimen available in \code{wts_data} and each follow-up time interval specified in \code{tbreaks}.
 When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the
 \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
 in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function
@@ -76,14 +79,14 @@ informative right-censoring.
 
 **********************************************************************
 
-\code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
+\code{tbreaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
 survival hazard function.
-The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval,
-with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
-For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
+The first value in \code{tbreaks} defines a dummy variable (indicator) for a fully closed interval,
+with each subsequent value in \code{tbreaks} defining a single right-closed time-interval.
+For example, \code{tbreaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
 I(0 < t <= 1) and I(1 < t <= max(t)).
-On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy
-indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
+On the other hand \code{tbreaks = c(1)} will define the following (more parametric) MSM dummy
+indicators: I(\code{mint} <= t <=1 ) and I(1 < t <= \code{tmax}).
 If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
 for every unique period in the observed data.
 }
@@ -170,7 +173,7 @@ wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "dhigh")
 # 3. Smoothing with one hazard coefficient over time-points 12 to 15
 # ------------------------------------------------------------------
 IPW_MSM_res <- survMSM(OData, wts_data = list(dlow = wts.St.dlow, dhigh = wts.St.dhigh),
-                      t_breaks = c(1:8,12,16)-1,
+                      tbreaks = c(1:8,12,16)-1,
                       est_name = "IPAW", getSEs = TRUE)
 names(IPW_MSM_res)
 # Survival estimates over time

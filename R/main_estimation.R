@@ -411,12 +411,19 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
 #' @param rule_name Optional name for the treatment/monitoring regimen.
+#' @param tmax Maximum value of the follow-up period.
+#' All person-time observations above this value will be excluded from the output weights dataset.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
-                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = "")
+getIPWeights <- function(OData,
+                         intervened_TRT = NULL,
+                         intervened_MONITOR = NULL,
+                         useonly_t_TRT = NULL,
+                         useonly_t_MONITOR = NULL,
+                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
+                         tmax = NULL
                          ) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
@@ -474,6 +481,10 @@ getIPWeights <- function(OData, intervened_TRT = NULL, intervened_MONITOR = NULL
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols = nodes$tnode)
   wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
+  setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
+
+  ## remove person time observations with f-up above tmax
+  if (!is.null(tmax)) wts.DT <- wts.DT[eval(as.name(nodes$tnode)) <= tmax, ]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
 
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
@@ -694,7 +705,7 @@ return(wts_data)
 #'
 #' This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
 #' many regimens, with dummy indicators for each treatment/monitoring
-#' regimen available in \code{wts_data} and each follow-up time interval specified in \code{t_breaks}.
+#' regimen available in \code{wts_data} and each follow-up time interval specified in \code{tbreaks}.
 #' When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the
 #' \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
 #' in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function
@@ -707,7 +718,7 @@ return(wts_data)
 #' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the
 #' previously fitted propensity score models for the exposure, monitoring and
 #' right-censoring.
-#' @param t_breaks The vector of integer (or numeric) breaks that defines the dummy indicators of the
+#' @param tbreaks The vector of integer (or numeric) breaks that defines the dummy indicators of the
 #' follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for
 #' the survival hazard. See Details.
 #' @param use_weights Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and
@@ -730,20 +741,22 @@ return(wts_data)
 #' when fitting MSM with many observations and large number of time-points.
 #' @param return_wts Return the data.table with subject-specific IP weights as part of the output.
 #' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
+#' @param tmax Maximum value of the follow-up period.
+#' All person-time observations above this value will be excluded from the MSM model.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #'
 #' @section Details:
 #' **********************************************************************
 #'
-#' \code{t_breaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
+#' \code{tbreaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
 #' survival hazard function.
-#' The first value in \code{t_breaks} defines a dummy variable (indicator) for a fully closed interval,
-#' with each subsequent value in \code{t_breaks} defining a single right-closed time-interval.
-#' For example, \code{t_breaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
+#' The first value in \code{tbreaks} defines a dummy variable (indicator) for a fully closed interval,
+#' with each subsequent value in \code{tbreaks} defining a single right-closed time-interval.
+#' For example, \code{tbreaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
 #' I(0 < t <= 1) and I(1 < t <= max(t)).
-#' On the other hand \code{t_breaks = c(1)} will define the following (more parametric) MSM dummy
-#' indicators: I(min(t) <= t <=1 ) and I(1 < t <= max(t)).
+#' On the other hand \code{tbreaks = c(1)} will define the following (more parametric) MSM dummy
+#' indicators: I(\code{mint} <= t <=1 ) and I(1 < t <= \code{tmax}).
 #' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
 #' for every unique period in the observed data.
 #'
@@ -756,7 +769,7 @@ return(wts_data)
 #' @export
 survMSM <- function(wts_data,
                     OData,
-                    t_breaks,
+                    tbreaks,
                     use_weights = TRUE,
                     stabilize = TRUE,
                     trunc_weights = 10^6,
@@ -765,6 +778,7 @@ survMSM <- function(wts_data,
                     est_name = "IPW",
                     glm_package = c("speedglm", "h2o"),
                     return_wts = FALSE,
+                    tmax = NULL,
                     verbose = getOption("stremr.verbose")) {
 
   gvars$verbose <- verbose
@@ -781,8 +795,12 @@ survMSM <- function(wts_data,
 
   if (verbose) print("performing estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
 
-  # Remove all observations with 0 cumulative weights & copy the weights data.table
-  wts_data_used <- wts_data[!is.na(cum.IPAW) & !is.na(eval(as.name(Ynode))) & (cum.IPAW > 0), ]
+  ## Remove all observations with 0 cumulative weights & copy the weights data.table
+  ## keep all weights, even if they are 0:
+  wts_data_used <- wts_data[!is.na(cum.IPAW) & !is.na(eval(as.name(Ynode))), ]
+  ## remove cumulative weights that are 0:
+  # wts_data_used <- wts_data[!is.na(cum.IPAW) & !is.na(eval(as.name(Ynode))) & (cum.IPAW > 0), ]
+
   setkeyv(wts_data_used, cols = c(nodes$IDnode, nodes$tnode))
 
   # Multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since cum.stab.P cancels out):
@@ -798,30 +816,33 @@ survMSM <- function(wts_data,
   if (!use_weights) wts_data_used[cum.IPAW > 0, cum.IPAW := 1L]
 
   # Define all observed sequence of periods (t's)
-  mint <- min(wts_data_used[[t_name]], na.rm = TRUE); maxt <- max(wts_data_used[[t_name]], na.rm = TRUE)
-  periods <- (mint:maxt)
+  mint <- min(wts_data_used[[t_name]], na.rm = TRUE)
+  if (is.null(tmax)) tmax <- max(wts_data_used[[nodes$tnode]], na.rm = TRUE)
+
+  ## subset weights data only by time-points being considered:
+  wts_data_used <- wts_data_used[eval(as.name(nodes$tnode)) <= tmax, ]
+
+  periods <- (mint:tmax)
   periods_idx <- seq_along(periods)
-  if (verbose) {
-    print("periods"); print(periods)
-  }
+  if (verbose) { print("periods"); print(periods) }
 
-  # Default t_breaks, error checks for t_breaks, plus padding w/ mint & maxt:
-  if (missing(t_breaks)) {
-    # default t_breaks is to use a saturated (non-parametric) MSM
-    t_breaks <- sort(periods)
+  # Default tbreaks, error checks for tbreaks, plus padding w/ mint & tmax:
+  if (missing(tbreaks)) {
+    # default tbreaks is to use a saturated (non-parametric) MSM
+    tbreaks <- sort(periods)
     if (verbose)
-      message("running with default 't_breaks': (" %+%
-        paste0(t_breaks, collapse = ",") %+%
-        "); \nNote: such 't_breaks' define a separate coefficient for every unique follow-up time period resulting in a saturated (non-parametric) MSM.")
-  }
-  if (length(unique(t_breaks)) < length(t_breaks)) {
-    stop("all t_breaks must be unique")
-  }
-  if (!all(t_breaks %in% periods)) {
-    stop("all t_breaks must be contained between minimum and maximum follow-up periods:" %+% t_breaks[!(t_breaks %in% periods)])
+      message("running with default 'tbreaks': (" %+%
+        paste0(tbreaks, collapse = ",") %+%
+        "); \nNote: such 'tbreaks' define a separate coefficient for every unique follow-up time period resulting in a saturated (non-parametric) MSM.")
   }
 
-  if (max(t_breaks) < maxt) t_breaks <- sort(c(t_breaks, maxt)) # pad on the right (if needed with maxt):
+  if (length(unique(tbreaks)) < length(tbreaks))
+    stop("all tbreaks must be unique")
+
+  if (!all(tbreaks %in% periods))
+    stop("all tbreaks must be contained between minimum and maximum follow-up periods:" %+% tbreaks[!(tbreaks %in% periods)])
+
+  if (max(tbreaks) < tmax) tbreaks <- sort(c(tbreaks, tmax)) # pad on the right (if needed with tmax):
 
   # Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
@@ -832,13 +853,13 @@ survMSM <- function(wts_data,
 
   # Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
   all.t.dummies <- NULL
-  t_breaks.mint <- c(mint, t_breaks) # pad t_breaks on the left (with mint)
-  MSM.intervals <- matrix(NA, ncol = 2, nrow = length(t_breaks)) # save the actual intervals
+  tbreaks.mint <- c(mint, tbreaks) # pad tbreaks on the left (with mint)
+  MSM.intervals <- matrix(NA, ncol = 2, nrow = length(tbreaks)) # save the actual intervals
   colnames(MSM.intervals) <- c("min.t", "max.t")
   t.per.inteval <- vector(mode = "list", length = nrow(MSM.intervals)) # save the vector of period vals that belong to each interval
-  for (t.idx in 2:length(t_breaks.mint)) {
-    low.t <- t_breaks.mint[t.idx - 1]
-    high.t <- t_breaks.mint[t.idx]
+  for (t.idx in 2:length(tbreaks.mint)) {
+    low.t <- tbreaks.mint[t.idx - 1]
+    high.t <- tbreaks.mint[t.idx]
     # First interval needs to be closed on both sides (includes the smallest obesrved follow-up, mint)
     if (t.idx == 2L) {
       dummy.j <- paste("Periods.", low.t, "to", high.t, sep="")
@@ -859,8 +880,7 @@ survMSM <- function(wts_data,
   # Create interaction dummies I(t in interval.j & d == intervened_TRT)
   for (d.dummy in all.d.dummies) {
     for (t.dummy in all.t.dummies) {
-      if (verbose)
-        print(t.dummy %+% "_" %+% d.dummy)
+      if (verbose) print(t.dummy %+% "_" %+% d.dummy)
       wts_data_used[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
     }
   }
@@ -875,7 +895,7 @@ survMSM <- function(wts_data,
   m.fit <- resglmMSM$m.fit
 
   # Compute the Survival curves under each d
-  S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,maxt-mint+1)), length(rules_TRT))
+  S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,tmax-mint+1)), length(rules_TRT))
   names(S2.IPAW) <- names(hazard.IPAW) <- rules_TRT
 
   if (verbose) message("...evaluating MSM-based survival curves...")
@@ -904,7 +924,7 @@ survMSM <- function(wts_data,
   # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
   # IC.O - observation-specific IC estimates for MSM coefs
   if (getSEs) {
-    design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:maxt))), length(rules_TRT))
+    design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:tmax))), length(rules_TRT))
     IC.Var.S.d <- vector(mode = "list", length(rules_TRT))
     names(design.d.t) <- names(IC.Var.S.d) <- rules_TRT
     # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
@@ -937,14 +957,18 @@ survMSM <- function(wts_data,
 
   MSM_out <- lapply(rules_TRT, function(rule_name) {
       estimates <- data.table(time = periods,
-                        ht.MSM = hazard.IPAW[[rule_name]],
-                        St.MSM = S2.IPAW[[rule_name]],
-                        SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
-                        rule.name = rep(rule_name, length(periods)))
+                              ht.MSM = hazard.IPAW[[rule_name]],
+                              St.MSM = S2.IPAW[[rule_name]],
+                              SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
+                              rule.name = rep(rule_name, length(periods)))
       n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
 
       for (i in 1:n_ts)
         estimates[i, ("IC.St") := list(list(IC.Var.S.d[[rule_name]][["IC.S"]][i, ]))]
+
+      # browser()
+      # IC.Var.S.d[[rule_name]][["IC.S"]][1, ]
+      # length(unique(wts_data_used[["ID"]]))
 
       attr(estimates, "estimator_short") <- "MSM"
       attr(estimates, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
@@ -971,24 +995,6 @@ survMSM <- function(wts_data,
   )
 
   names(MSM_out) <- rules_TRT
-
-  # MSM_out <- list(
-  #             est_name = est_name,
-  #             periods = periods,
-  #             St = S2.IPAW,
-  #             ht = hazard.IPAW,
-  #             MSM.fit = m.fit,
-  #             MSM.intervals = MSM.intervals,
-  #             IC.Var.S.d = IC.Var.S.d,
-  #             nID = nID,
-  #             nobs = nrow(wts_data_used),
-  #             wts_data = { if (return_wts) {wts_data_used} else {NULL} },
-  #             use_weights = use_weights,
-  #             trunc_weights = trunc_weights,
-  #             estimates = estimates
-  #           )
-  # attr(MSM_out, "estimator_short") <- "MSM"
-  # attr(MSM_out, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
 
   if (length(MSM_out) == 1L) return(MSM_out[[1L]]) else  return(MSM_out)
 }
