@@ -343,10 +343,11 @@ ggRD <- function(
   pl <- pl + ggplot2::theme(legend.position = legend_pos)
   if (!is.null(ymin) && !is.null(ymax)) pl <- pl + ggplot2::coord_cartesian(ylim = c(ymin, ymax))
 
-  # str(pl) <-
-  # pl <- pl + ggplot2::facet_wrap(~ dx2_name + dx1_name)
+
   if (facet)
-    pl <- pl + ggplot2::facet_wrap(c("dx2_name", "dx1_name"))
+    pl <- pl + ggplot2::facet_wrap(c("dx1_name", "dx2_name"),
+                labeller = function(labels) label_value(labels, multi_line = FALSE))
+  # pl <- pl + ggplot2::facet_wrap(~ dx2_name + dx1_name)
 
   return(pl)
 }

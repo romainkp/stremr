@@ -57,14 +57,21 @@ All person-time observations above this value will be excluded from the MSM mode
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 }
 \value{
-A named list with items containing the MSM estimation results.
+MSM estimation results composed of a separate list for each treatment regimen.
+Each regimen-specific list contains an item named \code{"estimates"}, which is a data.table
+with MSM survival estimates in a column \code{"St.MSM"}. The data.table \code{"estimates"} contains
+a separate row for each time-point \code{t}. The \code{"estimates"} also contains the
+standard error estimates for MSM survival and the observation-specific influence-curve estimates for
+the MSM survival saved in a column named \code{"IC.St"}.
 }
 \description{
 Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the
 treatment/exposure and monitoring processes based on
 the user-specified Marginal Structural Model (MSM) for the counterfactual survival function.
 }
-\details{
+\section{MSM}{
+
+**********************************************************************
 This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
 many regimens, with dummy indicators for each treatment/monitoring
 regimen available in \code{wts_data} and each follow-up time interval specified in \code{tbreaks}.
@@ -75,7 +82,8 @@ in \code{wts_data}. These IPW weights are based on the previously fitted propens
 adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly
 informative right-censoring.
 }
-\section{Details}{
+
+\section{Specifying time-intervals}{
 
 **********************************************************************
 
@@ -83,17 +91,16 @@ informative right-censoring.
 survival hazard function.
 The first value in \code{tbreaks} defines a dummy variable (indicator) for a fully closed interval,
 with each subsequent value in \code{tbreaks} defining a single right-closed time-interval.
-For example, \code{tbreaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
-I(0 < t <= 1) and I(1 < t <= max(t)).
+For example, \code{tbreaks = c(0,1)} will define the MSM dummy indicators: I(\code{tmin} <= t <= 0 ),
+I(0 < t <= 1) and I(1 < t <= \code{tmax}),
+where \code{tmin} is the minimum value of the time variable (automatically determined from input weights)
+and \code{tmax} is the maximum value of the time variable ( if omitted this will also be automatically
+determined from the input weights).
+
 On the other hand \code{tbreaks = c(1)} will define the following (more parametric) MSM dummy
 indicators: I(\code{mint} <= t <=1 ) and I(1 < t <= \code{tmax}).
 If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
 for every unique period in the observed data.
-}
-
-\section{MSM for the hazard}{
-
-**********************************************************************
 }
 \examples{
 #-------------------------------------------------------------------

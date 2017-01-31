@@ -107,7 +107,7 @@ e.g., \code{family = "binomial"} can be used to specify the model family.
 Note that all such arguments must be named.}
 }
 \value{
-...
+An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
 }
 \description{
 Interventions on up to 3 nodes are allowed: \code{CENS}, \code{TRT} and \code{MONITOR}.

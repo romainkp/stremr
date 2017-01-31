@@ -351,9 +351,9 @@ fitPropensity <- function(OData,
   return(OData)
 }
 
+## probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
+## if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
 defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
-  # probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
-  # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
   if (!is.null(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
@@ -448,18 +448,23 @@ getIPWeights <- function(OData,
 
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
+
   # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
   gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, OData$dat.sVar[["g0.A"]])
+
   # Likelihood for monitoring P(N^*(t)=N(t)) under counterfactual intervention N^*(t) on N(t):
   gstar.MONITOR <- defineNodeGstarIPW(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, OData$dat.sVar[["g0.N"]])
+
   # Save all likelihoods relating to propensity scores in separate dataset:
   wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode, "g0.A", "g0.C", "g0.N", "g0.CAN"), with = FALSE] # [wt.by.t > 0, ]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
   wts.DT[, "gstar.C" := gstar.CENS]
   wts.DT[, "gstar.A" := gstar.TRT]
   wts.DT[, "gstar.N" := gstar.MONITOR]
+
   # Joint likelihoood for all 3 node types:
   wts.DT[, "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR]
+
   # Weights by time and cumulative weights by time:
   wts.DT[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
@@ -703,15 +708,6 @@ return(wts_data)
 #' treatment/exposure and monitoring processes based on
 #' the user-specified Marginal Structural Model (MSM) for the counterfactual survival function.
 #'
-#' This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
-#' many regimens, with dummy indicators for each treatment/monitoring
-#' regimen available in \code{wts_data} and each follow-up time interval specified in \code{tbreaks}.
-#' When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the
-#' \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
-#' in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function
-#' \code{fitPropensity}), allowing
-#' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly
-#' informative right-censoring.
 #' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function
 #' \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
 #' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.
@@ -746,24 +742,42 @@ return(wts_data)
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #'
-#' @section Details:
+#' @section MSM:
+#' **********************************************************************
+#' This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
+#' many regimens, with dummy indicators for each treatment/monitoring
+#' regimen available in \code{wts_data} and each follow-up time interval specified in \code{tbreaks}.
+#' When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the
+#' \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
+#' in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function
+#' \code{fitPropensity}), allowing
+#' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly
+#' informative right-censoring.
+#'
+#' @section Specifying time-intervals:
 #' **********************************************************************
 #'
 #' \code{tbreaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
 #' survival hazard function.
 #' The first value in \code{tbreaks} defines a dummy variable (indicator) for a fully closed interval,
 #' with each subsequent value in \code{tbreaks} defining a single right-closed time-interval.
-#' For example, \code{tbreaks = c(0,1)} will define the MSM dummy indicators: I(min(t) <= t <=0 ),
-#' I(0 < t <= 1) and I(1 < t <= max(t)).
+#' For example, \code{tbreaks = c(0,1)} will define the MSM dummy indicators: I(\code{tmin} <= t <= 0 ),
+#' I(0 < t <= 1) and I(1 < t <= \code{tmax}),
+#' where \code{tmin} is the minimum value of the time variable (automatically determined from input weights)
+#' and \code{tmax} is the maximum value of the time variable ( if omitted this will also be automatically
+#' determined from the input weights).
+#'
 #' On the other hand \code{tbreaks = c(1)} will define the following (more parametric) MSM dummy
 #' indicators: I(\code{mint} <= t <=1 ) and I(1 < t <= \code{tmax}).
 #' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
 #' for every unique period in the observed data.
 #'
-#' @section MSM for the hazard:
-#' **********************************************************************
-#'
-#' @return A named list with items containing the MSM estimation results.
+#' @return MSM estimation results composed of a separate list for each treatment regimen.
+#' Each regimen-specific list contains an item named \code{"estimates"}, which is a data.table
+#' with MSM survival estimates in a column \code{"St.MSM"}. The data.table \code{"estimates"} contains
+#' a separate row for each time-point \code{t}. The \code{"estimates"} also contains the
+#' standard error estimates for MSM survival and the observation-specific influence-curve estimates for
+#' the MSM survival saved in a column named \code{"IC.St"}.
 #' @seealso \code{\link{fitPropensity}}, \code{\link{getIPWeights}}.
 #' @example tests/examples/4_survMSM_example.R
 #' @export
@@ -819,7 +833,7 @@ survMSM <- function(wts_data,
   mint <- min(wts_data_used[[t_name]], na.rm = TRUE)
   if (is.null(tmax)) tmax <- max(wts_data_used[[nodes$tnode]], na.rm = TRUE)
 
-  ## subset weights data only by time-points being considered:
+  ## subset weights data only by the time-points being considered:
   wts_data_used <- wts_data_used[eval(as.name(nodes$tnode)) <= tmax, ]
 
   periods <- (mint:tmax)
@@ -890,7 +904,7 @@ survMSM <- function(wts_data,
                         }))
 
   # Fit the hazard MSM
-  resglmMSM <- runglmMSM(OData, wts_data_used, all_dummies, Ynode, glm_package, verbose)
+  resglmMSM <- runglmMSM(wts_data_used, all_dummies, Ynode, glm_package, verbose)
   wts_data_used[, glm.IPAW.predictP1 := resglmMSM$glm.IPAW.predictP1]
   m.fit <- resglmMSM$m.fit
 
@@ -923,10 +937,13 @@ survMSM <- function(wts_data,
   # h.d.t.predict - MSM hazard estimates for one regimen
   # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
   # IC.O - observation-specific IC estimates for MSM coefs
+  # IC.S - observation-specific IC estimates for S(t) (by time-point)
+
   if (getSEs) {
     design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:tmax))), length(rules_TRT))
     IC.Var.S.d <- vector(mode = "list", length(rules_TRT))
     names(design.d.t) <- names(IC.Var.S.d) <- rules_TRT
+
     # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
     # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
     # p.coef - number of time-specific coefficients in the MSM
@@ -955,20 +972,20 @@ survMSM <- function(wts_data,
     IC.Var.S.d <- NULL
   }
 
+  ## The output MSM object.
+  ## "estimates" is a data.table with surv estimates (column "St.MSM");
+  ##  Separate row for each time-point t;
+  ##  "estimates" contains IC.St (observation-specific IC estimates for S(t)) saved in a column
   MSM_out <- lapply(rules_TRT, function(rule_name) {
       estimates <- data.table(time = periods,
                               ht.MSM = hazard.IPAW[[rule_name]],
                               St.MSM = S2.IPAW[[rule_name]],
                               SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
                               rule.name = rep(rule_name, length(periods)))
-      n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
 
+      n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
       for (i in 1:n_ts)
         estimates[i, ("IC.St") := list(list(IC.Var.S.d[[rule_name]][["IC.S"]][i, ]))]
-
-      # browser()
-      # IC.Var.S.d[[rule_name]][["IC.S"]][1, ]
-      # length(unique(wts_data_used[["ID"]]))
 
       attr(estimates, "estimator_short") <- "MSM"
       attr(estimates, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
@@ -983,7 +1000,7 @@ survMSM <- function(wts_data,
                   ht = hazard.IPAW[[rule_name]],
                   MSM.fit = m.fit,
                   MSM.intervals = MSM.intervals,
-                  IC.Var.S.d = IC.Var.S.d[[rule_name]],
+                  # IC.Var.S.d = IC.Var.S.d[[rule_name]],
                   nID = nID,
                   nobs = nrow(wts_data_used),
                   wts_data = { if (return_wts) {wts_data_used} else {NULL} },
@@ -999,7 +1016,7 @@ survMSM <- function(wts_data,
   if (length(MSM_out) == 1L) return(MSM_out[[1L]]) else  return(MSM_out)
 }
 
-runglmMSM <- function(OData, wts_data, all_dummies, Ynode, glm_package, verbose) {
+runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
   # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
   # Does not handle cases with deterministic Anodes in the original data.
   logispredict = function(m.fit, X_mat) {
@@ -1010,13 +1027,7 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, glm_package, verbose)
 
   if (glm_package %in% "h2o") {
     if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
-    loadframe_t <- system.time(
-      MSM.designmat.H2O <- OData$fast.load.to.H2O(wts_data,
-                                                  saveH2O = FALSE,
-                                                  destination_frame = "MSM.designmat.H2O")
-    )
-    if (verbose) { print("time to load the design mat into H2OFRAME: "); print(loadframe_t) }
-
+    MSM.designmat.H2O <- fast.load.to.H2O(wts_data, destination_frame = "MSM.designmat.H2O")
     m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
                                   x = all_dummies,
                                   intercept = FALSE,
@@ -1024,7 +1035,7 @@ runglmMSM <- function(OData, wts_data, all_dummies, Ynode, glm_package, verbose)
                                   training_frame = MSM.designmat.H2O,
                                   family = "binomial",
                                   standardize = FALSE,
-                                  solver = c("IRLSM"), # solver = c("L_BFGS"),
+                                  solver = "IRLSM", # solver = c("L_BFGS"),
                                   lambda = 0L,
                                   max_iterations = 50,
                                   ignore_const_cols = FALSE

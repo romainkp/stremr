@@ -60,7 +60,9 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   OData$fold_column <- NULL
   OData$nfolds <- NULL
 
-  params_g <- gridisl::defModel(estimator = "xgboost__glm",
+  fold_column <- "fold_ID"
+  fit_method_g <- "cv"
+  models_g <- gridisl::defModel(estimator = "xgboost__glm",
                                 family = "binomial",
                                 nrounds = 10,
                                 early_stopping_rounds = 2)
@@ -82,34 +84,40 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                 #                   )
                 #               )
 
+  fit_method_Q <- "none"
+  models_Q <-  gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
+
   OData <- fitPropensity(OData,
                           gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                          models_CENS = params_g, models_TRT = params_g, models_MONITOR = params_g,
-                          fit_method = "cv",
-                          fold_column = "fold_ID")
+                          models_CENS = models_g, models_TRT = models_g, models_MONITOR = models_g,
+                          fit_method = fit_method_g,
+                          fold_column = fold_column)
 
+  trunc_IPW <- 10
   tvals <- 0:8
   tmax <- 13
+  nfolds <- 10 ## number of folds for CV
   # tbreaks = c(1:8,12,16)-1
   tbreaks = c(1:8,11,14)-1
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
 
   ## ------------------------------------------------------------
-  ## **** 1) As a first step define a grid of all possible parameter combinations (for all estimators)
-  ## **** 2) This dataset is to be saved and will be later merged in with all analysis
+  ## **** As a first step define a grid of all possible parameter combinations (for all estimators)
+  ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh", "gTI.dlow"),
                   trunc_wt = c(FALSE, TRUE),
                   stratifyQ_by_rule = c(TRUE, FALSE)) %>%
                   cross_d() %>%
                   arrange(stratifyQ_by_rule) %>%
-                  mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, 50, Inf))) %>%
+                  mutate(nfolds = as.integer(nfolds)) %>%
+                  mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, trunc_IPW, Inf))) %>%
                   mutate(trunc_TMLE = trunc_MSM*10)
 
   ## ------------------------------------------------------------
   ## IPW ANALYSIS
-  ## **** 3) For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
+  ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
   IPW <-  analysis %>%
           rename(trunc_weight = trunc_MSM) %>%
@@ -117,8 +125,12 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
           group_by(intervened_TRT) %>%
           mutate(wts_data = map(first(intervened_TRT), getIPWeights, OData = OData, tmax = tmax)) %>%
+          ## save the tables of weights summaries (sep for each regimen)
           mutate(wts_tabs = map(wts_data,
               ~ get_wtsummary(.x, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE))) %>%
+          ## save the tables with number at risk / following each rule (sep for each regimen)
+          mutate(FUPtimes_tabs = map(wts_data,
+                ~ get_FUPtimes(.x, IDnode = ID, tnode = t))) %>%
           ungroup() %>%
 
           ## IPW-Adjusted KM (Non-Parametric or Saturated MSM):
@@ -145,7 +157,16 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                       tbreaks = tbreaks,
                       glm_package = "speedglm"))) %>%
           mutate(MSM = map(MSM, "estimates")) %>%
-          rename(trunc_MSM = trunc_weight)
+          rename(trunc_MSM = trunc_weight) %>%
+          select(-wts_data)
+
+  ## save IPW tables (will be later merged with main results dataset)
+  IPWtabs <-  analysis %>%
+               left_join(IPW) %>%
+               distinct(intervened_TRT, trunc_MSM, wts_tabs, FUPtimes_tabs) %>%
+               nest(intervened_TRT, wts_tabs, FUPtimes_tabs, .key = "IPWtabs")
+
+  IPW <- IPW %>% select(-wts_tabs, -FUPtimes_tabs)
 
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
@@ -157,7 +178,10 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                           stratifyQ_by_rule = .y,
                           tvals = tvals,
                           OData = OData,
-                          Qforms = Qforms))) %>%
+                          models = models_Q,
+                          Qforms = Qforms,
+                          fit_method = fit_method_Q,
+                          fold_column = fold_column))) %>%
           mutate(GCOMP = map(GCOMP, "estimates"))
 
   ## ------------------------------------------------------------
@@ -171,7 +195,10 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
           mutate(TMLE = pmap(TMLE, fitTMLE,
                              tvals = tvals,
                              OData = OData,
-                             Qforms = Qforms)) %>%
+                             models = models_Q,
+                             Qforms = Qforms,
+                             fit_method = fit_method_Q,
+                             fold_column = fold_column)) %>%
           mutate(TMLE = map(TMLE, "estimates")) %>%
           rename(trunc_TMLE = trunc_weight)
 
@@ -183,40 +210,33 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
               left_join(GCOMP) %>%
               left_join(TMLE)
 
-  ## ------------------------------------------------------------
-  ## REMOVE wts_data (no longer needed)
-  ## TO DO: NEED TO CREATE SUMMARY TABLES FIRST AND REPLACE wts_data
-  ##        get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE)
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
-  ## ------------------------------------------------------------
   results <- results %>%
-              select(-wts_data) %>%
-              nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates") # GCOMP, TMLE,
-              # nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
+              # select(-wts_tabs, -FUPtimes_tabs) %>%
+              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
 
-  ## ------------------------------------------------------------
-  ## Calculate RDs (contrasting all interventions, for each analysis row & estimator)
+  ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
   ## The RDs data no longer needs the intervened_TRT column
-  ## ------------------------------------------------------------
-  fin_results <-  results %>%
-                  mutate(RDs =
-                      map(estimates,
-                          ~ select(.x, -intervened_TRT) %>%
-                          map(~ get_RDs(.x)) %>%
-                          as_tibble()))
+  results <-  results %>%
+              mutate(RDs =
+                map(estimates,
+                  ~ select(.x, -intervened_TRT) %>%
+                  map(~ get_RDs(.x)) %>%
+                  as_tibble()
+                  ))
 
   ## Clean up by removing the subject-level IC estimates for EVERY SINGLE ESTIMATE / ANALYSIS
   ## WARNING: THIS IS A SIDE-EFFECT FUNCTION!
-  res <- fin_results[["estimates"]] %>%
-      map(
-        ~ select(.x, -intervened_TRT) %>%
-        map(
-          ~ map(.x,
-            ~ suppressWarnings(.x[, ("IC.St") := NULL]))))
-  rm(res)
+  # res <- results[["estimates"]] %>%
+  #     map(
+  #       ~ select(.x, -intervened_TRT) %>%
+  #       map(
+  #         ~ map(.x,
+  #           ~ suppressWarnings(.x[, ("IC.St") := NULL]))))
+  # rm(res)
 
   ## equivalent RD function above but with explicitely defined inside function::
-  # fin_results_2 <- results %>%
+  # results_2 <- results %>%
   #     mutate(RDs = map(estimates, function(.df) {
   #         res <- select(.df, -intervened_TRT) %>%
   #         map(~ get_RDs(.x))
@@ -227,19 +247,30 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   #     )
 
   ## ------------------------------------------------------------
+  ## Add models used for g and Q
+  ## Add IPWtabs
+  ## ------------------------------------------------------------
+  results <- results %>%
+             mutate(fit_method_g = fit_method_g) %>%
+             mutate(fit_method_Q = fit_method_Q) %>%
+             mutate(models_g = map(fit_method_g, ~ I(models_g))) %>%
+             mutate(models_Q = map(fit_method_Q, ~ I(models_Q))) %>%
+             left_join(IPWtabs)
+
+  ## ------------------------------------------------------------
   ## PLOTTING SURVIVAL CURVES
   ## ------------------------------------------------------------
   ests <- "TMLE"
-  SURVplot <- fin_results[1, ][["estimates"]][[1]][[ests]] %>%
+  SURVplot <- results[1, ][["estimates"]][[1]][[ests]] %>%
               ggsurv %>%
               print
 
-  fin_results[["estimates"]]
+  results[["estimates"]]
 
   # GCOMP <-GCOMP %>%
   #         mutate(plotGCOMP = map(GCOMP, ~ ggsurv(estimates = .x))) %>%
   ests <- c("MSM", "TMLE")
-  longSURV <- fin_results %>%
+  longSURV <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, estimates) %>%
               unnest(estimates) %>%
               gather(key = est, value = estimates, NPMSM, MSM.crude, MSM, GCOMP, TMLE) %>%
@@ -259,13 +290,13 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## PLOTTING RDs
   ## ------------------------------------------------------------
   ests <- "TMLE"
-  RDplot <-   fin_results[["RDs"]][[1]][[ests]][[1]] %>%
+  RDplot <-   results[["RDs"]][[1]][[ests]][[1]] %>%
               ggRD(t_int_sel = 1:5) %>%
               print
 
   ## across all scenarios for two estimators
   ests <- c("MSM", "TMLE")
-  longRDs <- fin_results %>%
+  longRDs <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, RDs) %>%
               unnest(RDs) %>%
               gather(key = est, value = RDs, NPMSM, MSM.crude, MSM, GCOMP, TMLE) %>%

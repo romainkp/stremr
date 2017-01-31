@@ -43,8 +43,8 @@ openFileInOS <- function(f) {
 #' @param TMLE Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{\link{fitTMLE}}.
 #' @param GCOMP Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{\link{fitSeqGcomp}}.
 #' @param WTtables Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{\link{get_wtsummary}}
-#' @param FUPtables Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
-#' by rule (monitoring and treatment).
+#' @param FUPtables Subject-specific \code{data.table} with maximum follow-up time saved for each subject in the column named \code{max.t}.
+#' See \code{\link{get_FUPtimes}} for additional details.
 #' @param MSM.RDtables List of tables with risk differences returned by the function \code{\link{get_MSM_RDs}}.
 #' @param TMLE.RDtables List of tables with risk differences returned by the function \code{\link{get_TMLE_RDs}}.
 #' @param plotKM Logical, set to \code{TRUE} to plot KM survival curves when \code{NPMSM} argument is specified. Default is \code{FALSE}.

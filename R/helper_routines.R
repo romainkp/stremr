@@ -1,7 +1,6 @@
 #' @importFrom magrittr %>%
 NULL
 
-
 if(getRversion() >= "2.15.1") {
   utils::globalVariables(c(".", "dx1", "dx2"))
 }
@@ -206,92 +205,15 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   return(list(summary.table = x.freq.counts.tab, summary.DT = x.freq.counts.DT, summary.DT.byrule = x.freq.counts.byrule.DT))
 }
 
-## RD:
-getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx, getSEs) {
-  se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
-  colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
-  rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
-  for (d1.idx in seq_along(names(S2.IPAW))) {
-    for (d2.idx in seq_along(names(S2.IPAW))) {
-      #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
-      if (getSEs) {
-        se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
-                                                                 IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
-                                                                 IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
 
 
-      }
-    }
-  }
-  return(se.RDscale.Sdt.K)
-}
 
-#' Risk Difference Estimates and SEs for IPW-MSM
-#'
-#' Produces table(s) with pair-wise risk differences for all regimens that were used for fitting IPW-MSM.
-#' The corresponding SEs are evaluated based on the estimated influence curves (IC).
-#' @param MSM Object returned by \code{\link{survMSM}}.
-#' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
-#' @param getSEs Evaluate the influence curve based RD estimates of standard errors (SEs) along with point estimates?
-#' @return A list with RD tables. One table for each time-point in \code{t.periods.RDs}.
-#' @seealso \code{\link{survMSM}} for estimation with MSM.
-#' @export
-get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
-  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
-  periods_idx <- seq_along(MSM$periods)
-  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
-  for (t.idx in seq_along(t.periods.RDs)) {
-    t.period.val.idx <- periods_idx[MSM$periods %in% t.periods.RDs[t.idx]]
-    se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx, getSEs)
-    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
-                                                RDscale = TRUE,
-                                                t.period = t.period.val.idx,
-                                                t.value = t.periods.RDs[t.idx],
-                                                nobs = MSM$nobs,
-                                                # nobs = nrow(MSM$wts_data),
-                                                esti = MSM$est_name,
-                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K)
-  }
-  return(RDs.IPAW.tperiods)
-}
 
-#' Risk Difference Estimates and SEs for a list of TMLE outputs
-#'
-#' Produces table(s) with pair-wise risk differences for all regimens that were used for fitting TMLE.
-#' The corresponding SEs are evaluated based on the estimated influence curves (IC).
-#' @param TMLE_list A list of objects returned by \code{\link{fitIterTMLE}}, \code{\link{fitTMLE}} or \code{\link{fitSeqGcomp}}.
-#' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
-#' @return A list with RD tables. One table for each time-point in \code{t.periods.RDs}.
-#' @seealso \code{\link{survMSM}} for estimation with MSM.
-#' @export
-get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
-  rule_names <- lapply(TMLE_list, "[[", "rule_name")
-  names(TMLE_list) <- rule_names
-  new_TMLE_list <- list()
-  new_TMLE_list$St <- lapply(lapply(TMLE_list, "[[", "estimates"), '[[', "St.TMLE")
-  new_TMLE_list$IC.Var.S.d <- lapply(TMLE_list, "[[", "IC.Var.S.d")
-  new_TMLE_list$periods <- TMLE_list[[1]]$periods
-  new_TMLE_list$est_name <- TMLE_list[[1]]$est_name
-  new_TMLE_list$wts_data <- rbindlist(lapply(TMLE_list, "[[", "wts_data"))
-  new_TMLE_list$nID <- TMLE_list[[1]]$nID
 
-  RDs.TMLE.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
-  periods_idx <- seq_along(new_TMLE_list$periods)
-  names(RDs.TMLE.tperiods) <- "RDs_for_t" %+% t.periods.RDs
-  for (t.idx in seq_along(t.periods.RDs)) {
-    t.period.val.idx <- periods_idx[new_TMLE_list$periods %in% t.periods.RDs[t.idx]]
-    se.RDscale.Sdt.K <- getSE_table_d_by_d(new_TMLE_list$St, new_TMLE_list$IC.Var.S.d, new_TMLE_list$nID, t.period.val.idx, getSEs = TRUE)
-    RDs.TMLE.tperiods[[t.idx]] <- make.table.m0(new_TMLE_list$St,
-                                                RDscale = TRUE,
-                                                t.period = t.period.val.idx,
-                                                t.value = t.periods.RDs[t.idx],
-                                                nobs = nrow(new_TMLE_list$wts_data),
-                                                esti = new_TMLE_list$est_name,
-                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K,
-                                                TMLE = TRUE)
-  }
-  return(RDs.TMLE.tperiods)
-}
+
+
+
+
 
 # ---------------------------------------------------------------------------------------------
 #' Helper routine to define the monitoring indicator and time since last visit
@@ -531,4 +453,96 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.peri
                     "Variance estimates are derived based on the influence curve of the estimator.")
   rownames(RDtable) <- NULL
   return(list(RDtable = RDtable, caption = caption))
+}
+
+
+
+
+
+
+## RD:
+getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx, getSEs) {
+  se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
+  colnames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+  rownames(se.RDscale.Sdt.K) <- names(S2.IPAW)
+  for (d1.idx in seq_along(names(S2.IPAW))) {
+    for (d2.idx in seq_along(names(S2.IPAW))) {
+      #### GET SE FOR RD(t)=Sd1(t) - Sd2(t)
+      if (getSEs) {
+        se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
+                                                                 IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
+                                                                 IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
+
+
+      }
+    }
+  }
+  return(se.RDscale.Sdt.K)
+}
+
+#' Risk Difference Estimates and SEs for IPW-MSM
+#'
+#' Produces table(s) with pair-wise risk differences for all regimens that were used for fitting IPW-MSM.
+#' The corresponding SEs are evaluated based on the estimated influence curves (IC).
+#' @param MSM Object returned by \code{\link{survMSM}}.
+#' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
+#' @param getSEs Evaluate the influence curve based RD estimates of standard errors (SEs) along with point estimates?
+#' @return A list with RD tables. One table for each time-point in \code{t.periods.RDs}.
+#' @seealso \code{\link{survMSM}} for estimation with MSM.
+#' @export
+get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
+  RDs.IPAW.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
+  periods_idx <- seq_along(MSM$periods)
+  names(RDs.IPAW.tperiods) <- "RDs_for_t" %+% t.periods.RDs
+  for (t.idx in seq_along(t.periods.RDs)) {
+    t.period.val.idx <- periods_idx[MSM$periods %in% t.periods.RDs[t.idx]]
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(MSM$St, MSM$IC.Var.S.d, MSM$nID, t.period.val.idx, getSEs)
+    RDs.IPAW.tperiods[[t.idx]] <- make.table.m0(MSM$St,
+                                                RDscale = TRUE,
+                                                t.period = t.period.val.idx,
+                                                t.value = t.periods.RDs[t.idx],
+                                                nobs = MSM$nobs,
+                                                # nobs = nrow(MSM$wts_data),
+                                                esti = MSM$est_name,
+                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K)
+  }
+  return(RDs.IPAW.tperiods)
+}
+
+#' Risk Difference Estimates and SEs for a list of TMLE outputs
+#'
+#' Produces table(s) with pair-wise risk differences for all regimens that were used for fitting TMLE.
+#' The corresponding SEs are evaluated based on the estimated influence curves (IC).
+#' @param TMLE_list A list of objects returned by \code{\link{fitIterTMLE}}, \code{\link{fitTMLE}} or \code{\link{fitSeqGcomp}}.
+#' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
+#' @return A list with RD tables. One table for each time-point in \code{t.periods.RDs}.
+#' @seealso \code{\link{survMSM}} for estimation with MSM.
+#' @export
+get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
+  rule_names <- lapply(TMLE_list, "[[", "rule_name")
+  names(TMLE_list) <- rule_names
+  new_TMLE_list <- list()
+  new_TMLE_list$St <- lapply(lapply(TMLE_list, "[[", "estimates"), '[[', "St.TMLE")
+  new_TMLE_list$IC.Var.S.d <- lapply(TMLE_list, "[[", "IC.Var.S.d")
+  new_TMLE_list$periods <- TMLE_list[[1]]$periods
+  new_TMLE_list$est_name <- TMLE_list[[1]]$est_name
+  new_TMLE_list$wts_data <- rbindlist(lapply(TMLE_list, "[[", "wts_data"))
+  new_TMLE_list$nID <- TMLE_list[[1]]$nID
+
+  RDs.TMLE.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
+  periods_idx <- seq_along(new_TMLE_list$periods)
+  names(RDs.TMLE.tperiods) <- "RDs_for_t" %+% t.periods.RDs
+  for (t.idx in seq_along(t.periods.RDs)) {
+    t.period.val.idx <- periods_idx[new_TMLE_list$periods %in% t.periods.RDs[t.idx]]
+    se.RDscale.Sdt.K <- getSE_table_d_by_d(new_TMLE_list$St, new_TMLE_list$IC.Var.S.d, new_TMLE_list$nID, t.period.val.idx, getSEs = TRUE)
+    RDs.TMLE.tperiods[[t.idx]] <- make.table.m0(new_TMLE_list$St,
+                                                RDscale = TRUE,
+                                                t.period = t.period.val.idx,
+                                                t.value = t.periods.RDs[t.idx],
+                                                nobs = nrow(new_TMLE_list$wts_data),
+                                                esti = new_TMLE_list$est_name,
+                                                se.RDscale.Sdt.K = se.RDscale.Sdt.K,
+                                                TMLE = TRUE)
+  }
+  return(RDs.TMLE.tperiods)
 }

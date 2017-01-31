@@ -25,8 +25,8 @@ make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, WTtables, FUPtables,
 
 \item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{\link{get_wtsummary}}}
 
-\item{FUPtables}{Logical, set to \code{TRUE} to print tables describing the distribution of the maximum follow-up times
-by rule (monitoring and treatment).}
+\item{FUPtables}{Subject-specific \code{data.table} with maximum follow-up time saved for each subject in the column named \code{max.t}.
+See \code{\link{get_FUPtimes}} for additional details.}
 
 \item{MSM.RDtables}{List of tables with risk differences returned by the function \code{\link{get_MSM_RDs}}.}
 
