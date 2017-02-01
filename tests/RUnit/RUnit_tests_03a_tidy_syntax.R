@@ -157,8 +157,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                       tbreaks = tbreaks,
                       glm_package = "speedglm"))) %>%
           mutate(MSM = map(MSM, "estimates")) %>%
-          rename(trunc_MSM = trunc_weight) %>%
-          select(-wts_data)
+          rename(trunc_MSM = trunc_weight)
 
   ## save IPW tables (will be later merged with main results dataset)
   IPWtabs <-  analysis %>%
@@ -166,7 +165,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                distinct(intervened_TRT, trunc_MSM, wts_tabs, FUPtimes_tabs) %>%
                nest(intervened_TRT, wts_tabs, FUPtimes_tabs, .key = "IPWtabs")
 
-  IPW <- IPW %>% select(-wts_tabs, -FUPtimes_tabs)
+  IPW <- IPW %>% select(-wts_data, -wts_tabs, -FUPtimes_tabs)
 
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
