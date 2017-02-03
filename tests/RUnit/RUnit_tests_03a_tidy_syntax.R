@@ -288,6 +288,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ------------------------------------------------------------
   ## PLOTTING RDs
   ## ------------------------------------------------------------
+  results %>% filter(trunc_wt == TRUE, stratifyQ_by_rule == TRUE) %>% select(RDs) %>% unnest(RDs) %>% select(TMLE) %>% unnest(TMLE)
+
   ests <- "TMLE"
   RDplot <-   results[["RDs"]][[1]][[ests]][[1]] %>%
               ggRD(t_int_sel = 1:5) %>%

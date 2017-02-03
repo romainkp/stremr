@@ -7,7 +7,7 @@
 ## -----------------------------------------------------------------------------
 
 if(getRversion() >= "2.15.1") {
-  utils::globalVariables(c("cens", "surv", "up", "low", "time", "group",
+  utils::globalVariables(c("cens", "surv", "CI95up", "CI95low", "up", "low", "time", "group",
                            "dx1", "dx2", "dx1_name", "dx2_name", "RD",
                            "RD.SE", "time", "contrast"))
 }
@@ -109,8 +109,8 @@ ggsurv <- function(
         group = surv_dat[["rule.name"]]
       )
       if (SE_name %in% names(surv_dat)) {
-        gr.df[[i]][, ("up") := surv + 1.96*surv_dat[[SE_name]]]
-        gr.df[[i]][, ("low") := surv - 1.96*surv_dat[[SE_name]]]
+        gr.df[[i]][, ("up") := surv + qnorm(0.025)*surv_dat[[SE_name]]]
+        gr.df[[i]][, ("low") := surv - qnorm(0.025)*surv_dat[[SE_name]]]
       } else {
         CI <- FALSE
       }
@@ -271,10 +271,6 @@ ggRD <- function(
 
   dat <-  RDests %>%
           dplyr::rename_(RD = RD_name, RD.SE = SE_name)
-          # dplyr::filter(dx1 < dx2) %>%
-          # tidyr::unite("contrast", dx1_name, dx2_name) %>%
-          # dplyr::mutate(up = RD + 1.96*RD.SE) %>%
-          # dplyr::mutate(low = RD - 1.96*RD.SE)
 
   if (!is.null(t_int_sel))
     dat <- dat %>% dplyr::filter(time_idx %in% t_int_sel)
@@ -331,11 +327,11 @@ ggRD <- function(
 
     if (CI_line) {
       pl <- pl +
-        ggplot2::geom_line(ggplot2::aes(y = up, lty = contrast, col = contrast), lty = stepLty, size = size_ci) +
-        ggplot2::geom_line(ggplot2::aes(y = low,lty = contrast, col = contrast), lty = stepLty, size = size_ci)
+        ggplot2::geom_line(ggplot2::aes(y = CI95up, lty = contrast, col = contrast), lty = stepLty, size = size_ci) +
+        ggplot2::geom_line(ggplot2::aes(y = CI95low,lty = contrast, col = contrast), lty = stepLty, size = size_ci)
     } else {
       pl <- pl +
-        ggplot2::geom_ribbon(ggplot2::aes(ymin = low, ymax = up, fill = contrast, linetype = contrast), alpha = 0.1, size = size_ci, lty = stepLty)
+        ggplot2::geom_ribbon(ggplot2::aes(ymin = CI95low, ymax = CI95up, fill = contrast, linetype = contrast), alpha = 0.1, size = size_ci, lty = stepLty)
     }
   }
 

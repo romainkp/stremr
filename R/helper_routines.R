@@ -38,18 +38,6 @@ if(getRversion() >= "2.15.1") {
 #' @return A long format dataset (\code{tibble}) with risk differences.
 #' @export
 get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data)) {
-  ## apply identical to any number of vectors (> 2):
-  # ident <- function(...){
-  #   args <- c(...)
-  #   if( length( args ) > 2L ){
-  #      #  recursively call ident()
-  #      out <- c( identical( args[1] , args[2] ) , ident(args[-1]))
-  #   }else{
-  #       out <- identical( args[1] , args[2] )
-  #   }
-  #   return( all( out ) )
-  # }
-
   estimator_short <- attr(St_data[[1]], "estimator_short")
 
   ## Use default name for the column with survival estimates
@@ -70,15 +58,6 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
   ## Will evaluate all RDs only at these intersected f-up time-points
   time <- Reduce(intersect, time_bydx_obs)
   time_idx <- seq_along(time)
-
-  ## NO LONGER USED:
-    # ## minimum across all regimen/tx-specific maximum follow-up time-points
-    # min_max_t_val <- min(unlist(lapply(time_bydx_obs, max)))
-    # ## Subset the data selecting only the min-max of all follow-up time-points
-    # St_data_use <- lapply(St_data, function(St) St[St[["time"]]<=min_max_t_val, ])
-    # time_bydx_obs <- lapply(St_data_use, function(St) St[["time"]])
-    # if (!ident(time_bydx_obs)) stop("Some of the survival estimate tables have unequal 'time' values.
-    # Evaluating risk differences is only possible when all 'time' values match exactly across all survival constrasts.")
 
   if (!all(unlist(lapply(St_data, function(surv) St_name %in% names(surv)))))
     stop("name of the survival estimates column cannot be found in one of the input datasets: " %+% St_name)
@@ -115,8 +94,10 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
           dplyr::mutate(RD.SE = purrr::pmap_dbl(., eval_SEs_two_tx))
 
     gs <- gs %>%
-          dplyr::mutate(up = RD + 1.96*RD.SE) %>%
-          dplyr::mutate(low = RD - 1.96*RD.SE)
+          dplyr::mutate(CI95up = round(RD + qnorm(0.025)*RD.SE, 4)) %>%
+          dplyr::mutate(CI95low = round(RD - qnorm(0.025)*RD.SE, 4)) %>%
+          tidyr::unite("CI", CI95up, CI95low, sep = ";", remove = FALSE) %>%
+          dplyr::mutate(pval = round(2*pnorm( abs(RD/RD.SE), lower.tail=FALSE ),2))
 
   gs <- gs %>%
         dplyr::mutate(dx1_name = purrr::map_chr(dx1, ~ tx_names[.x])) %>%

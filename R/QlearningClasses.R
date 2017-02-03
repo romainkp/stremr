@@ -1,4 +1,4 @@
-tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
+tmle.update <- function(prev_Q.kplus1, iQ_fitted_only, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
     update.Qstar.coef <- 0
@@ -12,9 +12,9 @@ tmle.update <- function(prev_Q.kplus1, init_Q_fitted_only, IPWts, lower_bound_ze
     #************************************************
     if (lower_bound_zero_Q) {
       prev_Q.kplus1[prev_Q.kplus1 < 10^(-4)] <- 10^(-4)
-      init_Q_fitted_only[init_Q_fitted_only < 10^(-4)] <- 10^(-4)
+      iQ_fitted_only[iQ_fitted_only < 10^(-4)] <- 10^(-4)
     }
-    off_TMLE <- qlogis(init_Q_fitted_only)
+    off_TMLE <- qlogis(iQ_fitted_only)
 
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol=1, nrow=length(prev_Q.kplus1)),
                                           y = prev_Q.kplus1, weights = IPWts, offset = off_TMLE,
@@ -209,8 +209,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                                stoch_indicator = stoch_indicator)
       }
 
-      init_Q_all_obs <- probA1
-      ## print("initial mean(Q.kplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
+      iQ_all <- probA1
+      ## print("initial mean(Q.kplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
 
       ## **********************************************************************
       ## Iteration step for TMLE / G-COMP
@@ -222,38 +222,24 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
       data$dat.sVar[self$idx_used_to_fit_initQ, "prev_Q.kplus1" := eval(as.name("Q.kplus1"))]
 
-      ## h2o version: prev_Q.kplus1 <- data$H2Oframe[self$idx_used_to_fit_initQ, "Q.kplus1"]
-      ## This assignment will be incorrect due to bug in h2o:
-      ## data$H2Oframe[self$idx_used_to_fit_initQ, "prev_Q.kplus1"] <- prev_Q.kplus1
-
       if (self$TMLE) {
         ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
         ## Thus, need to find which elements in predicted Q vector (probA1) where actually used for fitting the init Q
         idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
-        init_Q_fitted_only <- probA1[idx_for_fits_among_preds]
+        iQ_fitted_only <- probA1[idx_for_fits_among_preds]
+        off_TMLE <- qlogis(iQ_fitted_only)
+        # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
 
-        off_TMLE <- qlogis(init_Q_fitted_only)
-        ## h2o version: off_TMLE <- h2o.qlogis(init_Q_fitted_only)
-
-        # print("initial mean(Q.kplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(init_Q_all_obs), 4))
-
-        ## Cumulative IPWeights for current t:
+        ## Cumulative IPWeights for current t=k (from t=0 to k):
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
-        ## h2o version: wts_TMLE <- data$IPwts_by_regimen_h2o[self$idx_used_to_fit_initQ, ]
 
         ## TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         ## tmle update will error out if some predictions are exactly 0
         private$TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1,
-                                        init_Q_fitted_only = init_Q_fitted_only,
+                                        iQ_fitted_only = iQ_fitted_only,
                                         IPWts = wts_TMLE,
                                         lower_bound_zero_Q = self$lower_bound_zero_Q,
                                         skip_update_zero_Q = self$skip_update_zero_Q)
-        ## h2o version:
-        # private$TMLE.fit <- tmle.update.h2o(prev_Q.kplus1 = prev_Q.kplus1,
-        #                                     init_Q_fitted_only = init_Q_fitted_only,
-        #                                     IPWts = wts_TMLE,
-        #                                     lower_bound_zero_Q = self$lower_bound_zero_Q,
-        #                                     skip_update_zero_Q = self$skip_update_zero_Q)
 
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
         # TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
@@ -267,42 +253,34 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
 
         ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        init_Q_fitted_only <- plogis(qlogis(init_Q_fitted_only) + update.Qstar.coef)
-        init_Q_all_obs <- plogis(qlogis(init_Q_all_obs) + update.Qstar.coef)
+        iQ_fitted_only <- plogis(qlogis(iQ_fitted_only) + update.Qstar.coef)
+        iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
         ## h2o version:
-        # init_Q_fitted_only <- h2o.plogis(h2o.qlogis(init_Q_fitted_only) + update.Qstar.coef)
-        # init_Q_all_obs <- h2o.plogis(h2o.qlogis(init_Q_all_obs) + update.Qstar.coef)
+        # iQ_fitted_only <- h2o.plogis(h2o.qlogis(iQ_fitted_only) + update.Qstar.coef)
+        # iQ_all <- h2o.plogis(h2o.qlogis(iQ_all) + update.Qstar.coef)
 
-        # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(init_Q_all_obs))]
+        # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(iQ_all))]
 
-        EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
+        EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - iQ_fitted_only)
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
         ## This H2OFRAME assignment will be incorrect due to bug in h2o:
         ## data$H2Oframe[self$idx_used_to_fit_initQ, "EIC_i_t"] <- EIC_i_t_calc
       }
 
       ## Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values (data.table version):
-      data$dat.sVar[self$subset_idx, "Q.kplus1" := init_Q_all_obs]
-      ## This H2OFRAME assignment will be incorrect due to bug in h2o:
-      ## data$H2Oframe[self$subset_idx, "Q.kplus1"] <- init_Q_all_obs
+      data$dat.sVar[self$subset_idx, "Q.kplus1" := iQ_all]
 
       # Set the outcome for the next Q-regression: put Q[t] in (t-1), this will be overwritten with next prediction
       # only set the Q.kplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
         ## using data.table:
         newsubset_idx <- (self$subset_idx - 1)
-        data$dat.sVar[newsubset_idx, "Q.kplus1" := init_Q_all_obs] ## data$dat.sVar[(self$subset_idx - 1), "Q.kplus1" := init_Q_all_obs]
-
-        ## using H2OFRAME:
-        # subset_frame <- init_Q_all_obs # what we want to set
-        # reassign_rows_cols(data, newsubset_idx, subset_frame, col_name = "Q.kplus1", as.name(data$nodes$IDnode), as.name(data$nodes$tnode))
-        ## this h2o version DOES NOT WORK AS INTENDED!!!!: data$H2Oframe[newsubset_idx, "Q.kplus1"] <- subset_frame
+        data$dat.sVar[newsubset_idx, "Q.kplus1" := iQ_all] ## data$dat.sVar[(self$subset_idx - 1), "Q.kplus1" := iQ_all]
 
         private$probA1 <- NULL
       } else {
         ## save prediction P(Q.kplus=1):
-        private$probAeqa <- init_Q_all_obs
-        ## h2o version: pulls the final predictions on all N subjects from h2o into R: private$probAeqa <- as.vector(init_Q_all_obs)
+        private$probAeqa <- iQ_all
         private$probA1 <- NULL
       }
 

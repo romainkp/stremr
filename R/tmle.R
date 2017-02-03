@@ -229,7 +229,6 @@ fitSeqGcomp <- function(OData,
                         return_wts = FALSE,
                         verbose = getOption("stremr.verbose"), ...) {
 
-
   print("Calling fitSeqGcomp:")
   print("intervened_TRT: "); print(intervened_TRT)
   print("stratifyQ_by_rule: "); print(stratifyQ_by_rule)

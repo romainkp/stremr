@@ -342,38 +342,42 @@ fitPropensity <- function(OData,
   OData$modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gA")]]
   OData$modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gN")]]
 
-  g0.A <- OData$modelfit.gA$getcumprodAeqa()
   g0.C <- OData$modelfit.gC$getcumprodAeqa()
+  g0.A <- OData$modelfit.gA$getcumprodAeqa()
   g0.N <- OData$modelfit.gN$getcumprodAeqa()
 
   OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
-  # newdat <- OData$dat.sVar[, list("g0.A" = g0.A, "g0.C" = g0.C, "g0.N" = g0.N, "g0.CAN" = g0.A*g0.C*g0.N)]
+  # probs_g0 <- OData$dat.sVar[, list("g0.A" = g0.A, "g0.C" = g0.C, "g0.N" = g0.N, "g0.CAN" = g0.A*g0.C*g0.N)]
+
   return(OData)
 }
 
-## probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
-## if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
+## Evaluate the intervention probability  P(A^*(t)=a(t)) / P(N^*(t)=n(t))
+## for counterfactual A^*(t) / N^*(t) and the observed data values a(t) / n(t).
+## When intervened_NODE contains more than one rule-column, evaluate g^* for each and
+## multiply to get a single joint probability (at each time point).
 defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
   if (!is.null(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
     # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
-    Q_regs_list <- vector(mode = "list", length = length(NodeNames))
-    names(Q_regs_list) <- c(NodeNames)
-    class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
+    regs_list <- vector(mode = "list", length = length(NodeNames))
+    names(regs_list) <- c(NodeNames)
+    class(regs_list) <- c(class(regs_list), "ListOfRegressionForms")
     for (i in seq_along(NodeNames)) {
-      reg <- RegressionClass$new(outvar = NodeNames[i], predvars = NULL, outvar.class = list("deterministic"),
+      reg <- RegressionClass$new(outvar = NodeNames[i],
+                                 predvars = NULL,
+                                 outvar.class = list("deterministic"),
                                  subset_vars = list(NodeNames[i]),
                                  model_contrl = list(gstar.Name = intervened_NODE[i]))
-      Q_regs_list[[i]] <- reg
+      regs_list[[i]] <- reg
     }
-    gstar.NODE.obj <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+    gstar.NODE.obj <- GenericModel$new(reg = regs_list, DataStorageClass.g0 = OData)
     gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
 
-    if (any(is.na(subset_idx))) {
+    if (any(is.na(subset_idx)))
       stop("the subset index evaluation for the expression '" %+% useonly_t_NODE %+% "' resulted in NAs")
-    }
 
     gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
   } else {
@@ -444,7 +448,6 @@ getIPWeights <- function(OData,
     stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
   if (any(!(c("g0.A", "g0.C", "g0.N", "g0.CAN") %in% names(OData$dat.sVar))))
     stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")
-
 
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
