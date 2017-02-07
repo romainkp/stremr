@@ -19,8 +19,11 @@ newsummarymodel.categor <- function(regClass, reg, DataStorageClass.g0, ...) Cat
 newsummarymodel.stratify <- function(regClass, reg, DataStorageClass.g0, ...) StratifiedModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 # Summary model constructor for binary outcome sA[j]:
 newsummarymodel.binary <- function(regClass, reg, ...) BinaryOutcomeModel$new(reg = reg, ...)
+
 # Summary model constructor for Q-learning (sequential regression):
 newsummarymodel.Qlearn <- function(regClass, reg, ...) QlearnModel$new(reg = reg, ...)
+newsummarymodel.SDRQlearn <- function(regClass, reg, ...) SDRQlearnModel$new(reg = reg, ...)
+
 # For evaluating propensity scores under g.star (counterfactual probabilities)
 newsummarymodel.deterministic <- function(regClass, reg, ...) DeterministicBinaryOutcomeModel$new(reg = reg, ...)
 
@@ -108,6 +111,9 @@ GenericModel <- R6Class(classname = "GenericModel",
       if (gvars$verbose) prettyprint_GenericModel(self, reg, all.outvar.bin)
       # Factorize the joint into univariate regressions, by dimensionality of the outcome variable (sA_nms):
       for (k_i in 1:self$n_regs) {
+
+        # browser()
+
         if ("ListOfRegressionForms" %in% class(reg)) {
           reg_i <- reg[[k_i]]
         } else {
@@ -169,10 +175,10 @@ GenericModel <- R6Class(classname = "GenericModel",
     },
 
     # get pre-saved predictions P(Q=1) from the K indexed model fit for unique n obs.
-    predictRegK = function(K, n) {
-      if (length(private$PsAsW.models) < K) stop("invalid arg K; this object contains only " %+% length(private$PsAsW.models) %+% " different model fits.")
-      return(private$PsAsW.models[[K]]$predictAeqa(n = n))
-    },
+    # predictRegK = function(K, n) {
+    #   if (length(private$PsAsW.models) < K) stop("invalid arg K; this object contains only " %+% length(private$PsAsW.models) %+% " different model fits.")
+    #   return(private$PsAsW.models[[K]]$predictAeqa(n = n))
+    # },
 
     # call itself until reaches a terminal model fit with coefficients + regression returned with show()
     get.fits = function() {

@@ -138,7 +138,7 @@ fitTMLE <- function(...) {
 #' @param OData Input data object created by \code{importData} function.
 #' @param tvals Specify the vector of time-points for which the survival function (and risk) should be estimated
 #' @param Qforms Regression formulas, one formula per Q. Only main-terms are allowed.
-#' @param Qstratify Placeholder for future user-defined model stratification for all Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR)
+#' @param Qstratify Placeholder for future user-defined model stratification for fitting Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR).
 #' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
 #' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
 #' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
@@ -384,21 +384,25 @@ If this error cannot be fixed, consider creating a replicable example and filing
 # ------------------------------------------------------------------------------------------------
 iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001) {
   get_field_Qclass <- function(allQmodels, fieldName) {
-    lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]][[fieldName]])
+    lapply(allQmodels, function(Qclass) Qclass[[fieldName]])
+    # lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]][[fieldName]])
   }
 
   eval_idx_used_to_fit_initQ <- function(allQmodels, OData) {
-    lapply(allQmodels, function(Qclass) which(Qclass$getPsAsW.models()[[1]]$define_idx_to_fit_initQ(data = OData)))
+    lapply(allQmodels, function(Qclass) which(Qclass$define_idx_to_fit_initQ(data = OData)))
+    # lapply(allQmodels, function(Qclass) which(Qclass$getPsAsW.models()[[1]]$define_idx_to_fit_initQ(data = OData)))
   }
 
   # clean up left-over indices after we are done iterating
   eval_wipe.all.indices <- function(allQmodels, OData) {
-    lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]]$wipe.all.indices)
+    lapply(allQmodels, function(Qclass) Qclass$wipe.all.indices)
+    # lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]]$wipe.all.indices)
   }
 
   Propagate_TMLE_fits <- function(allQmodels, OData, TMLE.fit) {
     lapply(allQmodels,
-      function(Qclass) Qclass$getPsAsW.models()[[1]]$Propagate_TMLE_fit(data = OData, new.TMLE.fit = TMLE.fit))
+      function(Qclass) Qclass$Propagate_TMLE_fit(data = OData, new.TMLE.fit = TMLE.fit))
+      # function(Qclass) Qclass$getPsAsW.models()[[1]]$Propagate_TMLE_fit(data = OData, new.TMLE.fit = TMLE.fit))
     return(invisible(allQmodels))
   }
 
@@ -427,7 +431,8 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
     # Get t-specific and i-specific components of the EIC for all t > t.init:
     EIC_i_tplus <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
     # Get t-specific and i-specific components of the EIC for all t = t.init (mean pred from last reg, all n obs)
-    res_lastPredQ <- Qlearn.fit$predictRegK(Qreg_idx[1], OData$nuniqueIDs) # Qreg_idx[1] is the index for the last Q-fit
+    res_lastPredQ <- allQmodels[[Qreg_idx[1]]]$predictAeqa()  # Qreg_idx[1] is the index for the last Q-fit
+    # res_lastPredQ <- allQmodels[[length(allQmodels)]]$predictAeqa()
 
     EIC_i_t0 <- (res_lastPredQ - mean(res_lastPredQ))
     # Sum them all up and divide by N -> obtain the estimate of P_n(D^*_n):
@@ -465,7 +470,18 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
   return(invisible(Qlearn.fit))
 }
 
-fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE, iterTMLE, models, max_iter = 10, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
+fitSeqGcomp_onet <- function(OData,
+                             t_period,
+                             Qforms,
+                             Qstratify,
+                             stratifyQ_by_rule,
+                             TMLE,
+                             iterTMLE,
+                             models,
+                             max_iter = 10,
+                             adapt_stop = TRUE,
+                             adapt_stop_factor = 10,
+                             tol_eps = 0.001,
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -483,6 +499,7 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   # Adding user-specified stratas to each Q(t) regression:
   all_Q_stratify <- Qstratas_by_t
   if (!is.null(Qstratify)) {
+    stop("...Qstratify is not implemented...")
     assert_that(is.vector(Qstratify))
     assert_that(is.character(Qstratify))
     for (idx in seq_along(all_Q_stratify)) {
@@ -522,20 +539,37 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
   Q_regs_list <- vector(mode = "list", length = length(Qstratas_by_t))
   names(Q_regs_list) <- unlist(Qstratas_by_t)
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
+
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
-    reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i], t_period = Qperiods[i],
-                                     TMLE = TMLE, stratifyQ_by_rule = stratifyQ_by_rule,
-                                     outvar = "Q.kplus1", predvars = regform$predvars, outvar.class = list("Qlearn"),
-                                     subset_vars = list("Q.kplus1"), subset_exprs = all_Q_stratify[i], model_contrl = models,
+    reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i],
+                                     all_Qregs_indx = Qreg_idx,
+                                     t_period = Qperiods[i],
+                                     TMLE = TMLE,
+                                     keep_idx = ifelse(iterTMLE, TRUE, FALSE),
+                                     stratifyQ_by_rule = stratifyQ_by_rule,
+                                     outvar = "Q.kplus1",
+                                     predvars = regform$predvars,
+                                     outvar.class = list("Qlearn"),
+                                     subset_vars = list("Q.kplus1"),
+                                     subset_exprs = all_Q_stratify[i],
+                                     model_contrl = models,
                                      censoring = FALSE)
+
+    ## For Q-learning this reg class always represents a terminal model class,
+    ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
+    ## The following two lines allow for a slightly simplified (shallower) tree representation of GenericModel-type classes.
+    ## This also means that stratifying Q fits by some covariate value will not possible with this approach
+    ## (i.e., such stratifications would have to be implemented locally by the actual model fitting functions).
+    reg_i <- reg$clone()
+    reg <- reg_i$ChangeManyToOneRegresssion(1, reg)
     Q_regs_list[[i]] <- reg
   }
 
-  Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
-  Qlearn.fit$fit(data = OData, iterTMLE = iterTMLE)
+  Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  Qlearn.fit$fit(data = OData)
+  # Qlearn.fit$getPsAsW.models()[[1]]
   OData$Qlearn.fit <- Qlearn.fit
 
   # When the model is fit with user-defined stratas, need special functions to extract the final fit (current aproach will not work):
@@ -543,23 +577,23 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
 
   # get the individual TMLE updates and evaluate if any updates have failed
   allQmodels <- Qlearn.fit$getPsAsW.models()
-  allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getPsAsW.models()[[1]]$getTMLEfit)
 
+  allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getTMLEfit)
   TMLEfits <- unlist(allTMLEfits)
   successTMLEupdates <- !is.na(TMLEfits) & !is.nan(TMLEfits)
   ALLsuccessTMLE <- all(successTMLEupdates)
   nFailedUpdates <- sum(!successTMLEupdates)
 
-
   ## 1a. Grab last reg predictions from Q-regression objects:
   lastQ_inx <- Qreg_idx[1] # The index for the last Q-fit (first time-point)
   ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
-  res_lastPredQ <- Qlearn.fit$predictRegK(lastQ_inx, OData$nuniqueIDs)
+  res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()
   mean_est_t <- mean(res_lastPredQ)
 
   ## 1b. Can instead grab it directly from the data, using the appropriate strata-subsetting expression
   ## mean_est_t and mean_est_t_2 have to be equal!!!!
-  lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]] ## allQmodels[[lastQ_inx]]$get.fits()
+  # lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]] ## allQmodels[[lastQ_inx]]$get.fits()
+  lastQ.fit <- allQmodels[[lastQ_inx]]
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
@@ -594,7 +628,9 @@ fitSeqGcomp_onet <- function(OData, t_period, Qforms, Qstratify, stratifyQ_by_ru
     # if (gvars$verbose) {print("Time to run iterative TMLE: "); print(iter.time)}
 
     ## 1a. Grab the mean prediction from the very last regression (over all n observations);
-    res_lastPredQ <- Qlearn.fit$predictRegK(Qreg_idx[1], OData$nuniqueIDs)
+    lastQ_inx <- Qreg_idx[1]
+    res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()
+
     mean_est_t <- mean(res_lastPredQ)
     if (gvars$verbose) print("Iterative TMLE surv estimate: " %+% (1 - mean_est_t))
 

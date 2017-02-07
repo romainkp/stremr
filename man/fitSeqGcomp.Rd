@@ -52,7 +52,7 @@ define such folds or define the folds using your own method.}
 \item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
 Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).}
 
-\item{Qstratify}{Placeholder for future user-defined model stratification for all Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR)}
+\item{Qstratify}{Placeholder for future user-defined model stratification for fitting Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR).}
 
 \item{useonly_t_TRT}{Use for intervening only on some subset of observation and time-specific treatment nodes.
 Should be a character string with a logical expression that defines the subset of intervention observations.

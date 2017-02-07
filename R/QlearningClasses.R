@@ -87,6 +87,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
   portable = TRUE,
   class = TRUE,
   public = list(
+    reg = NULL,
     regimen_names = character(), # for future pooling across regimens
     classify = FALSE,
     TMLE = TRUE,
@@ -95,35 +96,36 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
     Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
+    all_Qregs_indx = integer(),
     t_period = integer(),
+    keep_idx = FALSE,         # keep current indices (do not remove them right after fitting)
     idx_used_to_fit_initQ = NULL,
 
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
+
+      self$reg <- reg
+
       self$Qreg_counter <- reg$Qreg_counter
+      self$all_Qregs_indx <- reg$all_Qregs_indx
+
       self$stratifyQ_by_rule <- reg$stratifyQ_by_rule
       self$lower_bound_zero_Q <- reg$lower_bound_zero_Q
       self$skip_update_zero_Q <- reg$skip_update_zero_Q
       self$t_period <- reg$t_period
       self$regimen_names <- reg$regimen_names
       self$TMLE <- reg$TMLE
+      self$keep_idx <- reg$keep_idx
 
       if (gvars$verbose) {print("initialized Q class"); reg$show()}
 
       invisible(self)
     },
 
-    define.subset.idx = function(data, subset_vars, subset_exprs) {
-      subset_idx <- data$evalsubst(subset_vars, subset_exprs)
-      # assert_that(is.logical(subset_idx))
-      # if ((length(subset_idx) < self$n) && (length(subset_idx) > 1L)) {
-      #   if (gvars$verbose) message("subset_idx has smaller length than self$n; repeating subset_idx p times, for p: " %+% data$p)
-      #   subset_idx <- rep.int(subset_idx, data$p)
-      #   # if (length(subset_idx) != self$n) stop("binomialModelObj$define.subset.idx: self$n is not equal to nobs*p!")
-      # }
-      # assert_that((length(subset_idx) == self$n) || (length(subset_idx) == 1L))
-      return(subset_idx)
-    },
+    define.subset.idx = function(data, subset_vars, subset_exprs) { data$evalsubst(subset_vars, subset_exprs) },
+
+    # Add all obs that were also censored at t and (possibly) those who just stopped following the rule
+    define_idx_to_predictQ = function(data) { self$define.subset.idx(data, subset_exprs = self$subset_exprs) },
 
     define_idx_to_fit_initQ = function(data) {
       ## self$subset_vars is the name of the outcome var, checks for (!is.na(self$subset_vars))
@@ -141,13 +143,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       return(subset_idx)
     },
 
-    # Add all obs that were also censored at t and (possibly) those who just stopped following the rule
-    define_idx_to_predictQ = function(data) {
-      subset_idx <- self$define.subset.idx(data, subset_exprs = self$subset_exprs)
-      return(subset_idx)
-    },
 
-    fit = function(overwrite = FALSE, data, iterTMLE = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
+    fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
@@ -157,16 +154,14 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
       # **********************************************************************
       self$subset_idx <- self$define_idx_to_fit_initQ(data)
-      # save the subset used for fitting of the current initial Q[t] -> will be used for targeting
+      # Save the subset used for fitting of the current initial Q[t] -> will be used for targeting
       self$idx_used_to_fit_initQ <- self$subset_idx
-      # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
 
-      # private$model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       nodes <- data$nodes
-
       self$n_obs_fit <- length(self$subset_idx)
-      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
 
+      # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
+      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
       self$is.fitted <- TRUE
 
       # **********************************************************************
@@ -175,7 +170,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # **********************************************************************
       interventionNodes.g0 <- data$interventionNodes.g0
       interventionNodes.gstar <- data$interventionNodes.gstar
-      # Determine which nodes are actually stochastic and need to be summed out
+
+      # Determine which nodes are actually stochastic and need to be summed out:
       stoch_indicator <- data$define.stoch.nodes(interventionNodes.gstar)
       any_stoch <- sum(stoch_indicator) > 0
 
@@ -213,12 +209,12 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## print("initial mean(Q.kplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
 
       ## **********************************************************************
-      ## Iteration step for TMLE / G-COMP
+      ## Iteration step for G-COMP
+      ## (*) Update are performed only among obs who were involved in fitting the initial Q (self$idx_used_to_fit_initQ)
+      ## (*) Predicted outcome from the previous Seq-GCOMP iteration (t+1) was previously saved in current t row under "Q.kplus1".
+      ## (*) If person failed at t, he/she could not have participated in model fit at t+1.
+      ## (*) Thus the outcome at row t for new failures ("Q.kplus1") is always deterministically assigned to 1.
       ## **********************************************************************
-      ## (*) TMLE update is performed only among obs who were involved in fitting of the initial Q above (self$idx_used_to_fit_initQ)
-      ## (*) Predicted outcome from the previous Seq-GCOMP/TMLE iteration was pre-saved in current regression row t.
-      ## (*) If the person just failed at current t, he/she could not have participated in regression at t+1.
-      ## (*) Thus the outcome at row t for this person is always equal to 1 (deterministic).
       prev_Q.kplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Q.kplus1", with = FALSE][[1]]
       data$dat.sVar[self$idx_used_to_fit_initQ, "prev_Q.kplus1" := eval(as.name("Q.kplus1"))]
 
@@ -242,9 +238,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                         skip_update_zero_Q = self$skip_update_zero_Q)
 
         TMLE.intercept <- private$TMLE.fit$TMLE.intercept
-        # TMLE.cleverCov.coef <- private$TMLE.fit$TMLE.cleverCov.coef
-        # print("TMLE Intercept: " %+% round(TMLE.intercept, 5))
-        # print("TMLE Intercept: " %+% TMLE.intercept)
 
         if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
           update.Qstar.coef <- TMLE.intercept
@@ -255,16 +248,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         iQ_fitted_only <- plogis(qlogis(iQ_fitted_only) + update.Qstar.coef)
         iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
-        ## h2o version:
-        # iQ_fitted_only <- h2o.plogis(h2o.qlogis(iQ_fitted_only) + update.Qstar.coef)
-        # iQ_all <- h2o.plogis(h2o.qlogis(iQ_all) + update.Qstar.coef)
-
-        # print("TMLE update of mean(Q.kplus1) at t=" %+% self$t_period %+% ": " %+% mean(iQ_all))]
 
         EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - iQ_fitted_only)
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
-        ## This H2OFRAME assignment will be incorrect due to bug in h2o:
-        ## data$H2Oframe[self$idx_used_to_fit_initQ, "EIC_i_t"] <- EIC_i_t_calc
       }
 
       ## Save all predicted vals as Q.kplus1[t] in row t or first target and then save targeted values (data.table version):
@@ -287,7 +273,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       self$wipe.alldat
-      if (!iterTMLE) self$wipe.all.indices # If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
+      if (!self$keep_idx) self$wipe.all.indices # If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
       # **********************************************************************
       invisible(self)
     },

@@ -226,7 +226,7 @@ RegressionClass <- R6Class("RegressionClass",
       super$initialize(...)
     },
 
-    # take the clone of a parent RegressionClass (reg) for length(self$outvar) regressions
+    # Take the clone of a parent RegressionClass (reg) for length(self$outvar) regressions
     # and set self to a single univariate k_i regression for outcome self$outvar[[k_i]]
     ChangeManyToOneRegresssion = function(k_i, reg) {
       assert_that(!missing(k_i))
@@ -284,29 +284,35 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
   portable = TRUE,
   public = list(
     Qreg_counter = integer(),
+    all_Qregs_indx = integer(),
     t_period = integer(),
     TMLE = FALSE,
+    keep_idx = FALSE,
     stratifyQ_by_rule = FALSE,
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
     regimen_names = NA,
     pool_regimes = FALSE,
     initialize = function(Qreg_counter,
+                          all_Qregs_indx,
                           t_period,
                           TMLE,
                           stratifyQ_by_rule,
                           regimen_names,
                           pool_regimes,
+                          keep_idx,
                           lower_bound_zero_Q = stremrOptions("lower_bound_zero_Q"),
                           skip_update_zero_Q = stremrOptions("skip_update_zero_Q"),
                           ...) {
       self$Qreg_counter <- Qreg_counter
+      self$all_Qregs_indx <- all_Qregs_indx
       self$t_period <- t_period
 
       if (!missing(TMLE)) self$TMLE <- TMLE
       if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
       if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
+      if (!missing(keep_idx)) self$keep_idx <- keep_idx
 
       self$lower_bound_zero_Q <- lower_bound_zero_Q
       self$skip_update_zero_Q <- skip_update_zero_Q
