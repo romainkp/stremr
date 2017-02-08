@@ -7,10 +7,10 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## **** makes it easier to read the individual analysis ****
   ## ----------------------------------------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
-  # options(stremr.verbose = TRUE)
+  options(stremr.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
+  # options(stremr.verbose = FALSE)
   # options(gridisl.verbose = FALSE)
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
 
   library("data.table")
   library("magrittr")
@@ -54,6 +54,9 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   # ----------------------------------------------------------------
   # IMPORT DATA
   # ----------------------------------------------------------------
+  library("h2o")
+  h2o::h2o.init(nthreads = -1)
+
   OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
   OData$dat.sVar[]
@@ -65,7 +68,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   models_g <- gridisl::defModel(estimator = "xgboost__glm",
                                 family = "binomial",
                                 nrounds = 10,
-                                early_stopping_rounds = 2)
+                                early_stopping_rounds = 2) +
+              gridisl::defModel(estimator = "h2o__gbm",
+                                distribution = "bernoulli") +
+              gridisl::defModel(estimator = "h2o__randomForest",
+                                distribution = "bernoulli")
                 # gridisl::defModel(estimator = "xgboost__gbm",
                 #               family = "binomial",
                 #               search_criteria = list(strategy = "RandomDiscrete", max_models = 5),

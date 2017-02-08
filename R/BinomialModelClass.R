@@ -40,17 +40,15 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   })
 
   if (inherits(model.fit, "try-error")) {
-    message("running " %+% paste0(model_contrl$fit.package, model_contrl$fit.algorithm, collapse=",") %+% " has failed, trying to run speedglm as a backup...")
+    message("...trying to run speedglm as a backup...")
     method <- "none"
     # model_contrl[["fit.package"]] <- "speedglm"
     # model_contrl[["fit.algorithm"]] <- "glm"
-
     glm_model <- models[1]
     glm_model[[1]][["fit.package"]] <- "speedglm"
     glm_model[[1]][["fit.algorithm"]] <- "glm"
     class(glm_model) <- c(class(glm_model), "ModelStack")
     # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
-
     # model.fit <- gridisl::fit_model(ID = nodes$IDnode,
     #                                     t_name = nodes$tnode,
     #                                     x = predvars, y = outvar,
@@ -142,9 +140,10 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
       assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
 
-      if (gvars$verbose) {
-        print("New instance of " %+% class(self)[1] %+% " :"); print(self$show())
-      }
+      # if (gvars$verbose) {
+      #   print("New instance of " %+% class(self)[1] %+% " :"); print(self$show())
+      # }
+
       # Get the bin width (interval length) for the current bin name self$getoutvarnm (for discretized continuous sA only):
       self$cont.sVar.flag <- self$getoutvarnm %in% names(reg$intrvls.width)
       if (self$cont.sVar.flag) {
