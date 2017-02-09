@@ -69,27 +69,125 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                                 family = "binomial",
                                 nrounds = 10,
                                 early_stopping_rounds = 2) +
-              gridisl::defModel(estimator = "h2o__gbm",
-                                distribution = "bernoulli") +
-              gridisl::defModel(estimator = "h2o__randomForest",
-                                distribution = "bernoulli")
-                # gridisl::defModel(estimator = "xgboost__gbm",
-                #               family = "binomial",
-                #               search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
-                #               seed = 23,
-                #               nrounds = 200, early_stopping_rounds = 10,
-                #               param_grid = list(
-                #                   learning_rate = c(.1, .3, .5), # .05,
-                #                   max_depth = c(seq(3, 19, 4), 25),
-                #                   min_child_weight = c(1, 3, 5, 7),
-                #                   gamma = c(.0, .05, seq(.1, .9, by=.2), 1),
-                #                   colsample_bytree = c(.6, .8, 1), # .4,
-                #                   subsample = c(.5, .75, 1),
-                #                   lambda = c(.1, .5, 2, 5), # lambda = c(1,2,5),
-                #                   alpha = c(0, .1, .5),
-                #                   max_delta_step = c(0, 1, 2, 5, 10)
-                #                   )
-                #               )
+               gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+                                 nlambdas = 5, lambda_search = TRUE,
+                                 param_grid = list(
+                                  alpha = c(0.5)
+                                 ))
+
+    # h2o_GBM_hyper <- list( # max_depth = c(3:10, 15),
+    #   max_depth = c(seq(3, 19, 4), 25),
+    #   # ntrees = c(500),
+    #   ntrees = c(100),
+    #   learn_rate = c(.05, .1), # 0.01, 0.03, , 0.005,
+    #   # sample_rate = seq(0.2, 1, 0.05),
+    #   sample_rate = c(.5, .75, 1),
+    #   # col_sample_rate = seq(0.1, 1, 0.05),
+    #   col_sample_rate_per_tree = c(.4, .6, .8, 1),
+    #   balance_classes = c(TRUE)
+    #   # col_sample_rate_change_per_level = seq(0.9, 1.1, 0.01),
+    #   # nbins = 2^seq(4,10,1),
+    #   # nbins_cats = 2^seq(4,12,1),
+    #   # min_split_improvement = c(0,1e-8,1e-6,1e-4),
+    #   # histogram_type = c("UniformAdaptive","QuantilesGlobal","RoundRobin"),
+    # )
+    #   # class_sampling_factors, ## Desired over/under-sampling ratios per class (in lexicographic order).
+    #   # max_after_balance_size ## Maximum relative size of the training data after balancing class counts (Default is 5)
+    #   # categorical_encoding = c("AUTO", "Enum", "OneHotInternal", "OneHotExplicit", "Binary", "Eigen")
+
+    # RF_hyper <- list(
+    #   mtries = -1,
+    #   # mtries = c(-1, seq(4, length(covars), by = 10)),
+    #   max_depth = c(3,10,15,20),
+    #   ntrees = c(100),
+    #   # ntrees = c(500),
+    #   # ntrees = c(50, 100, 200, 500, 1000),
+    #   sample_rate = c(0.632, seq(0.7, 1, 0.1)),
+    #   col_sample_rate_per_tree = seq(0.6, 1, 0.1),
+    #   balance_classes = TRUE
+    #   # col_sample_rate_change_per_level = seq(0.9, 1.1, 0.01)
+    #   # min_rows = 2^seq(0,log2(nrow(inputDT))-1,1),
+    #   # nbins = 2^seq(4,10,1), # n bins for split-finding for continuous and integer columns
+    #   # nbins_cats = 2^seq(4,12,1), # n bins for split-finding for categorical columns
+    #   # min_split_improvement = c(0,1e-8,1e-6,1e-4), # min req rel error improvement thres for a split to happen
+    #   # histogram_type = c("UniformAdaptive", "Random", "QuantilesGlobal","RoundRobin")
+    #   )
+
+    # models_g <<-
+    #             gridisl::defModel(estimator = "xgboost__gbm", family = "binomial",
+    #                                 nrounds = 200, # nrounds = 500,
+    #                                 early_stopping_rounds = 3,
+    #                                 learning_rate = .1,
+    #                                 max_depth = 3,
+    #                                 gamma = .5,
+    #                                 colsample_bytree = 0.8,
+    #                                 subsample = 0.8,
+    #                                 lambda = 2,
+    #                                 alpha = 0.5,
+    #                                 max_delta_step = 2) +
+
+    #             gridisl::defModel(estimator = "xgboost__drf", family = "binomial",
+    #                                 nrounds = 200, # nrounds = 500,
+    #                                 early_stopping_rounds = 3,
+    #                                 learning_rate = .1,
+    #                                 max_depth = 3,
+    #                                 gamma = .5,
+    #                                 # colsample_bytree = 0.8,
+    #                                 # subsample = 0.8,
+    #                                 lambda = 2,
+    #                                 alpha = 0.5,
+    #                                 max_delta_step = 2) +
+
+    #             gridisl::defModel(estimator = "xgboost__gbm",
+    #                                 family = "binomial",
+    #                                 search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
+    #                                 seed = 23,
+    #                                 nrounds = 200, # nrounds = 500,
+    #                                 early_stopping_rounds = 3,
+    #                                 param_grid = list(
+    #                                     learning_rate = c(.05, .1, .3), # .05,
+    #                                     max_depth = c(seq(3, 19, 4), 25),
+    #                                     min_child_weight = c(1, 3, 5, 7),
+    #                                     gamma = c(.0, .05, seq(.1, .9, by=.2), 1),
+    #                                     # colsample_bytree = c(.4, .6, .8, 1),
+    #                                     subsample = c(.5, .75, 1),
+    #                                     lambda = c(.1, .5, 1, 2, 5), # lambda = c(1,2,5),
+    #                                     alpha = c(0, .1, .5),
+    #                                     ## Maximum delta step we allow each tree’s weight estimation to be.
+    #                                     ## If the value is set to 0, it means there is no constraint.
+    #                                     ## If it is set to a positive value, it can help making the update step more conservative.
+    #                                     ## Might help in logistic regression when class is extremely imbalanced.
+    #                                     ## Set it to value of 1-10 to help control the update
+    #                                     max_delta_step = c(0, 1, 2, 5, 10)
+    #                                     )
+    #                                 ) +
+
+    #            gridisl::defModel(estimator = "h2o__glm", family = "binomial", alpha = 0, lambda = 0, lambda_search = FALSE) +
+
+    #            gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+    #                              nlambdas = 5, lambda_search = TRUE,
+    #                              param_grid = list(
+    #                               alpha = c(0.5)
+    #                              )) +
+
+    #             gridisl::defModel(estimator = "h2o__randomForest",
+    #                           distribution = "bernoulli",
+    #                           seed = 23,
+    #                           search_criteria = list(
+    #                             strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 3*60*60),
+    #                             # strategy = "RandomDiscrete", max_models = 20, max_runtime_secs = 3*60*60),
+    #                           param_grid = RF_hyper,
+    #                           binomial_double_trees = TRUE,
+    #                           stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1) +
+
+    #               gridisl::defModel(estimator = "h2o__gbm",
+    #                           distribution = "bernoulli",
+    #                           seed = 23,
+    #                           search_criteria = list(
+    #                             strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 3*60*60), # stopping_rounds = 5
+    #                             # strategy = "RandomDiscrete", max_models = 20, max_runtime_secs = 3*60*60), # stopping_rounds = 5
+    #                           param_grid = h2o_GBM_hyper,
+    #                           stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1)
 
   fit_method_Q <- "none"
   models_Q <-  gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
@@ -126,7 +224,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## IPW ANALYSIS
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
-  IPW <-  analysis %>%
+  IPW_time <- system.time({
+    IPW <-  analysis %>%
           rename(trunc_weight = trunc_MSM) %>%
           distinct(intervened_TRT, trunc_weight) %>%
 
@@ -165,6 +264,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                       glm_package = "speedglm"))) %>%
           mutate(MSM = map(MSM, "estimates")) %>%
           rename(trunc_MSM = trunc_weight)
+  })
+  IPW_time_hrs <- IPW_time[3]/60/60
 
   ## save IPW tables (will be later merged with main results dataset)
   IPWtabs <-  analysis %>%
@@ -177,7 +278,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
-  GCOMP <-analysis %>%
+  GCOMP_time <- system.time({
+    GCOMP <-analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule) %>%
           mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
             ~ fitSeqGcomp(intervened_TRT = .x,
@@ -189,6 +291,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                           fit_method = fit_method_Q,
                           fold_column = fold_column))) %>%
           mutate(GCOMP = map(GCOMP, "estimates"))
+  })
+  GCOMP_time_hrs <- GCOMP_time[3]/60/60
 
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
@@ -197,7 +301,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
           rename(trunc_weight = trunc_TMLE) %>%
           distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
-  TMLE <- TMLE %>%
+  TMLE_time <- system.time({
+    TMLE <- TMLE %>%
           mutate(TMLE = pmap(TMLE, fitTMLE,
                              tvals = tvals,
                              OData = OData,
@@ -207,6 +312,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                              fold_column = fold_column)) %>%
           mutate(TMLE = map(TMLE, "estimates")) %>%
           rename(trunc_TMLE = trunc_weight)
+  })
+  TMLE_time_hrs <- TMLE_time[3]/60/60
 
   ## ------------------------------------------------------------
   ## COMBINE ALL ANALYSES INTO A SINGLE DATASET
@@ -218,7 +325,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
   results <- results %>%
-              # select(-wts_tabs, -FUPtimes_tabs) %>%
+              # nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates")
               nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
 
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
@@ -256,12 +363,24 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Add models used for g and Q
   ## Add IPWtabs
   ## ------------------------------------------------------------
+  cat("IPW time, hrs: ", IPW_time_hrs, "\n")
+  cat("GCOMP time, hrs: ", GCOMP_time_hrs, "\n")
+  cat("TMLE time, hrs: ", TMLE_time_hrs, "\n")
+
   results <- results %>%
+             left_join(IPWtabs) %>%
              mutate(fit_method_g = fit_method_g) %>%
              mutate(fit_method_Q = fit_method_Q) %>%
-             mutate(models_g = map(fit_method_g, ~ I(models_g))) %>%
-             mutate(models_Q = map(fit_method_Q, ~ I(models_Q))) %>%
-             left_join(IPWtabs)
+             # mutate(models_g = map(fit_method_g, ~ I(models_g))) %>%
+             # mutate(models_Q = map(fit_method_Q, ~ I(models_Q))) %>%
+             mutate(models_g = map(fit_method_g, ~ models_g)) %>%
+             mutate(models_Q = map(fit_method_Q, ~ models_Q)) %>%
+             mutate(run_time = map(trunc_wt,
+              ~ tibble(IPW_time_hrs = IPW_time_hrs, GCOMP_time_hrs = GCOMP_time_hrs, TMLE_time_hrs = TMLE_time_hrs)))
+
+  # as.data.table(results)
+  # as.data.table(results)[["models_g"]]
+  # as.data.table(results)[["run_time"]]
 
   ## ------------------------------------------------------------
   ## PLOTTING SURVIVAL CURVES
