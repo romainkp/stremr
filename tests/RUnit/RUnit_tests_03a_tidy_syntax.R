@@ -57,7 +57,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   library("h2o")
   h2o::h2o.init(nthreads = -1)
 
-  OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+  OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
   OData$dat.sVar[]
   OData$fold_column <- NULL
@@ -65,10 +65,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   fold_column <- "fold_ID"
   fit_method_g <- "cv"
-  models_g <- gridisl::defModel(estimator = "xgboost__glm",
-                                family = "binomial",
-                                nrounds = 10,
-                                early_stopping_rounds = 2) +
+  models_g <-
+              # gridisl::defModel(estimator = "xgboost__glm",
+              #                   family = "binomial",
+              #                   nrounds = 10,
+              #                   early_stopping_rounds = 2) +
                gridisl::defModel(estimator = "h2o__glm", family = "binomial",
                                  nlambdas = 5, lambda_search = TRUE,
                                  param_grid = list(
