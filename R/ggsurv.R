@@ -224,6 +224,8 @@ ggsurv <- function(
 #' (e.g., "bottom", "right" or "left").
 #' @param RD_name The name of the column containing the risk differences.
 #' @param SE_name The name of the column containing the standard errors (SE) for each risk difference.
+#' @param CIlow_name The name of the column containing the lower bound of the confidence interval (optional).
+#' @param CIup_name The name of the column containing the upper bound of the confidence interval (optional).
 #' @param order_legend Set to \code{TRUE} to order the legend display by final
 #' survival time (highest first).
 #' @param t_int_sel The subset of time-point indices for which survival should be plotted.
@@ -257,6 +259,8 @@ ggRD <- function(
   legend_pos = "right",
   RD_name = "RD",
   SE_name = "RD.SE",
+  CIlow_name = "CI95low",
+  CIup_name = "CI95up",
   order_legend = TRUE,
   t_int_sel = NULL,
   ymin = NULL,
@@ -327,11 +331,11 @@ ggRD <- function(
 
     if (CI_line) {
       pl <- pl +
-        ggplot2::geom_line(ggplot2::aes(y = CI95up, lty = contrast, col = contrast), lty = stepLty, size = size_ci) +
-        ggplot2::geom_line(ggplot2::aes(y = CI95low,lty = contrast, col = contrast), lty = stepLty, size = size_ci)
+        ggplot2::geom_line(ggplot2::aes_string(y = CIup_name, lty = "contrast", col = "contrast"), lty = stepLty, size = size_ci) +
+        ggplot2::geom_line(ggplot2::aes_string(y = CIlow_name,lty = "contrast", col = "contrast"), lty = stepLty, size = size_ci)
     } else {
       pl <- pl +
-        ggplot2::geom_ribbon(ggplot2::aes(ymin = CI95low, ymax = CI95up, fill = contrast, linetype = contrast), alpha = 0.1, size = size_ci, lty = stepLty)
+        ggplot2::geom_ribbon(ggplot2::aes_string(ymin = CIlow_name, ymax = CIup_name, fill = "contrast", linetype = "contrast"), alpha = 0.1, size = size_ci, lty = stepLty)
     }
   }
 

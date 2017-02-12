@@ -10,8 +10,9 @@ ggRD(RDests, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
   size_ci = size_est, size_pt = size_est + 0.3, cens_size = 2,
   cens_shape = 3, back_white = TRUE, xlab = "Time",
   ylab = "Risk Difference", main = "", legend_pos = "right",
-  RD_name = "RD", SE_name = "RD.SE", order_legend = TRUE,
-  t_int_sel = NULL, ymin = NULL, ymax = NULL, facet = FALSE, ...)
+  RD_name = "RD", SE_name = "RD.SE", CIlow_name = "CI95low",
+  CIup_name = "CI95up", order_legend = TRUE, t_int_sel = NULL,
+  ymin = NULL, ymax = NULL, facet = FALSE, ...)
 }
 \arguments{
 \item{RDests}{A table in long format with a single column containing names of two contrasting regimens.
@@ -68,6 +69,10 @@ the character word denoting the legend orientation with respect to the plot
 \item{RD_name}{The name of the column containing the risk differences.}
 
 \item{SE_name}{The name of the column containing the standard errors (SE) for each risk difference.}
+
+\item{CIlow_name}{The name of the column containing the lower bound of the confidence interval (optional).}
+
+\item{CIup_name}{The name of the column containing the upper bound of the confidence interval (optional).}
 
 \item{order_legend}{Set to \code{TRUE} to order the legend display by final
 survival time (highest first).}

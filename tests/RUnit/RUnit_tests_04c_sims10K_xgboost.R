@@ -99,8 +99,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                         openFile = TRUE,
                         WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
                         file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
-
-  }
+    }
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     surv_dlow <- survNPMSM(wts.St.dlow, OData)
@@ -533,8 +532,10 @@ test.xgboost.10Kdata <- function() {
     # IMPORT DATA
     # ----------------------------------------------------------------
     `%+%` <- function(a, b) paste0(a, b)
+    library("stremr")
     library("data.table")
     data.table::setDTthreads(1)
+    # library("gridisl")
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
@@ -550,7 +551,7 @@ test.xgboost.10Kdata <- function() {
 
     setkeyv(Odat_DT, cols = c("ID", "t"))
 
-    OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1")
+    OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1")
     OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
     OData$dat.sVar[]
     OData$fold_column <- NULL
