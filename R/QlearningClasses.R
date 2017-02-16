@@ -132,17 +132,14 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## self$subset_exprs is the time variable for selecting certain rows
       subset_idx <- self$define.subset.idx(data, subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
 
-      ## excluded all censored observations
-      ## TO DO: Shift data$uncensored_idx to row-based indexing (from logical)
-      subset_idx <- intersect(subset_idx, which(data$uncensored_idx))
+      ## excluded all censored observations:
+      subset_idx <- intersect(subset_idx, which(data$uncensored))
 
-      ## if stratifying by rule, exclude all obs who are not following the rule:
-      ## TO DO: Shift data$rule_followers_idx to row-based indexing (from logical)
-      if (self$stratifyQ_by_rule) subset_idx <- intersect(subset_idx, which(data$rule_followers_idx))
+      ## if stratifying by rule, exclude all obs who stopped following the rule at some point prior t or at t:
+      if (self$stratifyQ_by_rule) subset_idx <- intersect(subset_idx, which(data$follow_rule))
 
       return(subset_idx)
     },
-
 
     fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs

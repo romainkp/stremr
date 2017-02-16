@@ -549,18 +549,48 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       # }
     },
 
-    eval_rule_followers = function(NodeName, gstar.NodeName) {
+    ## Rule followers over time for given exposure node and the counterfactual intervention node
+    ## ******* Must follow the rule over all time-points up to and including t *******
+    ## This is used for stratifying GCOMP by the entire history of following teh rule.
+    ## For stochastic intervention nodes, the person follows the rule when the joint probability of g^*(t) over all t is  > 0.
+    ## Returns a logical vector of indicators of length nrow(data)
+    eval_follow_rule = function(NodeName, gstar.NodeName) {
       dat.rulefollow <- self$dat.sVar[, c(self$nodes$IDnode, NodeName, gstar.NodeName), with = FALSE]
       setkeyv(dat.rulefollow, cols = self$nodes$IDnode)
-      # likelihood of N(t) under counterfactual g^*:
-      dat.rulefollow[, "rule.follower.byt" := get(gstar.NodeName)^get(NodeName) * (1L-get(gstar.NodeName))^(1-get(NodeName))]
-      # rule follower whenever the probability of observing the current history \bar{(O(t))} is > 0
-      rule_followers_idx <- dat.rulefollow[, "rule.followers" := as.integer(cumprod(rule.follower.byt) > 0), by = eval(self$nodes$IDnode)][["rule.followers"]]
-      return(as.logical(rule_followers_idx))
+      ## Likelihood of N(t) under counterfactual g^*. This is done so that stochastic intervention nodes are handled appropriately.
+      dat.rulefollow[, "follow.byt" := get(gstar.NodeName)^get(NodeName) * (1L - get(gstar.NodeName))^(1 - get(NodeName))]
+      ## rule follower whenever the probability of observing the current history \bar{(O(t))} is > 0
+      followers <- dat.rulefollow[, "followers" := as.logical(cumprod(follow.byt) > 0), by = eval(self$nodes$IDnode)][["followers"]]
+      return(followers)
     },
 
+    ## Time-specific rule followers for given exposure node and the counterfactual intervention node
+    ## **** Only considers the equality of the exposure and intervention nodes at the current t, regardless of the past history ***
+    ## This is used for stratifying GCOMP by current time-point only.
+    ## For stochastic intervention nodes, the person follows the rule when the probability of g^* at t is > 0.
+    ## Returns a logical vector of indicators of length nrow(data)
+    eval_follow_rule_each_t = function(NodeName, gstar.NodeName) {
+      dat.rulefollow <- self$dat.sVar[, c(self$nodes$IDnode, NodeName, gstar.NodeName), with = FALSE]
+      setkeyv(dat.rulefollow, cols = self$nodes$IDnode)
+      ## likelihood of N(t) under counterfactual g^*.
+      ## Rule follower at t whenever the probability of observing current gstar(t) is > 0.
+      follower_by_t <- dat.rulefollow[,
+                          "follow.byt" := as.logical(get(gstar.NodeName)^get(NodeName) * (1L - get(gstar.NodeName))^(1 - get(NodeName)) > 0)][[
+                          "follow.byt"]]
+      return(follower_by_t)
+    },
+
+    ## logical vector of length nrow(data), indicating if the person has not been censored (yet) at current t
     eval_uncensored = function() {
-      return(self$dat.sVar[, list(uncensored_idx = as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat))), .SDcols = self$nodes$Cnodes][["uncensored_idx"]])
+      return(self$dat.sVar[, list(uncensored = as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat))), .SDcols = self$nodes$Cnodes][["uncensored"]])
+    },
+
+    ## integer vector of rows in data for observations (over all time-points) who have not been censored yet at each t
+    eval_uncensored_idx = function() {
+      return(self$dat.sVar[,
+              list(uncensored_idx = which(as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat)))),
+              .SDcols = self$nodes$Cnodes][[
+                "uncensored_idx"]])
     },
 
     define.stoch.nodes = function(NodeNames) {
@@ -707,20 +737,20 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.nodes <- nodes
       }
     },
-    uncensored_idx = function(uncensored_idx) {
-      if (missing(uncensored_idx)) {
-        return(private$.uncensored_idx)
+    uncensored = function(uncensored) {
+      if (missing(uncensored)) {
+        return(private$.uncensored)
       } else {
-        assert_that(is.logical(uncensored_idx))
-        private$.uncensored_idx <- uncensored_idx
+        assert_that(is.logical(uncensored))
+        private$.uncensored <- uncensored
       }
     },
-    rule_followers_idx = function(rule_followers_idx) {
-      if (missing(rule_followers_idx)) {
-        return(private$.rule_followers_idx)
+    follow_rule = function(follow_rule) {
+      if (missing(follow_rule)) {
+        return(private$.follow_rule)
       } else {
-        assert_that(is.logical(rule_followers_idx))
-        private$.rule_followers_idx <- rule_followers_idx
+        assert_that(is.logical(follow_rule))
+        private$.follow_rule <- follow_rule
       }
     },
     IPwts_by_regimen = function(IPwts) {
@@ -756,8 +786,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     .ord.sVar = NULL,             # Ordinal (cat) transform for continous sVar
     # sVar.object = NULL,         # DefineSummariesClass object that contains / evaluates sVar expressions
     .type.sVar = NULL,            # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
-    .uncensored_idx = NULL,       # logical vector for all observation indices that are not censored at current t
-    .rule_followers_idx = NULL,   # logical vector for all observation indices that are following the current rule of interest at current t
+    .uncensored = NULL,       # logical vector for all observation indices that are not censored at current t
+    .follow_rule = NULL,   # logical vector for all observation indices that are following the current rule of interest at current t
     .IPwts = NULL,
     # .IPwts_h2o = NULL,
     # Replace all missing (NA) values with a default integer (0) for matrix

@@ -7,7 +7,8 @@
 # ---------------------------------------------------------------------------
 
 test.GCOMP.TMLE.10Kdata <- function() {
-  options(stremr.verbose = FALSE)
+  # options(stremr.verbose = FALSE)
+  options(stremr.verbose = TRUE)
   `%+%` <- function(a, b) paste0(a, b)
   # ---------------------------------------------------------------------------
   # INSTALL CORRECT VERSIONS of data.table and stremr from github:
@@ -42,10 +43,10 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # --------------------------------
   # options(stremr.verbose = FALSE)
   # options(stremr.verbose = TRUE)
-  set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
+  # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
 
   # import data into stremr object:
-  OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+  OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
 
   # --------------------------------
   # Fitting the propensity scores for observed variables (A,C,N)
@@ -82,21 +83,64 @@ test.GCOMP.TMLE.10Kdata <- function() {
   Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   # stratified modeling by rule followers only:
-  gcomp_est1 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  tmle_est1 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  names(gcomp_est1)
+  gcomp_est1 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
   gcomp_est1$estimates[]
-  gcomp_est1$est_name
-  gcomp_est1$IC.Var.S.d
-  names(tmle_est1)
+  # > gcomp_est1$estimates[]
+  #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
+  #      <char> <num>     <num>  <lgcl>      <lgcl>         <lgcl>          <int>     <char>
+  # 1:    GCOMP     1 0.9874747      NA          NA          FALSE              2 stratified
+  # 2:    GCOMP     2 0.9710077      NA          NA          FALSE              3 stratified
+  # 3:    GCOMP     3 0.9631855      NA          NA          FALSE              4 stratified
+  # 4:    GCOMP    10 0.8660195      NA          NA          FALSE             11 stratified
+  tmle_est1 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
   tmle_est1$estimates[]
-  tmle_est1$est_name
-  tmle_est1$IC.Var.S.d
+  #    est_name  time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
+  #      <char> <num>   <lgcl>     <num>      <lgcl>         <lgcl>          <int>     <char>
+  # 1:     TMLE     1       NA 0.9884151          NA           TRUE              0 stratified
+  # 2:     TMLE     2       NA 0.9662626          NA           TRUE              0 stratified
+  # 3:     TMLE     3       NA 0.9578743          NA           TRUE              0 stratified
+  # 4:     TMLE    10       NA 0.8613802          NA           TRUE              0 stratified
+
+  gcomp_est1_last_t <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  gcomp_est1_last_t$estimates[]
+  #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
+  #      <char> <num>     <num>  <lgcl>      <lgcl>         <lgcl>          <int>     <char>
+  # 1:    GCOMP     1 0.9881351      NA          NA          FALSE              2 stratified
+  # 2:    GCOMP     2 0.9775586      NA          NA          FALSE              3 stratified
+  # 3:    GCOMP     3 0.9698591      NA          NA          FALSE              4 stratified
+  # 4:    GCOMP    10 0.9028223      NA          NA          FALSE             11 stratified
+  tmle_est1_last_t <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  tmle_est1_last_t$estimates[]
+  #    est_name  time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
+  #      <char> <num>   <lgcl>     <num>      <lgcl>         <lgcl>          <int>     <char>
+  # 1:     TMLE     1       NA 0.9884149          NA           TRUE              0 stratified
+  # 2:     TMLE     2       NA 0.9662519          NA           TRUE              0 stratified
+  # 3:     TMLE     3       NA 0.9578642          NA           TRUE              0 stratified
+  # 4:     TMLE    10       NA 0.8613870          NA           TRUE              0 stratified
 
   # pooling all observations (no stratification):
   gcomp_est2 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   tmle_est2 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  gcomp_est2$estimates[]; tmle_est2$estimates[]
+  gcomp_est2$estimates[]
+  #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type
+  #      <char> <num>     <num>  <lgcl>      <lgcl>         <lgcl>          <int> <char>
+  # 1:    GCOMP     1 0.9861232      NA          NA          FALSE              2 pooled
+  # 2:    GCOMP     2 0.9751668      NA          NA          FALSE              3 pooled
+  # 3:    GCOMP     3 0.9674501      NA          NA          FALSE              4 pooled
+  # 4:    GCOMP    10 0.8964330      NA          NA          FALSE             11 pooled
+  tmle_est2$estimates[]
+  #    est_name  time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
+  #      <char> <num>   <lgcl>     <num>      <lgcl>         <lgcl>          <int> <char>       <num>
+  # 1:     TMLE     1       NA 0.9884138          NA           TRUE              0 pooled 0.001818848
+  # 2:     TMLE     2       NA 0.9662455          NA           TRUE              0 pooled 0.004760497
+  # 3:     TMLE     3       NA 0.9578574          NA           TRUE              0 pooled 0.005344252
+  # 4:     TMLE    10       NA 0.8613797          NA           TRUE              0 pooled 0.009636681
+  #                                                                             IC.St rule.name
+  #                                                                            <list>    <char>
+  # 1: -0.007387212,-0.006030586,-0.007387212, 0.003374826,-0.006030586,-0.006030586,  gTI.dlow
+  # 2:       -0.01317465,-0.01027082,-0.01317465, 0.01702086,-0.01027082,-0.01027082,  gTI.dlow
+  # 3:       -0.01573943,-0.01234550,-0.01573943, 0.03217811,-0.01234550,-0.01234550,  gTI.dlow
+  # 4:       -0.03282305,-0.02735624,-0.03282305, 0.15442483,-0.02735624,-0.02735624,  gTI.dlow
 
   # stratified modeling by rule followers only:
   gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)

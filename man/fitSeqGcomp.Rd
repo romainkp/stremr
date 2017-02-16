@@ -10,12 +10,12 @@ fitSeqGcomp(OData, tvals, Qforms, intervened_TRT = NULL,
   estimator = stremrOptions("estimator"),
   fit_method = stremrOptions("fit_method"),
   fold_column = stremrOptions("fold_column"), TMLE = FALSE,
-  stratifyQ_by_rule = FALSE, Qstratify = NULL, useonly_t_TRT = NULL,
-  useonly_t_MONITOR = NULL, iterTMLE = FALSE, IPWeights = NULL,
-  stabilize = FALSE, trunc_weights = 10^6, weights = NULL,
-  max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10,
-  tol_eps = 0.001, parallel = FALSE, return_wts = FALSE,
-  verbose = getOption("stremr.verbose"), ...)
+  stratifyQ_by_rule = FALSE, stratify_by_last = TRUE, Qstratify = NULL,
+  useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, iterTMLE = FALSE,
+  IPWeights = NULL, stabilize = FALSE, trunc_weights = 10^6,
+  weights = NULL, max_iter = 15, adapt_stop = TRUE,
+  adapt_stop_factor = 10, tol_eps = 0.001, parallel = FALSE,
+  return_wts = FALSE, verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -49,8 +49,19 @@ define such folds or define the folds using your own method.}
 
 \item{TMLE}{Set to \code{TRUE} to run the usual longitudinal TMLE algorithm (with a separate TMLE update of Q for every sequential regression).}
 
-\item{stratifyQ_by_rule}{Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
-Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).}
+\item{stratifyQ_by_rule}{Set to \code{TRUE} for stratifying the fit of Q (the outcome model) by rule-followers only.
+There are two ways to do this stratification. The first option is to use \code{stratify_by_last=TRUE}  (default),
+which would fit the outcome model only among the observations that were receiving their supposed
+counterfactual treatment at the current time-point (ignoring the past history of treatments leading up to time-point t).
+The second option is to set \code{stratify_by_last=FALSE} in which case the outcome model will be fit only
+among the observations who followed their counterfactual treatment regimen throughout the entire treatment history up to
+current time-point t (rule followers). For the latter option, the observation would be considered a non-follower if
+the person's treatment did not match their supposed counterfactual treatment at any time-point up to and including current
+time-point t.}
+
+\item{stratify_by_last}{Only used when \code{stratifyQ_by_rule} is \code{TRUE}.
+Set to \code{TRUE} for stratification by last time-point, set to \code{FALSE} for stratification by all time-points (rule-followers).
+See \code{stratifyQ_by_rule} for more details.}
 
 \item{Qstratify}{Placeholder for future user-defined model stratification for fitting Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR).}
 

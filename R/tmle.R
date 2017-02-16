@@ -65,36 +65,39 @@
 ## ------------------------------------------------------------------------------------------------------------------------
 ## Do it separately for gstar_TRT & gstar_MONITOR
 ## Loop over each node in gstar_TRT / gstar_MONITOR
-## Do it only once for all observations inside main tmle call
+## Do it only once for all observations inside main TMLE call
 ## Back-up a copy of all gstar nodes first, the original copy is then restored when finished running
 ## The observations which get swapped with g0 values are defined by:
 ## subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
 ## probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
 ## Example call: defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
-defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, stratifyQ_by_rule) {
+defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, stratifyQ_by_rule, stratify_by_last) {
   # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
   if (!is.null(intervened_NODE)) {
     gstar.NODEs <- intervened_NODE
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
 
-    # ------------------------------------------------------------------------------------------
-    # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
-    # ------------------------------------------------------------------------------------------
+    ## ------------------------------------------------------------------------------------------
+    ## Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
+    ## ------------------------------------------------------------------------------------------
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
     OData$replaceNodesVals(!subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
-    # ------------------------------------------------------------------------------------------
+    ## ------------------------------------------------------------------------------------------
 
-    # ------------------------------------------------------------------------------------------
-    # update rule followers for trt if doing stratified G-COMP:
-    # Note this will define rule followers based on REPLACED intervened_NODE in dat.sVar (i.e., modified n^*(t) under N.D.E.)
-    # FOR NDE BASED TMLE THE DEFINITION OF RULE-FOLLOWERS CHANGES ACCORDINGLY based on modified n^*(t) and a^*(t)
+    ## ------------------------------------------------------------------------------------------
+    ## update rule followers for trt if doing stratified G-COMP:
+    ## Note this will define rule followers based on REPLACED intervened_NODE in dat.sVar (i.e., modified n^*(t) under N.D.E.)
+    ## FOR NDE BASED TMLE THE DEFINITION OF RULE-FOLLOWERS CHANGES ACCORDINGLY based on modified n^*(t) and a^*(t)
     # ------------------------------------------------------------------------------------------
     if (stratifyQ_by_rule) {
-      rule_followers_idx <- OData$eval_rule_followers(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
-      OData$rule_followers_idx <- rule_followers_idx & OData$rule_followers_idx & OData$uncensored_idx
+      if (!stratify_by_last) {
+        follow_rule <- OData$eval_follow_rule(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
+      } else {
+        follow_rule <- OData$eval_follow_rule_each_t(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
+      }
+      OData$follow_rule <- follow_rule & OData$follow_rule & OData$uncensored
     }
-
   } else {
     # use the actual (observed) node names under g0:
     gstar.NODEs <- NodeNames
@@ -150,8 +153,18 @@ fitTMLE <- function(...) {
 #' Leave as \code{NULL} when intervening on all observations/time-points.
 #' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
 #' @param rule_name Optional name for the treatment/monitoring regimen.
-#' @param stratifyQ_by_rule Set to \code{TRUE} for stratification, fits the outcome model (Q-learning) among rule-followers only.
-#' Setting to \code{FALSE} will fit the outcome model (Q-learning) across all observations (pooled regression).
+#' @param stratifyQ_by_rule Set to \code{TRUE} for stratifying the fit of Q (the outcome model) by rule-followers only.
+#' There are two ways to do this stratification. The first option is to use \code{stratify_by_last=TRUE}  (default),
+#' which would fit the outcome model only among the observations that were receiving their supposed
+#' counterfactual treatment at the current time-point (ignoring the past history of treatments leading up to time-point t).
+#' The second option is to set \code{stratify_by_last=FALSE} in which case the outcome model will be fit only
+#' among the observations who followed their counterfactual treatment regimen throughout the entire treatment history up to
+#' current time-point t (rule followers). For the latter option, the observation would be considered a non-follower if
+#' the person's treatment did not match their supposed counterfactual treatment at any time-point up to and including current
+#' time-point t.
+#' @param stratify_by_last Only used when \code{stratifyQ_by_rule} is \code{TRUE}.
+#' Set to \code{TRUE} for stratification by last time-point, set to \code{FALSE} for stratification by all time-points (rule-followers).
+#' See \code{stratifyQ_by_rule} for more details.
 #' @param TMLE Set to \code{TRUE} to run the usual longitudinal TMLE algorithm (with a separate TMLE update of Q for every sequential regression).
 #' @param iterTMLE Set to \code{TRUE} to run the iterative univariate TMLE instead of the usual longitudinal TMLE.
 #' When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.
@@ -213,6 +226,7 @@ fitSeqGcomp <- function(OData,
                         fold_column = stremrOptions("fold_column"),
                         TMLE = FALSE,
                         stratifyQ_by_rule = FALSE,
+                        stratify_by_last = TRUE,
                         Qstratify = NULL,
                         useonly_t_TRT = NULL,
                         useonly_t_MONITOR = NULL,
@@ -229,10 +243,11 @@ fitSeqGcomp <- function(OData,
                         return_wts = FALSE,
                         verbose = getOption("stremr.verbose"), ...) {
 
-  print("Calling fitSeqGcomp:")
-  print("intervened_TRT: "); print(intervened_TRT)
-  print("stratifyQ_by_rule: "); print(stratifyQ_by_rule)
-  print("trunc_weights: "); print(trunc_weights)
+  cat("Calling fitSeqGcomp:")
+  cat("intervened_TRT: ", intervened_TRT);
+  cat("stratifyQ_by_rule: ", stratifyQ_by_rule);
+  cat("stratify_by_last: ", stratify_by_last);
+  cat("trunc_weights: ", trunc_weights);
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -246,8 +261,8 @@ fitSeqGcomp <- function(OData,
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
   # ------------------------------------------------------------------------------------------------
-  OData$uncensored_idx <- OData$eval_uncensored()
-  OData$rule_followers_idx <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
+  OData$uncensored <- OData$eval_uncensored()
+  OData$follow_rule <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
   sVar.exprs <- capture.exprs(...)
   models_control <- c(list(models = models), opt_params = list(sVar.exprs))
@@ -293,8 +308,8 @@ fitSeqGcomp <- function(OData,
   # Define the intervention nodes
   # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx
   # ------------------------------------------------------------------------------------------------
-  gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
-  gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule)
+  gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule, stratify_by_last)
+  gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule, stratify_by_last)
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
 
@@ -362,6 +377,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
   attr(resultDT, "nID") <- OData$nuniqueIDs
   attr(resultDT, "rule_name") <- rule_name
   attr(resultDT, "stratifyQ_by_rule") <- stratifyQ_by_rule
+  attr(resultDT, "stratify_by_last") <- stratify_by_last
   attr(resultDT, "trunc_weights") <- trunc_weights
   attr(resultDT, "time") <- resultDT[["time"]]
 
