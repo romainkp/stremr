@@ -561,6 +561,7 @@ test.xgboost.10Kdata <- function() {
     require("doParallel")
     stopImplicitCluster()
     registerDoParallel(cores = 4)
+    cl <- makeForkCluster(4, outfile = "")
     # cl <- makeForkCluster(10)
     # registerDoParallel(cl)
     # cl <- makeCluster(10)
@@ -585,7 +586,7 @@ test.xgboost.10Kdata <- function() {
     tmle.model <- "xgb.glm"
     params <- gridisl::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
-                                nthread = 2,
+                                # nthread = 2,
                                 nrounds = 100,
                                 early_stopping_rounds = 5)
 

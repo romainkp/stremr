@@ -1,7 +1,7 @@
 
 
 ## ---------------------------------------------------------------------
-## R6 class for fitting sequentially double robustness procedure
+## R6 class for fitting SDR procedure
 ## Inherits from \code{GenericModel}.
 ## ---------------------------------------------------------------------
 SDRModel <- R6Class(classname = "SDRModel",
@@ -78,6 +78,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
       cat("Current loop to update Q_k index = " %+% self$all_Qregs_indx[Qk_idx], "\n")
 
       cat("Targeting Q_k' (kprime) at = " %+% self$Qreg_counter, "; time = " %+% self$t_period, "\n")
+
       ## above is the same as self$all_Qregs_indx[kprime_idx]
       cat("Current k' (kprime) = " %+% kprime_idx, "\n")
 

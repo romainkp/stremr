@@ -306,24 +306,27 @@ fitSeqGcomp <- function(OData,
   OData$interventionNodes.g0 <- interventionNodes.g0
   OData$interventionNodes.gstar <- interventionNodes.gstar
 
-  # ------------------------------------------------------------------------------------------------
-  # RUN GCOMP OR TMLE FOR SEVERAL TIME-POINTS EITHER IN PARALLEL OR SEQUENTIALLY
-  # ------------------------------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------------------------------
+  ## RUN GCOMP OR TMLE FOR SEVERAL TIME-POINTS EITHER IN PARALLEL OR SEQUENTIALLY
+  ## For est of S(t) over vector of ts, estimate for highest t first going down to smallest t
+  ## This is a more efficient when parallelizing, since larger t implies more model runs & longer run time
+  ## ------------------------------------------------------------------------------------------------
   est_name <- ifelse(TMLE, "TMLE", ifelse(iterTMLE, "GCOMP & iterTMLE", "GCOMP"))
   tmle.run.res <- try(
     if (parallel) {
       mcoptions <- list(preschedule = FALSE)
       '%dopar%' <- foreach::'%dopar%'
-      res_byt <- foreach::foreach(t_idx = seq_along(tvals), .options.multicore = mcoptions) %dopar% {
+      res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
         return(res)
       }
+      res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
     } else {
       res_byt <- vector(mode = "list", length = length(tvals))
-      for (t_idx in seq_along(tvals)) {
+      for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
