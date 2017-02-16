@@ -27,11 +27,6 @@ run_test_xgb_Models <- function(seed){
 
 test.xgboost.parallel.10Kdata <- function() {
   `%+%` <- function(a, b) paste0(a, b)
-  # library("stremr")
-  # library("xgboost")
-  # library("data.table")
-  # setDTthreads(1)
-
   # options(stremr.verbose = TRUE)
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = TRUE)
@@ -99,7 +94,6 @@ test.xgboost.parallel.10Kdata <- function() {
 
   # cl <- makeForkCluster(4, outfile = "")
   # registerDoParallel(cl); Sys.sleep(2)
-
 
   # cat("...running inside run_test_xgb_Models...", "\n")
   # r <- foreach(n=seq.int(8), .packages=c('xgboost'), .export = "run_test_xgb_Models") %dopar% {
@@ -219,84 +213,81 @@ test.xgboost.parallel.10Kdata <- function() {
           rename(trunc_weight = trunc_TMLE) %>%
           distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
-  # TMLE_time <- system.time({
-  #   TMLE <- TMLE %>%
-  #         mutate(TMLE = pmap(TMLE, fitTMLE,
-  #                            tvals = tvals,
-  #                            OData = OData,
-  #                            models = models_Q,
-  #                            Qforms = Qforms,
-  #                            fit_method = fit_method_Q,
-  #                            fold_column = fold_column,
-  #                            parallel = TRUE)) %>%
-  #         mutate(TMLE = map(TMLE, "estimates")) %>%
-  #         rename(trunc_TMLE = trunc_weight)
-  # })
-  # TMLE_time_hrs <- TMLE_time[3]/60/60
+  TMLE_time <- system.time({
+    TMLE <- TMLE %>%
+          mutate(TMLE = pmap(TMLE, fitTMLE,
+                             tvals = tvals,
+                             OData = OData,
+                             models = models_Q,
+                             Qforms = Qforms,
+                             fit_method = fit_method_Q,
+                             fold_column = fold_column,
+                             parallel = TRUE)) %>%
+          mutate(TMLE = map(TMLE, "estimates")) %>%
+          rename(trunc_TMLE = trunc_weight)
+  })
+  TMLE_time_hrs <- TMLE_time[3]/60/60
 
   ## ------------------------------------------------------------
   ## COMBINE ALL ANALYSES INTO A SINGLE DATASET
   ## ------------------------------------------------------------
   results <-  analysis %>%
               left_join(IPW) %>%
-              left_join(GCOMP)
-              #  %>%
-              # left_join(TMLE)
+              left_join(GCOMP) %>%
+              left_join(TMLE)
 
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
-  # results <- results %>%
-  #             # nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates")
-  #             nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
+  results <- results %>%
+              # nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates")
+              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
 
-  # ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
-  # ## The RDs data no longer needs the intervened_TRT column
-  # results <-  results %>%
-  #             mutate(RDs =
-  #               map(estimates,
-  #                 ~ select(.x, -intervened_TRT) %>%
-  #                 map(~ get_RDs(.x)) %>%
-  #                 as_tibble()
-  #                 ))
+  ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
+  ## The RDs data no longer needs the intervened_TRT column
+  results <-  results %>%
+              mutate(RDs =
+                map(estimates,
+                  ~ select(.x, -intervened_TRT) %>%
+                  map(~ get_RDs(.x)) %>%
+                  as_tibble()
+                  ))
 
-  # ## Clean up by removing the subject-level IC estimates for EVERY SINGLE ESTIMATE / ANALYSIS
-  # ## WARNING: THIS IS A SIDE-EFFECT FUNCTION!
-  # # res <- results[["estimates"]] %>%
-  # #     map(
-  # #       ~ select(.x, -intervened_TRT) %>%
-  # #       map(
-  # #         ~ map(.x,
-  # #           ~ suppressWarnings(.x[, ("IC.St") := NULL]))))
-  # # rm(res)
+  ## Clean up by removing the subject-level IC estimates for EVERY SINGLE ESTIMATE / ANALYSIS
+  ## WARNING: THIS IS A SIDE-EFFECT FUNCTION!
+  # res <- results[["estimates"]] %>%
+  #     map(
+  #       ~ select(.x, -intervened_TRT) %>%
+  #       map(
+  #         ~ map(.x,
+  #           ~ suppressWarnings(.x[, ("IC.St") := NULL]))))
+  # rm(res)
 
-  # ## equivalent RD function above but with explicitely defined inside function::
-  # # results_2 <- results %>%
-  # #     mutate(RDs = map(estimates, function(.df) {
-  # #         res <- select(.df, -intervened_TRT) %>%
-  # #         map(~ get_RDs(.x))
-  # #         browser()
-  # #         as_tibble(res)
-  # #         return(res)
-  # #         })
-  # #     )
+  ## equivalent RD function above but with explicitely defined inside function::
+  # results_2 <- results %>%
+  #     mutate(RDs = map(estimates, function(.df) {
+  #         res <- select(.df, -intervened_TRT) %>%
+  #         map(~ get_RDs(.x))
+  #         browser()
+  #         as_tibble(res)
+  #         return(res)
+  #         })
+  #     )
 
-  # ## ------------------------------------------------------------
-  # ## Add models used for g and Q
-  # ## Add IPWtabs
-  # ## ------------------------------------------------------------
-  # cat("IPW time, hrs: ", IPW_time_hrs, "\n")
-  # cat("GCOMP time, hrs: ", GCOMP_time_hrs, "\n")
-  # cat("TMLE time, hrs: ", TMLE_time_hrs, "\n")
+  ## ------------------------------------------------------------
+  ## Add models used for g and Q
+  ## Add IPWtabs
+  ## ------------------------------------------------------------
+  cat("IPW time, hrs: ", IPW_time_hrs, "\n")
+  cat("GCOMP time, hrs: ", GCOMP_time_hrs, "\n")
+  cat("TMLE time, hrs: ", TMLE_time_hrs, "\n")
 
-  # results <- results %>%
-  #            left_join(IPWtabs) %>%
-  #            mutate(fit_method_g = fit_method_g) %>%
-  #            mutate(fit_method_Q = fit_method_Q) %>%
-  #            # mutate(models_g = map(fit_method_g, ~ I(models_g))) %>%
-  #            # mutate(models_Q = map(fit_method_Q, ~ I(models_Q))) %>%
-  #            # mutate(models_g = map(fit_method_g, ~ models_g)) %>%
-  #            mutate(models_Q = map(fit_method_Q, ~ models_Q)) %>%
-  #            mutate(run_time = map(trunc_wt,
-  #             ~ tibble(IPW_time_hrs = IPW_time_hrs, GCOMP_time_hrs = GCOMP_time_hrs, TMLE_time_hrs = TMLE_time_hrs)))
+  results <- results %>%
+             left_join(IPWtabs) %>%
+             mutate(fit_method_g = fit_method_g) %>%
+             mutate(fit_method_Q = fit_method_Q) %>%
+             # mutate(models_g = map(fit_method_g, ~ models_g)) %>%
+             mutate(models_Q = map(fit_method_Q, ~ models_Q)) %>%
+             mutate(run_time = map(trunc_wt,
+              ~ tibble(IPW_time_hrs = IPW_time_hrs, GCOMP_time_hrs = GCOMP_time_hrs, TMLE_time_hrs = TMLE_time_hrs)))
 
   # as.data.table(results)
   # as.data.table(results)[["models_g"]]
@@ -315,6 +306,6 @@ r <- foreach(n=seq.int(8), .packages=c('xgboost')) %dopar% {
 }
 cat("...finished outside with run_test_xgb_Models...", "\n")
 
-test.xgboost.parallel.10Kdata()
+results <- test.xgboost.parallel.10Kdata()
 
 stopCluster(cl)

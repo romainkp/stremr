@@ -3,6 +3,9 @@ library("data.table")
 setDTthreads(4)
 library("foreach")
 library("doParallel")
+library("gridisl")
+library("stremr")
+library("xgboost")
 
 run_test_xgb_Models <- function(seed){
     data(agaricus.train, package='xgboost')
@@ -18,12 +21,6 @@ run_test_xgb_Models <- function(seed){
 
 test.xgboost.parallel.10Kdata <- function() {
     `%+%` <- function(a, b) paste0(a, b)
-    library("gridisl")
-    library("stremr")
-    library("xgboost")
-    library("data.table")
-    # setDTthreads(1)
-
     # options(stremr.verbose = TRUE)
     options(stremr.verbose = FALSE)
     options(gridisl.verbose = TRUE)
@@ -97,20 +94,6 @@ test.xgboost.parallel.10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # Parallel TMLE w/ xgboost gbm and CV
     # ---------------------------------------------------------------------------------------------------------
-    # unregister <- function() {
-    #     env <- foreach:::.foreachGlobals
-    #     rm(list=ls(name=env), pos=env)
-    # }
-    # unregister()
-    # stopImplicitCluster()
-
-    # cl <- makeForkCluster(4, outfile = "")
-    # registerDoParallel(cl)
-    # cl <- makeForkCluster(10)
-    # registerDoParallel(cl)
-    # cl <- makeCluster(10)
-    # data.table::setDTthreads(1)
-    # stopCluster(cl)
 
     tmle.model <- "xgb.glm"
     params <- gridisl::defModel(estimator = "xgboost__gbm",
@@ -118,9 +101,6 @@ test.xgboost.parallel.10Kdata <- function() {
                                 nthread = 1,
                                 nrounds = 100,
                                 early_stopping_rounds = 20)
-
-    # params <- gridisl::defModel(estimator = "speedglm__glm",
-    #                             family = "quasibinomial")
 
     t.surv <- c(1:10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
@@ -135,6 +115,13 @@ test.xgboost.parallel.10Kdata <- function() {
 
 
 }
+
+# unregister <- function() {
+#     env <- foreach:::.foreachGlobals
+#     rm(list=ls(name=env), pos=env)
+# }
+# unregister()
+# stopImplicitCluster()
 
 # registerDoParallel(cores = 4); Sys.sleep(2)
 cl <- makeForkCluster(4, outfile = "")
