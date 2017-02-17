@@ -1,5 +1,5 @@
 
-test.xgboost.parallel.10Kdata <- function() {
+test.CV_TMLE.10Kdata <- function() {
     `%+%` <- function(a, b) paste0(a, b)
     library("xgboost")
     library("data.table")
@@ -77,44 +77,51 @@ test.xgboost.parallel.10Kdata <- function() {
     tmle.model <- "xgb.glm"
     params <- gridisl::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
-                                nthread = 1,
+                                nthread = 2,
                                 nrounds = 100,
-                                early_stopping_rounds = 20)
+                                early_stopping_rounds = 2)
 
     t.surv <- c(1:10)
     Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    tmle_est <- fitCVTMLE(OData, tvals = t.surv,
+    CV_tmle_est <- fitCVTMLE(OData, tvals = t.surv,
                           intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                           stratifyQ_by_rule = FALSE,
                           fit_method = "cv", # fit_method = "none",
                           fold_column = "fold_ID",
                           parallel = FALSE)
                            # parallel = TRUE)
+    CV_tmle_est[["estimates"]]
+    #     est_name time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
+    #  1:     TMLE    1       NA 0.9751897          NA           TRUE              0 pooled 0.001976476
+    #  2:     TMLE    2       NA 0.9467307          NA           TRUE              0 pooled 0.003070247
+    #  3:     TMLE    3       NA 0.9174615          NA           TRUE              0 pooled 0.003850820
+    #  4:     TMLE    4       NA 0.8881408          NA           TRUE              0 pooled 0.004487804
+    #  5:     TMLE    5       NA 0.8576092          NA           TRUE              0 pooled 0.005140892
+    #  6:     TMLE    6       NA 0.8296722          NA           TRUE              0 pooled 0.005690897
+    #  7:     TMLE    7       NA 0.8094901          NA           TRUE              0 pooled 0.005973558
+    #  8:     TMLE    8       NA 0.7877354          NA           TRUE              0 pooled 0.006376092
+    #  9:     TMLE    9       NA 0.7681367          NA           TRUE              0 pooled 0.006671797
+    # 10:     TMLE   10       NA 0.7546043          NA           TRUE              0 pooled 0.006828314
 
+    tmle_est <- fitTMLE(OData, tvals = t.surv,
+                        intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
+                        stratifyQ_by_rule = FALSE,
+                        fit_method = "cv", # fit_method = "none",
+                        fold_column = "fold_ID",
+                        parallel = FALSE)
+                        # parallel = TRUE)
+    #     tmle_est[["estimates"]]
+    #     est_name time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
+    #  1:     TMLE    1       NA 0.9751499          NA           TRUE              0 pooled 0.001968397
+    #  2:     TMLE    2       NA 0.9466906          NA           TRUE              0 pooled 0.003061770
+    #  3:     TMLE    3       NA 0.9173085          NA           TRUE              0 pooled 0.003840221
+    #  4:     TMLE    4       NA 0.8880466          NA           TRUE              0 pooled 0.004475643
+    #  5:     TMLE    5       NA 0.8575049          NA           TRUE              0 pooled 0.005122649
+    #  6:     TMLE    6       NA 0.8293748          NA           TRUE              0 pooled 0.005665724
+    #  7:     TMLE    7       NA 0.8094311          NA           TRUE              0 pooled 0.005952984
+    #  8:     TMLE    8       NA 0.7880349          NA           TRUE              0 pooled 0.006332490
+    #  9:     TMLE    9       NA 0.7684924          NA           TRUE              0 pooled 0.006624978
+    # 10:     TMLE   10       NA 0.7549844          NA           TRUE              0 pooled 0.006795919
 
 }
-
-run_test_xgb_Models <- function(seed){
-    data(agaricus.train, package='xgboost')
-    data(agaricus.test, package='xgboost')
-    dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
-    dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
-    watchlist <- list(eval = dtest, train = dtrain)
-    param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
-                  objective = "binary:logistic", eval_metric = "auc")
-    bst <- xgb.train(param, dtrain, nrounds = 500, watchlist)
-    return(bst)
-}
-
-
-cl <- makeForkCluster(2, outfile = "")
-registerDoParallel(cl); Sys.sleep(2)
-
-cat("...run_test_xgb_Models...")
-r <- foreach(n=seq.int(8), .packages=c('xgboost')) %dopar% {
-    run_test_xgb_Models(n)
-}
-cat("...finished with run_test_xgb_Models...")
-
-test.xgboost.parallel.10Kdata()
