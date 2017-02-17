@@ -111,7 +111,7 @@ test.CV_TMLE.10Kdata <- function() {
                         fold_column = "fold_ID",
                         parallel = FALSE)
                         # parallel = TRUE)
-    #     tmle_est[["estimates"]]
+    tmle_est[["estimates"]]
     #     est_name time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
     #  1:     TMLE    1       NA 0.9751499          NA           TRUE              0 pooled 0.001968397
     #  2:     TMLE    2       NA 0.9466906          NA           TRUE              0 pooled 0.003061770
