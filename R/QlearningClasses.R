@@ -321,24 +321,20 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     predict = function(newdata, subset_idx, ...) {
       ## For CV-TMLE need to use holdout predictions
       ## These are also referred to as predictions from all validation splits, or holdouts or out-of-sample predictions
-      holdout <- self$CVTMLE
+      # holdout <- self$CVTMLE
       assert_that(self$is.fitted)
       if (missing(newdata) && !is.null(private$probA1)) {
-
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         return(private$probA1)
-
       } else if (missing(newdata) && is.null(private$probA1)) {
         probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                       add_subject_data = FALSE,
                                       subset_idx = subset_idx,
                                       # use_best_retrained_model = TRUE,
-                                      holdout = holdout,
+                                      holdout = self$CVTMLE,
                                       verbose = gvars$verbose)
-
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
-
         return(private$probA1)
 
       } else {
@@ -348,13 +344,43 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
 
-        probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                      newdata = newdata,
-                                      add_subject_data = FALSE,
-                                      subset_idx = subset_idx,
-                                      # use_best_retrained_model = TRUE,
-                                      holdout = holdout,
-                                      verbose = gvars$verbose)
+        if (!self$CVTMLE) {
+
+          probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
+                                        newdata = newdata,
+                                        add_subject_data = FALSE,
+                                        subset_idx = subset_idx,
+                                        # use_best_retrained_model = TRUE,
+                                        holdout = FALSE,
+                                        verbose = gvars$verbose)
+        } else {
+
+          probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
+                                        newdata = newdata,
+                                        add_subject_data = FALSE,
+                                        subset_idx = self$idx_used_to_fit_initQ,
+                                        # use_best_retrained_model = TRUE,
+                                        holdout = TRUE,
+                                        verbose = gvars$verbose)
+          probA1[, ("idx") := self$idx_used_to_fit_initQ]
+
+          newObs_idx <- setdiff(subset_idx, self$idx_used_to_fit_initQ)
+          if (length(newObs_idx)) {
+            probA1_newObs <- gridisl::predict_SL(modelfit = private$model.fit,
+                                                 newdata = newdata,
+                                                 add_subject_data = FALSE,
+                                                 subset_idx = newObs_idx,
+                                                 # use_best_retrained_model = TRUE,
+                                                 holdout = FALSE,
+                                                 verbose = gvars$verbose)
+            probA1_newObs[, ("idx") := newObs_idx]
+            probA1 <- data.table::rbindlist(list(probA1, probA1_newObs))
+          }
+
+          setkeyv(probA1, "idx")
+          probA1[, ("idx") := NULL]
+
+        }
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
