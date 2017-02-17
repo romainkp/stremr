@@ -132,6 +132,20 @@ fitTMLE <- function(...) {
 }
 
 # ---------------------------------------------------------------------------------------
+#' CV-TMLE wrapper for \code{fitSeqGcomp}
+#'
+#' Calls \code{fitSeqGcomp} with arguments \code{TMLE = TRUE} and \code{CVTMLE = TRUE}.
+#' @param ... Arguments that will be passed down to the underlying function \code{fitSeqGcomp}
+#' @return \code{data.table} with TMLE survival by time
+#' @seealso \code{\link{fitSeqGcomp}}
+#' @example tests/examples/2_building_blocks_example.R
+#' @export
+fitCVTMLE <- function(...) {
+  fitSeqGcomp(TMLE = TRUE, CVTMLE = TRUE, ...)
+}
+
+
+# ---------------------------------------------------------------------------------------
 #' Fit sequential GCOMP and TMLE for survival
 #'
 #' Interventions on up to 3 nodes are allowed: \code{CENS}, \code{TRT} and \code{MONITOR}.
@@ -168,7 +182,8 @@ fitTMLE <- function(...) {
 #' @param TMLE Set to \code{TRUE} to run the usual longitudinal TMLE algorithm (with a separate TMLE update of Q for every sequential regression).
 #' @param iterTMLE Set to \code{TRUE} to run the iterative univariate TMLE instead of the usual longitudinal TMLE.
 #' When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.
-#' Must set \code{TMLE}=\code{FALSE} when setting this to \code{TRUE}.
+#' @param CVTMLE Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
+#' Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..
 #' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
@@ -231,6 +246,7 @@ fitSeqGcomp <- function(OData,
                         useonly_t_TRT = NULL,
                         useonly_t_MONITOR = NULL,
                         iterTMLE = FALSE,
+                        CVTMLE = FALSE,
                         IPWeights = NULL,
                         stabilize = FALSE,
                         trunc_weights = 10^6,
@@ -333,7 +349,8 @@ fitSeqGcomp <- function(OData,
       '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
-        res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
+        res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+                                TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
         return(res)
@@ -343,7 +360,8 @@ fitSeqGcomp <- function(OData,
       res_byt <- vector(mode = "list", length = length(tvals))
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
-        res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule, TMLE = TMLE, iterTMLE = iterTMLE,
+        res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+                                TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
         res_byt[[t_idx]] <- res
@@ -496,6 +514,7 @@ fitSeqGcomp_onet <- function(OData,
                              stratifyQ_by_rule,
                              TMLE,
                              iterTMLE,
+                             CVTMLE = FALSE,
                              models,
                              max_iter = 10,
                              adapt_stop = TRUE,
@@ -565,6 +584,7 @@ fitSeqGcomp_onet <- function(OData,
                                      all_Qregs_indx = Qreg_idx,
                                      t_period = Qperiods[i],
                                      TMLE = TMLE,
+                                     CVTMLE = CVTMLE,
                                      keep_idx = ifelse(iterTMLE, TRUE, FALSE),
                                      stratifyQ_by_rule = stratifyQ_by_rule,
                                      outvar = "Q.kplus1",

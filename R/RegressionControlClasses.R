@@ -287,6 +287,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
     all_Qregs_indx = integer(),
     t_period = integer(),
     TMLE = FALSE,
+    CVTMLE = FALSE,
     keep_idx = FALSE,
     stratifyQ_by_rule = FALSE,
     lower_bound_zero_Q = TRUE,
@@ -297,6 +298,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
                           all_Qregs_indx,
                           t_period,
                           TMLE,
+                          CVTMLE,
                           stratifyQ_by_rule,
                           regimen_names,
                           pool_regimes,
@@ -309,6 +311,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
       self$t_period <- t_period
 
       if (!missing(TMLE)) self$TMLE <- TMLE
+      if (!missing(CVTMLE)) self$CVTMLE <- CVTMLE
       if (!missing(stratifyQ_by_rule)) self$stratifyQ_by_rule <- stratifyQ_by_rule
       if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
@@ -325,6 +328,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
       list(Qreg_counter = self$Qreg_counter,
            t_period = self$t_period,
            TMLE = self$TMLE,
+           CVTMLE = self$CVTMLE,
            outvar = self$outvar,
            predvars = self$predvars,
            outvar.class = self$outvar.class,

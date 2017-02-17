@@ -91,6 +91,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     regimen_names = character(), # for future pooling across regimens
     classify = FALSE,
     TMLE = TRUE,
+    CVTMLE = FALSE,
     nIDs = integer(),
     stratifyQ_by_rule = FALSE,
     lower_bound_zero_Q = TRUE,
@@ -115,6 +116,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$t_period <- reg$t_period
       self$regimen_names <- reg$regimen_names
       self$TMLE <- reg$TMLE
+      self$CVTMLE <- reg$CVTMLE
       self$keep_idx <- reg$keep_idx
 
       if (gvars$verbose) {print("initialized Q class"); reg$show()}
@@ -191,15 +193,17 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## *** NEED TO ADD: do MC sampling to perform the same integration for stochastic g^*
       ## ------------------------------------------------------------------------------------------------------------------------
       if (!any_stoch) {
-        probA1 <- self$predictStatic(data, g0 = interventionNodes.g0,
-                                           gstar = interventionNodes.gstar,
-                                           subset_idx = self$subset_idx)
+        probA1 <- self$predictStatic(data,
+                                    g0 = interventionNodes.g0,
+                                    gstar = interventionNodes.gstar,
+                                    subset_idx = self$subset_idx)
       } else {
         # For all stochastic nodes, need to integrate out w.r.t. the support of each node
-        probA1 <- self$predictStochastic(data, g0 = interventionNodes.g0,
-                                               gstar = interventionNodes.gstar,
-                                               subset_idx = self$subset_idx,
-                                               stoch_indicator = stoch_indicator)
+        probA1 <- self$predictStochastic(data,
+                                        g0 = interventionNodes.g0,
+                                        gstar = interventionNodes.gstar,
+                                        subset_idx = self$subset_idx,
+                                        stoch_indicator = stoch_indicator)
       }
 
       iQ_all <- probA1
@@ -315,33 +319,42 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
     # Predict the response P(Bin = 1|sW = sw); Uses private$model.fit to generate predictions for data:
     predict = function(newdata, subset_idx, ...) {
+      ## For CV-TMLE need to use holdout predictions
+      ## These are also referred to as predictions from all validation splits, or holdouts or out-of-sample predictions
+      holdout <- self$CVTMLE
       assert_that(self$is.fitted)
       if (missing(newdata) && !is.null(private$probA1)) {
+
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         return(private$probA1)
+
       } else if (missing(newdata) && is.null(private$probA1)) {
-        # private$probA1 <- self$binomialModelObj$predictP1(subset_idx = subset_idx)
         probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                          add_subject_data = FALSE,
-                                          subset_idx = subset_idx,
-                                          # use_best_retrained_model = TRUE,
-                                          holdout = FALSE,
-                                          verbose = gvars$verbose)
+                                      add_subject_data = FALSE,
+                                      subset_idx = subset_idx,
+                                      # use_best_retrained_model = TRUE,
+                                      holdout = holdout,
+                                      verbose = gvars$verbose)
+
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
+
         return(private$probA1)
+
       } else {
+
         self$n <- newdata$nobs
         if (missing(subset_idx)) {
           subset_idx <- self$define.subset.idx(newdata, subset_exprs = self$subset_exprs)
         }
 
-        probA1 <- gridisl::predict_SL(modelfit = private$model.fit, newdata = newdata,
-                                     add_subject_data = FALSE,
-                                     subset_idx = subset_idx,
-                                     # use_best_retrained_model = TRUE,
-                                     holdout = FALSE,
-                                     verbose = gvars$verbose)
+        probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
+                                      newdata = newdata,
+                                      add_subject_data = FALSE,
+                                      subset_idx = subset_idx,
+                                      # use_best_retrained_model = TRUE,
+                                      holdout = holdout,
+                                      verbose = gvars$verbose)
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
@@ -358,6 +371,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         if (!(self$model_contrl[["fit_method"]] %in% "none")) private$model.fit$wipe.allmodels
 
         return(private$probA1)
+
       }
     },
 
@@ -366,10 +380,12 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # Set current A's and N's to the counterfactual exposures in the data (for predicting Q):
       # ------------------------------------------------------------------------------------------------------------------------
       data$swapNodes(current = g0, target = gstar)
+
       # ------------------------------------------------------------------------------------------------------------------------
       # Predict based on counterfactual exposure settings
       # ------------------------------------------------------------------------------------------------------------------------
       gcomp.pred.res <- try(self$predict(data, subset_idx = subset_idx))
+
       # ------------------------------------------------------------------------------------------------------------------------
       # Reset back the observed exposure to A[t] (swap back by renaming columns)
       # ------------------------------------------------------------------------------------------------------------------------

@@ -12,10 +12,11 @@ fitSeqGcomp(OData, tvals, Qforms, intervened_TRT = NULL,
   fold_column = stremrOptions("fold_column"), TMLE = FALSE,
   stratifyQ_by_rule = FALSE, stratify_by_last = TRUE, Qstratify = NULL,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, iterTMLE = FALSE,
-  IPWeights = NULL, stabilize = FALSE, trunc_weights = 10^6,
-  weights = NULL, max_iter = 15, adapt_stop = TRUE,
-  adapt_stop_factor = 10, tol_eps = 0.001, parallel = FALSE,
-  return_wts = FALSE, verbose = getOption("stremr.verbose"), ...)
+  CVTMLE = FALSE, IPWeights = NULL, stabilize = FALSE,
+  trunc_weights = 10^6, weights = NULL, max_iter = 15,
+  adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
+  parallel = FALSE, return_wts = FALSE,
+  verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -74,8 +75,10 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 \item{useonly_t_MONITOR}{Same as \code{useonly_t_TRT}, but for monitoring nodes.}
 
 \item{iterTMLE}{Set to \code{TRUE} to run the iterative univariate TMLE instead of the usual longitudinal TMLE.
-When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.
-Must set \code{TMLE}=\code{FALSE} when setting this to \code{TRUE}.}
+When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.}
+
+\item{CVTMLE}{Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
+Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..}
 
 \item{IPWeights}{(Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)}
 
