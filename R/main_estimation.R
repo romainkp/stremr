@@ -326,6 +326,7 @@ fitPropensity <- function(OData,
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
+
   h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs), silent = TRUE)
   if (inherits(h_gN, "try-error")) { # if failed, it means that prediction cannot be done without newdata
     h_gN <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs)
@@ -342,12 +343,16 @@ fitPropensity <- function(OData,
   OData$modelfit.gA <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gA")]]
   OData$modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gN")]]
 
-  g0.C <- OData$modelfit.gC$getcumprodAeqa()
-  g0.A <- OData$modelfit.gA$getcumprodAeqa()
-  g0.N <- OData$modelfit.gN$getcumprodAeqa()
+  g_preds <- data.table::data.table(g0.C = OData$modelfit.gC$getcumprodAeqa(),
+                                   g0.A = OData$modelfit.gA$getcumprodAeqa(),
+                                   g0.N = OData$modelfit.gN$getcumprodAeqa())
+  OData$g_preds <- g_preds
 
-  OData$dat.sVar[, c("g0.A", "g0.C", "g0.N", "g0.CAN") := list(g0.A, g0.C, g0.N, g0.A*g0.C*g0.N)]
-  # probs_g0 <- OData$dat.sVar[, list("g0.A" = g0.A, "g0.C" = g0.C, "g0.N" = g0.N, "g0.CAN" = g0.A*g0.C*g0.N)]
+  h_gN_holdout <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs, holdout = TRUE)
+  g_holdout_preds <- data.table::data.table(g0.C = OData$modelfit.gC$getcumprodAeqa(),
+                                           g0.A = OData$modelfit.gA$getcumprodAeqa(),
+                                           g0.N = OData$modelfit.gN$getcumprodAeqa())
+  OData$g_holdout_preds <- g_holdout_preds
 
   return(OData)
 }
@@ -417,6 +422,8 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @param tmax Maximum value of the follow-up period.
 #' All person-time observations above this value will be excluded from the output weights dataset.
+#' @param holdout Obtain the weights based on out-of-sample (holdout / validation set) predictions of propensity scores.
+#' This is useful for running CV-TMLE or evaluating the quality of the model fits based on validation sets.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
@@ -427,10 +434,18 @@ getIPWeights <- function(OData,
                          useonly_t_TRT = NULL,
                          useonly_t_MONITOR = NULL,
                          rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                         tmax = NULL
+                         tmax = NULL,
+                         holdout = FALSE
                          ) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
+
+  if (!holdout) {
+    g_preds <- OData$g_preds
+  } else {
+    g_preds <- OData$g_holdout_preds
+  }
+
   if (!is.null(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
   if (!is.null(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
@@ -446,30 +461,35 @@ getIPWeights <- function(OData,
   # ------------------------------------------------------------------------------------------------------------------------------
   if (is.null(OData$modelfits.g0))
     stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
-  if (any(!(c("g0.A", "g0.C", "g0.N", "g0.CAN") %in% names(OData$dat.sVar))))
+  if (any(!(c("g0.A", "g0.C", "g0.N") %in% names(g_preds))))
     stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")
 
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
-
   # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
-  gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, OData$dat.sVar[["g0.A"]])
-
+  gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, g_preds[["g0.A"]])
   # Likelihood for monitoring P(N^*(t)=N(t)) under counterfactual intervention N^*(t) on N(t):
-  gstar.MONITOR <- defineNodeGstarIPW(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, OData$dat.sVar[["g0.N"]])
+  gstar.MONITOR <- defineNodeGstarIPW(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, g_preds[["g0.N"]])
 
   # Save all likelihoods relating to propensity scores in separate dataset:
-  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode, "g0.A", "g0.C", "g0.N", "g0.CAN"), with = FALSE] # [wt.by.t > 0, ]
-  setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
-  wts.DT[, "gstar.C" := gstar.CENS]
-  wts.DT[, "gstar.A" := gstar.TRT]
-  wts.DT[, "gstar.N" := gstar.MONITOR]
+  # wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode, "g0.A", "g0.C", "g0.N", "g0.CAN"), with = FALSE]
+  wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode), with = FALSE]
+  wts.DT[,
+    c("g0.A", "g0.C", "g0.N") := list(g_preds[["g0.A"]], g_preds[["g0.C"]], g_preds[["g0.N"]])][,
+    c("g0.CAN") := g0.A * g0.C * g0.N]
 
-  # Joint likelihoood for all 3 node types:
-  wts.DT[, "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR]
+  setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
+
+  wts.DT[,
+    "gstar.C" := gstar.CENS][,
+    "gstar.A" := gstar.TRT][,
+    "gstar.N" := gstar.MONITOR][,
+    "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR] # Joint likelihoood for all 3 node types:
 
   # Weights by time and cumulative weights by time:
-  wts.DT[, "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][, "cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+  wts.DT[,
+    "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][,
+    "cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
   # -------------------------------------------------------------------------------------------
   # Calculate weight stabilization factor -- get emp P(followed rule at time t | followed rule up to now)
@@ -483,11 +503,15 @@ getIPWeights <- function(OData,
   wts.DT[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
   n.follow.rule.t <- wts.DT[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
   wts.DT[, "rule.follower.gCAN" := NULL]
-  n.follow.rule.t[, N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][,
-                    stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 1)][,
-                    cum.stab.P := cumprod(stab.P)]
+
+  n.follow.rule.t[,
+    N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][,
+    stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 1)][,
+    cum.stab.P := cumprod(stab.P)]
+
   n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
   setkeyv(n.follow.rule.t, cols = nodes$tnode)
+
   wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
 

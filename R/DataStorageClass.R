@@ -245,6 +245,9 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     modelfit.gC = NULL,
     modelfit.gA = NULL,
     modelfit.gN = NULL,
+    g_preds = NULL,
+    g_holdout_preds = NULL,
+
     new.factor.names = NULL,
     noCENScat = 0L,         # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables
     YnodeVals = NULL,       # Values of the binary outcome (Ynode) in observed data where det.Y = TRUE obs are set to NA

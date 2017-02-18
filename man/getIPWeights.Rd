@@ -7,7 +7,7 @@
 getIPWeights(OData, intervened_TRT = NULL, intervened_MONITOR = NULL,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
   rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-  tmax = NULL)
+  tmax = NULL, holdout = FALSE)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -33,6 +33,9 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 
 \item{tmax}{Maximum value of the follow-up period.
 All person-time observations above this value will be excluded from the output weights dataset.}
+
+\item{holdout}{Obtain the weights based on out-of-sample (holdout / validation set) predictions of propensity scores.
+This is useful for running CV-TMLE or evaluating the quality of the model fits based on validation sets.}
 }
 \value{
 ...

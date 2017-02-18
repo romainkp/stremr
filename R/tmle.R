@@ -293,7 +293,13 @@ fitSeqGcomp <- function(OData,
   if (TMLE || iterTMLE) {
     if (is.null(IPWeights)) {
       if (gvars$verbose) message("...evaluating IPWeights for TMLE...")
-      IPWeights <- getIPWeights(OData, intervened_TRT, intervened_MONITOR, useonly_t_TRT, useonly_t_MONITOR, rule_name)
+      IPWeights <- getIPWeights(OData,
+                                intervened_TRT,
+                                intervened_MONITOR,
+                                useonly_t_TRT,
+                                useonly_t_MONITOR,
+                                rule_name,
+                                holdout = CVTMLE)
       # if (stabilize) IPWeights[, "cum.IPAW" := eval(as.name("cum.stab.P")) * eval(as.name("cum.IPAW"))]
       if (trunc_weights < Inf) IPWeights[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
     } else {
