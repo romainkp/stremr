@@ -183,7 +183,6 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     # uses private$model.fit to generate predictions for data:
     predict = function(newdata, holdout = FALSE, ...) {
       assert_that(self$is.fitted)
-      cat("holdout: " %+% holdout, "\n")
 
       if (missing(newdata) && is.null(private$probA1)) {
         private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
