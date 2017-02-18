@@ -1,17 +1,14 @@
 
 test.CV_TMLE.10Kdata <- function() {
     `%+%` <- function(a, b) paste0(a, b)
+    library("h2o")
     library("xgboost")
     library("data.table")
     setDTthreads(1)
     library("foreach")
     library("doParallel")
-
     library("gridisl")
     # library("stremr")
-    library("xgboost")
-    library("data.table")
-    setDTthreads(1)
 
     options(stremr.verbose = TRUE)
     # options(stremr.verbose = FALSE)
@@ -61,10 +58,31 @@ test.CV_TMLE.10Kdata <- function() {
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH xgboost gbm and V fold CV
     # ----------------------------------------------------------------
+    ## xgboost gbm
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                             estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
                             family = "quasibinomial", rounds = 1000, early_stopping_rounds = 50)
+    ## h2o gbm
+    OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                           estimator = "h2o__gbm", distribution = "bernoulli",
+                           models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+                          fit_method = "cv", fold_column = "fold_ID"
+                          )
+
+    ## regularlized glm with h2o
+    models_g <<- gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+                                    nlambdas = 5, lambda_search = TRUE,
+                                    param_grid = list(
+                                        alpha = c(0, 0.5, 1)
+                                  ))
+    OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+                           models_CENS = models_g, models_TRT = models_g,
+                           models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+                          fit_method = "cv", fold_column = "fold_ID"
+                          )
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     surv_dlow <- survNPMSM(wts.St.dlow, OData)
@@ -85,7 +103,6 @@ test.CV_TMLE.10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # CV TMLE w/ xgboost gbm and cross-validation selection of Q
     # ---------------------------------------------------------------------------------------------------------
-    tmle.model <- "xgb.glm"
     params <- gridisl::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
                                 nthread = 2,
