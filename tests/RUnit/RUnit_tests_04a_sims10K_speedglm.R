@@ -80,7 +80,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # ---------------------------------------------------------------------------------------------------------
   # t.surv <- c(0,1,2,3,4,5,6,7,8,9,10)
   t.surv <- c(1,2,3,10)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   # stratified modeling by rule followers only:
   gcomp_est1 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
@@ -407,7 +407,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # ---------------------------------------------------------------------------------------------------------
   # t.surv <- c(4,5)
   t.surv <- c(9,10)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   # params = list(fit.package = "speedglm", fit.algorithm = "glm")
   # models = params,
   gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
@@ -439,7 +439,7 @@ test.speedglm.allestimators10Kdata <- function() {
   if (exists("setDTthreads")) data.table::setDTthreads(1)
 
   t.surv <- c(0,1,4)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   gcomp_est1 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledGCOMP.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est1$estimates[]
@@ -608,7 +608,7 @@ test.speedglm.allestimators10Kdata <- function() {
   # **** +3 add evaluation of IPW & TMLE under stochastic intervention on treatment
   # ---------------------------------------------------------------------------------------------------------
   t.surv <- c(4)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
   gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   # stratified modeling by rule followers only:
@@ -694,7 +694,7 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   # TMLE / GCOMP with a stochastic intervention on MONITOR
   # ---------------------------------------------------------------------------------------------------------
   t.surv <- c(4,5)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
   gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   # stratified modeling by rule followers only:
@@ -708,7 +708,7 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   # TMLE / GCOMP with a static intervention on MONITOR
   # ---------------------------------------------------------------------------------------------------------
   t.surv <- c(4,5)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
   gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est3$estimates[]
@@ -723,7 +723,7 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   # TMLE / GCOMP with a static intervention on MONITOR under NDE assumption
   # ---------------------------------------------------------------------------------------------------------
   t.surv <- c(4,5)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
   gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                             useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)

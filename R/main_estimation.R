@@ -422,8 +422,13 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @param tmax Maximum value of the follow-up period.
 #' All person-time observations above this value will be excluded from the output weights dataset.
+#' @param tmin (ADVANCED FEATURE) Minimum value of the follow-up period to start accumulative the weights over time.
+#' All of the observations with t < tmin will be removed from the data PRIOR to the evaluation of the cumulative weights.
+#' This is used by SDR routines.
 #' @param holdout Obtain the weights based on out-of-sample (holdout / validation set) predictions of propensity scores.
 #' This is useful for running CV-TMLE or evaluating the quality of the model fits based on validation sets.
+#' @param eval_stabP Evaluate the additional weight stabilization factor for each time-point.
+#' This is used for MSMs only and is enabled by default.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
@@ -435,7 +440,9 @@ getIPWeights <- function(OData,
                          useonly_t_MONITOR = NULL,
                          rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
                          tmax = NULL,
-                         holdout = FALSE
+                         tmin = NULL,
+                         holdout = FALSE,
+                         eval_stabP = TRUE
                          ) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
@@ -486,34 +493,40 @@ getIPWeights <- function(OData,
     "gstar.N" := gstar.MONITOR][,
     "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR] # Joint likelihoood for all 3 node types:
 
-  # Weights by time and cumulative weights by time:
-  wts.DT[,
-    "wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)][,
-    "cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+  ## Weights by time and cumulative weights by time:
+  wts.DT[,"wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)]
 
-  # -------------------------------------------------------------------------------------------
-  # Calculate weight stabilization factor -- get emp P(followed rule at time t | followed rule up to now)
-  # -------------------------------------------------------------------------------------------
-  nIDs <- OData$nuniqueIDs
-  # THE ENUMERATOR: the total sum of subjects followed the rule gstar.A at t
-  # THE DENOMINATOR: divide above by the total number of subjects who were still at risk of NOT FOLLOWING the rule at t
-  # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
-  # (The total sum of all subjects who WERE AT RISK at t)
-  # (FASTER) Version outside data.table, then merge back results:
-  wts.DT[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
-  n.follow.rule.t <- wts.DT[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
-  wts.DT[, "rule.follower.gCAN" := NULL]
+  ## When tmin is specified set the wt.by.t to 1 for all t values that occur prior to time-points.
+  ## NOTE: This is not the most efficient way to evaluate forward product for tmin, but it preserves the indexing
+  ## of the original database, making it very easy to look-up correct weights for each observation row-index from the main dataset.
+  if (!is.null(tmin)) wts.DT[eval(as.name(nodes$tnode)) < tmin, ("wt.by.t") := 1]
+  wts.DT[,"cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
 
-  n.follow.rule.t[,
-    N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][,
-    stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 1)][,
-    cum.stab.P := cumprod(stab.P)]
+  ## -------------------------------------------------------------------------------------------
+  ## Calculate weight stabilization factor -- get emp P(followed rule at time t | followed rule up to now)
+  ## -------------------------------------------------------------------------------------------
+  if (eval_stabP) {
+    nIDs <- OData$nuniqueIDs
+    # THE ENUMERATOR: the total sum of subjects followed the rule gstar.A at t
+    # THE DENOMINATOR: divide above by the total number of subjects who were still at risk of NOT FOLLOWING the rule at t
+    # i.e., followed rule at t-1, assume at the first time-point EVERYONE was following the rule (so denominator = n)
+    # (The total sum of all subjects who WERE AT RISK at t)
+    # (FASTER) Version outside data.table, then merge back results:
+    wts.DT[, "rule.follower.gCAN" := as.integer(cumprod(gstar.CAN) > 0), by = eval(nodes$IDnode)]
+    n.follow.rule.t <- wts.DT[, list(N.follow.rule = sum(rule.follower.gCAN, na.rm = TRUE)), by = eval(nodes$tnode)]
+    wts.DT[, "rule.follower.gCAN" := NULL]
 
-  n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
-  setkeyv(n.follow.rule.t, cols = nodes$tnode)
+    n.follow.rule.t[,
+      N.risk := shift(N.follow.rule, fill = nIDs, type = "lag")][,
+      stab.P := ifelse(N.risk > 0, N.follow.rule / N.risk, 1)][,
+      cum.stab.P := cumprod(stab.P)]
 
-  wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
-  setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
+    n.follow.rule.t[, c("N.risk", "stab.P") := list(NULL, NULL)]
+    setkeyv(n.follow.rule.t, cols = nodes$tnode)
+
+    wts.DT <- wts.DT[n.follow.rule.t, on = nodes$tnode]
+    setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
+  }
 
   ## remove person time observations with f-up above tmax
   if (!is.null(tmax)) wts.DT <- wts.DT[eval(as.name(nodes$tnode)) <= tmax, ]

@@ -115,7 +115,7 @@ test.buildingblocks <- function() {
   # Sequential G-COMP:
   # --------------------------------
   t.surv <- c(0:4)
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est[]

@@ -11,7 +11,7 @@
 ##     to pull the right QlearnModel.
 ##     Alternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos).
 ## *) Pooling across regimens ***
-##     Since new regimen results in new Q.kplus1 and hence new outcome -> requires a separate regression for each regimen:
+##     Since new regimen results in new Qkplus1 and hence new outcome -> requires a separate regression for each regimen:
 ##     => Can either pool all Q.regimens at once (fit one model for repeated observations, one for each rule, smoothing over rules).
 ##     => Can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
 ## ------------------------------------------------------------------------------------------
@@ -23,15 +23,15 @@
 ## ------------------------------------------------------------------------------------------
 ## 1. At each t iteration:
 ##     Fitting:
-##        Outcome is always Q.kplus1 (either by regimen or not). Fitting subset excludes all obs censored at t.
+##        Outcome is always Qkplus1 (either by regimen or not). Fitting subset excludes all obs censored at t.
 ##     Prediction:
 ##        Swap the entire column(s) A[t] with A^*[t] by renaming them in OData$dat.sVar (might do this for more than one regimen in the future, if pooling Q's)
 ##        Subset all observation by t (including all censored and non-followers).
-##        PredictP1() for everybody in the subset, then save the prediction in rows Q.kplus1[t] and rows Q.kplus1[t-1] for all obs that were used in prediction.
+##        PredictP1() for everybody in the subset, then save the prediction in rows Qkplus1[t] and rows Qkplus1[t-1] for all obs that were used in prediction.
 ##        Results in correct algorithm even when stratifyQ_by_rule=TRUE: next iteration (t-1) will do fit only based on obs that followed the rule at t-1.
 ## 2. At next iteration t-1:
 ##     Fitting:
-##        Use the predictions in Q.kplus1[t-1] as new outcomes and repeat until reached minimum t.
+##        Use the predictions in Qkplus1[t-1] as new outcomes and repeat until reached minimum t.
 
 ## ------------------------------------------------------------------------------------------
 ## Stochastic interventions:
@@ -185,7 +185,6 @@ fitCVTMLE <- function(...) {
 #' @param CVTMLE Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
 #' Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..
 #' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
-#' @param stabilize Set to \code{TRUE} to use stabilized weights for the TMLE
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
@@ -248,7 +247,6 @@ fitSeqGcomp <- function(OData,
                         iterTMLE = FALSE,
                         CVTMLE = FALSE,
                         IPWeights = NULL,
-                        stabilize = FALSE,
                         trunc_weights = 10^6,
                         weights = NULL,
                         max_iter = 15,
@@ -299,15 +297,14 @@ fitSeqGcomp <- function(OData,
                                 useonly_t_TRT,
                                 useonly_t_MONITOR,
                                 rule_name,
-                                holdout = CVTMLE)
-      # if (stabilize) IPWeights[, "cum.IPAW" := eval(as.name("cum.stab.P")) * eval(as.name("cum.IPAW"))]
+                                holdout = CVTMLE,
+                                eval_stabP = FALSE)
       if (trunc_weights < Inf) IPWeights[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
       if (gvars$verbose) message("applying user-specified IPWeights obtained with a call: \n" %+% deparse(getIPWeights_fun_call)[[1]])
       assert_that(all.equal(attributes(IPWeights)[['intervened_TRT']], intervened_TRT))
       assert_that(all.equal(attributes(IPWeights)[['intervened_MONITOR']], intervened_MONITOR))
-      # assert_that(attributes(IPWeights)[['stabilize']] == FALSE)
     }
     assert_that(is.data.table(IPWeights))
     assert_that("cum.IPAW" %in% names(IPWeights))
@@ -465,14 +462,14 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
   wts_TMLE <- OData$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
 
   for (iter in 1:(max_iter+1)) {
-    prev_Q.kplus1 <- OData$dat.sVar[use_subset_idx, "prev_Q.kplus1", with = FALSE][[1]]
-    init_Q_fitted_only <- OData$dat.sVar[use_subset_idx, "Q.kplus1", with = FALSE][[1]]
+    Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
+    iQ_fitted_only <- OData$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
 
     # ------------------------------------------------------------------------------------
     # ESTIMATE OF THE EIC:
     # ------------------------------------------------------------------------------------
     # Get t-specific and i-specific components of the EIC for all t > t.init:
-    EIC_i_tplus <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
+    EIC_i_tplus <- wts_TMLE * (Qkplus1 - iQ_fitted_only)
     # Get t-specific and i-specific components of the EIC for all t = t.init (mean pred from last reg, all n obs)
     res_lastPredQ <- allQmodels[[Qreg_idx[1]]]$predictAeqa()  # Qreg_idx[1] is the index for the last Q-fit
     # res_lastPredQ <- allQmodels[[length(allQmodels)]]$predictAeqa()
@@ -494,7 +491,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
       break
     }
 
-    TMLE.fit <- tmle.update(prev_Q.kplus1 = prev_Q.kplus1, init_Q_fitted_only = init_Q_fitted_only, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
+    TMLE.fit <- tmle.update(Qkplus1 = Qkplus1, iQ_fitted_only = iQ_fitted_only, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
     Propagate_TMLE_fits(allQmodels, OData, TMLE.fit)
   }
 
@@ -504,9 +501,9 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
   tmp <- eval_wipe.all.indices(allQmodels)
 
   # EVALUTE THE t and i-specific components of the EIC (estimates):
-  # prev_Q.kplus1 <- OData$dat.sVar[use_subset_idx, "prev_Q.kplus1", with = FALSE][[1]]
-  # init_Q_fitted_only <- OData$dat.sVar[use_subset_idx, "Q.kplus1", with = FALSE][[1]]
-  # EIC_i_t_calc <- wts_TMLE * (prev_Q.kplus1 - init_Q_fitted_only)
+  # Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
+  # iQ_fitted_only <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
+  # EIC_i_t_calc <- wts_TMLE * (Qkplus1 - iQ_fitted_only)
   # OData$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_t_calc]
   OData$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_tplus]
 
@@ -538,7 +535,7 @@ fitSeqGcomp_onet <- function(OData,
   Qperiods <- rev(OData$min.t:t_period)
   Qreg_idx <- rev(seq_along(Qperiods))
   Qstratas_by_t <- as.list(nodes[['tnode']] %+% " == " %+% (Qperiods))
-  names(Qstratas_by_t) <- rep.int("Q.kplus1", length(Qstratas_by_t))
+  names(Qstratas_by_t) <- rep.int("Qkplus1", length(Qstratas_by_t))
 
   # Adding user-specified stratas to each Q(t) regression:
   all_Q_stratify <- Qstratas_by_t
@@ -555,7 +552,7 @@ fitSeqGcomp_onet <- function(OData,
   # **** Process the input formulas and stratification settings
   # **** TO DO: Add checks that Qforms has correct number of regressions in it
   # ------------------------------------------------------------------------------------------------
-  Qforms.default <- rep.int("Q.kplus1 ~ Lnodes + Anodes + Cnodes + Nnodes", length(Qperiods))
+  Qforms.default <- rep.int("Qkplus1 ~ Lnodes + Anodes + Cnodes + Nnodes", length(Qperiods))
   if (missing(Qforms)) {
     Qforms_single_t <- Qforms.default
   } else {
@@ -563,17 +560,17 @@ fitSeqGcomp_onet <- function(OData,
   }
 
   # ------------------------------------------------------------------------------------------------
-  #  ****** Q.kplus1 THIS NEEDS TO BE MOVED OUT OF THE MAIN data.table *****
-  # Running fitSeqGcomp_onet might conflict with different Q.kplus1
+  #  ****** Qkplus1 THIS NEEDS TO BE MOVED OUT OF THE MAIN data.table *****
+  # Running fitSeqGcomp_onet might conflict with different Qkplus1
   # ------------------------------------------------------------------------------------------------
-  # **** G-COMP: Initiate Q.kplus1 - (could be multiple if more than one regimen)
+  # **** G-COMP: Initiate Qkplus1 - (could be multiple if more than one regimen)
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)
   # ------------------------------------------------------------------------------------------------
   OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
-  OData$dat.sVar[, "Q.kplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
+  OData$dat.sVar[, "Qkplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
 
   # OData$def.types.sVar() ## was a bottleneck, replaced with below:
-  OData$set.sVar.type(name.sVar = "Q.kplus1", new.type = "binary")
+  OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
   OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
 
   # ------------------------------------------------------------------------------------------------
@@ -593,10 +590,10 @@ fitSeqGcomp_onet <- function(OData,
                                      CVTMLE = CVTMLE,
                                      keep_idx = ifelse(iterTMLE, TRUE, FALSE),
                                      stratifyQ_by_rule = stratifyQ_by_rule,
-                                     outvar = "Q.kplus1",
+                                     outvar = "Qkplus1",
                                      predvars = regform$predvars,
                                      outvar.class = list("Qlearn"),
-                                     subset_vars = list("Q.kplus1"),
+                                     subset_vars = list("Qkplus1"),
                                      subset_exprs = all_Q_stratify[i],
                                      model_contrl = models,
                                      censoring = FALSE)
@@ -635,14 +632,14 @@ fitSeqGcomp_onet <- function(OData,
   res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()
   mean_est_t <- mean(res_lastPredQ)
 
-  ## 1b. Can instead grab it directly from the data, using the appropriate strata-subsetting expression
+  ## 1b. Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression
   ## mean_est_t and mean_est_t_2 have to be equal!!!!
   # lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]] ## allQmodels[[lastQ_inx]]$get.fits()
   lastQ.fit <- allQmodels[[lastQ_inx]]
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
-  mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Q.kplus1"]])
+  mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Qk_hat"]])
 
   if (gvars$verbose) {
     print("Surv est: " %+% (1 - mean_est_t))
@@ -682,7 +679,7 @@ fitSeqGcomp_onet <- function(OData,
     ## 1b. Grab it directly from the data, using the appropriate strata-subsetting expression
     # lastQ.fit <- Qlearn.fit$getPsAsW.models()[[Qreg_idx[1]]]$getPsAsW.models()[[1]]
     # subset_idx <- OData$evalsubst(subset_vars = lastQ.fit$subset_vars, subset_exprs = lastQ.fit$subset_exprs)
-    # res_lastPredQ <- OData$dat.sVar[subset_idx, ][["Q.kplus1"]]
+    # res_lastPredQ <- OData$dat.sVar[subset_idx, ][["Qkplus1"]]
     # mean_est_t  <- mean(res_lastPredQ)
     # print("TMLE surv estimate 2: " %+% (1 - mean_est_t))
 

@@ -213,7 +213,7 @@ survMSM_res$St
 Define time-points of interest, regression formulas and software to be used for fitting the sequential outcome models:
 ```R
 t.surv <- c(0:15)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 params = list(fit.package = "speedglm", fit.algorithm = "glm")
 ```
 

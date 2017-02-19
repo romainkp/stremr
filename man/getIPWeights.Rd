@@ -7,7 +7,7 @@
 getIPWeights(OData, intervened_TRT = NULL, intervened_MONITOR = NULL,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
   rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-  tmax = NULL, holdout = FALSE)
+  tmax = NULL, tmin = NULL, holdout = FALSE, eval_stabP = TRUE)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -34,8 +34,15 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 \item{tmax}{Maximum value of the follow-up period.
 All person-time observations above this value will be excluded from the output weights dataset.}
 
+\item{tmin}{(ADVANCED FEATURE) Minimum value of the follow-up period to start accumulative the weights over time.
+All of the observations with t < tmin will be removed from the data PRIOR to the evaluation of the cumulative weights.
+This is used by SDR routines.}
+
 \item{holdout}{Obtain the weights based on out-of-sample (holdout / validation set) predictions of propensity scores.
 This is useful for running CV-TMLE or evaluating the quality of the model fits based on validation sets.}
+
+\item{eval_stabP}{Evaluate the additional weight stabilization factor for each time-point.
+This is used for MSMs only and is enabled by default.}
 }
 \value{
 ...
@@ -123,7 +130,7 @@ survMSM_res$St
 # Sequential G-COMP
 # ----------------------------------------------------------------------
 t.surv <- c(0:15)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
@@ -197,7 +204,7 @@ OData <- fitPropensity(OData,
 # ----------------------------------------------------------------------
 \dontrun{
 t.surv <- c(0:5)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
@@ -208,7 +215,7 @@ tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 
 \dontrun{
 t.surv <- c(0:5)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)

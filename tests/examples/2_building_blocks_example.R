@@ -68,7 +68,7 @@ survMSM_res$St
 # Sequential G-COMP
 # ----------------------------------------------------------------------
 t.surv <- c(0:15)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
@@ -142,7 +142,7 @@ OData <- fitPropensity(OData,
 # ----------------------------------------------------------------------
 \dontrun{
 t.surv <- c(0:5)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)
@@ -153,7 +153,7 @@ tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 
 \dontrun{
 t.surv <- c(0:5)
-Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 models = list(fit.package = "h2o", fit.algorithm = "randomForest",
                 ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                 col_sample_rate = 0.8, balance_classes = TRUE)

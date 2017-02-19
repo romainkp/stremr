@@ -206,7 +206,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   nfolds <- 10 ## number of folds for CV
   # tbreaks = c(1:8,12,16)-1
   tbreaks = c(1:8,11,14)-1
-  Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
 
   ## ------------------------------------------------------------
   ## **** As a first step define a grid of all possible parameter combinations (for all estimators)

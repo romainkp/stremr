@@ -68,8 +68,8 @@ notest.h2oQuasiBinomGLM.Ensemble <- function() {
 
 
   #       h2oFrame <- as.h2o(Odat_DT)
-  #       h2oFrame[, "Q.kplus1"] <-  h2o.asnumeric(h2oFrame[["Y.tplus1"]]) # set the initial values of Q (the observed outcome node)
-  #       h2oFrame[, "prev_Q.kplus1"] <- h2oFrame[, "Q.kplus1"]
+  #       h2oFrame[, "Qkplus1"] <-  h2o.asnumeric(h2oFrame[["Y.tplus1"]]) # set the initial values of Q (the observed outcome node)
+  #       h2oFrame[, "prev_Qkplus1"] <- h2oFrame[, "Qkplus1"]
   #       set.seed(435)
   #       h2oFrame <- h2o::h2o.createFrame()
   #       set.seed(435)
@@ -79,17 +79,17 @@ notest.h2oQuasiBinomGLM.Ensemble <- function() {
 
   #       h2oFrame[subset_idx,]
 
-  #       as.data.table(h2oFrame[h2oFrame[["prev_Q.kplus1"]] != h2oFrame[["Q.kplus1"]], ])
+  #       as.data.table(h2oFrame[h2oFrame[["prev_Qkplus1"]] != h2oFrame[["Qkplus1"]], ])
 
-  #       prev_Q.kplus1 <- h2oFrame[subset_idx, "Q.kplus1"]
-  #       h2oFrame[subset_idx, "prev_Q.kplus1"] <- prev_Q.kplus1
-  #       as.data.table(h2oFrame[h2oFrame[["prev_Q.kplus1"]] != h2oFrame[["Q.kplus1"]], ])
+  #       prev_Qkplus1 <- h2oFrame[subset_idx, "Qkplus1"]
+  #       h2oFrame[subset_idx, "prev_Qkplus1"] <- prev_Qkplus1
+  #       as.data.table(h2oFrame[h2oFrame[["prev_Qkplus1"]] != h2oFrame[["Qkplus1"]], ])
 
-  # OData$H2Oframe[, "Q.kplus1"] <-  h2o.asnumeric(OData$H2Oframe[[OData$nodes$Ynode]]) # set the initial values of Q (the observed outcome node)
-  # OData$H2Oframe[, "prev_Q.kplus1"] <- OData$H2Oframe[, "Q.kplus1"]
+  # OData$H2Oframe[, "Qkplus1"] <-  h2o.asnumeric(OData$H2Oframe[[OData$nodes$Ynode]]) # set the initial values of Q (the observed outcome node)
+  # OData$H2Oframe[, "prev_Qkplus1"] <- OData$H2Oframe[, "Qkplus1"]
 
         t.surv <- c(10)
-        Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+        Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
         # H2O glm w/ L_BFGS:
         params = list(fit.package = "h2o", fit.algorithm = "glm", solver = "L_BFGS", family = "quasibinomial")

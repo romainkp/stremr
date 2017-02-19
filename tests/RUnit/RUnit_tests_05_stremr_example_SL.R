@@ -190,12 +190,12 @@ test.h2oEnsemble <- function() {
         # TMLE / GCOMP
         # ---------------------------------------------------------------------------------------------------------
         t.surv <- c(5)
-        Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+        Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
         params = list(fit.package = "speedglm", fit.algorithm = "glm")
         # params = list(fit.package = "h2o", fit.algorithm = "RF", ntrees = 100,
         #               learn_rate = 0.05, sample_rate = 0.8,
         #               col_sample_rate = 0.8, balance_classes = TRUE)
-        Qforms <- rep.int("Q.kplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+        Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
         tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
         tmle_est$estimates[]
 
