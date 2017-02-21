@@ -1,4 +1,4 @@
-tmle.update <- function(Qkplus1, iQ_fitted_only, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
+tmle.update <- function(Qkplus1, Qk_hat, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
     update.Qstar.coef <- 0
@@ -12,9 +12,9 @@ tmle.update <- function(Qkplus1, iQ_fitted_only, IPWts, lower_bound_zero_Q = TRU
     #************************************************
     if (lower_bound_zero_Q) {
       Qkplus1[Qkplus1 < 10^(-4)] <- 10^(-4)
-      iQ_fitted_only[iQ_fitted_only < 10^(-4)] <- 10^(-4)
+      Qk_hat[Qk_hat < 10^(-4)] <- 10^(-4)
     }
-    off_TMLE <- qlogis(iQ_fitted_only)
+    off_TMLE <- qlogis(Qk_hat)
 
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
                                           y = Qkplus1, weights = IPWts, offset = off_TMLE,
@@ -31,7 +31,7 @@ tmle.update <- function(Qkplus1, iQ_fitted_only, IPWts, lower_bound_zero_Q = TRU
     }
   }
 
-  fit <- list(TMLE.intercept = update.Qstar.coef)
+  fit <- list(TMLE_intercept = update.Qstar.coef)
   class(fit)[2] <- "tmlefit"
   if (gvars$verbose) print("tmle update: " %+% update.Qstar.coef)
   return(fit)
@@ -225,8 +225,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
         ## Thus, need to find which elements in predicted Q vector (probA1) where actually used for fitting the init Q
         idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
-        iQ_fitted_only <- probA1[idx_for_fits_among_preds]
-        off_TMLE <- qlogis(iQ_fitted_only)
+        Qk_hat <- probA1[idx_for_fits_among_preds]
+        # off_TMLE <- qlogis(Qk_hat)
         # print("initial mean(Qkplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
 
         ## Cumulative IPWeights for current t=k (from t=0 to k):
@@ -235,29 +235,26 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         ## TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
         ## tmle update will error out if some predictions are exactly 0
         private$TMLE.fit <- tmle.update(Qkplus1 = Qkplus1,
-                                        iQ_fitted_only = iQ_fitted_only,
+                                        Qk_hat = Qk_hat,
                                         IPWts = wts_TMLE,
                                         lower_bound_zero_Q = self$lower_bound_zero_Q,
                                         skip_update_zero_Q = self$skip_update_zero_Q)
 
-        TMLE.intercept <- private$TMLE.fit$TMLE.intercept
+        TMLE_intercept <- private$TMLE.fit$TMLE_intercept
 
-        if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
-          update.Qstar.coef <- TMLE.intercept
+        if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
+          update.Qstar.coef <- TMLE_intercept
         } else {
           update.Qstar.coef <- 0
         }
 
         ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        iQ_fitted_only <- plogis(qlogis(iQ_fitted_only) + update.Qstar.coef)
+        Qk_hat <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
         iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
 
-        EIC_i_t_calc <- wts_TMLE * (Qkplus1 - iQ_fitted_only)
+        EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
       }
-
-      ## Save all predicted vals as Qkplus1[t] in row t or
-      # data$dat.sVar[self$subset_idx, "Qkplus1" := iQ_all]
 
       ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
       ## This is either the initial G-COMP Q or the TMLE targeted version of the initial Q
@@ -294,9 +291,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitly asked
-      TMLE.intercept <- new.TMLE.fit$TMLE.intercept
-      if (!is.na(TMLE.intercept) && !is.nan(TMLE.intercept)) {
-        update.Qstar.coef <- TMLE.intercept
+      TMLE_intercept <- new.TMLE.fit$TMLE_intercept
+      if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
+        update.Qstar.coef <- TMLE_intercept
       } else {
         update.Qstar.coef <- 0
       }
@@ -342,6 +339,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                       # use_best_retrained_model = TRUE,
                                       holdout = self$CVTMLE,
                                       verbose = gvars$verbose)
+
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
         return(private$probA1)
@@ -354,7 +352,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
 
         if (!self$CVTMLE) {
-
           probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                         newdata = newdata,
                                         add_subject_data = FALSE,
@@ -363,7 +360,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                         holdout = FALSE,
                                         verbose = gvars$verbose)
         } else {
-
           probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                         newdata = newdata,
                                         add_subject_data = FALSE,
@@ -388,7 +384,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
           setkeyv(probA1, "idx")
           probA1[, ("idx") := NULL]
-
         }
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
@@ -483,10 +478,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       if (missing(newdata) && !is.null(private$probAeqa)) {
         return(private$probAeqa)
       } else {
-        stop("$predictAeqa should never be called for making actual predictions")
+        stop("$predictAeqa should never be called for making predictions for GCOMP")
       }
-      # if (is.null(self$getsubset)) stop("cannot make predictions after self$subset_idx is erased (set to NULL)")
-      # invisible(return(private$probAeqa))
     },
 
     # Returns the object that contains the actual model fits (itself)
@@ -501,7 +494,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     wipe.alldat = function() {
       # private$probA1 <- NULL
       # private$probAeqa <- NULL
-
       self$binomialModelObj$emptydata
       self$binomialModelObj$emptyY
       return(self)

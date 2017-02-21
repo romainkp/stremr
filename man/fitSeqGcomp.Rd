@@ -15,7 +15,8 @@ fitSeqGcomp(OData, tvals, Qforms, intervened_TRT = NULL,
   CVTMLE = FALSE, IPWeights = NULL, trunc_weights = 10^6,
   weights = NULL, max_iter = 15, adapt_stop = TRUE,
   adapt_stop_factor = 10, tol_eps = 0.001, parallel = FALSE,
-  return_wts = FALSE, verbose = getOption("stremr.verbose"), ...)
+  return_wts = FALSE, return_fW = FALSE,
+  verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}

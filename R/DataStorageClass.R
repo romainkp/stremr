@@ -245,8 +245,11 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     modelfit.gC = NULL,
     modelfit.gA = NULL,
     modelfit.gN = NULL,
+
     g_preds = NULL,
     g_holdout_preds = NULL,
+
+    IPWeights_info = NULL, # A list with all the information (node names, truncation) that is needed to evaluate the IP weights.
 
     new.factor.names = NULL,
     noCENScat = 0L,         # The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables

@@ -429,6 +429,8 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' This is useful for running CV-TMLE or evaluating the quality of the model fits based on validation sets.
 #' @param eval_stabP Evaluate the additional weight stabilization factor for each time-point.
 #' This is used for MSMs only and is enabled by default.
+#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in
+#' \code{trunc_weights} will be truncated.
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
@@ -442,7 +444,8 @@ getIPWeights <- function(OData,
                          tmax = NULL,
                          tmin = NULL,
                          holdout = FALSE,
-                         eval_stabP = TRUE
+                         eval_stabP = TRUE,
+                         trunc_weights = Inf
                          ) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
@@ -501,6 +504,7 @@ getIPWeights <- function(OData,
   ## of the original database, making it very easy to look-up correct weights for each observation row-index from the main dataset.
   if (!is.null(tmin)) wts.DT[eval(as.name(nodes$tnode)) < tmin, ("wt.by.t") := 1]
   wts.DT[,"cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+  if (trunc_weights < Inf) wts.DT[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
 
   ## -------------------------------------------------------------------------------------------
   ## Calculate weight stabilization factor -- get emp P(followed rule at time t | followed rule up to now)

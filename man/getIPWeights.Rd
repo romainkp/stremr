@@ -7,7 +7,8 @@
 getIPWeights(OData, intervened_TRT = NULL, intervened_MONITOR = NULL,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
   rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-  tmax = NULL, tmin = NULL, holdout = FALSE, eval_stabP = TRUE)
+  tmax = NULL, tmin = NULL, holdout = FALSE, eval_stabP = TRUE,
+  trunc_weights = Inf)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -43,6 +44,9 @@ This is useful for running CV-TMLE or evaluating the quality of the model fits b
 
 \item{eval_stabP}{Evaluate the additional weight stabilization factor for each time-point.
 This is used for MSMs only and is enabled by default.}
+
+\item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in
+\code{trunc_weights} will be truncated.}
 }
 \value{
 ...

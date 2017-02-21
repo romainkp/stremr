@@ -17,7 +17,6 @@
 ## ------------------------------------------------------------------------------------------
 
 
-
 ## ------------------------------------------------------------------------------------------
 ## Sequential (Recursive) G-COMP Algorithm:
 ## ------------------------------------------------------------------------------------------
@@ -255,13 +254,14 @@ fitSeqGcomp <- function(OData,
                         tol_eps = 0.001,
                         parallel = FALSE,
                         return_wts = FALSE,
+                        return_fW = FALSE,
                         verbose = getOption("stremr.verbose"), ...) {
 
-  cat("Calling fitSeqGcomp:")
-  cat("intervened_TRT: ", intervened_TRT);
-  cat("stratifyQ_by_rule: ", stratifyQ_by_rule);
-  cat("stratify_by_last: ", stratify_by_last);
-  cat("trunc_weights: ", trunc_weights);
+  cat("Calling fitSeqGcomp:\n")
+  cat("intervened_TRT: ", intervened_TRT, "\n")
+  cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n")
+  cat("stratify_by_last: ", stratify_by_last, "\n")
+  cat("trunc_weights: ", trunc_weights, "\n")
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -355,7 +355,8 @@ fitSeqGcomp <- function(OData,
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
-                                adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
+                                adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
+                                return_fW = return_fW, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -366,7 +367,8 @@ fitSeqGcomp <- function(OData,
         res <- fitSeqGcomp_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
-                                adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, verbose = verbose)
+                                adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
+                                return_fW = return_fW, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -463,13 +465,13 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
 
   for (iter in 1:(max_iter+1)) {
     Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
-    iQ_fitted_only <- OData$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
+    Qk_hat <- OData$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
 
     # ------------------------------------------------------------------------------------
     # ESTIMATE OF THE EIC:
     # ------------------------------------------------------------------------------------
     # Get t-specific and i-specific components of the EIC for all t > t.init:
-    EIC_i_tplus <- wts_TMLE * (Qkplus1 - iQ_fitted_only)
+    EIC_i_tplus <- wts_TMLE * (Qkplus1 - Qk_hat)
     # Get t-specific and i-specific components of the EIC for all t = t.init (mean pred from last reg, all n obs)
     res_lastPredQ <- allQmodels[[Qreg_idx[1]]]$predictAeqa()  # Qreg_idx[1] is the index for the last Q-fit
     # res_lastPredQ <- allQmodels[[length(allQmodels)]]$predictAeqa()
@@ -485,13 +487,13 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
         # if (abs(EIC_est) < (1 / OData$nuniqueIDs)) break
         if (abs(EIC_est) < (1 / (adapt_stop_factor*sqrt(OData$nuniqueIDs)))) break
       } else {
-        if (!is.null(tol_eps) & (abs(TMLE.fit$TMLE.intercept) <= tol_eps)) break
+        if (!is.null(tol_eps) & (abs(TMLE.fit$TMLE_intercept) <= tol_eps)) break
       }
     } else if (iter > max_iter) {
       break
     }
 
-    TMLE.fit <- tmle.update(Qkplus1 = Qkplus1, iQ_fitted_only = iQ_fitted_only, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
+    TMLE.fit <- tmle.update(Qkplus1 = Qkplus1, Qk_hat = Qk_hat, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
     Propagate_TMLE_fits(allQmodels, OData, TMLE.fit)
   }
 
@@ -502,8 +504,8 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
 
   # EVALUTE THE t and i-specific components of the EIC (estimates):
   # Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
-  # iQ_fitted_only <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
-  # EIC_i_t_calc <- wts_TMLE * (Qkplus1 - iQ_fitted_only)
+  # Qk_hat <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
+  # EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
   # OData$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_t_calc]
   OData$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_tplus]
 
@@ -523,6 +525,7 @@ fitSeqGcomp_onet <- function(OData,
                              adapt_stop = TRUE,
                              adapt_stop_factor = 10,
                              tol_eps = 0.001,
+                             return_fW = FALSE,
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -714,5 +717,10 @@ fitSeqGcomp_onet <- function(OData,
 
   ## save the i-specific estimates of the EIC as a separate column:
   resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
+
+  fW_fit <- lastQ.fit$getfit
+  # predict_SL(fW_fit)
+  resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {NULL} }]
+
   return(resDF_onet)
 }

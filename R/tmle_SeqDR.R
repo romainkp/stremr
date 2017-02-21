@@ -1,4 +1,3 @@
-# return_wts = FALSE,
 
 fitSeqDR <- function(OData,
                         tvals,
@@ -16,20 +15,22 @@ fitSeqDR <- function(OData,
                         CVTMLE = FALSE,
                         trunc_weights = 10^6,
                         parallel = FALSE,
+                        return_fW = FALSE,
                         verbose = getOption("stremr.verbose"), ...) {
 
   stratify_by_last  <- TRUE ## if stratifying we are always stratifying by last treatment only
-  cat("Calling fitSeqGcomp:")
-  cat("intervened_TRT: ", intervened_TRT);
-  cat("stratifyQ_by_rule: ", stratifyQ_by_rule);
-  cat("stratify_by_last: ", stratify_by_last);
-  cat("trunc_weights: ", trunc_weights);
+  cat("Calling fitSeqGcomp:\n")
+  cat("intervened_TRT: ", intervened_TRT, "\n");
+  cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n");
+  cat("stratify_by_last: ", stratify_by_last, "\n");
+  cat("trunc_weights: ", trunc_weights, "\n");
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
   if (!is.null(models)) assert_that(is.ModelStack(models))
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
+
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
   # ------------------------------------------------------------------------------------------------
@@ -40,32 +41,20 @@ fitSeqDR <- function(OData,
   models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
-
   if (missing(tvals)) stop("must specify survival 'tvals' of interest (time period values from column " %+% nodes$tnode %+% ")")
 
-
-
-
-
-  # # ------------------------------------------------------------------------------------------------
-  # # **** THIS NEEDS TO BE MOVED INSIDE THE SDR OBJECT k-LOOP
-  # # ------------------------------------------------------------------------------------------------
-  #   if (gvars$verbose) message("...evaluating IPWeights for TMLE...")
-  #   IPWeights <- getIPWeights(OData,
-  #                             intervened_TRT,
-  #                             intervened_MONITOR,
-  #                             useonly_t_TRT,
-  #                             useonly_t_MONITOR,
-  #                             rule_name,
-  #                             holdout = CVTMLE,
-  #                             tmin = ...,
-  #                             eval_stabP = FALSE)
-  #   if (trunc_weights < Inf) IPWeights[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
-  #   OData$IPwts_by_regimen <- IPWeights
-
-
-
-
+  # ------------------------------------------------------------------------------------------------
+  # The weights function is called inside the SDR OBJECT k-LOOP for each [k] row value
+  # ------------------------------------------------------------------------------------------------
+  OData$IPWeights_info <-
+    list(intervened_TRT = intervened_TRT,
+         intervened_MONITOR = intervened_MONITOR,
+         useonly_t_TRT = useonly_t_TRT,
+         useonly_t_MONITOR = useonly_t_MONITOR,
+         rule_name = rule_name,
+         trunc_weights = trunc_weights,
+         holdout = CVTMLE,
+         eval_stabP = FALSE)
 
   # ------------------------------------------------------------------------------------------
   # Create a back-up of the observed input gstar nodes (created by user in input data):
@@ -102,7 +91,7 @@ fitSeqDR <- function(OData,
       '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
-        res <- fitSeqDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, verbose = verbose)
+        res <- fitSeqDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -110,7 +99,7 @@ fitSeqDR <- function(OData,
       res_byt <- vector(mode = "list", length = length(tvals))
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
-        res <- fitSeqDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, verbose = verbose)
+        res <- fitSeqDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -171,6 +160,7 @@ fitSeqDR_onet <- function(OData,
                           stratifyQ_by_rule,
                           CVTMLE = FALSE,
                           models,
+                          return_fW = FALSE,
                           verbose = getOption("stremr.verbose"),
                           ...) {
   gvars$verbose <- verbose
@@ -251,7 +241,7 @@ fitSeqDR_onet <- function(OData,
     Q_regs_list[[i]] <- reg
   }
 
-  browser()
+  # browser()
 
   ## TO DO: Automatically call the right constructor below depending on running SDR or regular TMLE
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
@@ -285,6 +275,8 @@ fitSeqDR_onet <- function(OData,
   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
   mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Qk_hat"]])
 
+  # browser()
+
   if (gvars$verbose) {
     print("Surv est: " %+% (1 - mean_est_t))
     print("Surv est 2: " %+% (1 - mean_est_t_2))
@@ -293,16 +285,16 @@ fitSeqDR_onet <- function(OData,
   }
 
   resDF_onet <- data.table(time = t_period,
-                           St.GCOMP = NA,
-                           St.TMLE = NA,
-                           St.iterTMLE = NA,
-                           ALLsuccessTMLE = ALLsuccessTMLE,
-                           nFailedUpdates = nFailedUpdates,
+                           St.SDR = NA,
                            type = ifelse(stratifyQ_by_rule, "stratified", "pooled")
                           )
 
-  est_name <- ifelse(TMLE, "St.TMLE", "St.GCOMP")
+  est_name <- "St.SDR"
   resDF_onet[, (est_name) := (1 - mean_est_t)]
+
+  fW_fit <- lastQ.fit$getfit
+  # predict_SL(fW_fit)
+  resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {NULL} }]
 
   return(resDF_onet)
 }
