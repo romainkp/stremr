@@ -719,8 +719,7 @@ fitSeqGcomp_onet <- function(OData,
   resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
 
   fW_fit <- lastQ.fit$getfit
-  # predict_SL(fW_fit)
-  resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {NULL} }]
+  resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
 
   return(resDF_onet)
 }

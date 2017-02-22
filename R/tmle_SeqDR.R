@@ -19,11 +19,11 @@ fitSeqDR <- function(OData,
                         verbose = getOption("stremr.verbose"), ...) {
 
   stratify_by_last  <- TRUE ## if stratifying we are always stratifying by last treatment only
-  cat("Calling fitSeqGcomp:\n")
-  cat("intervened_TRT: ", intervened_TRT, "\n");
-  cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n");
-  cat("stratify_by_last: ", stratify_by_last, "\n");
-  cat("trunc_weights: ", trunc_weights, "\n");
+  # cat("Calling fitSeqGcomp:\n")
+  # cat("intervened_TRT: ", intervened_TRT, "\n");
+  # cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n");
+  # cat("stratify_by_last: ", stratify_by_last, "\n");
+  # cat("trunc_weights: ", trunc_weights, "\n");
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -41,6 +41,7 @@ fitSeqDR <- function(OData,
   models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
+
   if (missing(tvals)) stop("must specify survival 'tvals' of interest (time period values from column " %+% nodes$tnode %+% ")")
 
   # ------------------------------------------------------------------------------------------------
@@ -275,8 +276,6 @@ fitSeqDR_onet <- function(OData,
   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
   mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Qk_hat"]])
 
-  # browser()
-
   if (gvars$verbose) {
     print("Surv est: " %+% (1 - mean_est_t))
     print("Surv est 2: " %+% (1 - mean_est_t_2))
@@ -293,8 +292,7 @@ fitSeqDR_onet <- function(OData,
   resDF_onet[, (est_name) := (1 - mean_est_t)]
 
   fW_fit <- lastQ.fit$getfit
-  # predict_SL(fW_fit)
-  resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {NULL} }]
+  resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
 
   return(resDF_onet)
 }

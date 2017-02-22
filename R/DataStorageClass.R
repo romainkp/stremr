@@ -669,8 +669,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
         if (fold_column %in% names(self$dat.sVar)) self$dat.sVar[, (fold_column) := NULL]
         nuniqueIDs <- self$nuniqueIDs
-        if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
 
+        if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
 
         fold_IDs <- sprintf("%02d", seq(nfolds))
         fold_id <- as.factor(sample(rep(fold_IDs, ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
@@ -682,6 +682,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
         self$fold_column <- fold_column
         self$nfolds <- nfolds
+
+        if (is.numeric(seed)) set.seed(NULL)  #If seed was specified, reset it to NULL
         return(invisible(self))
       }
     },

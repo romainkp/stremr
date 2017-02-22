@@ -2,29 +2,28 @@
 ##**********************************************************************
 ################ TO DO FOR SDR ################
 ##**********************************************************************
-## * 1. Set up for doing predictions for targeted functional E(Y_d|W') for any W'.
-##      This needs to be entirely automated.
 ##
-## * 2. Safe targeting of E[Y_d] without over-writing E[Y_d|W].
+## * 1. Remove manual SDR update fitting / prediction and replace with general fit / predict for any learner.
+##      Make it consistent with fit / predict in the rest of the package.
+##      Allow passing arbitrary learners for the targeted update via model syntax.
+##
+## * 2. Stratification by A[k-1]? Need to sort out how to do this correctly for all targeting steps.
+##
+## * 3. Do we need to use offsets when extrapolating predictions of Q.star.k for new observations
+##      (newly censored and new non-follows at k')?
+##
+## * (DONE) Safe targeting of E[Y_d] without over-writing E[Y_d|W].
 ##      When k=-1 (after the last run of the epsilon targeting regressions).
 ##      Last loop can be currently identified as (Qk_idx == max_Qk_idx).
 ##      This final targeting step will do the usual TMLE (intercept-only logistic regression updates).
 ##      NEED TO FIGURE OUT HOW ACCOMPLISHE THIS AND WHERE TO STORE THE PREDICTIONS
 ##      (without over-overwriting the targeted E[Y_d|W] from previous loop)
 ##
-## * 3. Stratification by A[k-1]? Need to sort out how to do this correctly for all targeting steps.
-##
-## * 4. See also below. Do we need to use offsets when extrapolating predictions of Q.star.k for new observations
-##      (newly censored and new non-follows at k')?
-##
-## * 5. This cannot conflict with predictions for E[Y_d]. I.e.,
+## * (DONE) This cannot conflict with predictions for E[Y_d]. I.e.,
 ##      Should be able to make prediction from E(Y_d|W') and obtain E(Y_d) from same run of the algorithm.
 ##      Look at regular GCOMP for analogy on how best to set this up.
 ##
-## * 6. Remove manual SDR update fitting / prediction and replace with general fit / predict for any learner.
-##      Make it consistent with fit / predict in the rest of the package.
-##      Allow passing arbitrary learners for the targeted update via model syntax.
-##
+## * (DONE) Set up for doing predictions for targeted functional E(Y_d|W') for any W'. This needs to be entirely automated.
 ## * (DONE) Finish the weights evaluation, see below (need to pass appropriate args to the class to make the function call to weights).
 ## * (DONE) Still need to figure out how to pass covariates from the current G-COMP fit of Q_k, the covariates need to be from k-1.
 ## * (DONE) Add newly censored obs and newly non-followers to targeted predictions.
@@ -102,22 +101,17 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
     ## **********************************************************************
     ## Weights for SDR
     ## **********************************************************************
-    ## TO DO (Weights)
     ## *THE VALUE OF the current time-point is saved in self$t_period.
-    ## * When this is passed as tmin to getIPWeights, the weights are evaluated correctly for current t
+    ## * When this is passed as tmin to getIPWeights, the weights are evaluated correctly for current k.
     ## * That is, the product of the cumulative weights will be taken starting with k=t all the way up to end of follow-up.
     ## * The way the weights need to be evaluated for each k is exactly like in getIPWeights(),
-    ##    ****** except that we now have to exclude all time-points that occur before the current time-point k=t ******
+    ##    ****** except that all the weights for time-points < tmin are set to constant 1.
     eval_weights_k = function(data, ...) {
       call_list <- data$IPWeights_info
       call_list[["tmin"]] <- self$t_period
       call_list[["OData"]] <- data
       if (gvars$verbose) message("...evaluating IPWeights for TMLE...")
       IPWeights <- do.call("getIPWeights", call_list)
-
-      # IPWeights[t > 8, ]
-      # IPWeights[t > 9 & t < 11, c("ID", "t", "g0.CAN", "wt.by.t", "cum.IPAW")][1:20, ]
-
       data$IPwts_by_regimen <- IPWeights
       return(invisible(IPWeights))
     },
@@ -128,10 +122,6 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
     ## Weights: the product of g's from t=k to current k'
     ## Offset: qlogis(Qk_hat) - current (initial) Q prediction (at k')
     fit_epsilon_Q_k = function(data, kprime_idx, Qk_idx, max_Qk_idx, ...) {
-      # self$t_period
-      # self$Qreg_counter
-      # self$n <- data$nobs
-      # self$nIDs <- data$nuniqueIDs
       if (self$all_Qregs_indx[kprime_idx] != self$Qreg_counter) stop("something terrible has happened")
 
       cat("...running SDR targeting loop...\n")
@@ -171,12 +161,10 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
       ##    Note that after we generate an update Qk_hat_star, we ****over-write**** current Qk_hat with its updated version
       Qk_hat <- data$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
 
-      # data$dat.sVar[use_subset_idx, ]; # data$dat.sVar[t==9, ]
-
       ## 4A. The model update. Univariate logistic regression (TMLE)
       if (Qk_idx == max_Qk_idx) {
         # browser()
-        cat("NEED TO DO intercept only TMLE updates for targeting E(Y_d)\n")
+        cat("Last targeting step for E(Y_d) with intercept only TMLE updates\n")
         # Qk_hat_star_all <- intercept.update(data,
         #                                     Qkplus1 = Qkplus1,
         #                                     Qk_hat = Qk_hat,
@@ -211,7 +199,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ## 2. Fitting regression: Qkplus1 ~ offset(qlogis(Qk_hat)) + H[k-1] and weights 'wts'
         require('xgboost')
         param <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 4)
-        obs_dat[, CVD := as.numeric(CVD)]
+        # obs_dat[, CVD := as.numeric(CVD)]
         xgb_dat <- xgb.DMatrix(as.matrix(obs_dat), label = Qkplus1)
         setinfo(xgb_dat, "base_margin", qlogis(Qk_hat))
         setinfo(xgb_dat, "weight", wts)
@@ -233,7 +221,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ##    THE wts used no longer play any role, but the offsets (Qk_hat) needs to be re-evaluated for new observations?
         ##    The predictors used are still based on the covariate space at time point k-1.
         pred_dat <- data$dat.sVar[self$subset_idx + Hk_row_offset, self$predvars, with = FALSE]
-        pred_dat[, CVD := as.numeric(CVD)]
+        # pred_dat[, CVD := as.numeric(CVD)]
         xgb_dat <- xgb.DMatrix(as.matrix(pred_dat))
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         setinfo(xgb_dat, "base_margin", qlogis(Qk_hat_all))

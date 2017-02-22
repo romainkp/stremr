@@ -460,7 +460,7 @@ getIPWeights <- function(OData,
   if (!is.null(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
 
-  print("CALLING IP WEIGHTS NOW"); print("intervened_TRT"); print(intervened_TRT)
+  # print("CALLING IP WEIGHTS NOW"); print("intervened_TRT"); print(intervened_TRT)
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
   # Combine the propensity score for observed (g0.C, g0.A, g0.N) with the propensity scores for interventions (gstar.C, gstar.A, gstar.N):
