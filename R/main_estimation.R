@@ -126,7 +126,7 @@ importData <- function(data,
   gvars$noCENScat <- noCENScat
   if (verbose) {
     current.options <- capture.output(str(gvars$opts))
-    print("Using the following stremr options/settings: ")
+    print("stremr will use the following options as defaults: ")
     cat('\n')
     cat(paste0(current.options, collapse = '\n'), '\n')
   }
@@ -655,7 +655,7 @@ survNPMSM <- function(wts_data,
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
 
-  print("trunc_weights"); print(trunc_weights)
+  if (gvars$verbose) {print("trunc_weights"); print(trunc_weights)}
 
   rule.name <- unique(wts_data[["rule.name"]])
   if (length(rule.name)>1)
@@ -851,7 +851,7 @@ survMSM <- function(wts_data,
   glm_package <- glm_package[1L]
   if (!(glm_package %in% c("speedglm", "h2o"))) stop("glm_package must be either 'speedglm' or 'h2o'")
 
-  if (verbose) print("performing estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
+  if (verbose) print("performing MSM estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
 
   ## Remove all observations with 0 cumulative weights & copy the weights data.table
   ## keep all weights, even if they are 0:
@@ -882,14 +882,15 @@ survMSM <- function(wts_data,
 
   periods <- (mint:tmax)
   periods_idx <- seq_along(periods)
-  if (verbose) { print("periods"); print(periods) }
+
+  if (verbose) { print("MSM periods: "); print(periods) }
 
   # Default tbreaks, error checks for tbreaks, plus padding w/ mint & tmax:
   if (missing(tbreaks)) {
     # default tbreaks is to use a saturated (non-parametric) MSM
     tbreaks <- sort(periods)
     if (verbose)
-      message("running with default 'tbreaks': (" %+%
+      message("running MSM with default 'tbreaks': (" %+%
         paste0(tbreaks, collapse = ",") %+%
         "); \nNote: such 'tbreaks' define a separate coefficient for every unique follow-up time period resulting in a saturated (non-parametric) MSM.")
   }
@@ -931,7 +932,7 @@ survMSM <- function(wts_data,
       wts_data_used[, (dummy.j) := as.integer(get(t_name) >= (low.t + 1) & get(t_name) <= high.t)]
       # wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= (low.t + 1) & eval(as.name(t_name)) <= high.t)]
     }
-    print("defined t.dummy: " %+% dummy.j)
+    if (verbose) print("defined t.dummy: " %+% dummy.j)
     all.t.dummies <- c(all.t.dummies, dummy.j)
   }
 
@@ -957,6 +958,7 @@ survMSM <- function(wts_data,
   names(S2.IPAW) <- names(hazard.IPAW) <- rules_TRT
 
   if (verbose) message("...evaluating MSM-based survival curves...")
+
   for(d.j in names(S2.IPAW)) {
     for(period.idx in seq_along(periods)) {
       period.j <- periods[period.idx] # the period of the follow-up for which we want to evaluate the MSM-based survival:
@@ -1115,9 +1117,9 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
       }, GetWarningsToSuppress())
     }
     m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
-    if (verbose) {
-      print("MSM fits"); print(m.fit$coef)
-    }
+
+    if (verbose) {print("MSM fits"); print(m.fit$coef)}
+
     glm.IPAW.predictP1 <- logispredict(m.fit, Xdesign.mat)
     # wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
   } else {

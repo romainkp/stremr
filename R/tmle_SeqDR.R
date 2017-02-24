@@ -19,12 +19,6 @@ fitSeqDR <- function(OData,
                         verbose = getOption("stremr.verbose"), ...) {
 
   stratify_by_last  <- TRUE ## if stratifying we are always stratifying by last treatment only
-  # cat("Calling fitSeqGcomp:\n")
-  # cat("intervened_TRT: ", intervened_TRT, "\n");
-  # cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n");
-  # cat("stratify_by_last: ", stratify_by_last, "\n");
-  # cat("trunc_weights: ", trunc_weights, "\n");
-
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names

@@ -108,7 +108,7 @@ GenericModel <- R6Class(classname = "GenericModel",
       if (!("ListOfRegressionForms" %in% class(reg))) {
         all.outvar.bin <-  all(reg$outvar.class %in% gvars$sVartypes$bin)
       }
-      if (gvars$verbose) prettyprint_GenericModel(self, reg, all.outvar.bin)
+      if (gvars$verbose == 2) prettyprint_GenericModel(self, reg, all.outvar.bin)
       # Factorize the joint into univariate regressions, by dimensionality of the outcome variable (sA_nms):
       for (k_i in 1:self$n_regs) {
 
@@ -283,7 +283,7 @@ CategorModel <- R6Class(classname = "CategorModel",
       if (self$reg$get.reg$censoring & gvars$verbose) {
         message("...fitting a model for categorical censoring...")
       }
-      if (gvars$verbose) print("CategorModel outcome: "%+%self$outvar)
+      if (gvars$verbose == 2) print("CategorModel outcome: "%+%self$outvar)
 
       assert_that(is.DataStorageClass(DataStorageClass.g0))
       self$levels <- DataStorageClass.g0$detect.cat.sVar.levels(reg$outvar)
@@ -310,7 +310,7 @@ CategorModel <- R6Class(classname = "CategorModel",
       assert_that(is.DataStorageClass(data))
       # Binirizes & saves binned matrix inside DataStorageClass for categorical sVar
       data$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
-      if (gvars$verbose) {
+      if (gvars$verbose == 2) {
         print("performing fitting for categorical outcome: " %+% self$outvar)
         print("freq counts by bin for categorical outcome: "); print(table(data$get.sVar(self$outvar)))
         print("binned dataset: "); print(head(cbind(sA = data$get.sVar(self$outvar), data$dat.bin.sVar), 5))
@@ -325,7 +325,7 @@ CategorModel <- R6Class(classname = "CategorModel",
     # P(A=1|W=w): uses private$m.fit to generate predictions
     predict = function(newdata, ...) {
       # if (missing(newdata)) stop("must provide newdata")
-      if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
+      if (gvars$verbose == 2) print("performing prediction for categorical outcome: " %+% self$outvar)
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
       if (!missing(newdata)) newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
       super$predict(newdata, ...)
@@ -336,7 +336,7 @@ CategorModel <- R6Class(classname = "CategorModel",
     # Invisibly return cumm. prob P(A=a|W=w)
     # P(A=a|W=w) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
     predictAeqa = function(newdata, ...) {
-      if (gvars$verbose) print("performing prediction for categorical outcome: " %+% self$outvar)
+      if (gvars$verbose == 2) print("performing prediction for categorical outcome: " %+% self$outvar)
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
       if (!missing(newdata)) newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
       cumprodAeqa <- super$predictAeqa(newdata, ...)
@@ -398,7 +398,7 @@ StratifiedModel <- R6Class(classname = "StratifiedModel",
       self$subset_exprs <- reg$subset_exprs
       assert_that(length(self$reg$subset_exprs) > 1L)
       assert_that(length(self$reg$outvar) == 1L)
-      if (gvars$verbose)  {
+      if (gvars$verbose == 2)  {
         print("StratifiedModel outcome: "%+%self$outvar)
         print("StratifiedModel expressions: ("%+% paste(self$subset_exprs, collapse=",") %+% ")")
       }
@@ -417,7 +417,7 @@ StratifiedModel <- R6Class(classname = "StratifiedModel",
     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in sA - names have changed though)
     fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
-      if (gvars$verbose) {
+      if (gvars$verbose == 2) {
         print("performing fitting for outcome based on stratified model for outcome: " %+% self$outvar)
         # print("following subsets are defined: "); print(table(data$get.sVar(self$outvar)))
       }
@@ -428,7 +428,7 @@ StratifiedModel <- R6Class(classname = "StratifiedModel",
     # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
     predict = function(newdata, ...) {
       # if (missing(newdata)) stop("must provide newdata")
-      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
+      if (gvars$verbose == 2) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
       super$predict(newdata, ...)
       invisible(self)
@@ -436,7 +436,7 @@ StratifiedModel <- R6Class(classname = "StratifiedModel",
     # Invisibly return cumm. prob P(sA=sa|sW=sw)
     # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
     predictAeqa = function(newdata, ...) {
-      if (gvars$verbose) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
+      if (gvars$verbose == 2) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
       cumprodAeqa <- super$predictAeqa(newdata, ...)
       private$cumprodAeqa <- cumprodAeqa
@@ -595,7 +595,7 @@ ContinModel <- R6Class(classname = "ContinModel",
       names(self$intrvls.width) <- self$bin_nms
 
 
-      if (gvars$verbose)  {
+      if (gvars$verbose == 2)  {
         print("ContinModel outcome: "%+%self$outvar)
       }
 
@@ -630,7 +630,7 @@ ContinModel <- R6Class(classname = "ContinModel",
       # Binirizes & saves binned matrix inside DataStorageClass
       # data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$reg$nbins, bin.nms = self$reg$bin_nms)
       data$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$nbins, bin.nms = self$bin_nms)
-      if (gvars$verbose) {
+      if (gvars$verbose == 2) {
         print("performing fitting for continuous outcome: " %+% self$outvar)
         print("freq counts by bin for continuous outcome: "); print(table(data$ord.sVar))
         print("binned dataset: "); print(head(cbind(data$ord.sVar, data$dat.bin.sVar), 5))
@@ -646,7 +646,7 @@ ContinModel <- R6Class(classname = "ContinModel",
       # if (missing(newdata)) stop("must provide newdata")
       # assert_that(is.DataStorageClass(newdata))
 
-      if (gvars$verbose) print("performing prediction for continuous outcome: " %+% self$outvar)
+      if (gvars$verbose == 2) print("performing prediction for continuous outcome: " %+% self$outvar)
       # mat_bin doesn't need to be saved (even though its invisibly returned); mat_bin is automatically saved in datnet.sW.sA - a potentially dangerous side-effect!!!
 
       if (!missing(newdata)) {
@@ -664,7 +664,7 @@ ContinModel <- R6Class(classname = "ContinModel",
     predictAeqa = function(newdata, ...) { # P(A^s=a^s|W^s=w^s) - calculating the likelihood for obsdat.sA[i] (n vector of a`s)
       assert_that(is.DataStorageClass(newdata))
       newdata$binirize.sVar(name.sVar = self$outvar, intervals = self$intrvls, nbins = self$nbins, bin.nms = self$bin_nms)
-      if (gvars$verbose) print("performing prediction for continuous outcome: " %+% self$outvar)
+      if (gvars$verbose == 2) print("performing prediction for continuous outcome: " %+% self$outvar)
       bws <- newdata$get.sVar.bw(name.sVar = self$outvar, intervals = self$intrvls)
       self$bin_weights <- (1 / bws) # weight based on 1 / (sVar bin widths)
       # Option 1: ADJUST FINAL PROB by bw.j TO OBTAIN density at a point f(sa|sw) = P(A=a|W=w):

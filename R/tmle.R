@@ -257,11 +257,11 @@ fitSeqGcomp <- function(OData,
                         return_fW = FALSE,
                         verbose = getOption("stremr.verbose"), ...) {
 
-  cat("Calling fitSeqGcomp:\n")
-  cat("intervened_TRT: ", intervened_TRT, "\n")
-  cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n")
-  cat("stratify_by_last: ", stratify_by_last, "\n")
-  cat("trunc_weights: ", trunc_weights, "\n")
+  # cat("Calling fitSeqGcomp:\n")
+  # cat("intervened_TRT: ", intervened_TRT, "\n")
+  # cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n")
+  # cat("stratify_by_last: ", stratify_by_last, "\n")
+  # cat("trunc_weights: ", trunc_weights, "\n")
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -654,7 +654,7 @@ fitSeqGcomp_onet <- function(OData,
   resDF_onet <- data.table(time = t_period,
                            St.GCOMP = NA,
                            St.TMLE = NA,
-                           St.iterTMLE = NA,
+                           # St.iterTMLE = NA,
                            ALLsuccessTMLE = ALLsuccessTMLE,
                            nFailedUpdates = nFailedUpdates,
                            type = ifelse(stratifyQ_by_rule, "stratified", "pooled")

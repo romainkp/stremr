@@ -2,8 +2,9 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts, lower_bound_zero_Q = TRUE, skip_
   QY.star <- NA
   if (sum(abs(IPWts)) < 10^-9) {
     update.Qstar.coef <- 0
-    if (gvars$verbose) message("TMLE update cannot be performed since all IP-weights are exactly zero!")
-    warning("TMLE update cannot be performed since all IP-weights are exactly zero!")
+    # if (gvars$verbose)
+    message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
+    warning("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
   } else if ((sum(Qkplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
     update.Qstar.coef <- 0
   } else {
@@ -23,13 +24,16 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts, lower_bound_zero_Q = TRUE, skip_
                   silent = TRUE)
 
     if (inherits(m.Qstar, "try-error")) { # TMLE update failed
-      if (gvars$verbose) message("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
-      warning("attempt at running TMLE update with speedglm::speedglm.wfit has failed")
+      # if (gvars$verbose)
+      message("GLM TMLE update has failed, setting epsilon = 0")
+      warning("GLM TMLE update has failed, setting epsilon = 0")
       update.Qstar.coef <- 0
     } else {
       update.Qstar.coef <- m.Qstar$coef
     }
   }
+
+  if (gvars$verbose == 2) cat("...TMLE epsilon update = ", update.Qstar.coef, "\n")
 
   fit <- list(TMLE_intercept = update.Qstar.coef)
   class(fit)[2] <- "tmlefit"
@@ -119,7 +123,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$CVTMLE <- reg$CVTMLE
       self$keep_idx <- reg$keep_idx
 
-      if (gvars$verbose) {print("initialized Q class"); reg$show()}
+      if (gvars$verbose == 2) {print("initialized Q class"); reg$show()}
 
       invisible(self)
     },
@@ -421,9 +425,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # ------------------------------------------------------------------------------------------------------------------------
       data$swapNodes(current = gstar, target = g0)
 
-      if (inherits(gcomp.pred.res, "try-error")) { # prediction in seq-Gcomp has failed
-        stop("attempt at prediction during GCOMP/TMLE has failed")
-      }
+      # prediction in seq-Gcomp has failed
+      if (inherits(gcomp.pred.res, "try-error"))
+        stop("error during prediction of the iterative GCOMP/TMLE")
+
       invisible(return(private$probA1))
     },
 
