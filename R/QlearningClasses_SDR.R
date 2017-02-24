@@ -201,7 +201,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
         ## 2. Fitting regression: Qkplus1 ~ offset(qlogis(Qk_hat)) + H[k-1] and weights 'wts'
         # require('xgboost')
-        param <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 4)
+        param <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1)
         # obs_dat[, CVD := as.numeric(CVD)]
         xgb_dat <- xgboost::xgb.DMatrix(as.matrix(obs_dat), label = Qkplus1)
         xgboost::setinfo(xgb_dat, "base_margin", qlogis(Qk_hat))
