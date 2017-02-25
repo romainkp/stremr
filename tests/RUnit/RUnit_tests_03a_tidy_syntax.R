@@ -106,20 +106,24 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
   models_g <-
-              gridisl::defModel(estimator = "xgboost__glm",
-                                family = "binomial",
-                                nrounds = 10,
-                                early_stopping_rounds = 2,
-                                interactions = list(c("CVD", "highA1c"))) +
+    gridisl::defModel(estimator = "xgboost__glm",
+                      family = "binomial",
+                      nrounds = 10,
+                      early_stopping_rounds = 2,
+                      interactions = list(c("CVD", "highA1c"))) +
 
-               gridisl::defModel(estimator = "h2o__glm", family = "binomial",
-                                 nlambdas = 5, lambda_search = TRUE,
-                                 param_grid = list(
-                                  alpha = c(0, 0.5)
-                                 ))
+     gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+                       nlambdas = 5, lambda_search = TRUE,
+                       param_grid = list(
+                        alpha = c(0, 0.5)
+                       ))
 
     ## ----------------------------------------------------------------
-    ## To do extensive search of the model hyper-parameters, define grids and do random grid search, as shown below
+    ## AN EXAMPLE OF A GIANT GRID OF MODELS.
+    ## This will perform an extensive search of model hyper-parameters for fitting;
+    ## Define grids and do random grid search, as shown below.
+    ## USE THIS IN CASE OF UNLIMITED COMPUTATIONAL RESOURCES (OR VERY SMALL DATA).
+    ## OTHERWISE LIMIT THE NUMBER OF RANDOM MODELS BEING DRAWN FROM THE GRID.
     ## ----------------------------------------------------------------
     # h2o_GBM_hyper <- list( # max_depth = c(3:10, 15),
     #   max_depth = c(seq(3, 19, 4), 25),
@@ -160,83 +164,75 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     #   )
 
     # models_g <<-
-    #             gridisl::defModel(estimator = "xgboost__gbm", family = "binomial",
-    #                                 nrounds = 200, # nrounds = 500,
-    #                                 early_stopping_rounds = 3,
-    #                                 interactions = list(c("CVD", "highA1c")),
-    #                                 learning_rate = .1,
-    #                                 max_depth = 3,
-    #                                 gamma = .5,
-    #                                 colsample_bytree = 0.8,
-    #                                 subsample = 0.8,
-    #                                 lambda = 2,
-    #                                 alpha = 0.5,
-    #                                 max_delta_step = 2) +
-
-    #             gridisl::defModel(estimator = "xgboost__drf", family = "binomial",
-    #                                 nrounds = 200, # nrounds = 500,
-    #                                 early_stopping_rounds = 3,
-    #                                 interactions = list(c("CVD", "highA1c")),
-    #                                 learning_rate = .1,
-    #                                 max_depth = 3,
-    #                                 gamma = .5,
-    #                                 # colsample_bytree = 0.8,
-    #                                 # subsample = 0.8,
-    #                                 lambda = 2,
-    #                                 alpha = 0.5,
-    #                                 max_delta_step = 2) +
-
-    #             gridisl::defModel(estimator = "xgboost__gbm",
-    #                                 family = "binomial",
-    #                                 search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
-    #                                 seed = 23,
-    #                                 nrounds = 200, # nrounds = 500,
-    #                                 early_stopping_rounds = 3,
-    #                                 interactions = list(c("CVD", "highA1c")),
-    #                                 param_grid = list(
-    #                                     learning_rate = c(.05, .1, .3), # .05,
-    #                                     max_depth = c(seq(3, 19, 4), 25),
-    #                                     min_child_weight = c(1, 3, 5, 7),
-    #                                     gamma = c(.0, .05, seq(.1, .9, by=.2), 1),
-    #                                     # colsample_bytree = c(.4, .6, .8, 1),
-    #                                     subsample = c(.5, .75, 1),
-    #                                     lambda = c(.1, .5, 1, 2, 5), # lambda = c(1,2,5),
-    #                                     alpha = c(0, .1, .5),
-    #                                     ## Maximum delta step we allow each tree’s weight estimation to be.
-    #                                     ## If the value is set to 0, it means there is no constraint.
-    #                                     ## If it is set to a positive value, it can help making the update step more conservative.
-    #                                     ## Might help in logistic regression when class is extremely imbalanced.
-    #                                     ## Set it to value of 1-10 to help control the update
-    #                                     max_delta_step = c(0, 1, 2, 5, 10)
-    #                                     )
-    #                                 ) +
-
-    #            gridisl::defModel(estimator = "h2o__glm", family = "binomial", alpha = 0, lambda = 0, lambda_search = FALSE) +
-
-    #            gridisl::defModel(estimator = "h2o__glm", family = "binomial",
-    #                              nlambdas = 5, lambda_search = TRUE,
-    #                              param_grid = list(
-    #                               alpha = c(0.5)
-    #                              )) +
-
-    #             gridisl::defModel(estimator = "h2o__randomForest",
-    #                           distribution = "bernoulli",
-    #                           seed = 23,
-    #                           search_criteria = list(
-    #                             strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 3*60*60),
-    #                             # strategy = "RandomDiscrete", max_models = 20, max_runtime_secs = 3*60*60),
-    #                           param_grid = RF_hyper,
-    #                           binomial_double_trees = TRUE,
-    #                           stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1) +
-
-    #               gridisl::defModel(estimator = "h2o__gbm",
-    #                           distribution = "bernoulli",
-    #                           seed = 23,
-    #                           search_criteria = list(
-    #                             strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 3*60*60), # stopping_rounds = 5
-    #                             # strategy = "RandomDiscrete", max_models = 20, max_runtime_secs = 3*60*60), # stopping_rounds = 5
-    #                           param_grid = h2o_GBM_hyper,
-    #                           stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1)
+     #  gridisl::defModel(estimator = "xgboost__gbm", family = "binomial",
+     #                      nrounds = 200, # nrounds = 500,
+     #                      early_stopping_rounds = 3,
+     #                      interactions = list(c("CVD", "highA1c")),
+     #                      learning_rate = .1,
+     #                      max_depth = 3,
+     #                      gamma = .5,
+     #                      colsample_bytree = 0.8,
+     #                      subsample = 0.8,
+     #                      lambda = 2,
+     #                      alpha = 0.5,
+     #                      max_delta_step = 2) +
+     #  gridisl::defModel(estimator = "xgboost__drf", family = "binomial",
+     #                      nrounds = 200, # nrounds = 500,
+     #                      early_stopping_rounds = 3,
+     #                      interactions = list(c("CVD", "highA1c")),
+     #                      learning_rate = .1,
+     #                      max_depth = 3,
+     #                      gamma = .5,
+     #                      # colsample_bytree = 0.8,
+     #                      # subsample = 0.8,
+     #                      lambda = 2,
+     #                      alpha = 0.5,
+     #                      max_delta_step = 2) +
+     #  gridisl::defModel(estimator = "xgboost__gbm",
+     #                      family = "binomial",
+     #                      search_criteria = list(strategy = "RandomDiscrete", max_models = 100),
+     #                      seed = 23,
+     #                      nrounds = 200, # nrounds = 500,
+     #                      early_stopping_rounds = 3,
+     #                      interactions = list(c("CVD", "highA1c")),
+     #                      param_grid = list(
+     #                          learning_rate = c(.05, .1, .3), # .05,
+     #                          max_depth = c(seq(3, 19, 4), 25),
+     #                          min_child_weight = c(1, 3, 5, 7),
+     #                          gamma = c(.0, .05, seq(.1, .9, by=.2), 1),
+     #                          # colsample_bytree = c(.4, .6, .8, 1),
+     #                          subsample = c(.5, .75, 1),
+     #                          lambda = c(.1, .5, 1, 2, 5), # lambda = c(1,2,5),
+     #                          alpha = c(0, .1, .5),
+     #                          ## Maximum delta step we allow each tree’s weight estimation to be.
+     #                          ## If the value is set to 0, it means there is no constraint.
+     #                          ## If it is set to a positive value, it can help making the update step more conservative.
+     #                          ## Might help in logistic regression when class is extremely imbalanced.
+     #                          ## Set it to value of 1-10 to help control the update
+     #                          max_delta_step = c(0, 1, 2, 5, 10)
+     #                          )
+     #                      ) +
+     # gridisl::defModel(estimator = "h2o__glm", family = "binomial", alpha = 0, lambda = 0, lambda_search = FALSE) +
+     # gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+     #                   nlambdas = 5, lambda_search = TRUE,
+     #                   param_grid = list(
+     #                    alpha = c(0, .5, 1)
+     #                   )) +
+     #  gridisl::defModel(estimator = "h2o__randomForest",
+     #                distribution = "bernoulli",
+     #                seed = 23,
+     #                search_criteria = list(
+     #                  strategy = "RandomDiscrete", max_models = 100, max_runtime_secs = 3*60*60),
+     #                param_grid = RF_hyper,
+     #                binomial_double_trees = TRUE,
+     #                stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1) +
+     #    gridisl::defModel(estimator = "h2o__gbm",
+     #                distribution = "bernoulli",
+     #                seed = 23,
+     #                search_criteria = list(
+     #                  strategy = "RandomDiscrete", max_models = 100, max_runtime_secs = 3*60*60), # stopping_rounds = 5
+     #                param_grid = h2o_GBM_hyper,
+     #                stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1)
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
