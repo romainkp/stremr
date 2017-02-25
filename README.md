@@ -73,6 +73,12 @@ To install the development version (requires the `devtools` package):
 devtools::install_github('osofr/stremr')
 ```
 
+For ensemble learning with SuperLearner we recommend installing the latest development version of the `gridisl` R package:
+
+```R
+devtools::install_github('osofr/gridisl', build_vignettes = FALSE)
+```
+
 For optimal performance, we also recommend installing the development version of `data.table`:
 ```R
 remove.packages("data.table")                         # First remove the current version
@@ -82,21 +88,21 @@ install.packages("data.table", type = "source",
 
 For modeling with `H2O-3` machine learning libraries we recommend directly installing the latest version of the `h2o` R package ([can also see the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r#installation-from-within-r)):
 ```R
-if ("package:h2o" %in% search()) detach("package:h2o", unload=TRUE)
-if ("h2o" %in% rownames(installed.packages())) remove.packages("h2o")
-# Next, download H2O package dependencies:
-pkgs <- c("methods","statmod","stats","graphics","RCurl","jsonlite","tools","utils")
-new.pkgs <- setdiff(pkgs, rownames(installed.packages()))
-if (length(new.pkgs)) install.packages(new.pkgs)
-# Download and install the H2O package for R:
-install.packages("h2o", type="source", repos=(c("https://s3.amazonaws.com/h2o-release/h2o/master/3636/R")))
+if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+# Next, we download packages that H2O depends on.
+if (! ("methods" %in% rownames(installed.packages()))) { install.packages("methods") }
+if (! ("statmod" %in% rownames(installed.packages()))) { install.packages("statmod") }
+if (! ("stats" %in% rownames(installed.packages()))) { install.packages("stats") }
+if (! ("graphics" %in% rownames(installed.packages()))) { install.packages("graphics") }
+if (! ("RCurl" %in% rownames(installed.packages()))) { install.packages("RCurl") }
+if (! ("jsonlite" %in% rownames(installed.packages()))) { install.packages("jsonlite") }
+if (! ("tools" %in% rownames(installed.packages()))) { install.packages("tools") }
+if (! ("utils" %in% rownames(installed.packages()))) { install.packages("utils") }
+# Now we download, install and initialize the H2O package for R.
+install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))
 ```
 
-For ensemble learning with SuperLearner we recommend installing the latest development version of the `gridisl` R package
-
-```R
-devtools::install_github('osofr/gridisl', build_vignettes = FALSE)
-```
 
 Documentation with general overview of the package functions and datasets:
 ```R
@@ -122,7 +128,7 @@ To obtain documentation for specific relevant functions in `stremr` package:
 ?fitIterTMLE
 ```
 
-<a name="Reports"></a>
+<!-- <a name="Reports"></a>
 ### Automated Reports:
 
 The following is an example of a function call that produces an automated `html` report shown below. For a pdf report just set the argument `format = "pdf"`.
@@ -138,6 +144,7 @@ The following is an example of a function call that produces an automated `html`
 
 ![gif](https://cloud.githubusercontent.com/assets/6721358/18609476/d9b4db74-7cb7-11e6-9ca6-aacf0b70ca4c.gif)
 
+ -->
 
 <a name="Example1"></a>
 ### Example with Simulated Data
@@ -271,7 +278,7 @@ models = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100,
 tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = models, stratifyQ_by_rule = TRUE)
 ```
 
-<a name="SuperLearner"></a>
+<!-- <a name="SuperLearner"></a>
 ###Ensemble Learning with SuperLearner (based on `gridisl` R package)
 
 ```R
@@ -371,6 +378,7 @@ OData <- fitPropensity(OData,
 ```
 
 The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One needs to specify the relevant parameters and the ensemble models as part of the `models` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
+ -->
 
 ### Citation
 
