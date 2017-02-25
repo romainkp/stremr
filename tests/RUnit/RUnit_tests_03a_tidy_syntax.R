@@ -3,10 +3,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   if (!reqxgb) return()
 
   ## ----------------------------------------------------------------------------------------------------
-  ## Analysis by intervention
-  ## **** makes it easier to read the individual analysis ****
+  ## Analyses by intervention
+  ## **** makes it easier to read the individual analyses ****
   ## ----------------------------------------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
+  library("stremr")
   options(stremr.verbose = TRUE)
   options(gridisl.verbose = TRUE)
   # options(stremr.verbose = FALSE)
@@ -26,9 +27,10 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   # select only the first 1,000 IDs
   # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
-  # ---------------------------------------------------------------------------
-  # Define some summaries (lags C[t-1], A[t-1], N[t-1])
-  # ---------------------------------------------------------------------------
+
+  ## ---------------------------------------------------------------------------
+  ## Define some summaries (lags C[t-1], A[t-1], N[t-1])
+  ## ---------------------------------------------------------------------------
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
   newVarnames <- lagnodes %+% ".tminus1"
@@ -37,9 +39,9 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
   Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 
-  # ------------------------------------------------------------------
-  # Propensity score models for Treatment, Censoring & Monitoring
-  # ------------------------------------------------------------------
+  ## ------------------------------------------------------------------
+  ## Propensity score models for Treatment, Censoring & Monitoring
+  ## ------------------------------------------------------------------
   gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
   stratify_TRT <- list(
     TI=c("t == 0L",                                            # MODEL TI AT t=0
@@ -51,9 +53,31 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   gform_CENS <- c("C ~ highA1c + t")
   gform_MONITOR <- "N ~ 1"
 
-  # ----------------------------------------------------------------
-  # IMPORT DATA
-  # ----------------------------------------------------------------
+  ## ------------------------------------------------------------
+  ## **** As a first step define a grid of all possible parameter combinations (for all estimators)
+  ## **** This dataset is to be saved and will be later merged in with all analysis
+  ## ------------------------------------------------------------
+  trunc_IPW <- 10
+  tvals <- 0:8
+  tmax <- 13
+  ## number of folds for CV:
+  nfolds <- 10
+  tbreaks = c(1:8,11,14)-1
+
+  ## This dataset defines all parameters that we like to vary in this analysis (including different interventions)
+  ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
+  analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
+                  trunc_wt = c(FALSE, TRUE),
+                  stratifyQ_by_rule = c(TRUE, FALSE)) %>%
+                  cross_d() %>%
+                  arrange(stratifyQ_by_rule) %>%
+                  mutate(nfolds = as.integer(nfolds)) %>%
+                  mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, trunc_IPW, Inf))) %>%
+                  mutate(trunc_TMLE = trunc_MSM*10)
+
+  ## ----------------------------------------------------------------
+  ## IMPORT DATA
+  ## ----------------------------------------------------------------
   library("h2o")
   h2o::h2o.init(nthreads = -1)
 
@@ -62,20 +86,33 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   OData$dat.sVar[]
   OData$fold_column <- NULL
   OData$nfolds <- NULL
-
   fold_column <- "fold_ID"
+
+  ## ----------------------------------------------------------------
+  ## Define ensemble of models for fitting propensity scores (g).
+  ## ----------------------------------------------------------------
+  ## This example uses a discrete SuperLearner: best model will be selected on the basis of CV-MSE.
+  ## Use cross-validation to select best model for g (set 'fit_method_g <- "none"' to just fit a single model w/out CV)
   fit_method_g <- "cv"
+
+  ## Note that 'interactions' CANNOT be used with h2o (for now).
+  ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
   models_g <-
-              # gridisl::defModel(estimator = "xgboost__glm",
-              #                   family = "binomial",
-              #                   nrounds = 10,
-              #                   early_stopping_rounds = 2) +
+              gridisl::defModel(estimator = "xgboost__glm",
+                                family = "binomial",
+                                nrounds = 10,
+                                early_stopping_rounds = 2,
+                                interactions = list(c("CVD", "highA1c"))) +
+
                gridisl::defModel(estimator = "h2o__glm", family = "binomial",
                                  nlambdas = 5, lambda_search = TRUE,
                                  param_grid = list(
-                                  alpha = c(0.5)
+                                  alpha = c(0, 0.5)
                                  ))
 
+    ## ----------------------------------------------------------------
+    ## To do extensive search of the model hyper-parameters, define grids and do random grid search, as shown below
+    ## ----------------------------------------------------------------
     # h2o_GBM_hyper <- list( # max_depth = c(3:10, 15),
     #   max_depth = c(seq(3, 19, 4), 25),
     #   # ntrees = c(500),
@@ -118,6 +155,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     #             gridisl::defModel(estimator = "xgboost__gbm", family = "binomial",
     #                                 nrounds = 200, # nrounds = 500,
     #                                 early_stopping_rounds = 3,
+    #                                 interactions = list(c("CVD", "highA1c")),
     #                                 learning_rate = .1,
     #                                 max_depth = 3,
     #                                 gamma = .5,
@@ -130,6 +168,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     #             gridisl::defModel(estimator = "xgboost__drf", family = "binomial",
     #                                 nrounds = 200, # nrounds = 500,
     #                                 early_stopping_rounds = 3,
+    #                                 interactions = list(c("CVD", "highA1c")),
     #                                 learning_rate = .1,
     #                                 max_depth = 3,
     #                                 gamma = .5,
@@ -145,6 +184,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     #                                 seed = 23,
     #                                 nrounds = 200, # nrounds = 500,
     #                                 early_stopping_rounds = 3,
+    #                                 interactions = list(c("CVD", "highA1c")),
     #                                 param_grid = list(
     #                                     learning_rate = c(.05, .1, .3), # .05,
     #                                     max_depth = c(seq(3, 19, 4), 25),
@@ -190,9 +230,54 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     #                           param_grid = h2o_GBM_hyper,
     #                           stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1)
 
+  ## ------------------------------------------------------------------------
+  ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
+  ## ------------------------------------------------------------------------
+  ## regression formulas for Q's:
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
+
+  ## no cross-validation model selection, just fit a single model specified below
   fit_method_Q <- "none"
+
+  ## Use speedglm to fit all Q.
+  ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
+  ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   models_Q <-  gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
+  ## ------------------------------------------------------------------------
+  ## Alternative specifications of Q models for iterative G-COMP (Q) -- NONPARAMETRIC REGRESSION (GBM) + REGULARIZED GLM
+  ## ------------------------------------------------------------------------
+  # ## This example uses a discrete SuperLearner: best model will be selected on the basis of CV-MSE.
+  # fit_method_Q <- "cv"
+  # models_Q <<-
+  #   gridisl::defModel(estimator = "xgboost__gbm", family = "binomial",
+  #                       nrounds = 200,
+  #                       early_stopping_rounds = 3,
+  #                       interactions = list(c("TI", "highA1c"), c("TI", "CVD"), c("TI", "lastNat1")),
+  #                       learning_rate = .1,
+  #                       max_depth = 5,
+  #                       gamma = .5,
+  #                       colsample_bytree = 0.8,
+  #                       subsample = 0.8,
+  #                       lambda = 2,
+  #                       alpha = 0.5,
+  #                       max_delta_step = 2) +
+  #   gridisl::defModel(estimator = "xgboost__glm",
+  #                     family = "quasibinomial",
+  #                     seed = 23,
+  #                     nrounds = 500,
+  #                     early_stopping_rounds = 5,
+  #                     interactions = list(c("TI", "highA1c"), c("TI", "CVD"), c("TI", "lastNat1")),
+  #                     param_grid = list(
+  #                       alpha = c(.0, 0.5, 1.0),
+  #                       lambda = c(.01, .1, .5, .9, 1.5, 5)
+  #                       )
+  #                     )
+
+  ## ----------------------------------------------------------------
+  ## Fit propensity score models.
+  ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
+  ## ----------------------------------------------------------------
   OData <- fitPropensity(OData,
                           gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
@@ -200,29 +285,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                           fit_method = fit_method_g,
                           fold_column = fold_column)
 
-  trunc_IPW <- 10
-  tvals <- 0:8
-  tmax <- 13
-  nfolds <- 10 ## number of folds for CV
-  # tbreaks = c(1:8,12,16)-1
-  tbreaks = c(1:8,11,14)-1
-  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
-
   ## ------------------------------------------------------------
-  ## **** As a first step define a grid of all possible parameter combinations (for all estimators)
-  ## **** This dataset is to be saved and will be later merged in with all analysis
-  ## ------------------------------------------------------------
-  analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh", "gTI.dlow"),
-                  trunc_wt = c(FALSE, TRUE),
-                  stratifyQ_by_rule = c(TRUE, FALSE)) %>%
-                  cross_d() %>%
-                  arrange(stratifyQ_by_rule) %>%
-                  mutate(nfolds = as.integer(nfolds)) %>%
-                  mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, trunc_IPW, Inf))) %>%
-                  mutate(trunc_TMLE = trunc_MSM*10)
-
-  ## ------------------------------------------------------------
-  ## IPW ANALYSIS
+  ## RUN IPW ANALYSES
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
   IPW_time <- system.time({
@@ -339,6 +403,12 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                   as_tibble()
                   ))
 
+
+  ## ------------------------------------------------------------
+  ## Uncomment and run this to remove the individual EIC estimates from MSM and TMLE estimates.
+  ## This is useful if saving results to a file. The EIC take up a lot of space, hence removing them
+  ## will significantly reduce the final file size.
+  ## ------------------------------------------------------------
   ## Clean up by removing the subject-level IC estimates for EVERY SINGLE ESTIMATE / ANALYSIS
   ## WARNING: THIS IS A SIDE-EFFECT FUNCTION!
   # res <- results[["estimates"]] %>%
@@ -349,19 +419,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   #           ~ suppressWarnings(.x[, ("IC.St") := NULL]))))
   # rm(res)
 
-  ## equivalent RD function above but with explicitely defined inside function::
-  # results_2 <- results %>%
-  #     mutate(RDs = map(estimates, function(.df) {
-  #         res <- select(.df, -intervened_TRT) %>%
-  #         map(~ get_RDs(.x))
-  #         browser()
-  #         as_tibble(res)
-  #         return(res)
-  #         })
-  #     )
-
   ## ------------------------------------------------------------
-  ## Add models used for g and Q
+  ## Add models used for g and Q. Create the final analysis file.
   ## Add IPWtabs
   ## ------------------------------------------------------------
   cat("IPW time, hrs: ", IPW_time_hrs, "\n")
@@ -372,19 +431,13 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
              left_join(IPWtabs) %>%
              mutate(fit_method_g = fit_method_g) %>%
              mutate(fit_method_Q = fit_method_Q) %>%
-             # mutate(models_g = map(fit_method_g, ~ I(models_g))) %>%
-             # mutate(models_Q = map(fit_method_Q, ~ I(models_Q))) %>%
              mutate(models_g = map(fit_method_g, ~ models_g)) %>%
              mutate(models_Q = map(fit_method_Q, ~ models_Q)) %>%
              mutate(run_time = map(trunc_wt,
               ~ tibble(IPW_time_hrs = IPW_time_hrs, GCOMP_time_hrs = GCOMP_time_hrs, TMLE_time_hrs = TMLE_time_hrs)))
 
-  # as.data.table(results)
-  # as.data.table(results)[["models_g"]]
-  # as.data.table(results)[["run_time"]]
-
   ## ------------------------------------------------------------
-  ## PLOTTING SURVIVAL CURVES
+  ## VARIOUS WAYS OF PLOTTING SURVIVAL CURVES
   ## ------------------------------------------------------------
   ests <- "TMLE"
   SURVplot <- results[1, ][["estimates"]][[1]][[ests]] %>%
@@ -413,7 +466,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   }
 
   ## ------------------------------------------------------------
-  ## PLOTTING RDs
+  ## VARIOUS WAYS OF PLOTTING RDs
   ## ------------------------------------------------------------
   results %>% filter(trunc_wt == TRUE, stratifyQ_by_rule == TRUE) %>% select(RDs) %>% unnest(RDs) %>% select(TMLE) %>% unnest(TMLE)
 
