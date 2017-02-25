@@ -452,7 +452,10 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   # GCOMP <-GCOMP %>%
   #         mutate(plotGCOMP = map(GCOMP, ~ ggsurv(estimates = .x))) %>%
-  ests <- c("MSM", "TMLE")
+
+  ## FLATTEN THE results data (long format)
+  ## then add a new column with ggplot survival plot objects for THESE 3 estimators;
+  ests <- c("MSM", "GCOMP", "TMLE")
   longSURV <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, estimates) %>%
               unnest(estimates) %>%
@@ -462,6 +465,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
               nest(estimates, .key = "estimates") %>%
               mutate(SURVplot = map(estimates, ~ ggsurv(.x)))
 
+  ## Visualize all survival curves at once with a single interactive trelliscope panel
+  ## (install via: devtools::install_github("hafen/trelliscopejs"))
   reqtrell <- requireNamespace("trelliscopejs", quietly = TRUE)
   if (reqtrell) {
     longSURV %>%
@@ -470,16 +475,18 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   }
 
   ## ------------------------------------------------------------
-  ## VARIOUS WAYS OF PLOTTING RDs
+  ## VARIOUS WAYS OF PLOTTING RD TABLEs
   ## ------------------------------------------------------------
+  ## THE TABLE OF RDs FOR TMLE:
   results %>% filter(trunc_wt == TRUE, stratifyQ_by_rule == TRUE) %>% select(RDs) %>% unnest(RDs) %>% select(TMLE) %>% unnest(TMLE)
 
+  ## PLOT RD FOR TMLE FOR SPECIFIC SCENARIO:
   ests <- "TMLE"
   RDplot <-   results[["RDs"]][[1]][[ests]][[1]] %>%
               ggRD(t_int_sel = 1:5) %>%
               print
 
-  ## across all scenarios for two estimators
+  ## GENERERATE RD PLOTS across all scenarios for these two estimators:
   ests <- c("MSM", "TMLE")
   longRDs <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, RDs) %>%
