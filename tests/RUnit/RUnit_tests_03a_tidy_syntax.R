@@ -2,10 +2,18 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   reqxgb <- requireNamespace("xgboost", quietly = TRUE)
   if (!reqxgb) return()
 
-  ## ----------------------------------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------
+  ## ****************************** IMPORTANT ******************************
+  ## -----------------------------------------------------------------------
+  ## Make sure to always install the latest versions of these packages: "gridisl" and "stremr":
+  # devtools::install_github('osofr/gridisl')
+  # devtools::install_github('osofr/stremr')
+  ## -----------------------------------------------------------------------
+
+  ## -----------------------------------------------------------------------
   ## Analyses by intervention
   ## **** makes it easier to read the individual analyses ****
-  ## ----------------------------------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
   options(stremr.verbose = TRUE)
@@ -28,9 +36,9 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
-  ## ---------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------
   ## Define some summaries (lags C[t-1], A[t-1], N[t-1])
-  ## ---------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
   newVarnames <- lagnodes %+% ".tminus1"
