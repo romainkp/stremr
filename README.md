@@ -70,12 +70,14 @@ install.packages('stremr')
 To install the development version (requires the `devtools` package):
 
 ```R
-devtools::install_github('osofr/stremr', build_vignettes = FALSE)
+devtools::install_github('osofr/stremr')
 ```
 
 For optimal performance, we also recommend installing the development version of `data.table`:
 ```R
-devtools::install_github("Rdatatable/data.table")
+remove.packages("data.table")                         # First remove the current version
+install.packages("data.table", type = "source",
+    repos = "http://Rdatatable.github.io/data.table") # Then install devel version
 ```
 
 For modeling with `H2O-3` machine learning libraries we recommend directly installing the latest version of the `h2o` R package ([can also see the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r#installation-from-within-r)):
