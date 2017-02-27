@@ -109,8 +109,8 @@ ggsurv <- function(
         group = surv_dat[["rule.name"]]
       )
       if (SE_name %in% names(surv_dat)) {
-        gr.df[[i]][, ("up") := surv + qnorm(0.025)*surv_dat[[SE_name]]]
-        gr.df[[i]][, ("low") := surv - qnorm(0.025)*surv_dat[[SE_name]]]
+        gr.df[[i]][, ("up") := surv + abs(qnorm(0.025))*surv_dat[[SE_name]]]
+        gr.df[[i]][, ("low") := surv - abs(qnorm(0.025))*surv_dat[[SE_name]]]
       } else {
         CI <- FALSE
       }
