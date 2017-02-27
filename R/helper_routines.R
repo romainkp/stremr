@@ -94,9 +94,9 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
           dplyr::mutate(RD.SE = purrr::pmap_dbl(., eval_SEs_two_tx))
 
     gs <- gs %>%
-          dplyr::mutate(CI95up = round(RD + qnorm(0.025)*RD.SE, 4)) %>%
-          dplyr::mutate(CI95low = round(RD - qnorm(0.025)*RD.SE, 4)) %>%
-          tidyr::unite("CI", CI95up, CI95low, sep = ";", remove = FALSE) %>%
+          dplyr::mutate(CI95low = round(RD - abs(qnorm(0.025))*RD.SE, 4)) %>%
+          dplyr::mutate(CI95up = round(RD + abs(qnorm(0.025))*RD.SE, 4)) %>%
+          tidyr::unite("CI", CI95low, CI95up, sep = ";", remove = FALSE) %>%
           dplyr::mutate(pval = round(2*pnorm( abs(RD/RD.SE), lower.tail=FALSE ),2))
 
   gs <- gs %>%
