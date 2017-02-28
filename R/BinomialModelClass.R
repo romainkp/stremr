@@ -29,14 +29,23 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   ## Use the existing fold ID column (previously defined by calling define_CVfolds())
   } else if ((method %in% "cv") && is.null(fold_column)) fold_column <- data$fold_column
 
-  model.fit <- try({model.fit <- gridisl::fit(models,
-                                              method = method,
-                                              ID = nodes$IDnode, t_name = nodes$tnode,
-                                              x = predvars, y = outvar,
-                                              data = data,
-                                              verbose = gvars$verbose,
-                                              fold_column = fold_column,
-                                              subset_idx = subset_idx)
+  model.fit <- try({
+                  model.fit <- gridisl::fit(models,
+                                            method = method,
+                                            ID = nodes$IDnode, t_name = nodes$tnode,
+                                            x = predvars, y = outvar,
+                                            data = data,
+                                            fold_column = fold_column,
+                                            subset_idx = subset_idx)
+                  # model.fit <- gridisl::fit_split_cv(models = models,
+                  #                               method = method,
+                  #                               ID = nodes$IDnode,
+                  #                               t_name = nodes$tnode,
+                  #                               x = predvars,
+                  #                               y = outvar,
+                  #                               data = data,
+                  #                               fold_column = fold_column,
+                  #                               subset_idx = subset_idx)
   })
 
   if (inherits(model.fit, "try-error")) {
@@ -45,19 +54,12 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     # model_contrl[["fit.package"]] <- "speedglm"
     # model_contrl[["fit.algorithm"]] <- "glm"
     glm_model <- models[1]
+    browser()
     glm_model[[1]][["fit.package"]] <- "speedglm"
     glm_model[[1]][["fit.algorithm"]] <- "glm"
     class(glm_model) <- c(class(glm_model), "ModelStack")
     # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
-    # model.fit <- gridisl::fit_model(ID = nodes$IDnode,
-    #                                     t_name = nodes$tnode,
-    #                                     x = predvars, y = outvar,
-    #                                     train_data = data,
-    #                                     models = model_contrl,
-    #                                     subset_idx = subset_idx,
-    #                                     # useH2Oframe = TRUE
-    #                                     verbose = gvars$verbose
-    #                                     )
+
     model.fit <- gridisl::fit(glm_model,
                                method = method,
                                ID = nodes$IDnode, t_name = nodes$tnode,
@@ -186,21 +188,21 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
       if (missing(newdata) && is.null(private$probA1)) {
         private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                                 add_subject_data = FALSE,
-                                                 subset_idx = self$subset_idx,
-                                                 # use_best_retrained_model = TRUE,
-                                                 holdout = holdout,
-                                                 verbose = gvars$verbose)
+                                              add_subject_data = FALSE,
+                                              subset_idx = self$subset_idx,
+                                              # use_best_retrained_model = TRUE,
+                                              holdout = holdout,
+                                              verbose = gvars$verbose)
 
       } else {
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
         private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit, newdata = newdata,
-                                                 add_subject_data = FALSE,
-                                                 subset_idx = self$subset_idx,
-                                                 # use_best_retrained_model = TRUE,
-                                                 holdout = holdout,
-                                                 verbose = gvars$verbose)
+                                              add_subject_data = FALSE,
+                                              subset_idx = self$subset_idx,
+                                              # use_best_retrained_model = TRUE,
+                                              holdout = holdout,
+                                              verbose = gvars$verbose)
 
       }
       return(invisible(self))

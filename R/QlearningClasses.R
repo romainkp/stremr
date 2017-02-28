@@ -401,7 +401,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         ## Remove all modeling grid obj for xgboost (all the CV / training set models)
         ## This will still keep the best re-trained model object if method=="cv"/"holdout"
         ## Don't need to store these models, since we already made the prediction
-        ## However, we will need these models if want to report
+        ## However, we will need these models if we want to report the model fit stats
         if (!(self$model_contrl[["fit_method"]] %in% "none")) private$model.fit$wipe.allmodels
 
         return(private$probA1)
