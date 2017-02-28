@@ -37,15 +37,6 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                                             data = data,
                                             fold_column = fold_column,
                                             subset_idx = subset_idx)
-                  # model.fit <- gridisl::fit_split_cv(models = models,
-                  #                               method = method,
-                  #                               ID = nodes$IDnode,
-                  #                               t_name = nodes$tnode,
-                  #                               x = predvars,
-                  #                               y = outvar,
-                  #                               data = data,
-                  #                               fold_column = fold_column,
-                  #                               subset_idx = subset_idx)
   })
 
   if (inherits(model.fit, "try-error")) {
@@ -54,7 +45,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     # model_contrl[["fit.package"]] <- "speedglm"
     # model_contrl[["fit.algorithm"]] <- "glm"
     glm_model <- models[1]
-    browser()
+    # browser()
     glm_model[[1]][["fit.package"]] <- "speedglm"
     glm_model[[1]][["fit.algorithm"]] <- "glm"
     class(glm_model) <- c(class(glm_model), "ModelStack")
