@@ -61,14 +61,49 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param OData OData Input data object created by \code{importData} function.
 #' @param regforms Regression formula, only main terms are allowed.
 #' @param stratify Expression(s) for creating strata(s) (model will be fit separately on each strata)
-#' @param params Additional modeling controls (for downstream modeling algorithms)
+#' @param models Optional parameter specifying the models with \code{gridisl} R package.
+#' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
+#' @param estimator Specify the default estimator to use for fitting propensity scores.
+#' Should be a character string in the format 'Package__Algorithm'.
+#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
+#' This argument will only have an effect when some of the propensity score models were not explicitly defined
+#' with their corresponding arguments:
+#' \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
+#' To put it another way:
+#' this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
+#' are specified.
+#' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
+#' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
+#' (must specify the column name that contains the fold IDs).
+# \code{"holdout"} - model selection by splitting the data into training and validation samples according to
+# lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
+# where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
+#' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+#' Use the provided function \code{\link{define_CVfolds}} to
+#' define such folds or define the folds using your own method.
+# @param params Additional modeling controls (for downstream modeling algorithms)
+#' @param ... Additional parameters that will be passed down directly to the modeling function.
 #' @export
-define_single_regression <- function(OData, regforms, stratify = NULL, params = list()) {
+define_single_regression <- function(OData,
+                                     regforms,
+                                     stratify = NULL,
+                                     models = NULL,
+                                     estimator = stremrOptions("estimator"),
+                                     fit_method = stremrOptions("fit_method"),
+                                     fold_column = stremrOptions("fold_column"),
+                                     ...) {
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
+
+  sVar.exprs <- capture.exprs(...)
+  models_control <- c(list(   models = models), opt_params = list(sVar.exprs))
+  models_control[["estimator"]] <- estimator[1L]
+  models_control[["fit_method"]] <- fit_method[1L]
+  models_control[["fold_column"]] <- fold_column
+
   return(process_regforms(regforms = regforms,
                           stratify.EXPRS = stratify,
-                          model_contrl = params,
+                          model_contrl = models_control,
                           OData = OData,
                           sVar.map = nodes,
                           factor.map = new.factor.names))

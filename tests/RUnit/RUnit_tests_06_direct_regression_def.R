@@ -20,7 +20,7 @@ test.directRegressionDefn.10Kdata <- function() {
   # ----------------------------------------------------------------
   # IMPORT DATA
   # ----------------------------------------------------------------
-  OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+  # OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
 
   # ------------------------------------------------------------------
   # Alternative approach way to specify regression models
@@ -30,14 +30,19 @@ test.directRegressionDefn.10Kdata <- function() {
   reg_CENS <- define_single_regression(OData, "C ~ highA1c + t")
   reg_TRT <- c(
       define_single_regression(OData, "TI ~ CVD + highA1c",
-          stratify = list(TI = "t == 0L")),
+          stratify = list(TI = "t == 0L"),
+          estimator = "speedglm__glm"),
       define_single_regression(OData, "TI ~ CVD + highA1c",
-          stratify = list(TI = "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)")),
+          stratify = list(TI = "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)"),
+          estimator = "speedglm__glm"),
       define_single_regression(OData, "TI ~ 1",
-          stratify = list(TI = "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)")),
+          stratify = list(TI = "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)"),
+          estimator = "speedglm__glm"),
       define_single_regression(OData, "TI ~ 1",
-          stratify = list(TI = "(t > 0L) & (barTIm1eq0 == 0L)"))
-      )
+          stratify = list(TI = "(t > 0L) & (barTIm1eq0 == 0L)"),
+          estimator = "speedglm__glm")
+        )
+
   reg_MONITOR <- define_single_regression(OData, "N ~ 1")
   OData <- fitPropensity(OData, reg_CENS = reg_CENS, reg_TRT = reg_TRT)
 
