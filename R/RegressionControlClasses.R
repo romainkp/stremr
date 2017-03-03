@@ -346,6 +346,17 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
   )
 )
 
+RegressionClassSDR <- R6Class("RegressionClassSDR",
+  inherit = RegressionClassQlearn,
+  public = list(
+    SDR_model = NULL,
+    initialize = function(SDR_model, ...) {
+      self$SDR_model <- SDR_model
+      super$initialize(...)
+    }
+  )
+)
+
 # ---------------------------------------------------------------------------------
 # S3 methods for regression subsetting/stratification/interval subsetting
 # ---------------------------------------------------------------------------------

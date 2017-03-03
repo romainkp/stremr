@@ -201,12 +201,24 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
         ## 2. Fitting regression: Qkplus1 ~ offset(qlogis(Qk_hat)) + H[k-1] and weights 'wts'
         # require('xgboost')
-        param <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1)
+        # params <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 10)
+        params <- self$reg$SDR_model
+        cat("running SDR w/ following params: \n "); str(params)
         # obs_dat[, CVD := as.numeric(CVD)]
         xgb_dat <- xgboost::xgb.DMatrix(as.matrix(obs_dat), label = Qkplus1)
         xgboost::setinfo(xgb_dat, "base_margin", qlogis(Qk_hat))
         xgboost::setinfo(xgb_dat, "weight", wts)
-        mfit <- xgboost::xgb.train(params = param, data = xgb_dat, nrounds = 10)
+
+        nrounds <- params[["nrounds"]]
+        params[["nrounds"]] <- NULL
+        # browser()
+        if (is.null(nrounds)) {
+          cat("...running cv to figure out best nrounds for epsilon target...\n")
+          mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10)
+          nrounds <- mfitcv$best_iteration
+          cat("...best nrounds: ", nrounds, "\n")
+        }
+        mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = nrounds)
 
         # require('gam')
         # mfit <- gam.fit(

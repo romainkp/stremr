@@ -209,9 +209,12 @@ fitSeqDR_onet <- function(OData,
   names(Q_regs_list) <- unlist(Qstratas_by_t)
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
 
+  SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 10)
+
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
-    reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i],
+    reg <- RegressionClassSDR$new(SDR_model = SDR_model,
+                                     Qreg_counter = Qreg_idx[i],
                                      all_Qregs_indx = Qreg_idx,
                                      t_period = Qperiods[i],
                                      TMLE = FALSE, ## set this automatically to FALSE when running SDR:
