@@ -196,8 +196,10 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ##    somehow we need to select from the same set of covariates only those people who are currently at risk
         ##    => WE NEED A WAY OF GRABING THE stratification (init_idx) THAT WERE USED (OR WILL BE USED) FOR PREDICTING THE INITAL FOR TIME-POINT k-1.
         ##    Then we can intersect those with current idx
-        obs_dat <- data$dat.sVar[use_subset_idx + Hk_row_offset, self$predvars, with = FALSE]
-        # data$dat.sVar[t == 10, ]; data$dat.sVar[t == 9, ]
+        # browser()
+        # epsilon_predvars <- self$predvars
+        epsilon_predvars <- c("CVD", "highA1c")
+        obs_dat <- data$dat.sVar[use_subset_idx + Hk_row_offset, epsilon_predvars, with = FALSE]
 
         ## 2. Fitting regression: Qkplus1 ~ offset(qlogis(Qk_hat)) + H[k-1] and weights 'wts'
         # require('xgboost')
@@ -211,23 +213,41 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
         nrounds <- params[["nrounds"]]
         params[["nrounds"]] <- NULL
-        # browser()
+
         if (is.null(nrounds)) {
           cat("...running cv to figure out best nrounds for epsilon target...\n")
           mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10)
           nrounds <- mfitcv$best_iteration
           cat("...best nrounds: ", nrounds, "\n")
         }
-        mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = nrounds)
+        mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = 10)
 
+        ## GAM
         # require('gam')
+        # form <- as.formula(paste0("Qkplus1 ~ offset(qlogis(Qk_hat))+", paste(names(obs_dat), collapse = "+")))
+        # mfit <- gam(
+        #   form,
+        #   data = cbind(Qkplus1 = Qkplus1, obs_dat),
+        #   y = Qkplus1,
+        #   family = binomial(),
+        #   # offset = offset(qlogis(Qk_hat)),
+        #   weights = wts)
+
         # mfit <- gam.fit(
-        #   x=as.matrix(data$dat.sVar[use_subset_idx,self$predvars]),
-        #   y = Qstarkprime,
-        #   family=binomial(),
-        #   offset = offset(qlogis(Qk_hat)),
-        #   weights=wts)
+        #   x = as.matrix(obs_dat),
+        #   y = Qkplus1,
+        #   smooth.frame = NA,
+        #   family = binomial(),
+        #   offset = qlogis(Qk_hat),
+        #   weights = wts)
         # pred1.star = as.numeric(predict(mfit,type='response'))
+
+        ## GLM
+        # mfit <- speedglm::speedglm.wfit(X = cbind(Intercept = 1L, as.matrix(obs_dat)),
+        #                                 y = Qkplus1,
+        #                                 weights = wts,
+        #                                 offset = qlogis(Qk_hat), # method=c('eigen','Cholesky','qr'),
+        #                                 family = quasibinomial(), trace = FALSE, maxit = 1000)
 
         ## 3. Predicting for all newly censored and new non-follows at k'
         ##    **** Q: DO WE EVEN NEED TO USE NEW OFFSETS WHEN WE ARE EXTRAPOLATING THE MODEL UPDATE????
@@ -235,8 +255,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ##    **** NEED TO BE ABLE TO MAKE UPDATED MODEL PREDICTIONS FOR ANY NEW DATASET BASED ON THIS MODEL UPDATE
         ##    THE wts used no longer play any role, but the offsets (Qk_hat) needs to be re-evaluated for new observations?
         ##    The predictors used are still based on the covariate space at time point k-1.
-        pred_dat <- data$dat.sVar[self$subset_idx + Hk_row_offset, self$predvars, with = FALSE]
-        # pred_dat[, CVD := as.numeric(CVD)]
+        pred_dat <- data$dat.sVar[self$subset_idx + Hk_row_offset, epsilon_predvars, with = FALSE]
         xgb_dat <- xgboost::xgb.DMatrix(as.matrix(pred_dat))
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         xgboost::setinfo(xgb_dat, "base_margin", qlogis(Qk_hat_all))
@@ -244,7 +263,18 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ## 4. Update the model predictions (Qk_hat) for initial Q[k'] from GCOMP at time-point k'.
         ##    Based on TMLE update, the predictions now include ALL obs that are newly censored
         ##    and just stopped following the rule at current k'.
+        ## XGB:
         Qk_hat_star_all <- predict(mfit, xgb_dat)
+
+        ## GAM:
+        # Qk_hat_star_all <- as.numeric(predict(mfit, pred_dat[1:582,], type='link'))
+        # Qk_hat_star_all <- plogis(qlogis(Qk_hat_all) + Qk_hat_star_all)
+
+        ## GLM:
+        # Xmat <- cbind(Intercept = 1L, as.matrix(pred_dat))
+        # eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
+        # Qk_hat_star_all <- logit_linkinv(qlogis(Qk_hat_all) + eta)
+        # # Qk_hat_star_all <- plogis(qlogis(Qk_hat_all) + eta)
       }
 
       # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:

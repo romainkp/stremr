@@ -210,6 +210,7 @@ fitSeqDR_onet <- function(OData,
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
 
   SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 10)
+  # SDR_model <- list("objective" = "reg:logistic", "booster" = "gblinear", "nthread" = 1, "max_delta_step" = 10)
 
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
