@@ -214,12 +214,12 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         nrounds <- params[["nrounds"]]
         params[["nrounds"]] <- NULL
 
-        if (is.null(nrounds)) {
-          cat("...running cv to figure out best nrounds for epsilon target...\n")
-          mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10)
-          nrounds <- mfitcv$best_iteration
-          cat("...best nrounds: ", nrounds, "\n")
-        }
+        # if (is.null(nrounds)) {
+        #   cat("...running cv to figure out best nrounds for epsilon target...\n")
+        #   mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10)
+        #   nrounds <- mfitcv$best_iteration
+        #   cat("...best nrounds: ", nrounds, "\n")
+        # }
         mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = 10)
 
         ## GAM
