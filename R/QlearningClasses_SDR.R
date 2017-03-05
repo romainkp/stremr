@@ -143,7 +143,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
       ## use only the observations that participated in fitting of the initial Q_{k'} (current time-point is k')
       use_subset_idx <- self$idx_used_to_fit_initQ
 
-      # if (gvars$verbose == 2) {
+      if (gvars$verbose == 2) {
         cat("...running SDR targeting loop...\n")
         cat("Total number of time-points to consider: " %+% max_Qk_idx, "\n")
         cat("Current SDR k' (kprime) index = " %+% self$all_Qregs_indx[kprime_idx], "\n")
@@ -153,7 +153,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ## above is the same as self$all_Qregs_indx[kprime_idx]
         # cat("The shift row for targeted covariate space: " %+% Hk_row_offset, "\n")
         # cat("length(use_subset_idx): ", length(use_subset_idx), "length(self$subset_idx): ", length(self$subset_idx), "\n")
-      # }
+      }
 
       # QModel_h_k$t_period
       # QModel_h_k$Qreg_counter
@@ -214,13 +214,13 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
         epsilon_predvars <- QModel_h_k$predvars
         obs_dat <- data$dat.sVar[use_subset_idx + Hk_row_offset, epsilon_predvars, with = FALSE]
-        # data$dat.sVar[use_subset_idx + Hk_row_offset,]
+        # print(data$dat.sVar[use_subset_idx + Hk_row_offset,])
 
         ## 2. Fitting regression: Qkplus1 ~ offset(qlogis(Qk_hat)) + H[k-1] and weights 'wts'
         # require('xgboost')
         # params <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 10)
         params <- self$reg$SDR_model
-        cat("running SDR w/ following params: \n "); str(params)
+        if (gvars$verbose) { cat("running SDR w/ following params: \n "); str(params) }
         # obs_dat[, CVD := as.numeric(CVD)]
         xgb_dat <- xgboost::xgb.DMatrix(as.matrix(obs_dat), label = Qkplus1)
         xgboost::setinfo(xgb_dat, "base_margin", qlogis(Qk_hat))
@@ -229,13 +229,15 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         nrounds <- params[["nrounds"]]
         params[["nrounds"]] <- NULL
 
-        # if (is.null(nrounds)) {
-        #   cat("...running cv to figure out best nrounds for epsilon target...\n")
-        #   mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10)
-        #   nrounds <- mfitcv$best_iteration
-        #   cat("...best nrounds: ", nrounds, "\n")
-        # }
-        # mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = nrounds)
+        if (is.null(nrounds)) {
+          cat("...running cv to figure out best nrounds for epsilon target...\n")
+          mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10)
+          nrounds <- mfitcv$best_iteration
+          cat("...best nrounds: ", nrounds, "\n")
+        }
+
+        if (gvars$verbose) { cat("...running SDR update with xgboost...\n") }
+        mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = nrounds)
 
         ## GAM
         # require('gam')
@@ -258,20 +260,19 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         # pred1.star = as.numeric(predict(mfit,type='response'))
 
         ## GLM
-        mfit <- stats::glm.fit(x = cbind(Intercept = 1L, as.matrix(obs_dat)),
-                                        y = Qkplus1,
-                                        weights = wts,
-                                        offset = qlogis(Qk_hat), # method=c('eigen','Cholesky','qr'),
-                                        family = stats::quasibinomial(),
-                                        control = glm.control(trace = FALSE))
-
-        print("targeting epsilong glm fit: "); print(mfit$coef)
-
+        # cat("...running SDR update with GLM...\n")
+        # mfit <- stats::glm.fit(x = cbind(Intercept = 1L, as.matrix(obs_dat)),
+        #                                 y = Qkplus1,
+        #                                 weights = wts,
+        #                                 offset = qlogis(Qk_hat), # method=c('eigen','Cholesky','qr'),
+        #                                 family = stats::quasibinomial(),
+        #                                 control = glm.control(trace = FALSE))
         # mfit <- speedglm::speedglm.wfit(X = cbind(Intercept = 1L, as.matrix(obs_dat)),
         #                                 y = Qkplus1,
         #                                 weights = wts,
         #                                 offset = qlogis(Qk_hat), # method=c('eigen','Cholesky','qr'),
         #                                 family = quasibinomial(), trace = FALSE, maxit = 1000)
+        # print("targeting epsilong glm fit: "); print(mfit$coef)
 
         ## 3. Predicting for all newly censored and new non-follows at k'
         ##    **** Q: DO WE EVEN NEED TO USE NEW OFFSETS WHEN WE ARE EXTRAPOLATING THE MODEL UPDATE????
@@ -288,17 +289,17 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ##    Based on TMLE update, the predictions now include ALL obs that are newly censored
         ##    and just stopped following the rule at current k'.
         ## XGB:
-        # Qk_hat_star_all <- predict(mfit, xgb_dat)
+        Qk_hat_star_all <- predict(mfit, xgb_dat)
 
         ## GAM:
         # Qk_hat_star_all <- as.numeric(predict(mfit, pred_dat[1:582,], type='link'))
         # Qk_hat_star_all <- plogis(qlogis(Qk_hat_all) + Qk_hat_star_all)
 
         ## GLM:
-        Xmat <- cbind(Intercept = 1L, as.matrix(pred_dat))
-        eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
-        Qk_hat_star_all <- logit_linkinv(qlogis(Qk_hat_all) + eta)
-        sum(Qk_hat_star_all - plogis(qlogis(Qk_hat_all) + eta))
+        # Xmat <- cbind(Intercept = 1L, as.matrix(pred_dat))
+        # eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
+        # Qk_hat_star_all <- logit_linkinv(qlogis(Qk_hat_all) + eta)
+        ##### sum(Qk_hat_star_all - plogis(qlogis(Qk_hat_all) + eta))
       }
 
       print("MSE of previous Qk_hat vs. upated Qk_hat: " %+% mean((Qk_hat_star_all-Qk_hat_all)^2))
