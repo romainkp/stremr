@@ -152,7 +152,7 @@ fitCVTMLE <- function(...) {
 #' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
 #' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
 #' @param OData Input data object created by \code{importData} function.
-#' @param tvals Specify the vector of time-points for which the survival function (and risk) should be estimated
+#' @param tvals Vector of time-points in the data for which the survival function (and risk) should be estimated
 #' @param Qforms Regression formulas, one formula per Q. Only main-terms are allowed.
 #' @param Qstratify Placeholder for future user-defined model stratification for fitting Qs (CURRENTLY NOT FUNCTIONAL, WILL RESULT IN ERROR).
 #' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
@@ -559,7 +559,8 @@ fitSeqGcomp_onet <- function(OData,
   if (missing(Qforms)) {
     Qforms_single_t <- Qforms.default
   } else {
-    Qforms_single_t <- Qforms[seq_along(Qperiods)]
+    # Qforms_single_t <- Qforms[seq_along(Qperiods)]
+    Qforms_single_t <- Qforms[Qreg_idx]
   }
 
   # ------------------------------------------------------------------------------------------------

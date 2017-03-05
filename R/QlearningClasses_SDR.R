@@ -45,10 +45,19 @@ SDRModel <- R6Class(classname = "SDRModel",
       # serial loop over all regressions in PsAsW.models:
       max_Qk_idx <- length(private$PsAsW.models)
       for (k_i in seq_along(private$PsAsW.models)) {
+
         private$PsAsW.models[[k_i]]$fit(data = data, ...)
 
-        ## The last targeting step (k_i==max_Qk_idx) should be the usual TMLE and it needs to be done differently
-        ## (univariate logistic model updates)
+        ## The inner loop targets Q.kplus1, but based on the same time-point (covariate space) for object (k_i+1).
+        ## If (k_i+1) doesn't exist, it means that we have reached the initial regression E(Q.kplus1|A,W).
+        ## This requires the last targeting step, which is different from the rest.
+        ## The last targeting step (when k_i==max_Qk_idx) should be the usual TMLE update (univariate logistic model updates).
+        if (k_i == max_Qk_idx) {
+          QModel_h_k <- NULL
+        } else {
+          QModel_h_k <- private$PsAsW.models[[k_i + 1]]
+        }
+
         for (i in (1:k_i)) {
           ## All the targeting is for one functional with reg index (Qk_idx + 1) (since time-points and loops are reversed)
           ## Thus, all the targeting steps in this loop are functions of the same covariate space, located in row shift:
@@ -67,12 +76,15 @@ SDRModel <- R6Class(classname = "SDRModel",
           ## Qk_idx = 3, kprime_idx = 2 -> Hk_row_offset = -2
           ## Qk_idx = 3, kprime_idx = 3 -> Hk_row_offset = -1
 
+          ## evaluate the weights for this targeting step:
           private$PsAsW.models[[i]]$eval_weights_k(data = data, ...)
 
           private$PsAsW.models[[i]]$fit_epsilon_Q_k(data = data,
                                                     kprime_idx = i,
                                                     Qk_idx = k_i,
-                                                    max_Qk_idx = max_Qk_idx, ...)
+                                                    max_Qk_idx = max_Qk_idx,
+                                                    QModel_h_k = QModel_h_k,
+                                                    ...)
         }
       }
       invisible(self)
@@ -121,7 +133,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
     ## Predictors: All predictors used for fitting Q[k-1]
     ## Weights: the product of g's from t=k to current k'
     ## Offset: qlogis(Qk_hat) - current (initial) Q prediction (at k')
-    fit_epsilon_Q_k = function(data, kprime_idx, Qk_idx, max_Qk_idx, ...) {
+    fit_epsilon_Q_k = function(data, kprime_idx, Qk_idx, max_Qk_idx, QModel_h_k, ...) {
       if (self$all_Qregs_indx[kprime_idx] != self$Qreg_counter) stop("something terrible has happened")
 
       ## All targeting is for one functional with loop index (Qk_idx + 1) (since loops are reverse of time-points)
@@ -131,32 +143,36 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
       ## use only the observations that participated in fitting of the initial Q_{k'} (current time-point is k')
       use_subset_idx <- self$idx_used_to_fit_initQ
 
-      if (gvars$verbose == 2) {
+      # if (gvars$verbose == 2) {
         cat("...running SDR targeting loop...\n")
-        cat("Total number of time-points: " %+% max_Qk_idx, "\n")
-        cat("Updating Q_k at index: " %+% self$all_Qregs_indx[Qk_idx], "\n")
-        cat("Current targeting step for Q_k' is at index: " %+% self$Qreg_counter, "; time-point: " %+% self$t_period, "\n")
-
+        cat("Total number of time-points to consider: " %+% max_Qk_idx, "\n")
+        cat("Current SDR k' (kprime) index = " %+% self$all_Qregs_indx[kprime_idx], "\n")
+        # cat("Current targeting step for Q_k' is at index: " %+% self$Qreg_counter %+% "; time-point: " %+% self$t_period, "\n")
+        cat("Targeting the same Q.kplus1 for t index = " %+% self$all_Qregs_indx[Qk_idx], "\n")
+        cat("Using the covariate space at t index = " %+% (self$all_Qregs_indx[kprime_idx]+Hk_row_offset), "\n")
         ## above is the same as self$all_Qregs_indx[kprime_idx]
-        cat("Current k' (kprime) idx = " %+% kprime_idx, "\n")
-        cat("Currently targeting covariate space in time-point (kprime) idx: " %+% kprime_idx, "\n")
+        # cat("The shift row for targeted covariate space: " %+% Hk_row_offset, "\n")
+        # cat("length(use_subset_idx): ", length(use_subset_idx), "length(self$subset_idx): ", length(self$subset_idx), "\n")
+      # }
 
-        cat("The shift row for targeted covariate space: " %+% Hk_row_offset, "\n")
-        cat("Targeting covariate space for time-point: " %+% (self$t_period+Hk_row_offset), "\n")
-        cat("length(use_subset_idx): ", length(use_subset_idx), "length(self$subset_idx): ", length(self$subset_idx), "\n")
-      }
+      # QModel_h_k$t_period
+      # QModel_h_k$Qreg_counter
+      # QModel_h_k$predvars
+      # self$predvars
 
       ## 1. Weights: defined new column of cumulative weights where cumulative product starts at t = Qk_idx (k), rather than t = 0:
       wts <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
 
+      # data$IPwts_by_regimen[use_subset_idx, ]
+
       ## 2. Outcome: **TARGETED** prediction of the previous step k'+1.
       ##    These were targeted towards estimation of the same Q_k by the previous call to this function.
-      ##    If this is the first call to this function, then these must be the initial outcomes. That is, Qkplus1 is INITIALIZED TO BE ALL Y AT FIRST.
+      ##    If this is the first call to this function, then these must be the initial predictions. Note that Qkplus1 is INITIALIZED TO BE ALL Y AT FIRST.
       ##    This is used as the outcome for the current regression update.
       Qkplus1 <- data$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
 
       ## 3. Offset:
-      ##    Our offset is the Q[k'] fit that was previously targeted towards estimation of Q[k'] (k' is current time point).
+      ##    Our offset is the Q[k'] fit that was previously targeted towards estimation of Q[k'] (k' is the current time point).
       ##    This estimand has also been saved in row k'-1 by previous initial G-COMP for k'.
       ##    We now re-target it towards estimation of Q[k] (for any k < k').
       ##    In standard LTMLE this role is played by the initial GCOMP prediction for Q[k'].
@@ -166,7 +182,6 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
       ## 4A. The model update. Univariate logistic regression (TMLE)
       if (Qk_idx == max_Qk_idx) {
-        # browser()
         if (gvars$verbose) cat("Last targeting step for E(Y_d) with intercept only TMLE updates\n")
         # Qk_hat_star_all <- intercept.update(data,
         #                                     Qkplus1 = Qkplus1,
@@ -196,10 +211,10 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ##    somehow we need to select from the same set of covariates only those people who are currently at risk
         ##    => WE NEED A WAY OF GRABING THE stratification (init_idx) THAT WERE USED (OR WILL BE USED) FOR PREDICTING THE INITAL FOR TIME-POINT k-1.
         ##    Then we can intersect those with current idx
-        # browser()
-        # epsilon_predvars <- self$predvars
-        epsilon_predvars <- c("CVD", "highA1c")
+
+        epsilon_predvars <- QModel_h_k$predvars
         obs_dat <- data$dat.sVar[use_subset_idx + Hk_row_offset, epsilon_predvars, with = FALSE]
+        # data$dat.sVar[use_subset_idx + Hk_row_offset,]
 
         ## 2. Fitting regression: Qkplus1 ~ offset(qlogis(Qk_hat)) + H[k-1] and weights 'wts'
         # require('xgboost')
@@ -220,7 +235,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         #   nrounds <- mfitcv$best_iteration
         #   cat("...best nrounds: ", nrounds, "\n")
         # }
-        mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = 10)
+        # mfit <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = nrounds)
 
         ## GAM
         # require('gam')
@@ -243,6 +258,15 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         # pred1.star = as.numeric(predict(mfit,type='response'))
 
         ## GLM
+        mfit <- stats::glm.fit(x = cbind(Intercept = 1L, as.matrix(obs_dat)),
+                                        y = Qkplus1,
+                                        weights = wts,
+                                        offset = qlogis(Qk_hat), # method=c('eigen','Cholesky','qr'),
+                                        family = stats::quasibinomial(),
+                                        control = glm.control(trace = FALSE))
+
+        print("targeting epsilong glm fit: "); print(mfit$coef)
+
         # mfit <- speedglm::speedglm.wfit(X = cbind(Intercept = 1L, as.matrix(obs_dat)),
         #                                 y = Qkplus1,
         #                                 weights = wts,
@@ -264,18 +288,20 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         ##    Based on TMLE update, the predictions now include ALL obs that are newly censored
         ##    and just stopped following the rule at current k'.
         ## XGB:
-        Qk_hat_star_all <- predict(mfit, xgb_dat)
+        # Qk_hat_star_all <- predict(mfit, xgb_dat)
 
         ## GAM:
         # Qk_hat_star_all <- as.numeric(predict(mfit, pred_dat[1:582,], type='link'))
         # Qk_hat_star_all <- plogis(qlogis(Qk_hat_all) + Qk_hat_star_all)
 
         ## GLM:
-        # Xmat <- cbind(Intercept = 1L, as.matrix(pred_dat))
-        # eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
-        # Qk_hat_star_all <- logit_linkinv(qlogis(Qk_hat_all) + eta)
-        # # Qk_hat_star_all <- plogis(qlogis(Qk_hat_all) + eta)
+        Xmat <- cbind(Intercept = 1L, as.matrix(pred_dat))
+        eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
+        Qk_hat_star_all <- logit_linkinv(qlogis(Qk_hat_all) + eta)
+        sum(Qk_hat_star_all - plogis(qlogis(Qk_hat_all) + eta))
       }
+
+      print("MSE of previous Qk_hat vs. upated Qk_hat: " %+% mean((Qk_hat_star_all-Qk_hat_all)^2))
 
       # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:
       data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_star_all]

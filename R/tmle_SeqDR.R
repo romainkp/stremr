@@ -94,6 +94,7 @@ fitSeqDR <- function(OData,
       res_byt <- vector(mode = "list", length = length(tvals))
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
+        cat("Estimating parameter E[Y_d(t)] for t = " %+% t_period, "\n")
         res <- fitSeqDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
@@ -180,7 +181,8 @@ fitSeqDR_onet <- function(OData,
   if (missing(Qforms)) {
     Qforms_single_t <- Qforms.default
   } else {
-    Qforms_single_t <- Qforms[seq_along(Qperiods)]
+    # Qforms_single_t <- Qforms[seq_along(Qperiods)]
+    Qforms_single_t <- Qforms[Qreg_idx]
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -209,8 +211,7 @@ fitSeqDR_onet <- function(OData,
   names(Q_regs_list) <- unlist(Qstratas_by_t)
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
 
-  SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 10)
-  # SDR_model <- list("objective" = "reg:logistic", "booster" = "gblinear", "nthread" = 1, "max_delta_step" = 10)
+  SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 10, nrounds = 10)
 
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
@@ -239,8 +240,6 @@ fitSeqDR_onet <- function(OData,
     reg <- reg_i$ChangeManyToOneRegresssion(1, reg)
     Q_regs_list[[i]] <- reg
   }
-
-  # browser()
 
   ## TO DO: Automatically call the right constructor below depending on running SDR or regular TMLE
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:

@@ -21,7 +21,7 @@ fitSeqGcomp(OData, tvals, Qforms, intervened_TRT = NULL,
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
 
-\item{tvals}{Specify the vector of time-points for which the survival function (and risk) should be estimated}
+\item{tvals}{Vector of time-points in the data for which the survival function (and risk) should be estimated}
 
 \item{Qforms}{Regression formulas, one formula per Q. Only main-terms are allowed.}
 
