@@ -162,7 +162,6 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
       ## 1. Weights: defined new column of cumulative weights where cumulative product starts at t = Qk_idx (k), rather than t = 0:
       wts <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
-
       # data$IPwts_by_regimen[use_subset_idx, ]
 
       ## 2. Outcome: **TARGETED** prediction of the previous step k'+1.
@@ -204,6 +203,9 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         Qk_hat_star_all <- plogis(qlogis(Qk_hat_all) + update.Qstar.coef)
 
+        EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat)
+        data$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_t_calc]
+
       ## 4B. The model update. Infinite dimensional epsilon (SDR)
       } else {
         # Qk_hat_star_all <- SDR.update()
@@ -231,7 +233,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
         if (is.null(nrounds)) {
           cat("...running cv to figure out best nrounds for epsilon target...\n")
-          mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10)
+          mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10, verbose = 0)
           nrounds <- mfitcv$best_iteration
           cat("...best nrounds: ", nrounds, "\n")
         }

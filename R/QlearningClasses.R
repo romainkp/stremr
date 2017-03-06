@@ -367,35 +367,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
 
         if (!self$CVTMLE) {
-          # browser()
-          # length(self$idx_used_to_fit_initQ) # 1133
-          # length(subset_idx) # 1920
-
-          # newdata$dat.sVar[subset_idx, ]
-          #          ID     t   CVD     Y lastNat1 highA1c.UN highA1c timelowA1c.UN TI.gstar.dlow     C g.star.N    TI
-          #       <int> <int> <int> <int>    <num>      <int>   <int>         <num>         <int> <int>    <int> <int>
-          #    1:     1     3     0     0        0          1       1             2             1     0        1     1
-          #    2:     2     3     1     0        0          0       0             4             1     0        1     1
-          #    3:     3     3     1     0        0          0       0             4             0     0        1     1
-          #    4:     4     3     0     0        0          1       1             2             1     0        1     1
-          #   ---
-          # 1916:  1996     3     0     0        0          0       0             3             1     0        1     1
-          # 1917:  1997     3     0     0        0          1       1             3             0     0        1     1
-          # 1918:  1998     3     0     0        0          0       0             4             0     0        1     1
-          # 1919:  1999     3     1     0        0          0       0             4             1     0        1     1
-          # 1920:  2000     3     0     0        0          1       1             3             1     0        1     1
-          #       TI.gstar.dhigh C.tminus1 TI.tminus1 N.tminus1 barTIm1eq0 lastNat1.factor Y.tplus1 lastNat1.factor_ fold_ID
-          #                <int>     <int>      <int>     <int>      <int>          <fctr>    <int>           <list>  <fctr>
-          #    1:              1         0          0         1          1               0        0             NULL      02
-          #    2:              0         0          1         1          0               0        0             NULL      01
-          #    3:              0         0          0         1          1               0        0             NULL      01
-          #    4:              1         0          0         1          1               0        0             NULL      05
-          #   ---
-          # 1916:              1         0          1         1          0               0        0             NULL      05
-          # 1917:              1         0          0         1          1               0        0             NULL      03
-          # 1918:              0         0          0         1          1               0        0             NULL      04
-          # 1919:              0         0          1         1          0               0        0             NULL      04
-          # 1920:              1         0          0         1          1               0        0             NULL      01
           probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                         newdata = newdata,
                                         add_subject_data = FALSE,
@@ -450,33 +421,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     },
 
     predictStatic = function(data, g0, gstar, subset_idx) {
-      # browser()
-      # data$dat.sVar[subset_idx, ]
-      #          ID     t   CVD     Y lastNat1 highA1c.UN highA1c timelowA1c.UN    TI     C     N TI.gstar.dlow
-      #       <int> <int> <int> <int>    <num>      <int>   <int>         <num> <int> <int> <int>         <int>
-      #    1:     1     3     0     0        0          1       1             2     1     0     1             1
-      #    2:     2     3     1     0        0          0       0             4     1     0     1             1
-      #    3:     3     3     1     0        0          0       0             4     0     0     1             1
-      #    4:     4     3     0     0        0          1       1             2     1     0     1             1
-      #   ---
-      # 1916:  1996     3     0     0        0          0       0             3     1     0     1             1
-      # 1917:  1997     3     0     0        0          1       1             3     0     0     1             1
-      # 1918:  1998     3     0     0        0          0       0             4     0     0     1             1
-      # 1919:  1999     3     1     0        0          0       0             4     1     0     1             1
-      # 1920:  2000     3     0     0        0          1       1             3     1     0     1             1
-      #       TI.gstar.dhigh C.tminus1 TI.tminus1 N.tminus1 barTIm1eq0 lastNat1.factor Y.tplus1 lastNat1.factor_ fold_ID
-      #                <int>     <int>      <int>     <int>      <int>          <fctr>    <int>           <list>  <fctr>
-      #    1:              1         0          0         1          1               0        0             NULL      02
-      #    2:              0         0          1         1          0               0        0             NULL      01
-      #    3:              0         0          0         1          1               0        0             NULL      01
-      #    4:              1         0          0         1          1               0        0             NULL      05
-      #   ---
-      # 1916:              1         0          1         1          0               0        0             NULL      05
-      # 1917:              1         0          0         1          1               0        0             NULL      03
-      # 1918:              0         0          0         1          1               0        0             NULL      04
-      # 1919:              0         0          1         1          0               0        0             NULL      04
-      # 1920:              1         0          0         1          1               0        0             NULL      01
-
       # ------------------------------------------------------------------------------------------------------------------------
       # Set current A's and N's to the counterfactual exposures in the data (for predicting Q):
       # ------------------------------------------------------------------------------------------------------------------------

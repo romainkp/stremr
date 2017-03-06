@@ -217,20 +217,20 @@ fitSeqDR_onet <- function(OData,
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
     reg <- RegressionClassSDR$new(SDR_model = SDR_model,
-                                     Qreg_counter = Qreg_idx[i],
-                                     all_Qregs_indx = Qreg_idx,
-                                     t_period = Qperiods[i],
-                                     TMLE = FALSE, ## set this automatically to FALSE when running SDR:
-                                     CVTMLE = CVTMLE,
-                                     keep_idx = TRUE, ## Set this automatically to TRUE when running SDR:
-                                     stratifyQ_by_rule = stratifyQ_by_rule,
-                                     outvar = "Qkplus1",
-                                     predvars = regform$predvars,
-                                     outvar.class = list("SDRQlearn"), ## Set this automatically to "SDRQlearn" when Running SDR, otherwise "Qlearn"
-                                     subset_vars = list("Qkplus1"),
-                                     subset_exprs = all_Q_stratify[i],
-                                     model_contrl = models,
-                                     censoring = FALSE)
+                                  Qreg_counter = Qreg_idx[i],
+                                   all_Qregs_indx = Qreg_idx,
+                                   t_period = Qperiods[i],
+                                   TMLE = FALSE, ## set this automatically to FALSE when running SDR:
+                                   CVTMLE = CVTMLE,
+                                   keep_idx = TRUE, ## Set this automatically to TRUE when running SDR:
+                                   stratifyQ_by_rule = stratifyQ_by_rule,
+                                   outvar = "Qkplus1",
+                                   predvars = regform$predvars,
+                                   outvar.class = list("SDRQlearn"), ## Set this automatically to "SDRQlearn" when Running SDR, otherwise "Qlearn"
+                                   subset_vars = list("Qkplus1"),
+                                   subset_exprs = all_Q_stratify[i],
+                                   model_contrl = models,
+                                   censoring = FALSE)
 
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
@@ -288,6 +288,30 @@ fitSeqDR_onet <- function(OData,
 
   est_name <- "St.SDR"
   resDF_onet[, (est_name) := (1 - mean_est_t)]
+
+  # ------------------------------------------------------------------------------------------------
+  # SDR INFERENCE
+  # ------------------------------------------------------------------------------------------------
+  IC_i_onet <- vector(mode = "numeric", length = OData$nuniqueIDs)
+  IC_i_onet[] <- NA
+  IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
+  IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
+  IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
+  IC_dt[, c("EIC_i_t0", "EIC_i_tplus") :=  list(NULL, NULL)]
+  IC_i_onet <- IC_dt[["EIC_i"]]
+  ## asymptotic variance (var of the EIC):
+  IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
+  ## variance of the SDR estimate (scaled by n):
+  SDR_Var <- IC_Var / OData$nuniqueIDs
+  ## SE of the SDR
+  SDR_SE <- sqrt(SDR_Var)
+  if (gvars$verbose) {
+    print("...empirical mean of the estimated EIC: " %+% mean(IC_dt[["EIC_i"]]))
+    print("...estimated SDR variance: " %+% SDR_Var)
+  }
+  resDF_onet[, ("SE.SDR") := SDR_SE]
+  ## save the i-specific estimates of the EIC as a separate column:
+  resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
 
   fW_fit <- lastQ.fit$getfit
   resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
