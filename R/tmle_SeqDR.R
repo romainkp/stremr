@@ -226,7 +226,7 @@ fitSeqDR_onet <- function(OData,
                                    stratifyQ_by_rule = stratifyQ_by_rule,
                                    outvar = "Qkplus1",
                                    predvars = regform$predvars,
-                                   outvar.class = list("SDRQlearn"), ## Set this automatically to "SDRQlearn" when Running SDR, otherwise "Qlearn"
+                                   outvar.class = list("SplitCVSDRQlearn"), ## Set this automatically to "SplitCVSDRQlearn" when Running SDR, otherwise "Qlearn"
                                    subset_vars = list("Qkplus1"),
                                    subset_exprs = all_Q_stratify[i],
                                    model_contrl = models,
