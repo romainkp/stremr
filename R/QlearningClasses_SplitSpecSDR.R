@@ -47,8 +47,8 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         X <- as.matrix(qlogis(Qk_hat))
         newX <- as.matrix(qlogis(Qk_hat_all))
         colnames(X) <- colnames(newX) <- "offset"
-        TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
-        # TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat)
         data$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_t_calc]
@@ -75,6 +75,9 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         pred_dat[, ("offset") := qlogis(Qk_hat_all)]
 
 
+        ## ------------------------------------------------------------------------------
+        ## ****** MOVE THIS OUTSIDE (NEED TO PASS folds OBJECT ONLY) ******
+        ## ------------------------------------------------------------------------------
         make_kfold_from_column <- function(data, id = ".id", fold_column = "fold") {
           n <- nrow(data)
           folds <- data[[fold_column]]
@@ -88,34 +91,84 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
           }
           purrr::map2((1:k), fold_idx, fold)
         }
-
         # make_kfold_from_column
         folds <- make_kfold_from_column(data$dat.sVar[use_subset_idx + Hk_row_offset], id = ".id", fold_column = "fold_ID")
+
+        # cv_split_preds <- function(fold, data, fits_Qk, use_full = FALSE) {
+        #     browser()
+        #     ## These will be automatically defined in the calling frame of this function
+        #     ## when the cross-validator that calls cv_split_preds()
+        #     v <- origami::fold_index()
+        #     train_idx <- origami::training()
+        #     valid_idx <- origami::validation()
+
+        #     if ((all.equal(train_idx, valid_idx) == TRUE) || use_full) {
+        #       # we're in final resubstitution call, so let's use full Q and g fits
+        #       splitQk_fit <- fits_Qk$fullFit
+        #     } else {
+        #       # split-specific Super Learners
+        #       splitQk_fit <- fits_Qk$foldFits[[v]]
+        #     }
+        #     ## split-specific predictions for new data
+        #     ## this may include new observations, e.g., extrapolating for newly censored
+        #     new_data <- as.matrix(data)
+        #     QAW <- predict(splitQ_fit, newdata = new_data)[["pred"]]
+        #     # new_data[, nodes$Anode] <- 0
+        #     # Q0W <- predict(splitQ_fit, newdata = new_data)$pred
+        #     # new_data[, nodes$Anode] <- 1
+        #     # Q1W <- predict(splitQ_fit, newdata = new_data)$pred
+        #     # pA1 <- predict(splitg_fit, new_data)$pred
+
+        #     # # split specific blip, class, and weights
+        #     # A <- data[, nodes$Anode]
+        #     # Y <- data[, nodes$Ynode]
+        #     # D1 <- (A/pA1 - (1 - A)/(1 - pA1)) * (Y - QAW) + Q1W - Q0W
+        #     # if (maximize) {
+        #     #     Z <- as.numeric(D1 > 0)
+        #     # } else {
+        #     #     Z <- as.numeric(D1 < 0)
+        #     # }
+        #     # K <- as.vector(abs(D1))  #D1 is a matrix somehow
+
+        #     # browser()
+
+        #     list(QAW = QAW, pA1 = pA1)
+        # }
+
+
+        ## PASS THE SPLIT-SPEC PREDS FROM THE PREVIOUS RUN
+        ## NEED TO EXTRACT SPLIT-SPEC Y and offset
         SL.library <- c("SDR.updater.NULL", "SDR.updater.glmTMLE", "SDR.updater.glm", "SDR.updater.xgb")
         # , "SDR.updater.speedglmTMLE"
-
-        library("abind")
+        # library("abind")
         SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
-                                               Y = Qkplus1,
-                                               X = as.matrix(obs_dat),
-                                               family = quasibinomial(),
-                                               obsWeights = wts,
-                                               SL.library = SL.library,
-                                               params = self$reg$SDR_model)
-
-        # browser()
-
+                                                    Y = Qkplus1,
+                                                    X = as.matrix(obs_dat),
+                                                    family = quasibinomial(),
+                                                    obsWeights = wts,
+                                                    SL.library = SL.library,
+                                                    params = self$reg$SDR_model)
         print("SDR_SL_fit: "); print(SDR_SL_fit)
-        # names(SDR_SL_fit)
-        # SDR_SL_fit[["foldFits"]][[1]]
-        # SLpred <- predict(SDR_SL_fit, as.matrix(pred_dat))
+        ## SuperLearner final prediction based on models fit on all data
         Qk_hat_star_all <- as.numeric(predict(SDR_SL_fit, as.matrix(pred_dat))[["pred"]])
-
         # mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
         # # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         # # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         # # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         # Qk_hat_star_all <- mfit[["pred"]]
+
+
+        # ## Split-Specific predictions from the SuperLearner trained on fold v, for new data (extrapolating to new obs)
+        # v <- 1
+        # splitQk_fit <- SDR_SL_fit$foldFits[[v]]
+        # split_preds_v <- as.numeric(predict(splitQk_fit, newdata = as.matrix(pred_dat))[["pred"]])
+        # split_preds <- origami::cross_validate(cv_split_preds, folds, pred_dat, fits, .combine = FALSE)
+        # browser()
+        # # names(SDR_SL_fit)
+        # # SDR_SL_fit[["foldFits"]][[1]]
+        # # SLpred <- predict(SDR_SL_fit, as.matrix(pred_dat))
+
+
 
       }
 

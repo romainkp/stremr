@@ -106,8 +106,6 @@ SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
                          offset = offset, # method=c('eigen','Cholesky','qr'),
                          family = stats::quasibinomial(),
                          control = glm.control(trace = FALSE))
-  # print("fit.glm"); print(fit.glm)
-  # print("fit.glm$coef"); print(fit.glm$coef)
 
   fit <- list(object = list(est.fun = "stats::glm.fit", family = "quasibinomial", coef = fit.glm$coef))
   class(fit) <- "SDR.updater.TMLE"
@@ -125,8 +123,6 @@ SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
                                      y = Y, weights = obsWeights, offset = offset,
                                      # method=c('eigen','Cholesky','qr'),
                                      family = quasibinomial(), trace = FALSE, maxit = 1000)
-  # print("fit.glm"); print(fit.glm)
-  # print("fit.glm$coef"); print(fit.glm$coef)
 
   fit <- list(object = list(est.fun = "speedglm::speedglm.wfit", family = "quasibinomial", coef = fit.glm$coef))
   class(fit) <- "SDR.updater.TMLE"
@@ -142,17 +138,12 @@ SDR.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
   offset <- X[, "offset"]
   X <- X[, colnames(X)[!colnames(X) %in% "offset"], drop = FALSE]
 
-  # print("head(X)"); print(head(X))
-  # print("head(offset)"); print(head(offset))
-
   fit.glm <- stats::glm.fit(x = cbind(Intercept = 1L, as.matrix(X)),
                             y = Y,
                             weights = obsWeights,
                             offset = offset, # method=c('eigen','Cholesky','qr'),
                             family = stats::quasibinomial(),
                             control = glm.control(trace = FALSE))
-
-  # print("fit.glm$coef"); print(fit.glm$coef)
 
   fit <- list(object = list(est.fun = "stats::glm.fit", family = "stats::quasibinomial", coef = fit.glm$coef))
   class(fit) <- "SDR.updater.glm"
@@ -166,8 +157,6 @@ SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
   # cat("...running SDR updater xgboost w/ following params: \n "); str(params)
   offset <- X[, "offset"]
   X <- X[, colnames(X)[!colnames(X) %in% "offset"], drop = FALSE]
-  # print("head(X)"); print(head(X))
-  # print("head(offset)"); print(head(offset))
 
   xgb_dat <- xgboost::xgb.DMatrix(as.matrix(X), label = Y)
   xgboost::setinfo(xgb_dat, "base_margin", offset)
