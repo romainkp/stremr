@@ -140,7 +140,8 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         ## NEED TO EXTRACT SPLIT-SPEC Y and offset
         SL.library <- c("SDR.updater.NULL", "SDR.updater.glmTMLE", "SDR.updater.glm", "SDR.updater.xgb")
         # , "SDR.updater.speedglmTMLE"
-        # library("abind")
+        library("abind")
+        # browser()
         SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
                                                     Y = Qkplus1,
                                                     X = as.matrix(obs_dat),
