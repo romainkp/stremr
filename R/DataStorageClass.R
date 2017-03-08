@@ -688,6 +688,21 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       }
     },
 
+    make_origami_fold_from_column = function(subset_idx) {
+      fold_column <- self$fold_column
+      if (is.null(fold_column)) stop("must define the column with validation folds")
+      # n <- nrow(data)
+      n <- length(subset_idx)
+      folds <- self$dat.sVar[subset_idx, ][[fold_column]]
+      k <- length(unique(folds))
+      idx <- seq_len(n)
+      fold_idx <- split(idx, folds)
+      fold <- function(v, test) {
+        origami:::make_fold(v, setdiff(idx, test), test)
+      }
+      purrr::map2((1:k), fold_idx, fold)
+    },
+
     # -----------------------------------------------------------------------------
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------

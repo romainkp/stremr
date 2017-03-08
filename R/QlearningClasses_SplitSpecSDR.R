@@ -74,74 +74,59 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         pred_dat[, ("offset") := qlogis(Qk_hat_all)]
 
+        cv_split_preds <- function(fold, data, fits_Qk, use_full = FALSE) {
+            browser()
+            ## These will be automatically defined in the calling frame of this function
+            ## when the cross-validator that calls cv_split_preds()
+            v <- origami::fold_index()
+            train_idx <- origami::training()
+            valid_idx <- origami::validation()
 
-        ## ------------------------------------------------------------------------------
-        ## ****** MOVE THIS OUTSIDE (NEED TO PASS folds OBJECT ONLY) ******
-        ## ------------------------------------------------------------------------------
-        make_kfold_from_column <- function(data, id = ".id", fold_column = "fold") {
-          n <- nrow(data)
-          folds <- data[[fold_column]]
-          k <- length(unique(folds))
+            if ((all.equal(train_idx, valid_idx) == TRUE) || use_full) {
+              # we're in final resubstitution call, so let's use full Q and g fits
+              splitQk_fit <- fits_Qk$fullFit
+            } else {
+              # split-specific Super Learners
+              splitQk_fit <- fits_Qk$foldFits[[v]]
+            }
+            ## split-specific predictions for new data
+            ## this may include new observations, e.g., extrapolating for newly censored
+            new_data <- as.matrix(data)
+            splitQ <- predict(splitQ_fit, newdata = new_data)[["pred"]]
+            # new_data[, nodes$Anode] <- 0
+            # Q0W <- predict(splitQ_fit, newdata = new_data)$pred
+            # new_data[, nodes$Anode] <- 1
+            # Q1W <- predict(splitQ_fit, newdata = new_data)$pred
+            # pA1 <- predict(splitg_fit, new_data)$pred
 
-          idx <- seq_len(n)
-          fold_idx <- split(idx, folds)
-
-          fold <- function(v, test) {
-              origami:::make_fold(v, setdiff(idx, test), test)
-          }
-          purrr::map2((1:k), fold_idx, fold)
+            # # split specific blip, class, and weights
+            # A <- data[, nodes$Anode]
+            # Y <- data[, nodes$Ynode]
+            # D1 <- (A/pA1 - (1 - A)/(1 - pA1)) * (Y - QAW) + Q1W - Q0W
+            # if (maximize) {
+            #     Z <- as.numeric(D1 > 0)
+            # } else {
+            #     Z <- as.numeric(D1 < 0)
+            # }
+            # K <- as.vector(abs(D1))  #D1 is a matrix somehow
+            # browser()
+            list(splitQ = splitQ)
         }
-        # make_kfold_from_column
-        folds <- make_kfold_from_column(data$dat.sVar[use_subset_idx + Hk_row_offset], id = ".id", fold_column = "fold_ID")
-
-        # cv_split_preds <- function(fold, data, fits_Qk, use_full = FALSE) {
-        #     browser()
-        #     ## These will be automatically defined in the calling frame of this function
-        #     ## when the cross-validator that calls cv_split_preds()
-        #     v <- origami::fold_index()
-        #     train_idx <- origami::training()
-        #     valid_idx <- origami::validation()
-
-        #     if ((all.equal(train_idx, valid_idx) == TRUE) || use_full) {
-        #       # we're in final resubstitution call, so let's use full Q and g fits
-        #       splitQk_fit <- fits_Qk$fullFit
-        #     } else {
-        #       # split-specific Super Learners
-        #       splitQk_fit <- fits_Qk$foldFits[[v]]
-        #     }
-        #     ## split-specific predictions for new data
-        #     ## this may include new observations, e.g., extrapolating for newly censored
-        #     new_data <- as.matrix(data)
-        #     QAW <- predict(splitQ_fit, newdata = new_data)[["pred"]]
-        #     # new_data[, nodes$Anode] <- 0
-        #     # Q0W <- predict(splitQ_fit, newdata = new_data)$pred
-        #     # new_data[, nodes$Anode] <- 1
-        #     # Q1W <- predict(splitQ_fit, newdata = new_data)$pred
-        #     # pA1 <- predict(splitg_fit, new_data)$pred
-
-        #     # # split specific blip, class, and weights
-        #     # A <- data[, nodes$Anode]
-        #     # Y <- data[, nodes$Ynode]
-        #     # D1 <- (A/pA1 - (1 - A)/(1 - pA1)) * (Y - QAW) + Q1W - Q0W
-        #     # if (maximize) {
-        #     #     Z <- as.numeric(D1 > 0)
-        #     # } else {
-        #     #     Z <- as.numeric(D1 < 0)
-        #     # }
-        #     # K <- as.vector(abs(D1))  #D1 is a matrix somehow
-
-        #     # browser()
-
-        #     list(QAW = QAW, pA1 = pA1)
-        # }
 
 
         ## PASS THE SPLIT-SPEC PREDS FROM THE PREVIOUS RUN
         ## NEED TO EXTRACT SPLIT-SPEC Y and offset
-        SL.library <- c("SDR.updater.NULL", "SDR.updater.glmTMLE", "SDR.updater.glm", "SDR.updater.xgb")
-        # , "SDR.updater.speedglmTMLE"
-        library("abind")
+        # data$fold_column
+        folds <- data$make_origami_fold_from_column(use_subset_idx + Hk_row_offset)
         # browser()
+        # self$reg$SDR_model
+
+        SL.library <- c("SDR.updater.NULL", "SDR.updater.glmTMLE", "SDR.updater.glm",
+                        "SDR.updater.xgb",
+                        "SDR.updater.xgb.delta1", "SDR.updater.xgb.delta2", "SDR.updater.xgb.delta3", "SDR.updater.xgb.delta4")
+        # , "SDR.updater.speedglmTMLE"
+
+        library("abind")
         SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
                                                     Y = Qkplus1,
                                                     X = as.matrix(obs_dat),
@@ -158,8 +143,8 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         # # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         # Qk_hat_star_all <- mfit[["pred"]]
 
-
-        # ## Split-Specific predictions from the SuperLearner trained on fold v, for new data (extrapolating to new obs)
+        # # browser()
+        # ## Split-specific predictions from the SuperLearner trained on fold v, for new data (extrapolating to new obs)
         # v <- 1
         # splitQk_fit <- SDR_SL_fit$foldFits[[v]]
         # split_preds_v <- as.numeric(predict(splitQk_fit, newdata = as.matrix(pred_dat))[["pred"]])

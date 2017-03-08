@@ -36,6 +36,14 @@ fitSeqDR <- function(OData,
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
 
+  if (is.null(OData$fold_column) && is.null(fold_column)) {
+    stop("must specify the integer / factor fold_column with validation folds")
+  }
+
+  if (!is.null(fold_column)) {
+    OData$define_CVfolds(fold_column = fold_column)
+  }
+
   if (missing(tvals)) stop("must specify survival 'tvals' of interest (time period values from column " %+% nodes$tnode %+% ")")
 
   # ------------------------------------------------------------------------------------------------
