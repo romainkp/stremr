@@ -1,4 +1,16 @@
 
+## Split-specific predictions for validation sets
+## Uses offsets that could might be also split specific
+cv_validation_preds <- function(fold, split_preds_Qk_hat) {
+  ## These will be automatically defined in the calling frame of this function
+  ## when the cross-validator that calls cv_split_preds()
+  v <- origami::fold_index()
+  train_idx <- origami::training()
+  valid_idx <- origami::validation()
+  v_Qk_hat <- as.numeric(split_preds_Qk_hat[["splitQk"]][[v]][valid_idx, ])
+  list(v_Qk_hat = v_Qk_hat, valid_idx = valid_idx)
+}
+
 ## Split-specific predictions for new data (for all nrow(data).
 ## Uses offsets that could might be also split specific
 cv_split_preds <- function(fold, data, fits_Qk, split_preds_Qk_hat, use_full = FALSE) {
@@ -9,23 +21,20 @@ cv_split_preds <- function(fold, data, fits_Qk, split_preds_Qk_hat, use_full = F
   valid_idx <- origami::validation()
 
   if ((all.equal(train_idx, valid_idx) == TRUE) || use_full) {
-    # we're in final resubstitution call, so let's use full Q and g fits
+    # We're in final resubstitution call, so let's use full Q and g fits
     splitQk_fit <- fits_Qk$fullFit
   } else {
-    # split-specific Super Learners
+    # Split-specific Super Learners
     splitQk_fit <- fits_Qk$foldFits[[v]]
   }
-
-  # browser()
 
   ## split-specific predictions for new data
   ## this may include new observations, e.g., extrapolating for newly censored
   ## The offsets could be split specific if there were previous SDR targeting steps
   new_data <- as.matrix(data)
   if (!is.null(split_preds_Qk_hat)) {
-    new_data[, "offset"] <- as.numeric(split_preds_Qk_hat[["splitQk"]][[v]])
+    new_data[, "offset"] <- qlogis(as.numeric(split_preds_Qk_hat[["splitQk"]][[v]]))
   }
-
   splitQk <- predict(splitQk_fit, newdata = new_data)[["pred"]]
   list(splitQk = splitQk)
 }
@@ -74,6 +83,7 @@ split_cv_SL <- function(fold, Y, X,
     Y[subset_Y] <- as.numeric(split_preds_Qkplus1[["splitQk"]][[v]][subset_Qplus1_newQ, ])
   }
   ## ADD NEW SS-OFFSETS (ONLY WHEN AVAILABLE)
+  ## NOTE THAT THESE NEED TO BE CONVERTED TO LOGIT-LINEAR SCALE!!!!
   if (!is.null(split_preds_Qk_hat)) {
     X[, "offset"] <- as.numeric(split_preds_Qk_hat[["splitQk"]][[v]][subset_Qk_hat, ])
   }
@@ -139,6 +149,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
       ##    This requires handling new observations (for which Qkplus1 is not a model prediction, but a deterministic value)
       subset_Y <- NULL
       subset_Qplus1_newQ <- NULL
+
       ## Previous round of Q fitting (k+1 time-point) is saved in QModel_Qkplus1 arg
       if (!is.null(QModel_Qkplus1)) {
         ## THESE ARE IDs in QModel_Qkplus1 that ARE ACTUALLY BEING USED FOR MODELING CURRENT Q.plus1
@@ -154,13 +165,28 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         if (gvars$verbose) cat("Last targeting step for E(Y_d) with intercept only TMLE updates\n")
         ## Updated model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
+
+        # Qkplus1_new <- data$dat.sVar[t==0, Qkplus1]
+        # mean(data$dat.sVar[t==0, Qk_hat])
+        # sum(Qkplus1_new) /length(Qkplus1_new)
+
         X <- as.matrix(qlogis(Qk_hat))
         newX <- as.matrix(qlogis(Qk_hat_all))
         colnames(X) <- colnames(newX) <- "offset"
-        # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+
+        ## This will use validation (out-of-sample) Qkplus1 & Qk_hat (offset) for the TMLE updates
         TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         Qk_hat_star_all <- TMLE.fit[["pred"]]
-        EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat)
+        Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
+
+        # Qk_hat_star-Qk_hat
+        # browser()
+
+        ## This will USE validation (out-of-sample) Qkplus1 & Qk_hat for the EIC estimates:
+        ## REPLACE Qk_hat with Qk_hat_star (targeted version)
+        EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat_star)
+        # EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat)
         data$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_t_calc]
 
       ## 4B. The model update. Infinite dimensional epsilon (SDR)
@@ -179,17 +205,19 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         epsilon_predvars <- QModel_h_k$predvars
         obs_dat <- data$dat.sVar[use_subset_idx + Hk_row_offset, epsilon_predvars, with = FALSE]
         obs_dat[, ("offset") := qlogis(Qk_hat)]
+        folds <- data$make_origami_fold_from_column(use_subset_idx + Hk_row_offset)
 
         pred_dat <- data$dat.sVar[self$subset_idx + Hk_row_offset, epsilon_predvars, with = FALSE]
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         pred_dat[, ("offset") := qlogis(Qk_hat_all)]
+        folds_pred_dat <- data$make_origami_fold_from_column(self$subset_idx + Hk_row_offset)
+        # sort(unlist(lapply(folds_pred_dat, "[[", "validation_set")))
 
-        ## PASS THE SPLIT-SPEC PREDS FROM THE PREVIOUS RUN
-        ## NEED TO EXTRACT SPLIT-SPEC Y and offset
-        folds <- data$make_origami_fold_from_column(use_subset_idx + Hk_row_offset)
 
-        SL.library <- c("SDR.updater.NULL", "SDR.updater.glmTMLE",
-                        "SDR.updater.glm", "SDR.updater.xgb",
+        SL.library <- c("SDR.updater.NULL",
+                        # "SDR.updater.glmTMLE",
+                        # "SDR.updater.glm",
+                        "SDR.updater.xgb",
                         "SDR.updater.xgb.delta1", "SDR.updater.xgb.delta2", "SDR.updater.xgb.delta3", "SDR.updater.xgb.delta4")
         # , "SDR.updater.speedglmTMLE"
 
@@ -220,18 +248,10 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         print("SDR_SL_fit: "); print(SDR_SL_fit)
         self$SDR_SL_fit <- SDR_SL_fit
 
-        ## NONE-split-specific SuperLearner preds, based on the best SL fit re-trained on ALL data
-        Qk_hat_star_all <- as.numeric(predict(SDR_SL_fit, as.matrix(pred_dat))[["pred"]])
-        # mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
-        # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:
-        data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_star_all]
-
-        ## SS SuperLearner preds, list of nrow(pred_dat) preds for each fold (including extrapolating preds for new obs)
-        ## This needs to use offsets for newdata as well.
-        ## If there were prior targeting steps, there will be split-specific offsets, which then need to be utilized in this call.
+        ## Slit-Specitic SuperLearner preds
+        ## list of nrow(pred_dat) preds for each fold (including extrapolating preds for new obs)
+        ## This also uses the offsets for newdata,
+        ## if there were prior targeting steps, these will be split-specific offsets.
         split_preds_Qk_hat <- origami::cross_validate(cv_split_preds,
                                                       folds,
                                                       data = pred_dat,
@@ -239,7 +259,30 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
                                                       split_preds_Qk_hat = self$split_preds_Qk_hat,
                                                       .combine = FALSE)
         self$split_preds_Qk_hat <- split_preds_Qk_hat
+
+        ## Validation (out-of-sample) predictions for the split-specific SuperLearner (n predictions by combining all validation folds in newdata)
+        Qk_hat_star_all <- origami::cross_validate(cv_validation_preds,
+                                                   folds_pred_dat,
+                                                   split_preds_Qk_hat = split_preds_Qk_hat,
+                                                   .combine = TRUE)
+        Qk_hat_star_all <- as.data.table(Qk_hat_star_all)
+        setkeyv(Qk_hat_star_all, cols = "valid_idx")
+        Qk_hat_star_all <- Qk_hat_star_all[["v_Qk_hat"]]
+
+        ## Extract prediction for new data for regular SuperLearner (not split-specific, SL fit used ALL data)
+        # Qk_hat_star_all_2 <- as.numeric(predict(SDR_SL_fit, as.matrix(pred_dat))[["pred"]])
+        # cbind(Qk_hat_star_all, Qk_hat_star_all_2, Qk_hat_star_all - Qk_hat_star_all_2)
+        # mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
+        # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+
+        # browser()
+        # cbind(data$dat.sVar[self$subset_idx, "Qk_hat"], Qk_hat_star_all, Qk_hat_star_all_2)
       }
+
+      # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:
+      data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_star_all]
       # print("MSE of previous Qk_hat vs. upated Qk_hat: " %+% mean((Qk_hat_star_all-Qk_hat_all)^2))
 
       ## ************** NOTE ******************

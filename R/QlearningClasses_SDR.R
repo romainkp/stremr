@@ -187,7 +187,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         Qk_hat_star_all <- TMLE.fit[["pred"]]
-
+        Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
         # TMLE.fit <- tmle.update(Qkplus1 = Qkplus1,
         #                         Qk_hat = Qk_hat,
         #                         IPWts = wts,
@@ -202,7 +202,9 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         # Qk_hat_star_all2 <- plogis(qlogis(Qk_hat_all) + update.Qstar.coef)
         # max(Qk_hat_star_all2-Qk_hat_star_all)
 
-        EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat)
+        ## TO DO: REPLACE Qk_hat with Qk_hat_star (targeted version)
+        EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat_star)
+        # EIC_i_t_calc <- wts * (Qkplus1 - Qk_hat)
         data$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_t_calc]
 
       ## 4B. The model update. Infinite dimensional epsilon (SDR)
@@ -257,8 +259,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
 
       }
 
-      print("MSE of previous Qk_hat vs. upated Qk_hat: " %+% mean((Qk_hat_star_all-Qk_hat_all)^2))
-
+      # print("MSE of previous Qk_hat vs. upated Qk_hat: " %+% mean((Qk_hat_star_all-Qk_hat_all)^2))
       # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:
       data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_star_all]
 
