@@ -59,6 +59,11 @@ SDRModel <- R6Class(classname = "SDRModel",
         }
 
         for (i in (1:k_i)) {
+          if (i==1L) {
+            QModel_Qkplus1 <- NULL
+          } else {
+            QModel_Qkplus1 <- private$PsAsW.models[[i-1]]
+          }
           ## All the targeting is for one functional with reg index (Qk_idx + 1) (since time-points and loops are reversed)
           ## Thus, all the targeting steps in this loop are functions of the same covariate space, located in row shift:
           ## Hk_row_offset = kprime_idx - (Qk_idx + 1)
@@ -84,6 +89,7 @@ SDRModel <- R6Class(classname = "SDRModel",
                                                     Qk_idx = k_i,
                                                     max_Qk_idx = max_Qk_idx,
                                                     QModel_h_k = QModel_h_k,
+                                                    QModel_Qkplus1 = QModel_Qkplus1,
                                                     ...)
         }
       }
@@ -133,7 +139,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
     ## Predictors: All predictors used for fitting Q[k-1]
     ## Weights: the product of g's from t=k to current k'
     ## Offset: qlogis(Qk_hat) - current (initial) Q prediction (at k')
-    fit_epsilon_Q_k = function(data, kprime_idx, Qk_idx, max_Qk_idx, QModel_h_k, ...) {
+    fit_epsilon_Q_k = function(data, kprime_idx, Qk_idx, max_Qk_idx, QModel_h_k, QModel_Qkplus1, ...) {
       if (self$all_Qregs_indx[kprime_idx] != self$Qreg_counter) stop("something terrible has happened")
 
       ## All targeting is for one functional with loop index (Qk_idx + 1) (since loops are reverse of time-points)

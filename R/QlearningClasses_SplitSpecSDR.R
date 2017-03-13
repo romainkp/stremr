@@ -1,3 +1,86 @@
+
+## Split-specific predictions for new data (for all nrow(data).
+## Uses offsets that could might be also split specific
+cv_split_preds <- function(fold, data, fits_Qk, split_preds_Qk_hat, use_full = FALSE) {
+  ## These will be automatically defined in the calling frame of this function
+  ## when the cross-validator that calls cv_split_preds()
+  v <- origami::fold_index()
+  train_idx <- origami::training()
+  valid_idx <- origami::validation()
+
+  if ((all.equal(train_idx, valid_idx) == TRUE) || use_full) {
+    # we're in final resubstitution call, so let's use full Q and g fits
+    splitQk_fit <- fits_Qk$fullFit
+  } else {
+    # split-specific Super Learners
+    splitQk_fit <- fits_Qk$foldFits[[v]]
+  }
+
+  # browser()
+
+  ## split-specific predictions for new data
+  ## this may include new observations, e.g., extrapolating for newly censored
+  ## The offsets could be split specific if there were previous SDR targeting steps
+  new_data <- as.matrix(data)
+  if (!is.null(split_preds_Qk_hat)) {
+    new_data[, "offset"] <- as.numeric(split_preds_Qk_hat[["splitQk"]][[v]])
+  }
+
+  splitQk <- predict(splitQk_fit, newdata = new_data)[["pred"]]
+  list(splitQk = splitQk)
+}
+
+## Ignores Y and instead uses Z generated from a split-specific
+## training set generated using cv_split_preds X are the nodes to base the rule on
+split_cv_SL <- function(fold, Y, X,
+                        SL.library,
+                        family,
+                        obsWeights,
+                        id,
+                        use_full = FALSE,
+                        split_preds_Qk_hat,
+                        subset_Qk_hat,
+                        split_preds_Qkplus1,
+                        subset_Qplus1_newQ,
+                        subset_Y, ...) {
+
+  v <- origami::fold_index()
+  train_idx <- origami::training()
+  valid_idx <- origami::validation()
+
+  ## -------------------------------------------------------------------------------------------------------
+  ## ****** THIS GIVES US ACCESS TO SPLIT SPECIFIC PREDICTIONS (N in TOTAL) FROM SL trained on FOLD v ****
+  ## -------------------------------------------------------------------------------------------------------
+  # print(names(split_preds_Qk_hat))
+  # print(names(split_preds_Qkplus1))
+  # length(split_preds_Qk_hat[["splitQk"]])
+
+  ## NEED TO USE NON-EXTRAPOLATED split-specific offsets (which are actually being used now for targeting)
+  ## THIS LIST RECORDS ALL SPLIT-SPECIFIC model predictions (including extrapolated)
+  # length(split_preds_Qk_hat[["splitQk"]][[1]])
+  ## ******* Need to find out what indices in self$subset_idx ARE SPLIT-SPECIFIC (NOT NEW)
+  ## ******* Those are the only outcomes that need to be replaced *******
+  # length(split_preds_Qkplus1[["splitQk"]][[1]])
+
+  ## This replaces the usual Y passed down to split_cv_SL() with FOLD-SPECIFIC predictions of Y (Yhat).
+  ## Each Yhat is a vector of N predictions from the best model (SL) that was trained only on train_idx (v fold).
+  # browser()
+
+  ## WHAT ARE THE obsWeights? Are these the SL weights for each algorithm???
+  # obsWeights <- obsWeights * split_preds$K[[v]]
+
+  ## ADD NEW FAILURES (NEW OBSERVATIONS THAT WERE NOT USED FOR PREDICTING / FITTING Qkplus1 UNTIL NOW)
+  if (!is.null(split_preds_Qkplus1)) {
+    Y[subset_Y] <- as.numeric(split_preds_Qkplus1[["splitQk"]][[v]][subset_Qplus1_newQ, ])
+  }
+  ## ADD NEW SS-OFFSETS (ONLY WHEN AVAILABLE)
+  if (!is.null(split_preds_Qk_hat)) {
+    X[, "offset"] <- as.numeric(split_preds_Qk_hat[["splitQk"]][[v]][subset_Qk_hat, ])
+  }
+
+  origami::cv_SL(fold, Y, X, SL.library, family, obsWeights, id, ...)
+}
+
 ## ---------------------------------------------------------------------
 ## R6 Class for Split-Specific Sequentially Double Robustness Targeting Procedure
 ## Internal implementation of Q-learning functionality.
@@ -9,6 +92,8 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
   portable = TRUE,
   class = TRUE,
   public = list(
+    split_preds_Qk_hat = NULL,
+    SDR_SL_fit = NULL,
 
     ## Split-Specific SL updater
     ## This update is for current time-point k' aimed at targeting initial Q[k] fit.
@@ -16,7 +101,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
     ## Predictors: All predictors used for fitting Q[k-1]
     ## Weights: the product of g's from t=k to current k'
     ## Offset: qlogis(Qk_hat) - current (initial) Q prediction (at k')
-    fit_epsilon_Q_k = function(data, kprime_idx, Qk_idx, max_Qk_idx, QModel_h_k, ...) {
+    fit_epsilon_Q_k = function(data, kprime_idx, Qk_idx, max_Qk_idx, QModel_h_k, QModel_Qkplus1, ...) {
       if (self$all_Qregs_indx[kprime_idx] != self$Qreg_counter) stop("something terrible has happened")
       ## All targeting is for one functional with loop index (Qk_idx + 1) (since loops are reverse of time-points)
       ## Thus, all the targeting steps in this loop are functions of the same covariate space, located in row shift:
@@ -34,15 +119,40 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
       ## 1. Weights: defined new column of cumulative weights where cumulative product starts at t = Qk_idx (k), rather than t = 0:
       wts <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
-      ## 2. Outcome: **TARGETED** prediction of the previous step k'+1.
+      ## 2a. Outcome: **TARGETED** prediction of the previous step k'+1.
       Qkplus1 <- data$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
       ## 3. Offset:
       Qk_hat <- data$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
 
+      ## SS-SL will use split-specific offsets (Qhat) from this run and split-specific Y (Qkplus1) from the previous Q init / update (k+1)
+      ## ** is.null(QModel_Qkplus1) means that there are no split-specific Y's available (use the actual observed Qkplus1 / Y)
+      ##    If is.null(QModel_Qkplus1) then ALL Qkplus1 are the observed ones (no model predictions were used for assigning Qkplus1),
+      ##    so no subsetting / replacing of Y is necessary
+      ## ** is.null(split_preds_Qk_hat) means that no SS-offsets are available (first targeting step, only init Q fitted before)
+
+      ## ** Subsets of subset_idx that need to be utilized during fitting, these are used for SS-offsets
+      ##    IDs in split_preds_Qk_hat that need to be used for replacing offset in X with SS offsets (Qk_hat) for SS-targeting
+      ##    ******** TO DO: WILL NEED SS-OFFSETS FOR prediction as well (extrapolating to new obs) ********
+      subset_Qk_hat <- which(self$subset_idx %in% use_subset_idx)
+
+      ## ** IDs in Y that need to be used to replace the original Y (Qkplus1) with split specific outcomes
+      ##    This requires handling new observations (for which Qkplus1 is not a model prediction, but a deterministic value)
+      subset_Y <- NULL
+      subset_Qplus1_newQ <- NULL
+      ## Previous round of Q fitting (k+1 time-point) is saved in QModel_Qkplus1 arg
+      if (!is.null(QModel_Qkplus1)) {
+        ## THESE ARE IDs in QModel_Qkplus1 that ARE ACTUALLY BEING USED FOR MODELING CURRENT Q.plus1
+        subset_Qplus1_newQ <- which((QModel_Qkplus1$subset_idx - 1) %in% use_subset_idx)
+        # data$dat.sVar[(QModel_Qkplus1$subset_idx - 1)[subset_Qplus1_newQ], ]
+        ## THESE ARE IDs in Y that need to be replaced (not failures, i.e., why is not deterministic), must MATCH TO ABOVE IN LENGTH
+        subset_Y <- which(use_subset_idx %in% (QModel_Qkplus1$subset_idx-1))
+        # data$dat.sVar[use_subset_idx[subset_Y], ]
+      }
+
       ## 4A. The model update. Univariate logistic regression (TMLE)
       if (Qk_idx == max_Qk_idx) {
         if (gvars$verbose) cat("Last targeting step for E(Y_d) with intercept only TMLE updates\n")
-        ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
+        ## Updated model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         X <- as.matrix(qlogis(Qk_hat))
         newX <- as.matrix(qlogis(Qk_hat_all))
@@ -74,100 +184,69 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         pred_dat[, ("offset") := qlogis(Qk_hat_all)]
 
-        cv_split_preds <- function(fold, data, fits_Qk, use_full = FALSE) {
-            browser()
-            ## These will be automatically defined in the calling frame of this function
-            ## when the cross-validator that calls cv_split_preds()
-            v <- origami::fold_index()
-            train_idx <- origami::training()
-            valid_idx <- origami::validation()
-
-            if ((all.equal(train_idx, valid_idx) == TRUE) || use_full) {
-              # we're in final resubstitution call, so let's use full Q and g fits
-              splitQk_fit <- fits_Qk$fullFit
-            } else {
-              # split-specific Super Learners
-              splitQk_fit <- fits_Qk$foldFits[[v]]
-            }
-            ## split-specific predictions for new data
-            ## this may include new observations, e.g., extrapolating for newly censored
-            new_data <- as.matrix(data)
-            splitQ <- predict(splitQ_fit, newdata = new_data)[["pred"]]
-            # new_data[, nodes$Anode] <- 0
-            # Q0W <- predict(splitQ_fit, newdata = new_data)$pred
-            # new_data[, nodes$Anode] <- 1
-            # Q1W <- predict(splitQ_fit, newdata = new_data)$pred
-            # pA1 <- predict(splitg_fit, new_data)$pred
-
-            # # split specific blip, class, and weights
-            # A <- data[, nodes$Anode]
-            # Y <- data[, nodes$Ynode]
-            # D1 <- (A/pA1 - (1 - A)/(1 - pA1)) * (Y - QAW) + Q1W - Q0W
-            # if (maximize) {
-            #     Z <- as.numeric(D1 > 0)
-            # } else {
-            #     Z <- as.numeric(D1 < 0)
-            # }
-            # K <- as.vector(abs(D1))  #D1 is a matrix somehow
-            # browser()
-            list(splitQ = splitQ)
-        }
-
-
         ## PASS THE SPLIT-SPEC PREDS FROM THE PREVIOUS RUN
         ## NEED TO EXTRACT SPLIT-SPEC Y and offset
-        # data$fold_column
         folds <- data$make_origami_fold_from_column(use_subset_idx + Hk_row_offset)
-        # browser()
-        # self$reg$SDR_model
 
-        SL.library <- c("SDR.updater.NULL", "SDR.updater.glmTMLE", "SDR.updater.glm",
-                        "SDR.updater.xgb",
+        SL.library <- c("SDR.updater.NULL", "SDR.updater.glmTMLE",
+                        "SDR.updater.glm", "SDR.updater.xgb",
                         "SDR.updater.xgb.delta1", "SDR.updater.xgb.delta2", "SDR.updater.xgb.delta3", "SDR.updater.xgb.delta4")
         # , "SDR.updater.speedglmTMLE"
 
         library("abind")
+
+        # SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
+        #                                             Y = Qkplus1,
+        #                                             X = as.matrix(obs_dat),
+        #                                             family = quasibinomial(),
+        #                                             obsWeights = wts,
+        #                                             SL.library = SL.library,
+        #                                             params = self$reg$SDR_model)
+
         SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
                                                     Y = Qkplus1,
                                                     X = as.matrix(obs_dat),
+                                                    split_preds_Qk_hat = self$split_preds_Qk_hat,
+                                                    subset_Qk_hat = subset_Qk_hat,
+                                                    split_preds_Qkplus1 = QModel_Qkplus1$split_preds_Qk_hat,
+                                                    subset_Qplus1_newQ = subset_Qplus1_newQ,
+                                                    subset_Y = subset_Y,
                                                     family = quasibinomial(),
                                                     obsWeights = wts,
                                                     SL.library = SL.library,
-                                                    params = self$reg$SDR_model)
+                                                    params = self$reg$SDR_model,
+                                                    cvfun = split_cv_SL)
+
         print("SDR_SL_fit: "); print(SDR_SL_fit)
-        ## SuperLearner final prediction based on models fit on all data
+        self$SDR_SL_fit <- SDR_SL_fit
+
+        ## NONE-split-specific SuperLearner preds, based on the best SL fit re-trained on ALL data
         Qk_hat_star_all <- as.numeric(predict(SDR_SL_fit, as.matrix(pred_dat))[["pred"]])
         # mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
-        # # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # Qk_hat_star_all <- mfit[["pred"]]
+        # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:
+        data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_star_all]
 
-        # # browser()
-        # ## Split-specific predictions from the SuperLearner trained on fold v, for new data (extrapolating to new obs)
-        # v <- 1
-        # splitQk_fit <- SDR_SL_fit$foldFits[[v]]
-        # split_preds_v <- as.numeric(predict(splitQk_fit, newdata = as.matrix(pred_dat))[["pred"]])
-        # split_preds <- origami::cross_validate(cv_split_preds, folds, pred_dat, fits, .combine = FALSE)
-        # browser()
-        # # names(SDR_SL_fit)
-        # # SDR_SL_fit[["foldFits"]][[1]]
-        # # SLpred <- predict(SDR_SL_fit, as.matrix(pred_dat))
-
-
-
+        ## SS SuperLearner preds, list of nrow(pred_dat) preds for each fold (including extrapolating preds for new obs)
+        ## This needs to use offsets for newdata as well.
+        ## If there were prior targeting steps, there will be split-specific offsets, which then need to be utilized in this call.
+        split_preds_Qk_hat <- origami::cross_validate(cv_split_preds,
+                                                      folds,
+                                                      data = pred_dat,
+                                                      fits_Qk = SDR_SL_fit,
+                                                      split_preds_Qk_hat = self$split_preds_Qk_hat,
+                                                      .combine = FALSE)
+        self$split_preds_Qk_hat <- split_preds_Qk_hat
       }
+      # print("MSE of previous Qk_hat vs. upated Qk_hat: " %+% mean((Qk_hat_star_all-Qk_hat_all)^2))
 
-      print("MSE of previous Qk_hat vs. upated Qk_hat: " %+% mean((Qk_hat_star_all-Qk_hat_all)^2))
-
-      # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:
-      data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_star_all]
-
-      ## ************ NOTE ************
+      ## ************** NOTE ******************
       ##  The shift below will be wrong when we get to the very last iteration of the very last update (LTMLE)
       ##  There will be nowhere to write a new update, since we will be at a row t==0.
       ##  This happens when: (Qk_idx == max_Qk_idx) && (Qk_idx == kprime_idx)
-      ## ************
+      ## **************************************
       ## Set the outcome for the next Q-regression: put the updated Q[k'] in (k'-1)
       ## (kprime_idx == Qk_idx) means that we have reached the final update for current Q[k] that we were targeting,
       ## Save this update in row [k'-1] = [k-1], that's where it will be picked up by next loop (or initial est step for Q[k-1]).
@@ -175,6 +254,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         if (gvars$verbose) cat("reached the last targeting iteration of the very last initial regression. Saving the final targeted prediction for E[Y_d]")
         private$probAeqa <- Qk_hat_star_all
       } else {
+        # data$dat.sVar[self$subset_idx, ]
         data$dat.sVar[(self$subset_idx - 1), "Qkplus1" := Qk_hat_star_all]
       }
       invisible(self)
