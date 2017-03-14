@@ -180,7 +180,8 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
 
-        print("TMLE intercept update: "); print(TMLE.fit[["fit"]][["coef"]])
+        # browser()
+        print("TMLE intercept update: " %+% TMLE.fit[["fit"]][["object"]][["coef"]])
         # Qk_hat_star-Qk_hat
         # data.frame(cbind(Qk_hat_star, Qk_hat, diff = Qk_hat_star-Qk_hat))
         # browser()
@@ -218,10 +219,13 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
 
         SL.library <- c("SDR.updater.NULL",
-                        "SDR.updater.glmTMLE",
-                        "SDR.updater.glm",
+                        # "SDR.updater.glmTMLE",
+                        # "SDR.updater.glm",
                         "SDR.updater.xgb",
-                        "SDR.updater.xgb.delta1", "SDR.updater.xgb.delta2", "SDR.updater.xgb.delta3", "SDR.updater.xgb.delta4")
+                        "SDR.updater.xgb.delta1",
+                        "SDR.updater.xgb.delta2",
+                        "SDR.updater.xgb.delta3",
+                        "SDR.updater.xgb.delta4")
         # , "SDR.updater.speedglmTMLE"
 
         library("abind")
