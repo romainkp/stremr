@@ -178,7 +178,6 @@ SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
   # cat("...running SDR updater xgboost w/ following params: \n "); str(params)
   offset <- X[, "offset"]
   X <- X[, colnames(X)[!colnames(X) %in% "offset"], drop = FALSE]
-  # browser()
 
   xgb_dat <- xgboost::xgb.DMatrix(as.matrix(X), label = Y)
   xgboost::setinfo(xgb_dat, "base_margin", offset)
@@ -187,7 +186,7 @@ SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["nrounds"]] <- NULL
 
   if (is.null(nrounds)) {
-    # cat("...running cv to figure out best nrounds for epsilon target...\n")
+    cat("...running cv to figure out best nrounds for epsilon target...\n")
     mfitcv <- xgboost::xgb.cv(params = params, data = xgb_dat, nrounds = 100, nfold = 5, early_stopping_rounds = 10, verbose = 0)
     nrounds <- mfitcv$best_iteration
     # cat("...best nrounds: ", nrounds, "\n")

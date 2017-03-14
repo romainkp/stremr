@@ -85,7 +85,7 @@ split_cv_SL <- function(fold, Y, X,
   ## ADD NEW SS-OFFSETS (ONLY WHEN AVAILABLE)
   ## NOTE THAT THESE NEED TO BE CONVERTED TO LOGIT-LINEAR SCALE!!!!
   if (!is.null(split_preds_Qk_hat)) {
-    X[, "offset"] <- as.numeric(split_preds_Qk_hat[["splitQk"]][[v]][subset_Qk_hat, ])
+    X[, "offset"] <- qlogis(as.numeric(split_preds_Qk_hat[["splitQk"]][[v]][subset_Qk_hat, ]))
   }
 
   origami::cv_SL(fold, Y, X, SL.library, family, obsWeights, id, ...)
@@ -180,7 +180,9 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
 
+        print("TMLE intercept update: "); print(TMLE.fit[["fit"]][["coef"]])
         # Qk_hat_star-Qk_hat
+        # data.frame(cbind(Qk_hat_star, Qk_hat, diff = Qk_hat_star-Qk_hat))
         # browser()
 
         ## This will USE validation (out-of-sample) Qkplus1 & Qk_hat for the EIC estimates:
@@ -207,6 +209,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         obs_dat[, ("offset") := qlogis(Qk_hat)]
         folds <- data$make_origami_fold_from_column(use_subset_idx + Hk_row_offset)
 
+        # data$dat.sVar[self$subset_idx + Hk_row_offset,]
         pred_dat <- data$dat.sVar[self$subset_idx + Hk_row_offset, epsilon_predvars, with = FALSE]
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         pred_dat[, ("offset") := qlogis(Qk_hat_all)]
@@ -215,21 +218,21 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
 
         SL.library <- c("SDR.updater.NULL",
-                        # "SDR.updater.glmTMLE",
-                        # "SDR.updater.glm",
+                        "SDR.updater.glmTMLE",
+                        "SDR.updater.glm",
                         "SDR.updater.xgb",
                         "SDR.updater.xgb.delta1", "SDR.updater.xgb.delta2", "SDR.updater.xgb.delta3", "SDR.updater.xgb.delta4")
         # , "SDR.updater.speedglmTMLE"
 
         library("abind")
 
-        # SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
-        #                                             Y = Qkplus1,
-        #                                             X = as.matrix(obs_dat),
-        #                                             family = quasibinomial(),
-        #                                             obsWeights = wts,
-        #                                             SL.library = SL.library,
-        #                                             params = self$reg$SDR_model)
+        # SDR_SL_fit_simple <- origami::origami_SuperLearner(folds = folds,
+        #                                                    Y = Qkplus1,
+        #                                                    X = as.matrix(obs_dat),
+        #                                                    family = quasibinomial(),
+        #                                                    obsWeights = wts,
+        #                                                    SL.library = SL.library,
+        #                                                    params = self$reg$SDR_model)
 
         SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
                                                     Y = Qkplus1,
@@ -245,8 +248,16 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
                                                     params = self$reg$SDR_model,
                                                     cvfun = split_cv_SL)
 
-        print("SDR_SL_fit: "); print(SDR_SL_fit)
         self$SDR_SL_fit <- SDR_SL_fit
+
+        # print("Simple SDR_SL_fit: "); print(SDR_SL_fit_simple)
+        print("Split CV SDR_SL_fit: "); print(SDR_SL_fit)
+
+        # names(SDR_SL_fit)
+        # SDR_SL_fit_simple[["Z"]]
+        # SDR_SL_fit[["Z"]]
+        # SDR_SL_fit[["valY"]]
+        # SDR_SL_fit[["valWeights"]]
 
         ## Slit-Specitic SuperLearner preds
         ## list of nrow(pred_dat) preds for each fold (including extrapolating preds for new obs)
@@ -271,14 +282,14 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
         ## Extract prediction for new data for regular SuperLearner (not split-specific, SL fit used ALL data)
         # Qk_hat_star_all_2 <- as.numeric(predict(SDR_SL_fit, as.matrix(pred_dat))[["pred"]])
-        # cbind(Qk_hat_star_all, Qk_hat_star_all_2, Qk_hat_star_all - Qk_hat_star_all_2)
+
         # mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
         # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-
+        # cbind(Qk_hat_star_all, Qk_hat_star_all_2, Qk_hat_star_all - Qk_hat_star_all_2)
         # browser()
-        # cbind(data$dat.sVar[self$subset_idx, "Qk_hat"], Qk_hat_star_all, Qk_hat_star_all_2)
+        # data_compare_fits <- data.frame(cbind(data$dat.sVar[self$subset_idx, "Qk_hat"], v_Qk_hat_star = Qk_hat_star_all, SL_Qk_hat_star = Qk_hat_star_all_2))
       }
 
       # Over-write the old predictions with new model updates as Qk_hat[k'] in row [k']:
