@@ -219,13 +219,14 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
 
         SL.library <- c("SDR.updater.NULL",
-                        # "SDR.updater.glmTMLE",
+                        "SDR.updater.glmTMLE"
                         # "SDR.updater.glm",
-                        "SDR.updater.xgb",
-                        "SDR.updater.xgb.delta1",
-                        "SDR.updater.xgb.delta2",
-                        "SDR.updater.xgb.delta3",
-                        "SDR.updater.xgb.delta4")
+                        # "SDR.updater.xgb",
+                        # "SDR.updater.xgb.delta1",
+                        # "SDR.updater.xgb.delta2",
+                        # "SDR.updater.xgb.delta3",
+                        # "SDR.updater.xgb.delta4"
+                        )
         # , "SDR.updater.speedglmTMLE"
 
         library("abind")
