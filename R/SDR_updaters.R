@@ -100,6 +100,7 @@ SDR.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
 SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running glm TMLE update with intercept-only GLM...\n")
   offset <- X[, "offset"]
+  offset[offset == Inf] <- 30
   fit.glm <- stats::glm.fit(x = matrix(1L, ncol = 1, nrow = length(Y)),
                          y = Y,
                          weights = obsWeights,
@@ -119,6 +120,7 @@ SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
 SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running speedglm TMLE update with intercept-only GLM...\n")
   offset <- X[, "offset"]
+  offset[offset == Inf] <- 30
   fit.glm <- speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
                                      y = Y, weights = obsWeights, offset = offset,
                                      # method=c('eigen','Cholesky','qr'),

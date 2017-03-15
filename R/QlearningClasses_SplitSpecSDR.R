@@ -191,6 +191,10 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
         ## This will use validation (out-of-sample) Qkplus1 & Qk_hat (offset) for the TMLE updates
         TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        # if (inherits(TMLE.fit, "try-error")) {
+        #   browser()
+        # }
+
         # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
