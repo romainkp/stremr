@@ -572,6 +572,10 @@ fitSeqGcomp_onet <- function(OData,
   # ------------------------------------------------------------------------------------------------
   OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
   OData$dat.sVar[, "Qkplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
+  if ("Qk_hat" %in% names(OData$dat.sVar)) {
+    OData$dat.sVar[, "Qk_hat" := NULL]
+  }
+
 
   # OData$def.types.sVar() ## was a bottleneck, replaced with below:
   OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")

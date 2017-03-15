@@ -202,6 +202,10 @@ fitSeqDR_onet <- function(OData,
   # ------------------------------------------------------------------------------------------------
   OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
   OData$dat.sVar[, "Qkplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
+  if ("Qk_hat" %in% names(OData$dat.sVar)) {
+    OData$dat.sVar[, "Qk_hat" := NULL]
+  }
+
   ## for SDR adding another node:
   # OData$dat.sVar[, "Qstarkprime" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
 

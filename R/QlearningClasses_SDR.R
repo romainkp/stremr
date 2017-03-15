@@ -29,7 +29,6 @@
 ## * (DONE) Add newly censored obs and newly non-followers to targeted predictions.
 ## **********************************************************************
 
-
 ## ---------------------------------------------------------------------
 ## R6 class for fitting SDR procedure
 ## Inherits from \code{GenericModel}.
@@ -52,17 +51,28 @@ SDRModel <- R6Class(classname = "SDRModel",
         ## If (k_i+1) doesn't exist, it means that we have reached the initial regression E(Q.kplus1|A,W).
         ## This requires the last targeting step, which is different from the rest.
         ## The last targeting step (when k_i==max_Qk_idx) should be the usual TMLE update (univariate logistic model updates).
-        if (k_i == max_Qk_idx) {
-          QModel_h_k <- NULL
-        } else {
-          QModel_h_k <- private$PsAsW.models[[k_i + 1]]
-        }
 
-        for (i in (1:k_i)) {
-          if (i==1L) {
+
+        ## 1. Previous SDR updating scheme, loop the updates over different Q[i], wrt to the same covariate space of h[k_i-1] (object private$PsAsW.models[[k_i + 1]])
+        # if (k_i == max_Qk_idx) {
+        #   QModel_h_k <- NULL
+        # } else {
+        #   QModel_h_k <- private$PsAsW.models[[k_i + 1]]
+        # }
+        # for (i in (1:k_i)) {
+
+        ## 2. New SDR targeting scheme, loop by updating the same Q[k+i], wrt to different covariate spaces of h[i]
+        for (i in (k_i:max_Qk_idx)) {
+          if (i == max_Qk_idx) {
+            QModel_h_k <- NULL
+          } else {
+            QModel_h_k <- private$PsAsW.models[[i + 1]]
+          }
+
+          if (k_i==1L) {
             QModel_Qkplus1 <- NULL
           } else {
-            QModel_Qkplus1 <- private$PsAsW.models[[i-1]]
+            QModel_Qkplus1 <- private$PsAsW.models[[k_i-1]]
           }
           ## All the targeting is for one functional with reg index (Qk_idx + 1) (since time-points and loops are reversed)
           ## Thus, all the targeting steps in this loop are functions of the same covariate space, located in row shift:
@@ -81,12 +91,22 @@ SDRModel <- R6Class(classname = "SDRModel",
           ## Qk_idx = 3, kprime_idx = 2 -> Hk_row_offset = -2
           ## Qk_idx = 3, kprime_idx = 3 -> Hk_row_offset = -1
 
+          ## 1. Previous SDR targeting scheme:
           ## evaluate the weights for this targeting step:
-          private$PsAsW.models[[i]]$eval_weights_k(data = data, ...)
+          # private$PsAsW.models[[i]]$eval_weights_k(data = data, ...)
+          # private$PsAsW.models[[i]]$fit_epsilon_Q_k(data = data,
+          #                                           kprime_idx = i,
+          #                                           Qk_idx = k_i,
+          #                                           max_Qk_idx = max_Qk_idx,
+          #                                           QModel_h_k = QModel_h_k,
+          #                                           QModel_Qkplus1 = QModel_Qkplus1,
+          #                                           ...)
 
-          private$PsAsW.models[[i]]$fit_epsilon_Q_k(data = data,
-                                                    kprime_idx = i,
-                                                    Qk_idx = k_i,
+          ## 2. New SDR targeting scheme. Always updating the very same Q[k_i] we just fit as initial
+          private$PsAsW.models[[k_i]]$eval_weights_k(data = data, t_period = private$PsAsW.models[[i]]$t_period, ...)
+          private$PsAsW.models[[k_i]]$fit_epsilon_Q_k(data = data,
+                                                    kprime_idx = k_i,
+                                                    Qk_idx = i,
                                                     max_Qk_idx = max_Qk_idx,
                                                     QModel_h_k = QModel_h_k,
                                                     QModel_Qkplus1 = QModel_Qkplus1,
@@ -124,9 +144,15 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
     ## * That is, the product of the cumulative weights will be taken starting with k=t all the way up to end of follow-up.
     ## * The way the weights need to be evaluated for each k is exactly like in getIPWeights(),
     ##    ****** except that all the weights for time-points < tmin are set to constant 1.
-    eval_weights_k = function(data, ...) {
+    eval_weights_k = function(data, t_period = NULL, ...) {
       call_list <- data$IPWeights_info
-      call_list[["tmin"]] <- self$t_period
+
+      if (is.null(t_period)) {
+        call_list[["tmin"]] <- self$t_period
+      } else {
+        call_list[["tmin"]] <- t_period
+      }
+
       call_list[["OData"]] <- data
       if (gvars$verbose == 2) message("...evaluating IPWeights for SDR...")
       IPWeights <- do.call("getIPWeights", call_list)
