@@ -29,6 +29,38 @@
 ## * (DONE) Add newly censored obs and newly non-followers to targeted predictions.
 ## **********************************************************************
 
+## **********************************************************************
+## Weights for SDR
+## **********************************************************************
+## *THE VALUE OF the current time-point is saved in self$t_period.
+## * When this is passed as ignore_tmin to getIPWeights, the weights are evaluated correctly for current k.
+## * That is, the product of the cumulative weights will be taken starting with k=t all the way up to end of follow-up.
+## * The way the weights need to be evaluated for each k is exactly like in getIPWeights(),
+##    ****** except that all the weights for time-points < ignore_tmin are set to constant 1.
+eval_weights_k = function(data, ignore_tmin = NULL, ignore_max = NULL, reverse_wt_prod = FALSE, ...) {
+  call_list <- data$IPWeights_info
+
+  if (!is.null(ignore_tmin)) {
+    call_list[["ignore_tmin"]] <- ignore_tmin
+  }
+  # else {
+  #   call_list[["ignore_tmin"]] <- self$t_period
+  # }
+
+  if (!is.null(ignore_max)) {
+    call_list[["ignore_max"]] <- ignore_max
+  }
+
+  call_list[["reverse_wt_prod"]] <- reverse_wt_prod
+
+  call_list[["OData"]] <- data
+  if (gvars$verbose == 2) message("...evaluating IPWeights for SDR...")
+
+  IPWeights <- do.call("getIPWeights", call_list)
+  data$IPwts_by_regimen <- IPWeights
+  return(invisible(IPWeights))
+}
+
 ## ---------------------------------------------------------------------
 ## R6 class for fitting SDR procedure
 ## Inherits from \code{GenericModel}.
@@ -93,7 +125,8 @@ SDRModel <- R6Class(classname = "SDRModel",
 
           ## 1. Previous SDR targeting scheme:
           ## evaluate the weights for this targeting step:
-          # private$PsAsW.models[[i]]$eval_weights_k(data = data, ...)
+          # #### private$PsAsW.models[[i]]$eval_weights_k(data = data, , ignore_tmin = private$PsAsW.models[[i]]$t_period, ...)
+          # wts <- eval_weights_k(data = data, ignore_tmin = private$PsAsW.models[[i]]$t_period, ...)
           # private$PsAsW.models[[i]]$fit_epsilon_Q_k(data = data,
           #                                           kprime_idx = i,
           #                                           Qk_idx = k_i,
@@ -102,15 +135,20 @@ SDRModel <- R6Class(classname = "SDRModel",
           #                                           QModel_Qkplus1 = QModel_Qkplus1,
           #                                           ...)
 
+
           ## 2. New SDR targeting scheme. Always updating the very same Q[k_i] we just fit as initial
-          private$PsAsW.models[[k_i]]$eval_weights_k(data = data, t_period = private$PsAsW.models[[i]]$t_period, ...)
+          ## ******** Q: NEED TO VERIFY ignore_tmin is ACTUALLY SET-UP CORRECTLY ********
+          # private$PsAsW.models[[k_i]]$eval_weights_k(data = data, ignore_tmin = private$PsAsW.models[[i]]$t_period, ...)
+          wts <- eval_weights_k(data = data, ignore_tmin = private$PsAsW.models[[i]]$t_period, ...)
+          ## ********
+
           private$PsAsW.models[[k_i]]$fit_epsilon_Q_k(data = data,
-                                                    kprime_idx = k_i,
-                                                    Qk_idx = i,
-                                                    max_Qk_idx = max_Qk_idx,
-                                                    QModel_h_k = QModel_h_k,
-                                                    QModel_Qkplus1 = QModel_Qkplus1,
-                                                    ...)
+                                                      kprime_idx = k_i,
+                                                      Qk_idx = i,
+                                                      max_Qk_idx = max_Qk_idx,
+                                                      QModel_h_k = QModel_h_k,
+                                                      QModel_Qkplus1 = QModel_Qkplus1,
+                                                      ...)
         }
       }
       invisible(self)
@@ -135,30 +173,6 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
     stratifyQ_by_rule = FALSE,
     Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
     t_period = integer(),
-
-    ## **********************************************************************
-    ## Weights for SDR
-    ## **********************************************************************
-    ## *THE VALUE OF the current time-point is saved in self$t_period.
-    ## * When this is passed as tmin to getIPWeights, the weights are evaluated correctly for current k.
-    ## * That is, the product of the cumulative weights will be taken starting with k=t all the way up to end of follow-up.
-    ## * The way the weights need to be evaluated for each k is exactly like in getIPWeights(),
-    ##    ****** except that all the weights for time-points < tmin are set to constant 1.
-    eval_weights_k = function(data, t_period = NULL, ...) {
-      call_list <- data$IPWeights_info
-
-      if (is.null(t_period)) {
-        call_list[["tmin"]] <- self$t_period
-      } else {
-        call_list[["tmin"]] <- t_period
-      }
-
-      call_list[["OData"]] <- data
-      if (gvars$verbose == 2) message("...evaluating IPWeights for SDR...")
-      IPWeights <- do.call("getIPWeights", call_list)
-      data$IPwts_by_regimen <- IPWeights
-      return(invisible(IPWeights))
-    },
 
     ## This update is for current time-point k' aimed at targeting initial Q[k] fit.
     ## Outcome: The same outcomes that were used to fit this initial Q[k']

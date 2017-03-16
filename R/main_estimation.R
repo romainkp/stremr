@@ -457,9 +457,14 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' @param rule_name Optional name for the treatment/monitoring regimen.
 #' @param tmax Maximum value of the follow-up period.
 #' All person-time observations above this value will be excluded from the output weights dataset.
-#' @param tmin (ADVANCED FEATURE) Minimum value of the follow-up period to start accumulative the weights over time.
-#' All of the observations with t < tmin will be removed from the data PRIOR to the evaluation of the cumulative weights.
-#' This is used by SDR routines.
+#' @param ignore_tmin (ADVANCED FEATURE) Minimum value of the follow-up period at which the IP-weights should start accumulating over time.
+#' All IP-weights for time-points t < ignore_tmin will be set to a constant 1.
+#' This will have the effect of completely ignoring all weight contributions that occur before ignore_tmin.
+#' @param ignore_tmax (ADVANCED FEATURE) Maximum value of the follow-up period to start accumulative the weights over time.
+#' All of the time-specific IP-weights with t < ignore_tmin will be set to constant 1 PRIOR to the evaluation of the cumulative weights.
+#' This will have the effect of completely ignoring all the IP weight contributions up to and including the time-point ignore_tmin.
+#' @param reverse_wt_prod Set to TRUE to take the product of the cumulative weights in reverse time-ordering. That is, the
+#' cumulative product will be evaluated by starting from the highest follow-up time point (time variable value).
 #' @param holdout Obtain the weights based on out-of-sample (holdout / validation set) predictions of propensity scores.
 #' This is useful for running CV-TMLE or evaluating the quality of the model fits based on validation sets.
 #' @param eval_stabP Evaluate the additional weight stabilization factor for each time-point.
@@ -477,7 +482,9 @@ getIPWeights <- function(OData,
                          useonly_t_MONITOR = NULL,
                          rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
                          tmax = NULL,
-                         tmin = NULL,
+                         ignore_tmin = NULL,
+                         ignore_tmax = NULL,
+                         reverse_wt_prod = FALSE,
                          holdout = FALSE,
                          eval_stabP = TRUE,
                          trunc_weights = Inf
@@ -534,11 +541,17 @@ getIPWeights <- function(OData,
   ## Weights by time and cumulative weights by time:
   wts.DT[,"wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)]
 
-  ## When tmin is specified set the wt.by.t to 1 for all t values that occur prior to time-points.
-  ## NOTE: This is not the most efficient way to evaluate forward product for tmin, but it preserves the indexing
+  ## When ignore_tmin is specified set the wt.by.t to 1 for all t values that occur prior to time-points.
+  ## NOTE: This is not the most efficient way to evaluate forward product for ignore_tmin, but it preserves the indexing
   ## of the original database, making it very easy to look-up correct weights for each observation row-index from the main dataset.
-  if (!is.null(tmin)) wts.DT[eval(as.name(nodes$tnode)) < tmin, ("wt.by.t") := 1]
-  wts.DT[,"cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+  if (!is.null(ignore_tmin)) wts.DT[eval(as.name(nodes$tnode)) < ignore_tmin, ("wt.by.t") := 1]
+  if (!is.null(ignore_tmax)) wts.DT[eval(as.name(nodes$tnode)) > ignore_tmax, ("wt.by.t") := 1]
+  if (reverse_wt_prod) {
+    wts.DT[,"cum.IPAW" := rev(cumprod(rev(wt.by.t))), by = eval(nodes$IDnode)]
+  } else {
+    wts.DT[,"cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+  }
+
   if (trunc_weights < Inf) wts.DT[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
 
   ## -------------------------------------------------------------------------------------------
@@ -567,7 +580,7 @@ getIPWeights <- function(OData,
     setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
   }
 
-  ## remove person time observations with f-up above tmax
+  ## remove person time observations with FUP above tmax
   if (!is.null(tmax)) wts.DT <- wts.DT[eval(as.name(nodes$tnode)) <= tmax, ]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
 

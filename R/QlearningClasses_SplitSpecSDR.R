@@ -140,7 +140,6 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
       # data$dat.sVar[use_subset_idx, Qk_hat]
       # data$IPwts_by_regimen[use_subset_idx,]
       # data$IPwts_by_regimen[c(use_subset_idx-1, use_subset_idx),]
-
       wts <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
       ## 2a. Outcome: **TARGETED** prediction of the previous step k'+1.
       Qkplus1 <- data$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]

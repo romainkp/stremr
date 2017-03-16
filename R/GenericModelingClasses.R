@@ -24,6 +24,7 @@ newsummarymodel.binary <- function(regClass, reg, ...) BinaryOutcomeModel$new(re
 newsummarymodel.Qlearn <- function(regClass, reg, ...) QlearnModel$new(reg = reg, ...)
 newsummarymodel.SDRQlearn <- function(regClass, reg, ...) SDRQlearnModel$new(reg = reg, ...)
 newsummarymodel.SplitCVSDRQlearn <- function(regClass, reg, ...) SplitCVSDRQlearnModel$new(reg = reg, ...)
+newsummarymodel.SDRtransformQModel <- function(regClass, reg, ...) SDRtransformQModel$new(reg = reg, ...)
 
 # For evaluating propensity scores under g.star (counterfactual probabilities)
 newsummarymodel.deterministic <- function(regClass, reg, ...) DeterministicBinaryOutcomeModel$new(reg = reg, ...)

@@ -7,7 +7,8 @@
 getIPWeights(OData, intervened_TRT = NULL, intervened_MONITOR = NULL,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
   rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-  tmax = NULL, tmin = NULL, holdout = FALSE, eval_stabP = TRUE,
+  tmax = NULL, ignore_tmin = NULL, ignore_tmax = NULL,
+  reverse_wt_prod = FALSE, holdout = FALSE, eval_stabP = TRUE,
   trunc_weights = Inf)
 }
 \arguments{
@@ -35,9 +36,16 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 \item{tmax}{Maximum value of the follow-up period.
 All person-time observations above this value will be excluded from the output weights dataset.}
 
-\item{tmin}{(ADVANCED FEATURE) Minimum value of the follow-up period to start accumulative the weights over time.
-All of the observations with t < tmin will be removed from the data PRIOR to the evaluation of the cumulative weights.
-This is used by SDR routines.}
+\item{ignore_tmin}{(ADVANCED FEATURE) Minimum value of the follow-up period at which the IP-weights should start accumulating over time.
+All IP-weights for time-points t < ignore_tmin will be set to a constant 1.
+This will have the effect of completely ignoring all weight contributions that occur before ignore_tmin.}
+
+\item{ignore_tmax}{(ADVANCED FEATURE) Maximum value of the follow-up period to start accumulative the weights over time.
+All of the time-specific IP-weights with t < ignore_tmin will be set to constant 1 PRIOR to the evaluation of the cumulative weights.
+This will have the effect of completely ignoring all the IP weight contributions up to and including the time-point ignore_tmin.}
+
+\item{reverse_wt_prod}{Set to TRUE to take the product of the cumulative weights in reverse time-ordering. That is, the
+cumulative product will be evaluated by starting from the highest follow-up time point (time variable value).}
 
 \item{holdout}{Obtain the weights based on out-of-sample (holdout / validation set) predictions of propensity scores.
 This is useful for running CV-TMLE or evaluating the quality of the model fits based on validation sets.}

@@ -168,6 +168,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       data$dat.sVar[self$subset_idx, ]
       data$dat.sVar[self$subset_idx, fold_ID]
 
+      # browser()
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
       self$is.fitted <- TRUE
@@ -216,7 +217,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
 
       iQ_all <- probA1
+
       ## print("initial mean(Qkplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
+      # browser()
 
       ## **********************************************************************
       ## Iteration step for G-COMP

@@ -201,6 +201,7 @@ fitSeqDR_onet <- function(OData,
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)
   # ------------------------------------------------------------------------------------------------
   OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
+  OData$dat.sVar[, ("EIC_i_t_sum") := 0.0] # set the initial rolling EIC sum
   OData$dat.sVar[, "Qkplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
   if ("Qk_hat" %in% names(OData$dat.sVar)) {
     OData$dat.sVar[, "Qk_hat" := NULL]
@@ -238,7 +239,8 @@ fitSeqDR_onet <- function(OData,
                                    stratifyQ_by_rule = stratifyQ_by_rule,
                                    outvar = "Qkplus1",
                                    predvars = regform$predvars,
-                                   outvar.class = list("SplitCVSDRQlearn"), ## Set this automatically to "SplitCVSDRQlearn" when Running SDR, otherwise "Qlearn"
+                                   # outvar.class = list("SplitCVSDRQlearn"), ## Set this automatically to "SplitCVSDRQlearn" when Running SDR, otherwise "Qlearn"
+                                   outvar.class = list("SDRtransformQModel"), ## Set this automatically to "SplitCVSDRQlearn" when Running SDR, otherwise "Qlearn"
                                    subset_vars = list("Qkplus1"),
                                    subset_exprs = all_Q_stratify[i],
                                    model_contrl = models,
@@ -256,7 +258,8 @@ fitSeqDR_onet <- function(OData,
 
   ## TO DO: Automatically call the right constructor below depending on running SDR or regular TMLE
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
-  Qlearn.fit <- SDRModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  # Qlearn.fit <- SDRModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  Qlearn.fit <- SDRtransform$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
   # Qlearn.fit$getPsAsW.models()[[1]]
   Qlearn.fit$fit(data = OData)
   OData$Qlearn.fit <- Qlearn.fit
