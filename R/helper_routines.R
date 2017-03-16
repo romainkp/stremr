@@ -254,8 +254,14 @@ defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = 'N', tsinceNis1
   # N(t-1)=1 indicates that I(t) is observed. Note that the very first I(t) is assumed to be always observed.
   DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID.expression), .SDcols = (imp.I)]
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
+
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
-  DT[, ("indx") := cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID.expression)]
+  DT[, ("indx") := cumsum(c(FALSE, (get(MONITOR.name)!=0L)[-.N])), by = eval(ID.expression)]
+  ## This line had a bug, since vec=cumsum(0, MONITOR) evaluates to length [.N+1].
+  ## By applying vec[-.N] we remove the second to last observation, rather than just the last observation in vec
+  # DT[, ("indx") := cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID.expression)]
+
+  ## Evaluate the number of time-points that have passed since last visit:
   DT[, (tsinceNis1) := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
   DT[, ("indx") := NULL]
