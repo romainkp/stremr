@@ -260,12 +260,18 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           update.Qstar.coef <- 0
         }
 
+        # browser()
+        # EIC_i_t_calc_unadjusted <- wts_TMLE * (Qkplus1 - Qk_hat)
+        # print("EIC_i_t_calc_unadjusted"); print(mean(EIC_i_t_calc_unadjusted))
+
         ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         Qk_hat <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
         iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
 
         EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
+        # print("EIC_i_t_calc_adjusted"); print(mean(EIC_i_t_calc))
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
+
       }
 
       ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))

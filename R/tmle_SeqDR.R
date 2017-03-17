@@ -202,6 +202,7 @@ fitSeqDR_onet <- function(OData,
   # ------------------------------------------------------------------------------------------------
   OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
   OData$dat.sVar[, ("EIC_i_t_sum") := 0.0] # set the initial rolling EIC sum
+  OData$dat.sVar[, "Qkplus1.protected" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
   OData$dat.sVar[, "Qkplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
   if ("Qk_hat" %in% names(OData$dat.sVar)) {
     OData$dat.sVar[, "Qk_hat" := NULL]
@@ -212,8 +213,8 @@ fitSeqDR_onet <- function(OData,
 
   # OData$def.types.sVar() ## was a bottleneck, replaced with below:
   OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
+  OData$set.sVar.type(name.sVar = "Qkplus1.protected", new.type = "binary")
   # OData$set.sVar.type(name.sVar = "Qstarkprime", new.type = "binary")
-
   OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
 
   # ------------------------------------------------------------------------------------------------
@@ -260,7 +261,7 @@ fitSeqDR_onet <- function(OData,
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
   # Qlearn.fit <- SDRModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
   Qlearn.fit <- SDRtransform$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-  # Qlearn.fit$getPsAsW.models()[[1]]
+
   Qlearn.fit$fit(data = OData)
   OData$Qlearn.fit <- Qlearn.fit
 
