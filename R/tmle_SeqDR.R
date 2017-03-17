@@ -123,13 +123,8 @@ If this error cannot be fixed, consider creating a replicable example and filing
   }
 
   resultDT <- rbindlist(res_byt)
-  ## to extract the EIC estimates by time point (no longer returning those separately, only as part of the estimates data.table)
-  # ICs_byt <- resultDT[["IC.St"]]
-  # IC.Var.S.d <- t(do.call("cbind", ICs_byt))
-
   resultDT <- cbind(est_name = est_name, resultDT)
   resultDT[, "rule.name" := eval(as.character(rule_name))]
-
   attr(resultDT, "estimator_short") <- est_name
   attr(resultDT, "estimator_long") <- est_name
   attr(resultDT, "nID") <- OData$nuniqueIDs
@@ -138,18 +133,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
   attr(resultDT, "stratify_by_last") <- stratify_by_last
   attr(resultDT, "trunc_weights") <- trunc_weights
   attr(resultDT, "time") <- resultDT[["time"]]
-
-  res_out <- list(
-              # est_name = est_name,
-              # periods = tvals,
-              # IC.Var.S.d = list(IC.S = IC.Var.S.d),
-              # nID = OData$nuniqueIDs,
-              # wts_data = { if ((TMLE || iterTMLE) && return_wts) { IPWeights } else { NULL } },
-              # rule_name = rule_name,
-              # trunc_weights = trunc_weights
-              estimates = resultDT
-              )
-
+  res_out <- list(estimates = resultDT)
   attr(res_out, "estimator_short") <- est_name
   attr(res_out, "estimator_long") <- est_name
   return(res_out)
@@ -208,13 +192,9 @@ fitSeqDR_onet <- function(OData,
     OData$dat.sVar[, "Qk_hat" := NULL]
   }
 
-  ## for SDR adding another node:
-  # OData$dat.sVar[, "Qstarkprime" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
-
   # OData$def.types.sVar() ## was a bottleneck, replaced with below:
   OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
   OData$set.sVar.type(name.sVar = "Qkplus1.protected", new.type = "binary")
-  # OData$set.sVar.type(name.sVar = "Qstarkprime", new.type = "binary")
   OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
 
   # ------------------------------------------------------------------------------------------------
