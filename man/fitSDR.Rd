@@ -12,7 +12,8 @@ fitSDR(OData, tvals, Qforms, intervened_TRT = NULL,
   fold_column = stremrOptions("fold_column"), stratifyQ_by_rule = FALSE,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, CVTMLE = FALSE,
   trunc_weights = 10^6, parallel = FALSE, return_fW = FALSE,
-  use_DR_transform = FALSE, verbose = getOption("stremr.verbose"), ...)
+  use_DR_transform = FALSE, stabilize = FALSE,
+  verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -73,6 +74,10 @@ requires a previously defined parallel back-end cluster)}
 \item{return_fW}{...}
 
 \item{use_DR_transform}{...}
+
+\item{stabilize}{Only applies when \code{use_DR_transform=TRUE}. Set this argument to \code{TRUE} to stabilize the weights by the
+empirical conditional probability of having followed the rule at time-point \code{t}, given the subject has followed the rule all
+the way up to time-point \code{t}.}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 

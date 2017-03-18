@@ -51,6 +51,9 @@
 #' requires a previously defined parallel back-end cluster)
 #' @param return_fW ...
 #' @param use_DR_transform ...
+#' @param stabilize Only applies when \code{use_DR_transform=TRUE}. Set this argument to \code{TRUE} to stabilize the weights by the
+#' empirical conditional probability of having followed the rule at time-point \code{t}, given the subject has followed the rule all
+#' the way up to time-point \code{t}.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -76,6 +79,7 @@ fitSDR <- function(OData,
                     parallel = FALSE,
                     return_fW = FALSE,
                     use_DR_transform = FALSE,
+                    stabilize = FALSE,
                     verbose = getOption("stremr.verbose"), ...) {
 
   stratify_by_last  <- TRUE ## if stratifying we are always stratifying by last treatment only
@@ -117,7 +121,7 @@ fitSDR <- function(OData,
          rule_name = rule_name,
          trunc_weights = trunc_weights,
          holdout = CVTMLE,
-         eval_stabP = TRUE)
+         eval_stabP = stabilize)
 
   # ------------------------------------------------------------------------------------------
   # Create a back-up of the observed input gstar nodes (created by user in input data):
@@ -154,7 +158,7 @@ fitSDR <- function(OData,
       '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
-        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, verbose = verbose)
+        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -163,7 +167,7 @@ fitSDR <- function(OData,
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
         cat("Estimating parameter E[Y_d(t)] for t = " %+% t_period, "\n")
-        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, verbose = verbose)
+        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -210,6 +214,7 @@ fitSDR_onet <- function(OData,
                         models,
                         return_fW = FALSE,
                         use_DR_transform = FALSE,
+                        stabilize = FALSE,
                         verbose = getOption("stremr.verbose"),
                         ...) {
   gvars$verbose <- verbose
@@ -272,6 +277,7 @@ fitSDR_onet <- function(OData,
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
     reg <- RegressionClassSDR$new(SDR_model = SDR_model,
+                                  stabilize = stabilize,
                                   Qreg_counter = Qreg_idx[i],
                                    all_Qregs_indx = Qreg_idx,
                                    t_period = Qperiods[i],

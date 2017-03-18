@@ -23,7 +23,6 @@ SDRtransform <- R6Class(classname = "SDRtransform",
                                                     k_i = k_i,
                                                     i = i,
                                                     max_Qk_idx = max_Qk_idx,
-                                                    SDR_term_k_cum = SDR_term_k_cum,
                                                     ...)
             SDR_term_k_cum <- SDR_term_k_cum + SDR_term_k
         }
@@ -41,9 +40,6 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
   portable = TRUE,
   class = TRUE,
   public = list(
-    split_preds_Qk_hat = NULL,
-    SDR_SL_fit = NULL,
-
     ## SDR tranform learner
     ## Transform the most recent fit of Q[k] (Qk_hat) into DR outcome (scaled by the reverse cumulative product of the weights)
     ## Move that outcome to next regression step (subset_idx-1)
@@ -56,7 +52,7 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
 
     ## Outcome: The same outcomes that were used to fit this initial Q[k']
     ## Weights: the product of g's from t=k to current k'
-    transform_Q_k = function(data, k_i, i, max_Qk_idx, SDR_term_k_cum = 0, stabilize = TRUE, ...) {
+    transform_Q_k = function(data, k_i, i, max_Qk_idx, ...) {
       ## use only the observations that participated in fitting of the initial Q_{k'} (current time-point is k')
       use_subset_idx <- self$idx_used_to_fit_initQ
       if (gvars$verbose == 2) {
@@ -69,7 +65,8 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
       ## 1. Weights: defined new column of cumulative weights where cumulative product starts at t = Qk_idx (k), rather than t = 0:
       # wts <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
       wts <- data$IPwts_by_regimen[self$subset_idx, cum.IPAW]
-      # if (stabilize) wts <- wts * data$IPwts_by_regimen[self$subset_idx, cum.stab.P]
+      if (self$reg$stabilize) wts <- wts * data$IPwts_by_regimen[self$subset_idx, cum.stab.P]
+
       ## 2. Outcome: **TARGETED** prediction of the previous step k'+1.
       # Qkplus1.protected <- data$dat.sVar[use_subset_idx, "Qkplus1.protected", with = FALSE][[1]]
       Qkplus1.protected <- data$dat.sVar[self$subset_idx, "Qkplus1.protected", with = FALSE][[1]]
@@ -78,7 +75,7 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
       Qk_hat <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
       ## The cumulative transform sum (making sure we are using Qkplus1 and not Gamma transforms):
       SDR_term_k <- wts * (Qkplus1.protected - Qk_hat)
-      print("mean(SDR_term_k)"); print(mean(SDR_term_k))
+      # print("mean(SDR_term_k)"); print(mean(SDR_term_k))
 
       # wts_fitted <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
       # Qkplus1.protected_fitted <- data$dat.sVar[use_subset_idx, "Qkplus1.protected", with = FALSE][[1]]
@@ -118,7 +115,7 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
       }
 
       if (i == k_i) {
-        print("mean(Gamma_DR)"); print(mean(Gamma_DR))
+        # print("mean(Gamma_DR)"); print(mean(Gamma_DR))
         return(Gamma_DR)
       } else {
         return(SDR_term_k)

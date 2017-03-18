@@ -26,7 +26,9 @@ the survival hazard. See Details.}
 fit a "crude" MSM that does not adjust for the possible confounding due to non-random
 assignment of the exposure/censoring and monitoring indicators.}
 
-\item{stabilize}{Set to \code{TRUE} for weight stabilization}
+\item{stabilize}{Set to \code{TRUE} to stabilize the weights by the empirical conditional probability
+of having followed the rule at time-point \code{t}, given the subject has followed the rule all the way up to
+time-point \code{t}.}
 
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the
 value in \code{trunc_weights} will be truncated.}

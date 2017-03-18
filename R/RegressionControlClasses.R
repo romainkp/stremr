@@ -350,8 +350,10 @@ RegressionClassSDR <- R6Class("RegressionClassSDR",
   inherit = RegressionClassQlearn,
   public = list(
     SDR_model = NULL,
-    initialize = function(SDR_model, ...) {
+    stabilize = FALSE,
+    initialize = function(SDR_model, stabilize, ...) {
       self$SDR_model <- SDR_model
+      self$stabilize <- stabilize
       super$initialize(...)
     }
   )

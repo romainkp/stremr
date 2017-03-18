@@ -237,7 +237,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
         # SL.library <- c( "SDR.updater.NULL")
         SL.library <- c( "SDR.updater.NULL",
-                      # "SDR.updater.glmTMLE"
+                      "SDR.updater.glmTMLE"
                       "SDR.updater.glm",
                       "SDR.updater.xgb"
                       # "SDR.updater.xgb.delta1",
