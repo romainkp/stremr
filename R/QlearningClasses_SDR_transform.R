@@ -101,8 +101,7 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
       }
 
       if ((self$Qreg_counter > 1) && (i == k_i)) {
-        if (gvars$verbose)
-          cat("updating the outcomes for next regression with DR tranformed outcomes (only among those who were at risk and following treatment)")
+        # if (gvars$verbose) cat("updating the outcomes for next regression with DR tranformed outcomes (only among those who were at risk and following treatment)")
         data$dat.sVar[self$subset_idx - 1, "Qkplus1.protected" := Qkplus1]
         data$dat.sVar[self$subset_idx - 1, "Qkplus1" := Gamma_DR]
 
