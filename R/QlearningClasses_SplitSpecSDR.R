@@ -120,13 +120,13 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
       ## use only the observations that participated in fitting of the initial Q_{k'} (current time-point is k')
       use_subset_idx <- self$idx_used_to_fit_initQ
 
-      # if (gvars$verbose == 2) {
+      if (gvars$verbose == 2) {
         cat("...running SDR targeting loop...\n")
         cat("Total number of time-points to consider: " %+% max_Qk_idx, "\n")
         cat("Current SDR k' (kprime) index = " %+% self$all_Qregs_indx[kprime_idx], "\n")
         cat("Regression Qk_idx order = " %+% self$all_Qregs_indx[Qk_idx], "\n")
         cat("Using the covariate space at t index = " %+% (self$all_Qregs_indx[kprime_idx]+Hk_row_offset), "\n")
-      # }
+      }
 
       # browser()
       # data$dat.sVar[use_subset_idx,]
@@ -143,8 +143,11 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
       wts <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
       ## 2a. Outcome: **TARGETED** prediction of the previous step k'+1.
       Qkplus1 <- data$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
+
+      # data$dat.sVar[use_subset_idx,]
       ## 3. Offset:
       Qk_hat <- data$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
+      # data$dat.sVar[use_subset_idx,]
 
       ## SS-SL will use split-specific offsets (Qhat) from this run and split-specific Y (Qkplus1) from the previous Q init / update (k+1)
       ## ** is.null(QModel_Qkplus1) means that there are no split-specific Y's available (use the actual observed Qkplus1 / Y)
@@ -175,8 +178,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
 
       ## 4A. The model update. Univariate logistic regression (TMLE)
       if (Qk_idx == max_Qk_idx) {
-        # if (gvars$verbose)
-          cat("Last targeting step for E(Y_d) with intercept only TMLE updates\n")
+        if (gvars$verbose) cat("Last targeting step for E(Y_d) with intercept only TMLE updates\n")
         ## Updated model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
 
@@ -188,13 +190,13 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         newX <- as.matrix(qlogis(Qk_hat_all))
         colnames(X) <- colnames(newX) <- "offset"
 
+        # browser()
         ## This will use validation (out-of-sample) Qkplus1 & Qk_hat (offset) for the TMLE updates
-        TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
-        # if (inherits(TMLE.fit, "try-error")) {
-        #   browser()
-        # }
+        TMLE.fit <- try(SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts))
+        if (inherits(TMLE.fit, "try-error")) { # TMLE update w/ speedglm failed
+          TMLE.fit <- try(SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts))
+        }
 
-        # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
 
@@ -236,7 +238,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         # sort(unlist(lapply(folds_pred_dat, "[[", "validation_set")))
 
         # SL.library <- c( "SDR.updater.NULL")
-        SL.library <- c( "SDR.updater.NULL",
+        SL.library <- c("SDR.updater.NULL",
                       "SDR.updater.glmTMLE",
                       "SDR.updater.glm",
                       "SDR.updater.xgb"
@@ -248,7 +250,6 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         # , "SDR.updater.speedglmTMLE"
 
         library("abind")
-
         # SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
         #                                                    Y = Qkplus1,
         #                                                    X = as.matrix(obs_dat),
@@ -256,6 +257,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         #                                                    obsWeights = wts,
         #                                                    SL.library = SL.library,
         #                                                    params = self$reg$SDR_model)
+        # browser()
 
         SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
                                                     Y = Qkplus1,
@@ -317,8 +319,8 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         # print(data$dat.sVar[self$subset_idx + Hk_row_offset,])
         # print(data$dat.sVar[self$subset_idx,])
         # print(var(data$dat.sVar[self$subset_idx + Hk_row_offset,"Qk_hat"]))
-        print("variance of Qk_hat")
-        print(var(data$dat.sVar[self$subset_idx,"Qk_hat"]))
+        # print("variance of Qk_hat")
+        # print(var(data$dat.sVar[self$subset_idx,"Qk_hat"]))
         # mean(data$dat.sVar[self$subset_idx + Hk_row_offset,"Qk_hat"])
 
       }

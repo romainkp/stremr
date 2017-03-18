@@ -703,7 +703,7 @@ survNPMSM <- function(wts_data,
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
 
-  if (gvars$verbose) {print("trunc_weights"); print(trunc_weights)}
+  # if (gvars$verbose) {print("trunc_weights"); print(trunc_weights)}
 
   rule.name <- unique(wts_data[["rule.name"]])
   if (length(rule.name)>1)
