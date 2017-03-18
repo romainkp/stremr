@@ -218,13 +218,14 @@ fitCVTMLE <- function(...) {
 #' @param return_wts Applies only when \code{TMLE = TRUE}.
 #' Return the data.table with subject-specific IP weights as part of the output.
 #' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
+#' @param return_fW ...
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
 #' e.g., \code{family = "binomial"} can be used to specify the model family.
 #' Note that all such arguments must be named.
 #' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
-#' @seealso \code{\link{stremr-package}} for the general overview of the package,
+#' @seealso \code{\link{stremr-package}} for the general overview of the package.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
 fitSeqGcomp <- function(OData,

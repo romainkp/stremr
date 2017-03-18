@@ -1,22 +1,82 @@
-
-fitSeqDR <- function(OData,
-                        tvals,
-                        Qforms,
-                        intervened_TRT = NULL,
-                        intervened_MONITOR = NULL,
-                        rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                        models = NULL,
-                        estimator = stremrOptions("estimator"),
-                        fit_method = stremrOptions("fit_method"),
-                        fold_column = stremrOptions("fold_column"),
-                        stratifyQ_by_rule = FALSE,
-                        useonly_t_TRT = NULL,
-                        useonly_t_MONITOR = NULL,
-                        CVTMLE = FALSE,
-                        trunc_weights = 10^6,
-                        parallel = FALSE,
-                        return_fW = FALSE,
-                        verbose = getOption("stremr.verbose"), ...) {
+# ---------------------------------------------------------------------------------------
+#' Fit the sequential double robust (SDR) procedure, either with DR tranformation or TMLE-like targeting
+#'
+#' Interventions on up to 3 nodes are allowed: \code{CENS}, \code{TRT} and \code{MONITOR}.
+#' Adjustment will be based on the inverse of the propensity score fits for the observed likelihood (g0.C, g0.A, g0.N),
+#' multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
+#' Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
+#' @param OData Input data object created by \code{importData} function.
+#' @param tvals Vector of time-points in the data for which the survival function (and risk) should be estimated
+#' @param Qforms Regression formulas, one formula per Q. Only main-terms are allowed.
+#' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
+#' @param intervened_MONITOR Column name in the input data with probabilities (or indicators) of counterfactual monitoring nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on the monitoring node(s).
+#' @param useonly_t_TRT Use for intervening only on some subset of observation and time-specific treatment nodes.
+#' Should be a character string with a logical expression that defines the subset of intervention observations.
+#' For example, using \code{TRT==0} will intervene only at observations with the value of \code{TRT} being equal to zero.
+#' The expression can contain any variable name that was defined in the input dataset.
+#' Leave as \code{NULL} when intervening on all observations/time-points.
+#' @param useonly_t_MONITOR Same as \code{useonly_t_TRT}, but for monitoring nodes.
+#' @param rule_name Optional name for the treatment/monitoring regimen.
+#' @param stratifyQ_by_rule Set to \code{TRUE} for stratifying the fit of Q (the outcome model) by rule-followers only.
+#' There are two ways to do this stratification. The first option is to use \code{stratify_by_last=TRUE}  (default),
+#' which would fit the outcome model only among the observations that were receiving their supposed
+#' counterfactual treatment at the current time-point (ignoring the past history of treatments leading up to time-point t).
+#' The second option is to set \code{stratify_by_last=FALSE} in which case the outcome model will be fit only
+#' among the observations who followed their counterfactual treatment regimen throughout the entire treatment history up to
+#' current time-point t (rule followers). For the latter option, the observation would be considered a non-follower if
+#' the person's treatment did not match their supposed counterfactual treatment at any time-point up to and including current
+#' time-point t.
+#' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
+#' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
+#' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
+#' Should be a character string in the format 'Package__Algorithm'.
+#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
+#' This argument is ignored when the fitting procedures are already defined via the argument \code{models}.
+#' @param fit_method Model selection approach. Can be either \code{"none"} - no model selection or
+#' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
+# \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
+# where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
+#' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
+#' Use the provided function \code{\link{define_CVfolds}} to
+#' define such folds or define the folds using your own method.
+#' @param stratify_by_last Only used when \code{stratifyQ_by_rule} is \code{TRUE}.
+#' Set to \code{TRUE} for stratification by last time-point, set to \code{FALSE} for stratification by all time-points (rule-followers).
+#' See \code{stratifyQ_by_rule} for more details.
+#' @param CVTMLE Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
+#' Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..
+#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
+#' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
+#' requires a previously defined parallel back-end cluster)
+#' @param return_fW ...
+#' @param use_DR_transform ...
+#' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
+#' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
+#' modeling functions that are called from this routine,
+#' e.g., \code{family = "binomial"} can be used to specify the model family.
+#' Note that all such arguments must be named.
+#' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
+#' @export
+fitSDR <- function(OData,
+                    tvals,
+                    Qforms,
+                    intervened_TRT = NULL,
+                    intervened_MONITOR = NULL,
+                    rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
+                    models = NULL,
+                    estimator = stremrOptions("estimator"),
+                    fit_method = stremrOptions("fit_method"),
+                    fold_column = stremrOptions("fold_column"),
+                    stratifyQ_by_rule = FALSE,
+                    useonly_t_TRT = NULL,
+                    useonly_t_MONITOR = NULL,
+                    CVTMLE = FALSE,
+                    trunc_weights = 10^6,
+                    parallel = FALSE,
+                    return_fW = FALSE,
+                    use_DR_transform = FALSE,
+                    verbose = getOption("stremr.verbose"), ...) {
 
   stratify_by_last  <- TRUE ## if stratifying we are always stratifying by last treatment only
   gvars$verbose <- verbose
@@ -57,7 +117,7 @@ fitSeqDR <- function(OData,
          rule_name = rule_name,
          trunc_weights = trunc_weights,
          holdout = CVTMLE,
-         eval_stabP = FALSE)
+         eval_stabP = TRUE)
 
   # ------------------------------------------------------------------------------------------
   # Create a back-up of the observed input gstar nodes (created by user in input data):
@@ -94,7 +154,7 @@ fitSeqDR <- function(OData,
       '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
-        res <- fitSeqDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, verbose = verbose)
+        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -103,7 +163,7 @@ fitSeqDR <- function(OData,
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
         cat("Estimating parameter E[Y_d(t)] for t = " %+% t_period, "\n")
-        res <- fitSeqDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, verbose = verbose)
+        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -142,15 +202,16 @@ If this error cannot be fixed, consider creating a replicable example and filing
 ## ------------------------------------------------------------------------------------------------
 ## New procedure for sequential double robustness
 ## ------------------------------------------------------------------------------------------------
-fitSeqDR_onet <- function(OData,
-                          t_period,
-                          Qforms,
-                          stratifyQ_by_rule,
-                          CVTMLE = FALSE,
-                          models,
-                          return_fW = FALSE,
-                          verbose = getOption("stremr.verbose"),
-                          ...) {
+fitSDR_onet <- function(OData,
+                        t_period,
+                        Qforms,
+                        stratifyQ_by_rule,
+                        CVTMLE = FALSE,
+                        models,
+                        return_fW = FALSE,
+                        use_DR_transform = FALSE,
+                        verbose = getOption("stremr.verbose"),
+                        ...) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
@@ -221,7 +282,8 @@ fitSeqDR_onet <- function(OData,
                                    outvar = "Qkplus1",
                                    predvars = regform$predvars,
                                    # outvar.class = list("SplitCVSDRQlearn"), ## Set this automatically to "SplitCVSDRQlearn" when Running SDR, otherwise "Qlearn"
-                                   outvar.class = list("SDRtransformQModel"), ## Set this automatically to "SplitCVSDRQlearn" when Running SDR, otherwise "Qlearn"
+                                   # outvar.class = list("SDRtransformQModel"), ## Set this automatically to "SplitCVSDRQlearn" when Running SDR, otherwise "Qlearn"
+                                   outvar.class = list(ifelse(use_DR_transform, "SDRtransformQModel", "SplitCVSDRQlearn")),
                                    subset_vars = list("Qkplus1"),
                                    subset_exprs = all_Q_stratify[i],
                                    model_contrl = models,
@@ -237,10 +299,13 @@ fitSeqDR_onet <- function(OData,
     Q_regs_list[[i]] <- reg
   }
 
-  ## TO DO: Automatically call the right constructor below depending on running SDR or regular TMLE
+  ## Automatically call the right constructor below depending on running DR tranform or SDR TMLE
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
-  # Qlearn.fit <- SDRModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-  Qlearn.fit <- SDRtransform$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  if (use_DR_transform) {
+    Qlearn.fit <- SDRtransform$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  } else {
+    Qlearn.fit <- SDRModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  }
 
   Qlearn.fit$fit(data = OData)
   OData$Qlearn.fit <- Qlearn.fit

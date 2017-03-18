@@ -56,7 +56,7 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
 
     ## Outcome: The same outcomes that were used to fit this initial Q[k']
     ## Weights: the product of g's from t=k to current k'
-    transform_Q_k = function(data, k_i, i, max_Qk_idx, SDR_term_k_cum = 0, ...) {
+    transform_Q_k = function(data, k_i, i, max_Qk_idx, SDR_term_k_cum = 0, stabilize = TRUE, ...) {
       ## use only the observations that participated in fitting of the initial Q_{k'} (current time-point is k')
       use_subset_idx <- self$idx_used_to_fit_initQ
       if (gvars$verbose == 2) {
@@ -68,7 +68,8 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
 
       ## 1. Weights: defined new column of cumulative weights where cumulative product starts at t = Qk_idx (k), rather than t = 0:
       # wts <- data$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
-      wts <- data$IPwts_by_regimen[self$subset_idx, "cum.IPAW", with = FALSE][[1]]
+      wts <- data$IPwts_by_regimen[self$subset_idx, cum.IPAW]
+      # if (stabilize) wts <- wts * data$IPwts_by_regimen[self$subset_idx, cum.stab.P]
       ## 2. Outcome: **TARGETED** prediction of the previous step k'+1.
       # Qkplus1.protected <- data$dat.sVar[use_subset_idx, "Qkplus1.protected", with = FALSE][[1]]
       Qkplus1.protected <- data$dat.sVar[self$subset_idx, "Qkplus1.protected", with = FALSE][[1]]

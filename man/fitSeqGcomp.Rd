@@ -111,6 +111,8 @@ requires a previously defined parallel back-end cluster)}
 Return the data.table with subject-specific IP weights as part of the output.
 Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 
+\item{return_fW}{...}
+
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 
 \item{...}{When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
@@ -294,6 +296,6 @@ tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 
 }
 \seealso{
-\code{\link{stremr-package}} for the general overview of the package,
+\code{\link{stremr-package}} for the general overview of the package.
 }
 
