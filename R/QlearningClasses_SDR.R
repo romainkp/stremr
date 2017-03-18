@@ -312,7 +312,7 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
       ## (kprime_idx == Qk_idx) means that we have reached the final update for current Q[k] that we were targeting,
       ## Save this update in row [k'-1] = [k-1], that's where it will be picked up by next loop (or initial est step for Q[k-1]).
       if ((Qk_idx == max_Qk_idx) && (Qk_idx == kprime_idx)) {
-        if (gvars$verbose) cat("reached the last targeting iteration of the very last initial regression. Saving the final targeted prediction for E[Y_d]")
+        # if (gvars$verbose) cat("reached the last targeting iteration of the very last initial regression. Saving the final targeted prediction for E[Y_d]")
         private$probAeqa <- Qk_hat_star_all
       } else {
         data$dat.sVar[(self$subset_idx - 1), "Qkplus1" := Qk_hat_star_all]
