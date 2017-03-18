@@ -17,14 +17,14 @@ SDRtransform <- R6Class(classname = "SDRtransform",
         ignore_tmin <- private$PsAsW.models[[k_i]]$t_period
         wts <- eval_weights_k(data = data, ignore_tmin = ignore_tmin, reverse_wt_prod = FALSE, ...)
 
-        SDR_term_k_cum <- 0
+        # SDR_term_k_cum <- 0
         for (i in (1:k_i)) {
             SDR_term_k <- private$PsAsW.models[[i]]$transform_Q_k(data = data,
                                                     k_i = k_i,
                                                     i = i,
                                                     max_Qk_idx = max_Qk_idx,
                                                     ...)
-            SDR_term_k_cum <- SDR_term_k_cum + SDR_term_k
+            # SDR_term_k_cum <- SDR_term_k_cum + SDR_term_k
         }
       }
       invisible(self)
