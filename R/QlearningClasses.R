@@ -163,12 +163,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       nodes <- data$nodes
       self$n_obs_fit <- length(self$subset_idx)
 
-      # browser()
-
       data$dat.sVar[self$subset_idx, ]
       data$dat.sVar[self$subset_idx, fold_ID]
 
-      # browser()
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
       self$is.fitted <- TRUE
@@ -219,7 +216,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       iQ_all <- probA1
 
       ## print("initial mean(Qkplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
-      # browser()
 
       ## **********************************************************************
       ## Iteration step for G-COMP
@@ -260,7 +256,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           update.Qstar.coef <- 0
         }
 
-        # browser()
         # EIC_i_t_calc_unadjusted <- wts_TMLE * (Qkplus1 - Qk_hat)
         # print("EIC_i_t_calc_unadjusted"); print(mean(EIC_i_t_calc_unadjusted))
 
@@ -271,7 +266,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
         # print("EIC_i_t_calc_adjusted"); print(mean(EIC_i_t_calc))
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
-
       }
 
       ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
@@ -517,10 +511,11 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
   active = list(
     wipe.alldat = function() {
-      # private$probA1 <- NULL
+      private$probA1 <- NULL
+      private$model.fit <- NULL
       # private$probAeqa <- NULL
-      self$binomialModelObj$emptydata
-      self$binomialModelObj$emptyY
+      # self$binomialModelObj$emptydata
+      # self$binomialModelObj$emptyY
       return(self)
     },
     wipe.all.indices = function() {

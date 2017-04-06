@@ -4,15 +4,17 @@
 \alias{ggRD}
 \title{Plot risk differences over time with ggplot2}
 \usage{
-ggRD(RDests, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
-  surv_col = "gg.def", cens_col = "gg.def", lty_est = 1,
-  shape_est = seq_along(RDests), lty_ci = 2, size_est = 0.5,
-  size_ci = size_est, size_pt = size_est + 0.3, cens_size = 2,
-  cens_shape = 3, back_white = TRUE, xlab = "Time",
+ggRD(RDests, CI = TRUE, CI_errorbar = FALSE, CI_line = FALSE,
+  plot_cens = TRUE, surv_col = "gg.def", cens_col = "gg.def",
+  lty_est = 1, shape_est = seq_along(RDests), lty_ci = 2,
+  size_est = 0.5, size_ci = size_est, size_pt = size_est + 0.3,
+  cens_size = 2, cens_shape = 3, back_white = TRUE, xlab = "Time",
   ylab = "Risk Difference", main = "", legend_pos = "right",
   RD_name = "RD", SE_name = "RD.SE", CIlow_name = "CI95low",
   CIup_name = "CI95up", order_legend = TRUE, t_int_sel = NULL,
-  ymin = NULL, ymax = NULL, facet = FALSE, ...)
+  ymin = NULL, ymax = NULL, facet = FALSE, font_size = 6,
+  line_RD_plot = TRUE, x_breaks = unique(RDests[["time"]]),
+  axis_font_size = NULL, x_axis_font_angle = 0, ...)
 }
 \arguments{
 \item{RDests}{A table in long format with a single column containing names of two contrasting regimens.
@@ -21,6 +23,8 @@ risk difference estimates over time.}
 
 \item{CI}{should a 95\% confidence interval be plotted? Defaults to \code{TRUE}.
 Uses the standard error RDests provided as a separate column of the input data.}
+
+\item{CI_errorbar}{Plot CIs as error bars around point estimates, default is \code{FALSE}.}
 
 \item{CI_line}{When \code{TRUE} the 95\% CIs will be plotted as a line function (same as main plot type).
 When \code{FALSE} the 95\% CIs are plotted using \code{ggplot2::geom_ribbon}.}
@@ -86,6 +90,14 @@ to automatically adjust the limits of the y-axis.}
 to automatically adjust the limits of the y-axis.}
 
 \item{facet}{Set to \code{TRUE} to create a facet of plots by first / last tx name}
+
+\item{font_size}{Font size for facet labels, legend text and legend title}
+
+\item{x_breaks}{Vector of breaks to display on x-axis}
+
+\item{axis_font_size}{Control the font size of x and y axis, leave as NULL for default.}
+
+\item{x_axis_font_angle}{Control the angle of rotation for x-axis labels (default is 0).}
 
 \item{...}{Additional arguments (not used).}
 }

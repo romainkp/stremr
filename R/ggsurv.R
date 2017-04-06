@@ -195,6 +195,7 @@ ggsurv <- function(
 #' risk difference estimates over time.
 #' @param CI should a 95\% confidence interval be plotted? Defaults to \code{TRUE}.
 #' Uses the standard error RDests provided as a separate column of the input data.
+#' @param CI_errorbar Plot CIs as error bars around point estimates, default is \code{FALSE}.
 #' @param CI_line When \code{TRUE} the 95\% CIs will be plotted as a line function (same as main plot type).
 #' When \code{FALSE} the 95\% CIs are plotted using \code{ggplot2::geom_ribbon}.
 #' @param plot_cens mark the censored observations?
@@ -234,12 +235,17 @@ ggsurv <- function(
 #' @param ymax The maximum value of the y axis. The default (\code{ymax=NULL}) is to use \code{ggplot}
 #' to automatically adjust the limits of the y-axis.
 #' @param facet Set to \code{TRUE} to create a facet of plots by first / last tx name
+#' @param font_size Font size for facet labels, legend text and legend title
+#' @param x_breaks Vector of breaks to display on x-axis
+#' @param axis_font_size Control the font size of x and y axis, leave as NULL for default.
+#' @param x_axis_font_angle Control the angle of rotation for x-axis labels (default is 0).
 #' @param ... Additional arguments (not used).
 #' @return An object of class \code{ggplot}
 #' @author Original R code by Edwin Thoen \email{edwinthoen@@gmail.com}, modified by Oleg Sofrygin \email{oleg.sofrygin@@gmail.com}
 ggRD <- function(
   RDests,
   CI         = TRUE,
+  CI_errorbar = FALSE,
   CI_line    = FALSE,
   plot_cens  = TRUE,
   surv_col   = 'gg.def',
@@ -266,6 +272,11 @@ ggRD <- function(
   ymin = NULL,
   ymax = NULL,
   facet = FALSE,
+  font_size = 6,
+  line_RD_plot = TRUE,
+  x_breaks = unique(RDests[["time"]]),
+  axis_font_size = NULL,
+  x_axis_font_angle = 0,
   ...
 ){
 
@@ -282,9 +293,13 @@ ggRD <- function(
   n.grps <- length(unique(dat[["contrast"]]))
   gr.name <- "contrast"
 
-  pl <- ggplot2::ggplot(dat, ggplot2::aes(x = time, y = RD, group = contrast)) +
-        ggplot2::geom_line(ggplot2::aes(col = contrast, lty = contrast), size = size_est) +
-        ggplot2::geom_point(ggplot2::aes(col = contrast, shape = contrast), size = size_pt) +
+  pl <- ggplot2::ggplot(dat, ggplot2::aes(x = time, y = RD, group = contrast))
+  if (line_RD_plot) pl <- pl + ggplot2::geom_line(ggplot2::aes(col = contrast, lty = contrast), size = size_est)
+  pl <- pl +
+        # , shape = contrast
+        ggplot2::geom_point(ggplot2::aes(col = contrast), size = size_pt) +
+        # ggplot2::scale_x_discrete(breaks = waiver()) +
+        ggplot2::scale_x_continuous(breaks = x_breaks) +
         ggplot2::xlab(xlab) +
         ggplot2::ylab(ylab) +
         ggplot2::ggtitle(main)
@@ -329,10 +344,15 @@ ggRD <- function(
       surv_col
     }
 
-    if (CI_line) {
+    if (CI_errorbar) {
+      pl <- pl +
+        ggplot2::geom_errorbar(ggplot2::aes_string(ymin = CIlow_name, ymax = CIup_name, lty = "contrast", col = "contrast"), lty = stepLty, size = size_ci)
+
+    } else  if (CI_line) {
       pl <- pl +
         ggplot2::geom_line(ggplot2::aes_string(y = CIup_name, lty = "contrast", col = "contrast"), lty = stepLty, size = size_ci) +
         ggplot2::geom_line(ggplot2::aes_string(y = CIlow_name,lty = "contrast", col = "contrast"), lty = stepLty, size = size_ci)
+
     } else {
       pl <- pl +
         ggplot2::geom_ribbon(ggplot2::aes_string(ymin = CIlow_name, ymax = CIup_name, fill = "contrast", linetype = "contrast"), alpha = 0.1, size = size_ci, lty = stepLty)
@@ -340,14 +360,30 @@ ggRD <- function(
   }
 
   if(identical(back_white, TRUE)) pl <- pl + ggplot2::theme_bw()
-  pl <- pl + ggplot2::theme(legend.position = legend_pos)
+  pl <- pl + ggplot2::theme(legend.position = legend_pos,
+                            legend.text = element_text(size = font_size),
+                            legend.title = element_text(size = font_size))
   if (!is.null(ymin) && !is.null(ymax)) pl <- pl + ggplot2::coord_cartesian(ylim = c(ymin, ymax))
 
 
+  label_value2 <- function (labels, multi_line = TRUE) {
+    labels <- lapply(labels, as.character)
+    if (multi_line) {
+      labels
+    } else {
+      out <- do.call("Map", c(list(paste, sep = " - "), labels))
+      list(unname(unlist(out)))
+    }
+  }
+
   if (facet)
     pl <- pl + ggplot2::facet_wrap(c("dx1_name", "dx2_name"),
-                labeller = function(labels) label_value(labels, multi_line = FALSE))
+                labeller = function(labels) label_value2(labels, multi_line = FALSE)) +
+                ggplot2::theme(strip.text.x = element_text(size = font_size, angle = 0)) +
+                ggplot2::theme(axis.text.x = element_text(size = axis_font_size, angle = x_axis_font_angle)) +
+                ggplot2::theme(axis.text.y = element_text(size = axis_font_size))
   # pl <- pl + ggplot2::facet_wrap(~ dx2_name + dx1_name)
+
 
   return(pl)
 }

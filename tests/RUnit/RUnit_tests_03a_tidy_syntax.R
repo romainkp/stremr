@@ -106,19 +106,19 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
   models_g <-
-    gridisl::defModel(estimator = "xgboost__glm",
-                      family = "binomial",
-                      nrounds = 100,
-                      # early_stopping_rounds = 2,
-                      interactions = list(c("CVD", "highA1c"))) +
+    # gridisl::defModel(estimator = "xgboost__glm",
+    #                   family = "binomial",
+    #                   nrounds = 100,
+    #                   # early_stopping_rounds = 2,
+    #                   interactions = list(c("CVD", "highA1c")))
+    #  #                   +
+     # gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
-     gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
-
-     # gridisl::defModel(estimator = "h2o__glm", family = "binomial",
-     #                   nlambdas = 5, lambda_search = TRUE,
-     #                   param_grid = list(
-     #                    alpha = c(0, 0.5)
-     #                   ))
+     gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+                       nlambdas = 5, lambda_search = TRUE,
+                       param_grid = list(
+                        alpha = c(0, 0.5)
+                       ))
 
     ## ----------------------------------------------------------------
     ## AN EXAMPLE OF A GIANT GRID OF MODELS.
@@ -368,7 +368,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
   ## ------------------------------------------------------------
-  TMLE <- analysis %>%
+  TMLE <- CVTMLE <- analysis %>%
           rename(trunc_weight = trunc_TMLE) %>%
           distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
@@ -386,18 +386,34 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   })
   TMLE_time_hrs <- TMLE_time[3]/60/60
 
+  CVTMLE_time <- system.time({
+    CVTMLE <- CVTMLE %>%
+          mutate(CVTMLE = pmap(CVTMLE, fitCVTMLE,
+                             tvals = tvals,
+                             OData = OData,
+                             models = models_Q,
+                             Qforms = Qforms,
+                             fit_method = fit_method_Q,
+                             fold_column = fold_column)) %>%
+          mutate(CVTMLE = map(CVTMLE, "estimates")) %>%
+          rename(trunc_TMLE = trunc_weight)
+  })
+  CVTMLE_time_hrs <- TMLE_time[3]/60/60
+
+
   ## ------------------------------------------------------------
   ## COMBINE ALL ANALYSES INTO A SINGLE DATASET
   ## ------------------------------------------------------------
   results <-  analysis %>%
               left_join(IPW) %>%
               left_join(GCOMP) %>%
-              left_join(TMLE)
+              left_join(TMLE) %>%
+              left_join(CVTMLE)
 
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
   results <- results %>%
               # nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates")
-              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
+              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE,.key = "estimates")
 
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
   ## The RDs data no longer needs the intervened_TRT column
@@ -432,6 +448,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   cat("IPW time, hrs: ", IPW_time_hrs, "\n")
   cat("GCOMP time, hrs: ", GCOMP_time_hrs, "\n")
   cat("TMLE time, hrs: ", TMLE_time_hrs, "\n")
+  cat("CVTMLE time, hrs: ", CVTMLE_time_hrs, "\n")
 
   results <- results %>%
              left_join(IPWtabs) %>%
