@@ -111,7 +111,8 @@ requires a previously defined parallel back-end cluster)}
 Return the data.table with subject-specific IP weights as part of the output.
 Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 
-\item{return_fW}{...}
+\item{return_fW}{Return the \code{gridisl} model object from the very last Q regression.
+Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 

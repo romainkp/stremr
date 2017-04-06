@@ -21,6 +21,49 @@ define_CVfolds = function(data, nfolds = 5, fold_column = "fold_ID", seed = NULL
   return(data)
 }
 
+#' Removing all g model fits from DataStorage object.
+#' Clean up the DataStorage object by removing all g (IPW) modeling fits.
+#' This helps save up some RAM for running G-COMP / TMLE when working with large data.
+#' Call this function AFTER fitting IPW (g), but before calling TMLE.
+#'
+#' @param OData Data storage object containing the observed data.
+#' @param keep_holdout_preds Keep the holdout predictions? Needed for CV TMLE only and set to FALSE by default.
+#' @export
+remove_g <- function(OData, keep_holdout_preds = FALSE) {
+  OData$modelfits.g0 <- NULL
+  OData$modelfit.gC <- NULL
+  OData$modelfit.gA <- NULL
+  OData$modelfit.gN <- NULL
+  if (!keep_holdout_preds) OData$g_holdout_preds <- NULL
+  return(OData)
+}
+
+
+#' Removing not needed rows from observed data (and weights data).
+#' Clean up the DataStorage object by removing all extra rows after certain time-point specified
+#' by \code{tmax}. This will also have the effect of removing all the extra weights.
+#' Can be useful when running TMLE with very large data, trimming the extra rows will free up some RAM.
+#' @param OData Data storage object containing the observed data.
+#' @param tmax Time-point value (max \code{tvals} in TMLE) after which all rows are removed.
+#' @export
+trim_rows_after_tmax <- function(OData, tmax = OData$max.t) {
+  nodes <- OData$nodes
+
+  keep_idx <- which(OData$dat.sVar[[nodes$tnode]] <= tmax)
+  OData$dat.sVar <- OData$dat.sVar[keep_idx, ]
+
+  if (!is.null(OData$g_preds)) {
+    OData$g_preds[] <- OData$g_preds[keep_idx, ]
+  }
+
+  if (!is.null(OData$g_holdout_preds)) {
+    OData$g_holdout_preds[] <- OData$g_holdout_preds[keep_idx, ]
+  }
+
+  setkeyv(OData$dat.sVar, cols = c(nodes$IDnode, nodes$tnode))
+  return(OData)
+}
+
 # -----------------------------------------------------------------------------
 # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
 # -----------------------------------------------------------------------------
@@ -241,6 +284,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     interventionNodes.g0 = NULL,
     interventionNodes.gstar = NULL,
     gstarNodes_stoch = NULL,
+
     modelfits.g0 = NULL,
     modelfit.gC = NULL,
     modelfit.gA = NULL,

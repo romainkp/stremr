@@ -383,6 +383,7 @@ fitPropensity <- function(OData,
                                    g0.N = OData$modelfit.gN$getcumprodAeqa())
   OData$g_preds <- g_preds
 
+  ## warning: side-effect function call, the predicted probabilities are updated inside each class and are saved
   h_gN_holdout <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs, holdout = TRUE)
   g_holdout_preds <- data.table::data.table(g0.C = OData$modelfit.gC$getcumprodAeqa(),
                                            g0.A = OData$modelfit.gA$getcumprodAeqa(),
@@ -511,7 +512,7 @@ getIPWeights <- function(OData,
   # (2) gstar.TRT: prob of following one treatment rule; and
   # (3) gstar.MONITOR prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
-  if (is.null(OData$modelfits.g0))
+  if (is.null(g_preds))
     stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
   if (any(!(c("g0.A", "g0.C", "g0.N") %in% names(g_preds))))
     stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")

@@ -218,7 +218,8 @@ fitCVTMLE <- function(...) {
 #' @param return_wts Applies only when \code{TMLE = TRUE}.
 #' Return the data.table with subject-specific IP weights as part of the output.
 #' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
-#' @param return_fW ...
+#' @param return_fW Return the \code{gridisl} model object from the very last Q regression.
+#' Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
