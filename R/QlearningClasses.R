@@ -512,7 +512,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
   active = list(
     wipe.alldat = function() {
       private$probA1 <- NULL
-      private$model.fit <- NULL
+      # private$model.fit <- NULL
       # private$probAeqa <- NULL
       # self$binomialModelObj$emptydata
       # self$binomialModelObj$emptyY
