@@ -612,7 +612,11 @@ getIPWeights <- function(OData,
 #' @return A data.table with bounded IPW estimates of risk and survival by time.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-survDirectIPW <- function(wts_data, OData, weights, trunc_weights, return_wts = FALSE) {
+survDirectIPW <- function(wts_data,
+                          OData,
+                          weights,
+                          trunc_weights = 10^6,
+                          return_wts = FALSE) {
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
@@ -623,25 +627,30 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights, return_wts = 
   ## EXTRACT RELEVANT INFORMATION
   ID.t.IPW.Y <- wts_data[,list(get(nodes$IDnode), get(t_name), cum.IPAW, get(Ynode))]
   names(ID.t.IPW.Y) <- c(nodes$IDnode, t_name, "cum.IPAW", Ynode)
+  setkeyv(ID.t.IPW.Y, cols = c(nodes$IDnode, t_name))
 
   ## MAKE SURE EVERY PATIENT HAS AN ENTRY FOR EVERY TIME POINT BY LVCF
-  tmax <- wts_data[, max(get(t_name))]
+  ## version 1:
+  # tmax <- wts_data[, max(get(t_name))]
+  # tmax <- tmax - 1
+  # UID <- wts_data[, unique(get(nodes$IDnode))]
+  # all.ID.t <- as.data.table(cbind(rep(UID,each=(tmax+1)), rep(0:tmax,length(UID)) ))
+  # names(all.ID.t) <- c(nodes$IDnode, t_name)
+  # all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE, by = c(nodes$IDnode, t_name))
+  # all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(cum.IPAW), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
-  tmax <- tmax - 1
-  UID <- wts_data[, unique(get(nodes$IDnode))]
-
-  all.ID.t <- as.data.table(cbind(rep(UID,each=(tmax+1)), rep(0:tmax,length(UID)) ))
-  names(all.ID.t) <- c(nodes$IDnode, t_name)
-
-  all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE, by = c(nodes$IDnode, t_name))
-  all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(cum.IPAW), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
+  ## version 2:
+  all.ID.t <- CJ(unique(wts_data[[nodes$IDnode]]), unique(wts_data[[t_name]]))
+  colnames(all.ID.t) <- c(nodes$IDnode, t_name)
+  setkeyv(all.ID.t, cols = c(nodes$IDnode, t_name))
+  all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE) # , by = c(nodes$IDnode, t_name)
+  ## carry forward last known outcome / weights for survival outcomes (after time-to-event to maximum follow-up)
+  if (any(is.na(all.ID.t[[Ynode]]))) all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(cum.IPAW), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
   ## NUMERATOR OF BOUNDED IPW FOR SURVIVAL:
   numIPW <- all.ID.t[, {sum_Y_IPAW = sum(get(Ynode)*cum.IPAW, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
-
   ## DENOMINATOR OF BOUNDED IPW FOR SURVIVAL:
   denomIPW <- all.ID.t[, {sum_IPAW = sum(cum.IPAW, na.rm = TRUE); list(sum_IPAW = sum_IPAW)}, by = eval(t_name)]
-
   ## BOUNDED IPW OF SURVIVAL (DIRECT):
   risk.t <- (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
 
@@ -652,22 +661,23 @@ survDirectIPW <- function(wts_data, OData, weights, trunc_weights, return_wts = 
   setnames(resultDT, t_name, "time")
 
   ## FILL IN THE GAP BETWEEN MINIMAL 'time' VALUE FROM OBSERVED DATA (IF THERE IS ANY) BY ADDING EXTRA ROWS IN THE BEGINING
-  if (min(resultDT[["time"]]) > OData$min.t) {
-    t_to_add <- (OData$min.t) : (min(resultDT[["time"]])-1)
-    resultDT_addt <- merge(data.table(time = t_to_add), resultDT, by = "time", all.x = TRUE)[,
-                              c("St.NPMSM", "St.KM") := 1][,
-                              c("ht.NPMSM","ht.KM") := 0][,
-                              "rule.name" := resultDT[["rule.name"]][1]]
-    resultDT <- rbind(resultDT_addt, resultDT)
-    setkeyv(resultDT, cols = "time")
-  }
+  ## NOT NEEDED FOR DIRECT IPW -- THIS SHOULD BE ACCOMPLISHED AUTOMATICALLY
+  # if (min(resultDT[["time"]]) > OData$min.t) {
+  #   t_to_add <- (OData$min.t) : (min(resultDT[["time"]])-1)
+  #   resultDT_addt <- merge(data.table(time = t_to_add), resultDT, by = "time", all.x = TRUE)[,
+  #                             c("St.NPMSM", "St.KM") := 1][,
+  #                             c("ht.NPMSM","ht.KM") := 0][,
+  #                             "rule.name" := resultDT[["rule.name"]][1]]
+  #   resultDT <- rbind(resultDT_addt, resultDT)
+  #   setkeyv(resultDT, cols = "time")
+  # }
 
   resultDT <- data.frame(resultDT)
   attr(resultDT, "estimator_short") <- "NPMSM"
   attr(resultDT, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
   attr(resultDT, "trunc_weights") <- trunc_weights
   attr(resultDT, "rule_name") <- rule.name
-  attr(resultDT, "time") <- St_ht_IPAW[["time"]]
+  attr(resultDT, "time") <- resultDT[["time"]]
 
   result_object <- list(estimates = resultDT)
 

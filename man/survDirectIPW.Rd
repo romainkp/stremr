@@ -4,7 +4,8 @@
 \alias{survDirectIPW}
 \title{Direct (bounded) IPW estimator of discrete survival function.}
 \usage{
-survDirectIPW(wts_data, OData, weights, trunc_weights, return_wts = FALSE)
+survDirectIPW(wts_data, OData, weights, trunc_weights = 10^6,
+  return_wts = FALSE)
 }
 \arguments{
 \item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}.
