@@ -6,7 +6,7 @@
 \usage{
 importData(data, ID = "Subject_ID", t_name = "time_period", covars,
   CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y", noCENScat = 0L,
-  verbose = getOption("stremr.verbose"))
+  remove_extra_rows = TRUE, verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns,
@@ -45,6 +45,9 @@ Note that factors are not allowed in \code{CENS}.}
 \item{noCENScat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 for variables specifed in \code{CENS}.}
+
+\item{remove_extra_rows}{Remove extra rows after the event of interest (survival outcome) has occurred (OUTCOME=1).
+Set this to FALSE for non-survival data (i.e., when the outcome is not time-to-event and new observations may occur after OUTCOME = 1).}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}

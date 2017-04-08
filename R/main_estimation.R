@@ -141,6 +141,8 @@ define_single_regression <- function(OData,
 #' @param noCENScat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 #' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 #' for variables specifed in \code{CENS}.
+#' @param remove_extra_rows Remove extra rows after the event of interest (survival outcome) has occurred (OUTCOME=1).
+#' Set this to FALSE for non-survival data (i.e., when the outcome is not time-to-event and new observations may occur after OUTCOME = 1).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @return ...
@@ -156,6 +158,7 @@ importData <- function(data,
                        MONITOR = "N",
                        OUTCOME = "Y",
                        noCENScat = 0L,
+                       remove_extra_rows = TRUE,
                        verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   gvars$noCENScat <- noCENScat
@@ -181,8 +184,7 @@ importData <- function(data,
   # --------------------------------------------------------------------------------------------------------
   # Check no extra rows after event:
   # --------------------------------------------------------------------------------------------------------
-  OData$check_norows_after_event()
-
+  if (remove_extra_rows) OData$check_norows_after_event()
 
   # --------------------------------------------------------------------------------------------------------
   # Create dummies for factors

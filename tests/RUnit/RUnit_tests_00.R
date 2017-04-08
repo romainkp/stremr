@@ -51,6 +51,9 @@ if(FALSE) {
   # devtools::install_github('osofr/simcausal', build_vignettes = FALSE, dependencies = FALSE)
   # devtools::install_github('osofr/stremr', build_vignettes = FALSE, dependencies = FALSE)
 
+  ## devtools version before turbo was renamed to ..turbo in fwrite:
+  # devtools::install_github('Rdatatable/data.table', dependencies = FALSE, ref = "4a1f4ba")
+
 }
 
 psi_RDs_DAG2a <- NULL
