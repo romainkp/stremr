@@ -16,6 +16,8 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts, lower_bound_zero_Q = TRUE, skip_
       Qk_hat[Qk_hat < 10^(-4)] <- 10^(-4)
     }
     off_TMLE <- qlogis(Qk_hat)
+    off_TMLE[off_TMLE == Inf] <- 20
+    off_TMLE[off_TMLE == -Inf] <- -20
 
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
                                           y = Qkplus1, weights = IPWts, offset = off_TMLE,
