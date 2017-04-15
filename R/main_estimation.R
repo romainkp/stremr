@@ -640,7 +640,7 @@ survDirectIPW <- function(wts_data,
   # all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(cum.IPAW), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
   ## version 2:
-  all.ID.t <- CJ(unique(wts_data[[nodes$IDnode]]), unique(wts_data[[t_name]]))
+  all.ID.t <- data.table::CJ(unique(wts_data[[nodes$IDnode]]), unique(wts_data[[t_name]]))
   colnames(all.ID.t) <- c(nodes$IDnode, t_name)
   setkeyv(all.ID.t, cols = c(nodes$IDnode, t_name))
   all.ID.t <- merge(all.ID.t, ID.t.IPW.Y, all.x=TRUE) # , by = c(nodes$IDnode, t_name)

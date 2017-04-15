@@ -12,7 +12,7 @@ fitSDR(OData, tvals, Qforms, intervened_TRT = NULL,
   fold_column = stremrOptions("fold_column"), stratifyQ_by_rule = FALSE,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, CVTMLE = FALSE,
   trunc_weights = 10^6, parallel = FALSE, return_fW = FALSE,
-  use_DR_transform = FALSE, stabilize = FALSE,
+  use_DR_transform = FALSE, stabilize = FALSE, reg_Q = NULL,
   verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
@@ -78,6 +78,8 @@ requires a previously defined parallel back-end cluster)}
 \item{stabilize}{Only applies when \code{use_DR_transform=TRUE}. Set this argument to \code{TRUE} to stabilize the weights by the
 empirical conditional probability of having followed the rule at time-point \code{t}, given the subject has followed the rule all
 the way up to time-point \code{t}.}
+
+\item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 

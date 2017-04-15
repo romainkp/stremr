@@ -220,6 +220,7 @@ fitCVTMLE <- function(...) {
 #' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
 #' @param return_fW Return the \code{gridisl} model object from the very last Q regression.
 #' Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).
+#' @param reg_Q (ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -257,6 +258,7 @@ fitSeqGcomp <- function(OData,
                         parallel = FALSE,
                         return_wts = FALSE,
                         return_fW = FALSE,
+                        reg_Q = NULL,
                         verbose = getOption("stremr.verbose"), ...) {
 
   # cat("Calling fitSeqGcomp:\n")
@@ -281,7 +283,7 @@ fitSeqGcomp <- function(OData,
   OData$follow_rule <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
   sVar.exprs <- capture.exprs(...)
-  models_control <- c(list(models = models), opt_params = list(sVar.exprs))
+  models_control <- c(list(models = models), list(reg_Q = reg_Q), opt_params = list(sVar.exprs))
   models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
@@ -593,6 +595,10 @@ fitSeqGcomp_onet <- function(OData,
 
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
+    # browser()
+    if (!is.null(models[["reg_Q"]])) {
+      models[["models"]] <- models[["reg_Q"]][[Qreg_idx[i]]]
+    }
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i],
                                      all_Qregs_indx = Qreg_idx,
                                      t_period = Qperiods[i],

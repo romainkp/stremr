@@ -1,6 +1,6 @@
 
 ## Split-specific predictions for validation sets
-## Uses offsets that could might be also split specific
+## Uses offsets that are also allowed to be split specific
 cv_validation_preds <- function(fold, split_preds_Qk_hat) {
   ## These will be automatically defined in the calling frame of this function
   ## when the cross-validator that calls cv_split_preds()

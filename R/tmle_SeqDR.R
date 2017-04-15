@@ -54,6 +54,7 @@
 #' @param stabilize Only applies when \code{use_DR_transform=TRUE}. Set this argument to \code{TRUE} to stabilize the weights by the
 #' empirical conditional probability of having followed the rule at time-point \code{t}, given the subject has followed the rule all
 #' the way up to time-point \code{t}.
+#' @param reg_Q (ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -80,6 +81,7 @@ fitSDR <- function(OData,
                     return_fW = FALSE,
                     use_DR_transform = FALSE,
                     stabilize = FALSE,
+                    reg_Q = NULL,
                     verbose = getOption("stremr.verbose"), ...) {
 
   stratify_by_last  <- TRUE ## if stratifying we are always stratifying by last treatment only
@@ -95,7 +97,7 @@ fitSDR <- function(OData,
   OData$uncensored <- OData$eval_uncensored()
   OData$follow_rule <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
   sVar.exprs <- capture.exprs(...)
-  models_control <- c(list(models = models), opt_params = list(sVar.exprs))
+  models_control <- c(list(models = models), list(reg_Q = reg_Q), opt_params = list(sVar.exprs))
   models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
@@ -277,6 +279,9 @@ fitSDR_onet <- function(OData,
 
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
+    if (!is.null(models[["reg_Q"]])) {
+      models[["models"]] <- models[["reg_Q"]][[Qreg_idx[i]]]
+    }
     reg <- RegressionClassSDR$new(SDR_model = SDR_model,
                                   stabilize = stabilize,
                                   Qreg_counter = Qreg_idx[i],
