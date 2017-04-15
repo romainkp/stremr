@@ -231,6 +231,14 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         #                                                    SL.library = SL.library,
         #                                                    params = self$reg$SDR_model)
 
+        ## Fit the Split-Specific SuperLearner.
+        ## The function split_cv_SL() does all the work, taking the input data (X,Y) and
+        ## replacing the training set Y[i] and offset[i] with split-specific outcomes Y^s[i] and offset^s[i]
+        ## The rest of it goes on just like in the usual SuperLearner.
+        ## The split-specific Y^s are obtained from split_preds_Qkplus1
+        ##  (predictions Qhat from SS-SL for time-point t+1)
+        ## The split-specific offset^s are obtained from split_preds_Qk_hat
+        ##  (Qhat from the fit of the initial SL for time-point t or the targeted split-specific Qhat)
         SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,
                                                     Y = Qkplus1,
                                                     X = as.matrix(obs_dat),
@@ -260,6 +268,10 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         ## list of nrow(pred_dat) preds for each fold (including extrapolating preds for new obs)
         ## This also uses the offsets for newdata,
         ## if there were prior targeting steps, these will be split-specific offsets.
+        ## All the split-specific predictions are being done here.
+        ## This loops over each fold, then calls predict() on the fold-specific SL fits, passing newdata=data
+        ## So each fold-specific SuperLearner fit does predictions for all observations in pred_dat.
+        ## The results is a list of predictions: number of list items = number of folds.
         split_preds_Qk_hat <- origami::cross_validate(cv_split_preds,
                                                       folds,
                                                       data = pred_dat,
@@ -268,7 +280,9 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
                                                       .combine = FALSE)
         self$split_preds_Qk_hat <- split_preds_Qk_hat
 
-        # # Validation (out-of-sample) predictions for the split-specific SuperLearner (n predictions by combining all validation folds in newdata)
+        ## Validation (out-of-sample) predictions for the split-specific SuperLearner (n predictions by combining all validation folds in newdata)
+        ## All this is does is takes the list of previous split-spec predictions (above call to cross_validate) and
+        ## extracts the validation set predictions from each fold. It then stacks these predictions together to obtain n validation predictions.
         Qk_hat_star_all <- origami::cross_validate(cv_validation_preds,
                                                    folds_pred_dat,
                                                    split_preds_Qk_hat = split_preds_Qk_hat,
