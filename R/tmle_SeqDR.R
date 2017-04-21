@@ -362,6 +362,56 @@ fitSDR_onet <- function(OData,
   est_name <- "St.SDR"
   resDF_onet[, (est_name) := (1 - mean_est_t)]
 
+  # browser()
+
+  # ## THESE TWO ARE EQUAL:
+  # mean(OData$dat.sVar[t==0, Qk_hat] - mean_est_t)
+  # mean(res_lastPredQ - mean_est_t)
+  # sum((res_lastPredQ - mean_est_t)^2) / (OData$nuniqueIDs^2)
+  # ## WHY IS THIS NOT EQUAL TO ABOVE???
+  # mean(OData$dat.sVar[t==0, EIC_i_t_sum])
+
+  # # prev SDR Var:
+  # # [1] 0.0004280239
+  # # [1] "...empirical mean of the estimated EIC: -0.000409312028226282"
+  # get_field_Qclass <- function(allQmodels, fieldName) {
+  #   lapply(allQmodels, function(Qclass) Qclass[[fieldName]])
+  #   # lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]][[fieldName]])
+  # }
+  # OData$IPwts_by_regimen[t==0, ]
+  # # [1] -0.000430987
+  # sum(OData$dat.sVar[t==0, EIC_i_t_sum]^2)/(OData$nuniqueIDs^2)
+  # # [1] 0.0001000335
+  # sqrt(sum(OData$dat.sVar[t==0, EIC_i_t_sum]^2)/(OData$nuniqueIDs^2))
+  # # [1] 0.01000167
+  # idx_all_wts_above0 <- which(OData$IPwts_by_regimen[["cum.IPAW"]] > 0)
+  # allQmodels <- Qlearn.fit$getPsAsW.models() # Get the individual Qlearning classes
+  # res_idx_used_to_fit_initQ <- as.vector(sort(unlist(get_field_Qclass(allQmodels, "idx_used_to_fit_initQ"))))
+  # use_subset_idx <- intersect(idx_all_wts_above0, res_idx_used_to_fit_initQ)
+  # wts_TMLE <- OData$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
+  # # Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
+  # Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1.protected", with = FALSE][[1]]
+  # Qk_hat <- OData$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
+  # EIC_i_tplus <- wts_TMLE * (Qkplus1 - Qk_hat)
+  # # OData$dat.sVar[, ("EIC_i_t") := 0]
+  # OData$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_tplus]
+  # # OData$dat.sVar[use_subset_idx, ("EIC_i_t2") := EIC_i_tplus2]
+  # IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
+  # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
+  # IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
+  # IC_dt
+  # SDR_Var_2 <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2) / OData$nuniqueIDs
+  # SDR_Var_2
+  # # [1] 0.0001282086
+  # # [1] 4.56573e-05
+  # sqrt(SDR_Var_2)
+  # # [1] 0.006757019
+  # mean(IC_dt[["EIC_i"]])
+  # # [1] 0.001448439
+  # # [1] 0.001229965
+  # # mean(res_lastPredQ - mean_est_t)
+  # 1.951753*(0.0005806247-0.1845869742)
+
   # ------------------------------------------------------------------------------------------------
   # SDR INFERENCE
   # ------------------------------------------------------------------------------------------------
@@ -369,12 +419,24 @@ fitSDR_onet <- function(OData,
   IC_i_onet[] <- NA
   IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
   IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
-  IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
+
+  ## FOR DR-transform the i-specific EIC estimate (over all t) is just (res_lastPredQ - psi_n)
+  ## This is because the very last Qhat (res_lastPredQ) is based on the transformed Gamma(k) for k=0 (DR transform for Q_0),
+  ## which over-wrote the initial Q_hat at first time-point.
+  ## The Gamma(0) was evaluated as sum_{k}[wt(k)(Q_{k+1}-Q_{k})] + Q_hat.
+  ## In the last sum Q_hat was the initial regression fit E[Gamma(1)|h(0),A(0)=1] for the very first time-point.
+  ## Thus, but subtracting the mean parameter estimate (psi_n) from res_lastPredQ we get the i-specific EIC estimate.
+  if (use_DR_transform) {
+    IC_dt[, ("EIC_i") := EIC_i_t0]
+  } else {
+    IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
+  }
+
   IC_dt[, c("EIC_i_t0", "EIC_i_tplus") :=  list(NULL, NULL)]
   IC_i_onet <- IC_dt[["EIC_i"]]
-  ## asymptotic variance (var of the EIC):
+  ## estimate of the asymptotic variance (var of the EIC):
   IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
-  ## variance of the SDR estimate (scaled by n):
+  ## estimate of the variance of SDR estimate (scaled by n):
   SDR_Var <- IC_Var / OData$nuniqueIDs
   ## SE of the SDR
   SDR_SE <- sqrt(SDR_Var)
@@ -385,9 +447,7 @@ fitSDR_onet <- function(OData,
   resDF_onet[, ("SE.SDR") := SDR_SE]
   ## save the i-specific estimates of the EIC as a separate column:
   resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
-
   fW_fit <- lastQ.fit$getfit
   resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
-
   return(resDF_onet)
 }
