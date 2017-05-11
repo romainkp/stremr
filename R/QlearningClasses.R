@@ -442,7 +442,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
       # prediction in seq-Gcomp has failed
       if (inherits(gcomp.pred.res, "try-error"))
-        stop("error during prediction of the iterative GCOMP/TMLE")
+        stop("error during prediction step of GCOMP/TMLE")
 
       invisible(return(private$probA1))
     },
@@ -484,12 +484,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           data$dat.sVar[subset_idx, (stoch.node.nm) := stoch.probs[[stoch.node.nm]]]
         }
         # Weight the current prediction by its probability
-        probA1[subset_idx] <- probA1[subset_idx] * jointProb
+        probA1 <- probA1 * jointProb
+        # probA1[subset_idx] <- probA1[subset_idx] * jointProb
         # Sum and keep looping
-        stoch.probA1 <- stoch.probA1 + probA1[subset_idx]
+        stoch.probA1 <- stoch.probA1 + probA1
+        # stoch.probA1 <- stoch.probA1 + probA1[subset_idx]
       }
-      stoch.probA1 <- stoch.probA1
-      private$probA1[subset_idx] <- stoch.probA1
+      private$probA1 <- stoch.probA1
+      # stoch.probA1 <- stoch.probA1
+      # private$probA1[subset_idx] <- stoch.probA1
       return(invisible(private$probA1))
     },
 

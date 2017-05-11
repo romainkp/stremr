@@ -81,7 +81,9 @@ defineNodeGstarGComp <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
     ## Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
     ## ------------------------------------------------------------------------------------------
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
-    OData$replaceNodesVals(!subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
+    not_subset_idx <- setdiff(1:nrow(OData$dat.sVar), subset_idx)
+    # OData$replaceNodesVals(!subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
+    OData$replaceNodesVals(not_subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
     ## ------------------------------------------------------------------------------------------
 
     ## ------------------------------------------------------------------------------------------
@@ -595,7 +597,6 @@ fitSeqGcomp_onet <- function(OData,
 
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)
-    # browser()
     if (!is.null(models[["reg_Q"]])) {
       models[["models"]] <- models[["reg_Q"]][[Qreg_idx[i]]]
     }
