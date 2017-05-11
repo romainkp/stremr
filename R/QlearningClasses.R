@@ -167,9 +167,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       nodes <- data$nodes
       self$n_obs_fit <- length(self$subset_idx)
 
-      data$dat.sVar[self$subset_idx, ]
-      data$dat.sVar[self$subset_idx, fold_ID]
-
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
       self$is.fitted <- TRUE

@@ -9,7 +9,7 @@ test.CV_TMLE.10Kdata <- function() {
     library("foreach")
     library("doParallel")
     library("gridisl")
-    # library("stremr")
+    library("stremr")
 
     # options(stremr.verbose = TRUE)
     options(stremr.verbose = FALSE)
@@ -106,7 +106,7 @@ test.CV_TMLE.10Kdata <- function() {
     t.surv <- 10
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    SDR_est <- fitSeqDR(OData, tvals = t.surv,
+    SDR_est <- stremr:::fitSDR(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         # fit_method = "cv",
@@ -134,6 +134,15 @@ test.CV_TMLE.10Kdata <- function() {
     #  9:    SeqDR     9 0.7699733 pooled gTI.dhigh
     # 10:    SeqDR    10 0.7559333 pooled gTI.dhigh
 
+    DR_trans_est <- stremr:::fitSDR(OData, tvals = t.surv,
+                           intervened_TRT = "gTI.dhigh", Qforms = Qforms,
+                           stratifyQ_by_rule = FALSE,
+                           fit_method = "none",
+                           models = params,
+                           return_fW = TRUE,
+                           use_DR_transform = TRUE # stabilize = FALSE,
+                          )
+
     tmle_est <- fitTMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
@@ -160,7 +169,7 @@ test.CV_TMLE.10Kdata <- function() {
     #  9:     TMLE     9       NA 0.7684924          NA           TRUE              0 pooled 0.006624978
     # 10:     TMLE    10       NA 0.7549844          NA           TRUE              0 pooled 0.006795919
 
-    SDR_est <- fitSeqDR(OData, tvals = t.surv,
+    SDR_est <- stremr:::fitSDR(OData, tvals = t.surv,
                           intervened_TRT = "gTI.dlow", Qforms = Qforms, models = params,
                           stratifyQ_by_rule = FALSE,
                           # fit_method = "cv",

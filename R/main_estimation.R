@@ -194,13 +194,29 @@ importData <- function(data,
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0 && verbose)
     message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
+  # for (factor.varnm in factor.Ls) {
+  #   factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
+  #   factor.levs <- factor.levs[-1] # remove the first level (reference class)
+  #   # use levels to define cat indicators:
+  #   OData$dat.sVar[,(factor.varnm %+% "_" %+% factor.levs) := lapply(factor.levs, function(x) levels(get(factor.varnm))[get(factor.varnm)] %in% x)]
+  #   # to remove the origional factor var: # OData$dat.sVar[,(factor.varnm):=NULL]
+  #   new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
+  #   # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
+  # }
   for (factor.varnm in factor.Ls) {
-    factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
-    factor.levs <- factor.levs[-1] # remove the first level (reference class)
-    # use levels to define cat indicators:
-    OData$dat.sVar[,(factor.varnm %+% "_" %+% factor.levs) := lapply(factor.levs, function(x) levels(get(factor.varnm))[get(factor.varnm)] %in% x)]
-    # to remove the origional factor var: # OData$dat.sVar[,(factor.varnm):=NULL]
-    new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
+    factor.levs <- levels(OData$dat.sVar[[factor.varnm]])
+    ## only define new dummies for factors with > 2 levels
+    if (length(factor.levs) > 2) {
+      factor.levs <- factor.levs[-1] # remove the first level (reference class)
+      # use levels to define cat indicators:
+      OData$dat.sVar[,(factor.varnm %+% "_" %+% factor.levs) := lapply(factor.levs, function(x) as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% x))]
+      # to remove the origional factor var: # OData$dat.sVar[,(factor.varnm):=NULL]
+      new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
+    ## Convert existing factor variable to integer
+    } else {
+      OData$dat.sVar[, (factor.varnm) := as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% factor.levs[2])]
+      new.factor.names[[factor.varnm]] <- factor.varnm
+    }
     # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
   }
   OData$new.factor.names <- new.factor.names
@@ -381,8 +397,8 @@ fitPropensity <- function(OData,
   OData$modelfit.gN <- modelfits.g0$getPsAsW.models()[[which(names(ALL_g_regs) %in% "gN")]]
 
   g_preds <- data.table::data.table(g0.C = OData$modelfit.gC$getcumprodAeqa(),
-                                   g0.A = OData$modelfit.gA$getcumprodAeqa(),
-                                   g0.N = OData$modelfit.gN$getcumprodAeqa())
+                                    g0.A = OData$modelfit.gA$getcumprodAeqa(),
+                                    g0.N = OData$modelfit.gN$getcumprodAeqa())
   OData$g_preds <- g_preds
 
   ## warning: side-effect function call, the predicted probabilities are updated inside each class and are saved
