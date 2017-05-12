@@ -10,24 +10,24 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # options(stremr.verbose = FALSE)
   options(stremr.verbose = TRUE)
   `%+%` <- function(a, b) paste0(a, b)
-  # ---------------------------------------------------------------------------
-  # INSTALL CORRECT VERSIONS of data.table and stremr from github:
-  # ---------------------------------------------------------------------------
+  ## ---------------------------------------------------------------------------
+  ## INSTALL CORRECT VERSIONS of data.table and stremr from github:
+  ## ---------------------------------------------------------------------------
   # devtools::install_github('Rdatatable/data.table')
   # devtools::install_github('osofr/stremr', build_vignettes = FALSE)
   require("data.table")
 
-  # # ---------------------------------------------------------------------------
-  # # Test data set included in stremr:
-  # # ---------------------------------------------------------------------------
+  ## ---------------------------------------------------------------------------
+  ## Test data set included in stremr:
+  ## ---------------------------------------------------------------------------
   # head(O.data)
   data(OdatDT_10K)
   ID <- "ID"; t <- "t"; TRT <- "TI"; CENS <- "C"; MONITOR <- "N"; outcome <- "Y.tplus1"; I <- "highA1c";
 
-  # ---------------------------------------------------------------------------
-  # DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
-  # Might expand this in the future to allow defining arbitrary summaries
-  # ---------------------------------------------------------------------------
+  ## ---------------------------------------------------------------------------
+  ## DEFINE SOME SUMMARIES (lags C[t-1], A[t-1], N[t-1])
+  ## Might expand this in the future to allow defining arbitrary summaries
+  ## ---------------------------------------------------------------------------
   # Odat_DT <- obsDTg05_1mil
   Odat_DT <- OdatDT_10K
   lagnodes <- c("C", "TI", "N")
@@ -38,9 +38,9 @@ test.GCOMP.TMLE.10Kdata <- function() {
   Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
   # Odat_DT[1:100, ]
 
-  # --------------------------------
-  # Define global options for stremr (which R packages to use for model fitting)
-  # --------------------------------
+  ## --------------------------------
+  ## Define global options for stremr (which R packages to use for model fitting)
+  ## --------------------------------
   # options(stremr.verbose = FALSE)
   # options(stremr.verbose = TRUE)
   # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
@@ -48,9 +48,9 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # import data into stremr object:
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
 
-  # --------------------------------
-  # Fitting the propensity scores for observed variables (A,C,N)
-  # --------------------------------
+  ## --------------------------------
+  ## Fitting the propensity scores for observed variables (A,C,N)
+  ## --------------------------------
   # + N.tminus1
   gform_TRT <- "TI ~ CVD + highA1c"
   stratify_TRT <- list(
@@ -75,15 +75,15 @@ test.GCOMP.TMLE.10Kdata <- function() {
   St.dhigh <- survNPMSM(wts.St.dhigh, OData)
   St.dhigh
 
-  # ---------------------------------------------------------------------------------------------------------
-  # GCOMP AND TMLE w/ GLMs
-  # ---------------------------------------------------------------------------------------------------------
+  ## ---------------------------------------------------------------------------------------------------------
+  ## GCOMP AND TMLE w/ GLMs
+  ## ---------------------------------------------------------------------------------------------------------
   # t.surv <- c(0,1,2,3,4,5,6,7,8,9,10)
   t.surv <- c(1,2,3,10)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   # stratified modeling by rule followers only:
-  gcomp_est1 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
+  gcomp_est1 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
   gcomp_est1$estimates[]
   # > gcomp_est1$estimates[]
   #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
@@ -101,7 +101,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 3:     TMLE     3       NA 0.9578743          NA           TRUE              0 stratified
   # 4:     TMLE    10       NA 0.8613802          NA           TRUE              0 stratified
 
-  gcomp_est1_last_t <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  gcomp_est1_last_t <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   gcomp_est1_last_t$estimates[]
   #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
   #      <char> <num>     <num>  <lgcl>      <lgcl>         <lgcl>          <int>     <char>
@@ -119,7 +119,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 4:     TMLE    10       NA 0.8613870          NA           TRUE              0 stratified
 
   # pooling all observations (no stratification):
-  gcomp_est2 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est2 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   tmle_est2 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est2$estimates[]
   #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type
@@ -143,33 +143,33 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 4:       -0.03282305,-0.02735624,-0.03282305, 0.15442483,-0.02735624,-0.02735624,  gTI.dlow
 
   # stratified modeling by rule followers only:
-  gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est3 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   gcomp_est3$estimates[]; tmle_est3$estimates[]
 
   # pooling all observations (no stratification):
-  gcomp_est4 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est4 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   tmle_est4 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est4$estimates[]; tmle_est4$estimates[]
 
-  # ------------------------------------------------------------------------
-  # RUN PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)
-  # ------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------
+  ## RUN PARALLEL seq-GCOMP & TMLE over t.surv (MUCH FASTER)
+  ## ------------------------------------------------------------------------
   # require("doParallel")
   # registerDoParallel(cores = 2)
   # data.table::setDTthreads(1)
 
-  # gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
   # tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
   # gcomp_est; tmle_est
 
-  # gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
   # tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
   # gcomp_est; tmle_est
 
-  # ------------------------------------------------------------------------
-  # TEST FOR PROBLEMS WITH > 1 REGRESSION AND > 1 STATA (SHOULD WORK)
-  # ------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------
+  ## TEST FOR PROBLEMS WITH > 1 REGRESSION AND > 1 STATA (SHOULD WORK)
+  ## ------------------------------------------------------------------------
   gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
   stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
   Odat_DT_test <- Odat_DT
@@ -183,9 +183,9 @@ test.GCOMP.TMLE.10Kdata <- function() {
 }
 
 
-# ---------------------------------------------------------------------------
-# Test speedglm
-# ---------------------------------------------------------------------------
+## ---------------------------------------------------------------------------
+## Test speedglm
+## ---------------------------------------------------------------------------
 test.speedglm.allestimators10Kdata <- function() {
   # options(stremr.verbose = FALSE)
   options(stremr.verbose = TRUE)
@@ -276,7 +276,7 @@ test.speedglm.allestimators10Kdata <- function() {
   surv1_test <- survNPMSM(wts.St.dlow_test2, OData)
   checkEquals(sum(surv1_test[["estimates"]][["time"]] == 0L)==1, TRUE)
 
-  surv1_test2 <- survDirectIPW(wts.St.dlow_test, OData)
+  surv1_test2 <- directIPW(wts.St.dlow_test, OData)
   checkEquals(sum(surv1_test[["estimates"]][["time"]] == 0L)==1, TRUE)
 
 
@@ -410,7 +410,7 @@ test.speedglm.allestimators10Kdata <- function() {
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   # params = list(fit.package = "speedglm", fit.algorithm = "glm")
   # models = params,
-  gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est3[["estimates"]][]
   #    est_name     t      risk      surv ALLsuccessTMLE nFailedUpdates   type rule.name
   # 1:    GCOMP    10 0.6600633 0.3399367          FALSE             11 pooled gTI.dhigh
@@ -441,13 +441,13 @@ test.speedglm.allestimators10Kdata <- function() {
   t.surv <- c(0,1,4)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  gcomp_est1 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledGCOMP.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est1 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", rule_name = "pooledGCOMP.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est1$estimates[]
 # 1:    GCOMP     0 0.5018253 0.4981747          FALSE              1 pooled pooledGCOMP.dhigh
 # 2:    GCOMP     1 0.6243751 0.3756249          FALSE              2 pooled pooledGCOMP.dhigh
 # 3:    GCOMP     4 0.6597016 0.3402984          FALSE              5 pooled pooledGCOMP.dhigh
 
-  gcomp_est2 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pooledGCOMP.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est2 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", rule_name = "pooledGCOMP.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est2$estimates[]
 # 1:    GCOMP     0 0.5018090 0.4981910          FALSE              1 pooled pooledGCOMP.dlow
 # 2:    GCOMP     1 0.6232914 0.3767086          FALSE              2 pooled pooledGCOMP.dlow
@@ -610,7 +610,7 @@ test.speedglm.allestimators10Kdata <- function() {
   t.surv <- c(4)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   params = list(fit.package = "speedglm", fit.algorithm = "glm")
-  gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   # stratified modeling by rule followers only:
   tmle_est3 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est3$estimates[]

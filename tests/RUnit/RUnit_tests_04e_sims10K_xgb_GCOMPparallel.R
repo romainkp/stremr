@@ -100,7 +100,7 @@ test.xgboost.parallel.10Kdata <- function() {
 
     t.surv <- c(1:10)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    tmle_est <- fitSeqGcomp(OData, tvals = t.surv,
+    tmle_est <- fitGCOMP(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         # fit_method = "none",

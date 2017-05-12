@@ -88,7 +88,7 @@ AKME.St.1
 # Bounded IPW
 # ----------------------------------------------------------------------
 IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") \%>\%
-             survDirectIPW(OData)
+             directIPW(OData)
 IPW.St.1[]
 
 # ----------------------------------------------------------------------
@@ -107,7 +107,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
-gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                           Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }

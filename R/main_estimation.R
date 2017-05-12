@@ -612,7 +612,7 @@ getIPWeights <- function(OData,
 }
 
 # ---------------------------------------------------------------------------------------
-#' Direct (bounded) IPW estimator of discrete survival function.
+#' Direct (bounded) IPW estimator for the expected outcome over time (can be time-to-event or not).
 #' @param wts_data \code{data.table} returned by a single call to \code{getIPWeights}.
 #' Must contain the treatment/monitoring estimated IPTW weights for a SINGLE rule.
 #' @param OData The object returned by function \code{fitPropensity}.
@@ -628,11 +628,7 @@ getIPWeights <- function(OData,
 #' @return A data.table with bounded IPW estimates of risk and survival by time.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-survDirectIPW <- function(wts_data,
-                          OData,
-                          weights,
-                          trunc_weights = 10^6,
-                          return_wts = FALSE) {
+directIPW <- function(wts_data, OData, weights, trunc_weights = 10^6, return_wts = FALSE) {
   nodes <- OData$nodes
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
@@ -664,14 +660,15 @@ survDirectIPW <- function(wts_data,
   if (any(is.na(all.ID.t[[Ynode]]))) all.ID.t[ , c("cum.IPAW", Ynode) := list(zoo::na.locf(cum.IPAW), zoo::na.locf(get(Ynode))), by = get(nodes$IDnode)]
 
   ## NUMERATOR OF BOUNDED IPW FOR SURVIVAL:
-  numIPW <- all.ID.t[, {sum_Y_IPAW = sum(get(Ynode)*cum.IPAW, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
+  numIPW <- all.ID.t[, {sum_Y_IPW = sum(get(Ynode)*cum.IPAW, na.rm = TRUE); list(sum_Y_IPW = sum_Y_IPW)}, by = eval(t_name)]
   ## DENOMINATOR OF BOUNDED IPW FOR SURVIVAL:
-  denomIPW <- all.ID.t[, {sum_IPAW = sum(cum.IPAW, na.rm = TRUE); list(sum_IPAW = sum_IPAW)}, by = eval(t_name)]
+  denomIPW <- all.ID.t[, {sum_IPW = sum(cum.IPAW, na.rm = TRUE); list(sum_IPW = sum_IPW)}, by = eval(t_name)]
   ## BOUNDED IPW OF SURVIVAL (DIRECT):
-  risk.t <- (numIPW[, "sum_Y_IPAW", with = FALSE] / denomIPW[, "sum_IPAW", with = FALSE])
+  risk.t <- (numIPW[, "sum_Y_IPW", with = FALSE] / denomIPW[, "sum_IPW", with = FALSE])
 
-  resultDT <- data.table(est_name = "DirectBoundedIPW", merge(numIPW, denomIPW, by = t_name))
-  resultDT[, ("St.DirectIPW") := (1 - risk.t[[1]])]
+  resultDT <- data.table(merge(numIPW, denomIPW, by = t_name))
+  # resultDT <- data.table(est_name = "DirectBoundedIPW", merge(numIPW, denomIPW, by = t_name))
+  resultDT[, ("St.directIPW") := (1 - risk.t[[1]])]
 
   ## STANDARDIZE THE NAME OF THE 'time' VARIABLE
   setnames(resultDT, t_name, "time")
@@ -689,8 +686,8 @@ survDirectIPW <- function(wts_data,
   # }
 
   resultDT <- data.frame(resultDT)
-  attr(resultDT, "estimator_short") <- "NPMSM"
-  attr(resultDT, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
+  attr(resultDT, "estimator_short") <- "directIPW"
+  attr(resultDT, "estimator_long") <- "Direct Bounded IPW"
   attr(resultDT, "trunc_weights") <- trunc_weights
   attr(resultDT, "rule_name") <- rule.name
   attr(resultDT, "time") <- resultDT[["time"]]
@@ -766,7 +763,7 @@ survNPMSM <- function(wts_data,
   wts_data_used[, "Wt.OUTCOME" := Wt.OUTCOME * cum.IPAW]
 
   ## THE ENUMERATOR FOR THE HAZARD AT t: THE WEIGHTED SUM OF SUBJECTS WHO HAD EXPERIENCED THE EVENT AT t:
-  sum_Ywt <- wts_data_used[, {sum_Y_IPAW = sum(Wt.OUTCOME, na.rm = TRUE); list(sum_Y_IPAW = sum_Y_IPAW)}, by = eval(t_name)]
+  sum_Ywt <- wts_data_used[, {sum_Y_IPW = sum(Wt.OUTCOME, na.rm = TRUE); list(sum_Y_IPW = sum_Y_IPW)}, by = eval(t_name)]
   setkeyv(sum_Ywt, cols = t_name)
 
   ## THE DENOMINATOR FOR THE HAZARD AT t: THE WEIGHTED SUM OF ALL SUBJECTS WHO WERE AT RISK AT t (EQUIVALENT TO SUMMING CUMULATIVE WEIGHTS cum.IPAW BY t):
@@ -774,7 +771,7 @@ survNPMSM <- function(wts_data,
   setkeyv(sum_Allwt, cols = t_name)
 
   ## EVALUATE THE DISCRETE HAZARD ht AND SURVIVAL St OVER t
-  St_ht_IPAW <- sum_Ywt[sum_Allwt][, ("ht.NPMSM") := sum_Y_IPAW / sum_all_IPAW][, ("St.NPMSM") := cumprod(1 - ht.NPMSM)]
+  St_ht_IPAW <- sum_Ywt[sum_Allwt][, ("ht.NPMSM") := sum_Y_IPW / sum_all_IPAW][, ("St.NPMSM") := cumprod(1 - ht.NPMSM)]
   St_ht_IPAW <- merge(St_ht_IPAW, ht.crude, all = TRUE)
   St_ht_IPAW[, "rule.name" := rule.name]
 

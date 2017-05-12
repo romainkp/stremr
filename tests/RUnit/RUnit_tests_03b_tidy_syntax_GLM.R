@@ -142,6 +142,12 @@ test.tidy.speedglm.10Kdata <- function() {
                     tbreaks = tbreaks,
                     glm_package = "speedglm"))) %>%
         mutate(MSM = map(MSM, "estimates")) %>%
+
+        dplyr::mutate(directIPW = map2(wts_data, trunc_weight,
+          ~ directIPW(wts_data = .x,
+                      trunc_weights = .y,
+                      OData = OData))) %>%
+        dplyr::mutate(directIPW = purrr::map(directIPW, "estimates")) %>%
         rename(trunc_MSM = trunc_weight)
 
   ## save IPW tables (will be later merged with main results dataset)
@@ -152,13 +158,16 @@ test.tidy.speedglm.10Kdata <- function() {
 
   IPW <- IPW %>% select(-wts_data, -wts_tabs, -FUPtimes_tabs)
 
+  IPW[["directIPW"]][[1]]
+  attributes(IPW[["directIPW"]][[1]])
+
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
   GCOMP <-analysis %>%
         distinct(intervened_TRT, stratifyQ_by_rule) %>%
         mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fitSeqGcomp(intervened_TRT = .x,
+          ~ fitGCOMP(intervened_TRT = .x,
                         stratifyQ_by_rule = .y,
                         tvals = tvals,
                         OData = OData,

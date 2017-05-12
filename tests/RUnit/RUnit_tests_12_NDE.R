@@ -80,7 +80,7 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   t.surv <- c(4,5)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est3$estimates[]
 
   # stratified modeling by rule followers only:
@@ -97,7 +97,7 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   t.surv <- c(4,5)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  gcomp_est3 <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
+  gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                             useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est3$estimates[]
   # stratified modeling by rule followers only:

@@ -24,7 +24,7 @@ Nuisance parameters can be modeled with machine learning R packages `xgboost` an
 Currently implemented **estimators** include:
  - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
  - [**Inverse Probability Weighted (IPW) Kaplan-Meier**](#survNPMSM). Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. This estimator inverse weights each observation based on the exposure/censoring model fits (propensity scores).
- - [**Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival**](#survDirectIPW). Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
+ - [**Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival**](#directIPW). Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
  - [**Inverse Probability Weighted Marginal Structural Model (IPW-MSM)**](#survMSM) for the hazard function, mapped into survival. Currently only logistic regression is allowed where covariates are time-points and regime/rule indicators. This estimator is also based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points and includes optional weight stabilization.
  - [**Recursive G-Computation (GCOMP)**](#GCOMPTMLE). Also known as the iterative G-Computation formula or Q-learning. Directly estimates the outcome model while adjusting for time-varying confounding. Estimation can be stratified by rule/regime followed or pooled across all rules/regimes.
  - [**Targeted Maximum Likelihood Estimator (TMLE)**](#GCOMPTMLE) for longitudinal data. Also known as the Targeted Minimum Loss-based Estimator. Doubly robust and semi-parametrically efficient estimator that targets the initial outcome model fits (GCOMP) with IPW.
@@ -120,12 +120,12 @@ To obtain documentation for specific relevant functions in `stremr` package:
 ?importData
 ?fitPropensity
 ?getIPWeights
-?survDirectIPW
+?directIPW
 ?survNPMSM
 ?survMSM
-?fitSeqGcomp
+?fitGCOMP
 ?fitTMLE
-?fitIterTMLE
+?fit_iterTMLE
 ```
 
 <!-- <a name="Reports"></a>
@@ -201,10 +201,10 @@ AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
 AKME.St.1
 ```
 
-<a name="survDirectIPW"></a>Estimate survival with bounded IPW:
+<a name="directIPW"></a>Estimate survival with bounded IPW:
 ```R
 IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
-            survDirectIPW(OData)
+            directIPW(OData)
 IPW.St.1[]
 ```
 
@@ -228,7 +228,7 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 G-Computation (pooled):
 ```R
-gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 ```
 
 Targeted Maximum Likelihood Estimation (TMLE) (stratified):
@@ -260,7 +260,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gf
 
 Other available algorithms are `H2O-3` Gradient Boosting Machines (`fit.algorithm = "gbm"`), distributed GLM (including LASSO and Ridge) (`fit.algorithm = "glm"`) and Deep Neural Nets (`fit.algorithm = "deeplearning"`).
 
-Use arguments `params_...` in `fitPropensity()` and `models` in `fitSeqGcomp()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
+Use arguments `params_...` in `fitPropensity()` and `models` in `fitGCOMP()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
 ```R
 params_TRT = list(fit.package = "h2o", fit.algorithm = "gbm", ntrees = 50, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")

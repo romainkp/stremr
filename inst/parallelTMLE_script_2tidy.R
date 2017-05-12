@@ -193,7 +193,7 @@ test.xgboost.parallel.10Kdata <- function() {
     GCOMP <-analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule) %>%
           mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-            ~ fitSeqGcomp(intervened_TRT = .x,
+            ~ fitGCOMP(intervened_TRT = .x,
                           stratifyQ_by_rule = .y,
                           tvals = tvals,
                           OData = OData,

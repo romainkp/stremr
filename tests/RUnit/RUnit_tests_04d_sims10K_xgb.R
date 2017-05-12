@@ -347,13 +347,13 @@ test.xgboost.10Kdata <- function() {
                         family = "quasibinomial", early_stopping_rounds = 10)
     tmle_est_dhigh[["estimates"]]
 
-    gcomp_est_dlow <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    gcomp_est_dlow <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              estimator = "xgboost__glm",
                              family = "quasibinomial", early_stopping_rounds = 10)
     gcomp_est_dlow[["estimates"]]
 
-    gcomp_est_dhigh <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    gcomp_est_dhigh <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              estimator = "xgboost__glm",
                              family = "quasibinomial", early_stopping_rounds = 10)
@@ -387,13 +387,13 @@ test.xgboost.10Kdata <- function() {
                         family = "quasibinomial", nrounds = 10, early_stopping_rounds = 3)
     tmle_est_dhigh[["estimates"]]
 
-    gcomp_est_dlow <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    gcomp_est_dlow <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
                              family = "quasibinomial", nrounds = 10, early_stopping_rounds = 3)
     gcomp_est_dlow[["estimates"]]
 
-    gcomp_est_dhigh <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    gcomp_est_dhigh <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
                              family = "quasibinomial", nrounds = 10, early_stopping_rounds = 3)
@@ -431,10 +431,10 @@ test.xgboost.10Kdata <- function() {
     tmle_est_dlow[["estimates"]]
     tmle_est_dhigh[["estimates"]]
 
-    gcomp_est_dlow <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    gcomp_est_dlow <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
-    gcomp_est_dhigh <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    gcomp_est_dhigh <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
     gcomp_est_dlow[["estimates"]]
@@ -489,7 +489,7 @@ test.xgboost.10Kdata <- function() {
                                     )
                                 )
 
-    gcomp_est_dlow <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    gcomp_est_dlow <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
 
@@ -500,7 +500,7 @@ test.xgboost.10Kdata <- function() {
     # [1] "No. of obs for last prediction of Q: 10000"
     # [1] "EY^* estimate at t=3: 0.07957"
 
-    gcomp_est_dhigh <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    gcomp_est_dhigh <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
 
@@ -592,7 +592,7 @@ test.xgboost.10Kdata <- function() {
 
     t.surv <- c(1:10)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    tmle_est <- fitSeqGcomp(OData, tvals = t.surv,
+    tmle_est <- fitGCOMP(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE, fit_method = "cv", fold_column = "fold_ID",
                         # parallel = FALSE)
@@ -782,7 +782,7 @@ test.xgboost.grid.10Kdata <- function() {
     t.surv <- c(10)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = model_Grid, stratifyQ_by_rule = FALSE)
+    gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = model_Grid, stratifyQ_by_rule = FALSE)
     gcomp_est$estimates[]
     # for larger grid (10 random models):
     #    est_name     t      risk      surv ALLsuccessTMLE nFailedUpdates   type rule.name
@@ -813,7 +813,7 @@ test.xgboost.grid.10Kdata <- function() {
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit_method = "cv", fold_column = "fold_ID")
     t.surv <- c(5,6,7,8,9,10)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
+    gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE, parallel = FALSE)
     gcomp_est$estimates[]
     #    est_name  t      risk      surv ALLsuccessTMLE nFailedUpdates   type
     # 1:    GCOMP  5 0.1806779 0.8193221          FALSE              6 pooled

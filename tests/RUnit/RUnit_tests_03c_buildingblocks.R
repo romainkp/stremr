@@ -55,7 +55,7 @@ test.buildingblocks <- function() {
   # Bounded IPW
   # ----------------------------------------------------------------------
   IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
-               survDirectIPW(OData)
+               directIPW(OData)
   # IPW.St.1[]
   res.test.IPW.St.1 <- c(0.9564462, 0.9519073, 0.9497037, 0.9643112, 0.9498030, 0.9502507, 0.9631751,
                          0.9559085, 0.9487348, 0.9553832, 0.9698508, 0.9683569, 0.9347756, 0.9341488,
@@ -94,7 +94,7 @@ test.buildingblocks <- function() {
   survNPIPW_ests <- survNP_res$estimates
   survNPIPW_ests[]
 
-  survDirIPW_ests <- survDirectIPW(wts.DT.1, OData)
+  survDirIPW_ests <- directIPW(wts.DT.1, OData)
   survDirIPW_ests[]
 
   survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1,)
@@ -117,7 +117,7 @@ test.buildingblocks <- function() {
   t.surv <- c(0:4)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est[]
 
   # stratified modeling by rule followers only:

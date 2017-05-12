@@ -41,7 +41,7 @@ openFileInOS <- function(f) {
 #' @param MSM The MSM object fits returned by the function \code{\link{survMSM}}.
 #' @param NPMSM Optional list of a resulting calls to \code{survNPMSM} or a result of a single call to \code{\link{survNPMSM}}.
 #' @param TMLE Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{\link{fitTMLE}}.
-#' @param GCOMP Optional list of a resulting calls to \code{fitSeqGcomp} or a result of a single call to \code{\link{fitSeqGcomp}}.
+#' @param GCOMP Optional list of a resulting calls to \code{fitGCOMP} or a result of a single call to \code{\link{fitGCOMP}}.
 #' @param WTtables Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{\link{get_wtsummary}}
 #' @param FUPtables Subject-specific \code{data.table} with maximum follow-up time saved for each subject in the column named \code{max.t}.
 #' See \code{\link{get_FUPtimes}} for additional details.

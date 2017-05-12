@@ -62,7 +62,7 @@
 #' Note that all such arguments must be named.
 #' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
 #' @export
-fitSDR <- function(OData,
+fit_iTMLE <- function(OData,
                     tvals,
                     Qforms,
                     intervened_TRT = NULL,
@@ -135,8 +135,8 @@ fitSDR <- function(OData,
   # Define the intervention nodes
   # Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx
   # ------------------------------------------------------------------------------------------------
-  gstar.A <- defineNodeGstarGComp(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule, stratify_by_last = stratify_by_last)
-  gstar.N <- defineNodeGstarGComp(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule, stratify_by_last = stratify_by_last)
+  gstar.A <- defineNodeGstarGCOMP(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule, stratify_by_last = stratify_by_last)
+  gstar.N <- defineNodeGstarGCOMP(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, stratifyQ_by_rule, stratify_by_last = stratify_by_last)
   interventionNodes.g0 <- c(nodes$Anodes, nodes$Nnodes)
   interventionNodes.gstar <- c(gstar.A, gstar.N)
 
@@ -153,14 +153,14 @@ fitSDR <- function(OData,
   ## For est of S(t) over vector of ts, estimate for highest t first going down to smallest t
   ## This is a more efficient when parallelizing, since larger t implies more model runs & longer run time
   ## ------------------------------------------------------------------------------------------------
-  est_name <- "SDR"
+  est_name <- "iTMLE"
   tmle.run.res <- try(
     if (parallel) {
       mcoptions <- list(preschedule = FALSE)
       '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
-        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
+        res <- fit_iTMLE_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -169,7 +169,7 @@ fitSDR <- function(OData,
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
         cat("Estimating parameter E[Y_d(t)] for t = " %+% t_period, "\n")
-        res <- fitSDR_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
+        res <- fit_iTMLE_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -208,7 +208,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
 ## ------------------------------------------------------------------------------------------------
 ## New procedure for sequential double robustness
 ## ------------------------------------------------------------------------------------------------
-fitSDR_onet <- function(OData,
+fit_iTMLE_onet <- function(OData,
                         t_period,
                         Qforms,
                         stratifyQ_by_rule,
@@ -247,7 +247,7 @@ fitSDR_onet <- function(OData,
 
   # ------------------------------------------------------------------------------------------------
   #  ****** Qkplus1 THIS NEEDS TO BE MOVED OUT OF THE MAIN data.table *****
-  # Running fitSeqGcomp_onet might conflict with different Qkplus1
+  # Running fitGCOMP_onet might conflict with different Qkplus1
   # ------------------------------------------------------------------------------------------------
   # **** G-COMP: Initiate Qkplus1 - (could be multiple if more than one regimen)
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)

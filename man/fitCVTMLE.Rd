@@ -2,18 +2,18 @@
 % Please edit documentation in R/tmle.R
 \name{fitCVTMLE}
 \alias{fitCVTMLE}
-\title{CV-TMLE wrapper for \code{fitSeqGcomp}}
+\title{CV-TMLE wrapper for \code{fitGCOMP}}
 \usage{
 fitCVTMLE(...)
 }
 \arguments{
-\item{...}{Arguments that will be passed down to the underlying function \code{fitSeqGcomp}}
+\item{...}{Arguments that will be passed down to the underlying function \code{fitGCOMP}}
 }
 \value{
 \code{data.table} with TMLE survival by time
 }
 \description{
-Calls \code{fitSeqGcomp} with arguments \code{TMLE = TRUE} and \code{CVTMLE = TRUE}.
+Calls \code{fitGCOMP} with arguments \code{TMLE = TRUE} and \code{CVTMLE = TRUE}.
 }
 \examples{
 options(stremr.verbose = TRUE)
@@ -71,7 +71,7 @@ AKME.St.1
 # Bounded IPW
 # ----------------------------------------------------------------------
 IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") \%>\%
-             survDirectIPW(OData)
+             directIPW(OData)
 IPW.St.1[]
 
 # ----------------------------------------------------------------------
@@ -90,7 +90,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 \dontrun{
-gcomp_est <- fitSeqGcomp(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                           Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
@@ -182,6 +182,6 @@ tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 
 }
 \seealso{
-\code{\link{fitSeqGcomp}}
+\code{\link{fitGCOMP}}
 }
 
