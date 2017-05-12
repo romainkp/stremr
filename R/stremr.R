@@ -289,7 +289,7 @@ stremr <- function(data, ID = "Subj_ID", t_name = "time_period",
         ~ get_wtsummary(.x, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE))) %>%
     ## save the tables with number at risk / following each rule (sep for each regimen)
     dplyr::mutate(FUPtimes_tabs = purrr::map(wts_data,
-          ~ get_FUPtimes(.x, IDnode = ID, tnode = t))) %>%
+          ~ get_FUPtimes(.x, IDnode = ID, tnode = t_name))) %>%
     dplyr::ungroup() %>%
 
     ## IPW-Adjusted KM (Non-Parametric or Saturated MSM):

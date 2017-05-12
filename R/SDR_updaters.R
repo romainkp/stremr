@@ -7,6 +7,19 @@ truncate_offset <- function(offset,
   return(offset)
 }
 
+#' iTMLE NULL learner / updater
+#'
+#' Returns the inputs Y as they are, without updating. This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @param Y Input outcomes
+#' @param X Input design matrix with training data.
+#' Must contain a column named "offset", which contains the offsets converted to logit-linear scale.
+#' @param newX Input design matrix with test data.
+#' Same requirement as for \code{X}: must contain a column named "offset",
+#' which contains the offsets converted to logit-linear scale.
+#' @param family Link function (ignored).
+#' @param obsWeights Row-specific weights
+#' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
 SDR.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running no update (epsilon update set to 0)...\n")
@@ -17,6 +30,19 @@ SDR.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
   out
 }
 
+#' iTMLE univariate glm learner / updater
+#'
+#' Performs a univariate TMLE update. This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @param Y Input outcomes
+#' @param X Input design matrix with training data.
+#' Must contain a column named "offset", which contains the offsets converted to logit-linear scale.
+#' @param newX Input design matrix with test data.
+#' Same requirement as for \code{X}: must contain a column named "offset",
+#' which contains the offsets converted to logit-linear scale.
+#' @param family Link function (ignored).
+#' @param obsWeights Row-specific weights
+#' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
 SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running glm TMLE update with intercept-only GLM...\n")
@@ -44,6 +70,12 @@ SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   out
 }
 
+#' iTMLE glm learner / updater
+#'
+#' Performs an SDR update using a main-terms GLM (logistic regression with \code{speedglm} package).
+#' This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @rdname SDR.updater.glmTMLE
 #' @export
 SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running speedglm TMLE update with intercept-only GLM...\n")
@@ -61,6 +93,20 @@ SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   out
 }
 
+#' iTMLE glm learner / updater
+#'
+#' Performs an SDR update using a main-terms GLM (logistic regression with \code{stats::glm}).
+#' This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @param Y Input outcomes
+#' @param X Input design matrix with training data.
+#' Must contain a column named "offset", which contains the offsets converted to logit-linear scale.
+#' @param newX Input design matrix with test data.
+#' Same requirement as for \code{X}: must contain a column named "offset",
+#' which contains the offsets converted to logit-linear scale.
+#' @param family Link function (ignored).
+#' @param obsWeights Row-specific weights
+#' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
 SDR.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running SDR update with GLM...\n")
@@ -80,27 +126,69 @@ SDR.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
   out
 }
 
+#' iTMLE gbm learner / updater
+#'
+#' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=1.
+#' This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @rdname SDR.updater.xgb
 #' @export
 SDR.updater.xgb.delta1 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 1
   SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
+
+#' iTMLE gbm learner / updater
+#'
+#' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=2.
+#' This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @rdname SDR.updater.xgb
 #' @export
 SDR.updater.xgb.delta2 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 2
   SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
+
+#' iTMLE gbm learner / updater
+#'
+#' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=3.
+#' This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @rdname SDR.updater.xgb
 #' @export
 SDR.updater.xgb.delta3 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 3
   SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
+
+#' iTMLE gbm learner / updater
+#'
+#' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=4.
+#' This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @rdname SDR.updater.xgb
 #' @export
 SDR.updater.xgb.delta4 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 4
   SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
 
+#' iTMLE gbm learner / updater
+#'
+#' General GBM learner from \code{xgboost} package.
+#' This function is passed along as a separate learner
+#' to the SuperLearner implementation of origami package
+#' @param Y Input outcomes
+#' @param X Input design matrix with training data.
+#' Must contain a column named "offset", which contains the offsets converted to logit-linear scale.
+#' @param newX Input design matrix with test data.
+#' Same requirement as for \code{X}: must contain a column named "offset",
+#' which contains the offsets converted to logit-linear scale.
+#' @param family Link function (ignored).
+#' @param obsWeights Row-specific weights
+#' @param params Tuning parameters passed on to \code{xgboost}.
+#' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
 SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
   # cat("...running SDR updater xgboost w/ following params: \n "); str(params)
@@ -129,6 +217,10 @@ SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
   out
 }
 
+#' @param object Results of calling \code{SDR.updater.speedglmTMLE} or \code{SDR.updater.glmTMLE}.
+#' @param newdata Design matrix with test data for which predictions should be obtained.
+#' Must contain a column named "offset".
+#' @rdname SDR.updater.glmTMLE
 #' @export
 predict.SDR.updater.TMLE <- function(object, newdata, ...) {
   mfit <- object$object
@@ -137,6 +229,10 @@ predict.SDR.updater.TMLE <- function(object, newdata, ...) {
   pred
 }
 
+#' @param object Results of calling \code{SDR.updater.glm}.
+#' @param newdata Design matrix with test data for which predictions should be obtained.
+#' Must contain a column named "offset".
+#' @rdname SDR.updater.glm
 #' @export
 predict.SDR.updater.glm <- function(object, newdata, ...) {
   mfit <- object$object
@@ -149,6 +245,10 @@ predict.SDR.updater.glm <- function(object, newdata, ...) {
   pred
 }
 
+#' @param object Results of calling \code{SDR.updater.xgb} functions.
+#' @param newdata Design matrix with test data for which predictions should be obtained.
+#' Must contain a column named "offset".
+#' @rdname SDR.updater.xgb
 #' @export
 predict.SDR.updater.xgb <- function (object, newdata, ...)  {
   mfit <- object$object
