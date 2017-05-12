@@ -24,7 +24,10 @@ gvars$opts.allowedVals <- list(estimator = c("speedglm__glm", "glm__glm",
                                maxncats = "_positive_integer_",
                                maxNperBin = "_positive_integer_",
                                lower_bound_zero_Q = c(TRUE, FALSE),
-                               skip_update_zero_Q = c(TRUE, FALSE)
+                               skip_update_zero_Q = c(TRUE, FALSE),
+                               up_trunc_offset = "_numeric_",
+                               low_trunc_offset = "_numeric_",
+                               eps_tol = "_numeric_"
   )
 
 getopt <- function(optname) return(stremrOptions(o = optname))
@@ -129,6 +132,9 @@ print_stremr_opts <- function() {
 #' Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.
 #' @param skip_update_zero_Q Set to \code{FALSE} to perform TMLE update with glm even when all of the Q's are zero.
 #' When set to \code{TRUE} the TMLE update step is skipped if the predicted Q's are either all 0 or near 0, with TMLE intercept being set to 0.
+#' @param up_trunc_offset The upper bound for the TMLE offset during the TMLE GLM update step.
+#' @param low_trunc_offset The lower bound for the TMLE offset during the TMLE GLM update step.
+#' @param eps_tol Used for TMLE GLM update step. Set the tolerance for testing that the outcomes (\code{Qkplus1}) are all 0 or are all 1.
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{stremrOptions}}, \code{\link{print_stremr_opts}}
 #' @export
@@ -147,7 +153,10 @@ set_all_stremr_options <- function(
                             maxncats = 20,
                             maxNperBin = 500,
                             lower_bound_zero_Q = TRUE,
-                            skip_update_zero_Q = TRUE
+                            skip_update_zero_Q = TRUE,
+                            up_trunc_offset = 20,
+                            low_trunc_offset = -10,
+                            eps_tol = 10^-5
                             ) {
 
   old.opts <- gvars$opts
@@ -177,7 +186,10 @@ set_all_stremr_options <- function(
     # poolContinVar = poolContinVar,
     maxNperBin = maxNperBin,
     lower_bound_zero_Q = lower_bound_zero_Q,
-    skip_update_zero_Q = skip_update_zero_Q
+    skip_update_zero_Q = skip_update_zero_Q,
+    up_trunc_offset = up_trunc_offset,
+    low_trunc_offset = low_trunc_offset,
+    eps_tol = eps_tol
   )
 
   gvars$opts <- opts

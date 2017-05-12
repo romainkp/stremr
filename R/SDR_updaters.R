@@ -1,3 +1,12 @@
+
+truncate_offset <- function(offset,
+                            up_trunc_offset = stremrOptions("up_trunc_offset"),
+                            low_trunc_offset = stremrOptions("low_trunc_offset")) {
+  offset[offset >= up_trunc_offset] <- up_trunc_offset
+  offset[offset <= low_trunc_offset] <- low_trunc_offset
+  return(offset)
+}
+
 #' @export
 SDR.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running no update (epsilon update set to 0)...\n")
@@ -11,13 +20,7 @@ SDR.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
 #' @export
 SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running glm TMLE update with intercept-only GLM...\n")
-  offset <- X[, "offset"]
-  offset[offset >= 20] <- 20
-  offset[offset <= -11] <- -11.0
-  # offset[offset == Inf] <- 20
-  # offset[offset == -Inf] <- -20
-  # offset[offset == -Inf] <- -11.0
-
+  offset <- truncate_offset(X[, "offset"])
   fit.glm <- try(stats::glm.fit(x = matrix(1L, ncol = 1, nrow = length(Y)),
                                  y = Y,
                                  weights = obsWeights,
@@ -44,12 +47,7 @@ SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
 #' @export
 SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running speedglm TMLE update with intercept-only GLM...\n")
-  offset <- X[, "offset"]
-  offset[offset >= 20] <- 20
-  offset[offset <= -11] <- -11.0
-  # offset[offset == Inf] <- 20
-  # offset[offset == -Inf] <- -20
-
+  offset <- truncate_offset(X[, "offset"])
   fit.glm <- speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
                                      y = Y, weights = obsWeights, offset = offset,
                                      # method=c('eigen','Cholesky','qr'),
@@ -66,12 +64,7 @@ SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
 #' @export
 SDR.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running SDR update with GLM...\n")
-  offset <- X[, "offset"]
-  offset[offset >= 20] <- 20
-  offset[offset <= -11] <- -11.0
-  # offset[offset == Inf] <- 20
-  # offset[offset == -Inf] <- -20
-
+  offset <- truncate_offset(X[, "offset"])
   X <- X[, colnames(X)[!colnames(X) %in% "offset"], drop = FALSE]
   fit.glm <- stats::glm.fit(x = cbind(Intercept = 1L, as.matrix(X)),
                             y = Y,
@@ -111,12 +104,7 @@ SDR.updater.xgb.delta4 <- function(Y, X, newX, family, obsWeights, params, ...) 
 #' @export
 SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
   # cat("...running SDR updater xgboost w/ following params: \n "); str(params)
-  offset <- X[, "offset"]
-  offset[offset >= 20] <- 20
-  offset[offset <= -11] <- -11.0
-  # offset[offset == Inf] <- 20
-  # offset[offset == -Inf] <- -20
-
+  offset <- truncate_offset(X[, "offset"])
   X <- X[, colnames(X)[!colnames(X) %in% "offset"], drop = FALSE]
 
   xgb_dat <- xgboost::xgb.DMatrix(as.matrix(X), label = Y)
@@ -144,12 +132,7 @@ SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
 #' @export
 predict.SDR.updater.TMLE <- function(object, newdata, ...) {
   mfit <- object$object
-  offset <- newdata[, "offset"]
-  offset[offset >= 20] <- 20
-  offset[offset <= -11] <- -11.0
-  # offset[offset == Inf] <- 20
-  # offset[offset == -Inf] <- -20
-
+  offset <- truncate_offset(newdata[, "offset"])
   pred <- stremr:::logit_linkinv(offset + mfit$coef)
   pred
 }
@@ -157,14 +140,9 @@ predict.SDR.updater.TMLE <- function(object, newdata, ...) {
 #' @export
 predict.SDR.updater.glm <- function(object, newdata, ...) {
   mfit <- object$object
-  offset <- newdata[, "offset"]
-  offset[offset >= 20] <- 20
-  offset[offset <= -11] <- -11.0
-  # offset[offset == Inf] <- 20
-  # offset[offset == -Inf] <- -20
+  offset <- truncate_offset(newdata[, "offset"])
 
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
-
   Xmat <- cbind(Intercept = 1L, as.matrix(newdata))
   eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
   pred <- stremr:::logit_linkinv(offset + eta)
@@ -174,11 +152,7 @@ predict.SDR.updater.glm <- function(object, newdata, ...) {
 #' @export
 predict.SDR.updater.xgb <- function (object, newdata, ...)  {
   mfit <- object$object
-  offset <- newdata[, "offset"]
-  offset[offset >= 20] <- 20
-  offset[offset <= -11] <- -11.0
-  # offset[offset == Inf] <- 20
-  # offset[offset == -Inf] <- -20
+  offset <- truncate_offset(newdata[, "offset"])
 
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
   xgb_dat <- xgboost::xgb.DMatrix(as.matrix(newdata))

@@ -1,6 +1,10 @@
 
 
 test.CV_TMLE.10Kdata <- function() {
+    reqxgb <- requireNamespace("xgboost", quietly = TRUE)
+    reqh2o <- requireNamespace("h2o", quietly = TRUE)
+    if (!reqxgb || !reqh2o) return(NULL)
+
     `%+%` <- function(a, b) paste0(a, b)
     library("h2o")
     library("xgboost")
@@ -65,7 +69,7 @@ test.CV_TMLE.10Kdata <- function() {
                             estimator = "xgboost__gbm",
                             fit_method = "cv",
                             fold_column = "fold_ID",
-                            family = "quasibinomial", rounds = 1000, early_stopping_rounds = 50)
+                            family = "quasibinomial", rounds = 5, early_stopping_rounds = 2)
 
     # ## h2o gbm
     # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
@@ -74,7 +78,6 @@ test.CV_TMLE.10Kdata <- function() {
     #                        models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
     #                       fit_method = "cv", fold_column = "fold_ID"
     #                       )
-
     # ## regularlized glm with h2o
     # models_g <<- gridisl::defModel(estimator = "h2o__glm", family = "binomial",
     #                                 nlambdas = 5, lambda_search = TRUE,
@@ -99,11 +102,11 @@ test.CV_TMLE.10Kdata <- function() {
     params <- gridisl::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
                                 nthread = 2,
-                                nrounds = 100,
+                                nrounds = 5,
                                 early_stopping_rounds = 2)
 
     # t.surv <- c(1:10)
-    t.surv <- 10
+    t.surv <- 2
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
     SDR_est <- stremr:::fit_iTMLE(OData, tvals = t.surv,
@@ -116,10 +119,10 @@ test.CV_TMLE.10Kdata <- function() {
                         return_fW = FALSE)
                         # parallel = TRUE)
     SDR_est[["estimates"]]
-    fW_fit <- SDR_est[["estimates"]][["fW_fit"]][[1]]
-    preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
-    MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
-    MSE_err # [1] 0.07085635
+    # fW_fit <- SDR_est[["estimates"]][["fW_fit"]][[1]]
+    # preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
+    # MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
+    # MSE_err # [1] 0.07085635
 
     #         est_name  time    St.SDR   type rule.name
     #       <char> <int>     <num> <char>    <char>
@@ -142,6 +145,7 @@ test.CV_TMLE.10Kdata <- function() {
                            return_fW = TRUE,
                            use_DR_transform = TRUE # stabilize = FALSE,
                           )
+    DR_trans_est[["estimates"]]
 
     tmle_est <- fitTMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
@@ -152,10 +156,10 @@ test.CV_TMLE.10Kdata <- function() {
                         return_fW = TRUE)
                         # parallel = TRUE)
     tmle_est[["estimates"]]
-    fW_fit <- tmle_est[["estimates"]][["fW_fit"]][[1]]
-    preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
-    MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
-    MSE_err # [1] 0.07085635
+    # fW_fit <- tmle_est[["estimates"]][["fW_fit"]][[1]]
+    # preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
+    # MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
+    # MSE_err # [1] 0.07085635
     #     est_name  time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
     #       <char> <int>   <lgcl>     <num>      <lgcl>         <lgcl>          <int> <char>       <num>
     #  1:     TMLE     1       NA 0.9751499          NA           TRUE              0 pooled 0.001968403

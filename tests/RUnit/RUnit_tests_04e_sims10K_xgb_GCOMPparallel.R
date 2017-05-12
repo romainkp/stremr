@@ -4,7 +4,7 @@ setDTthreads(1)
 library("foreach")
 library("doParallel")
 
-test.xgboost.parallel.10Kdata <- function() {
+notest.xgboost.parallel.10Kdata <- function() {
     `%+%` <- function(a, b) paste0(a, b)
     library("gridisl")
     library("stremr")
@@ -110,28 +110,28 @@ test.xgboost.parallel.10Kdata <- function() {
                         parallel = TRUE)
 
 
+    run_test_xgb_Models <- function(seed){
+        data(agaricus.train, package='xgboost')
+        data(agaricus.test, package='xgboost')
+        dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
+        dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
+        watchlist <- list(eval = dtest, train = dtrain)
+        param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
+                      objective = "binary:logistic", eval_metric = "auc")
+        bst <- xgb.train(param, dtrain, nrounds = 500, watchlist)
+        return(bst)
+    }
+
+
+    cl <- makeForkCluster(2, outfile = "")
+    registerDoParallel(cl); Sys.sleep(2)
+
+    cat("...run_test_xgb_Models...")
+    r <- foreach(n=seq.int(8), .packages=c('xgboost')) %dopar% {
+        run_test_xgb_Models(n)
+    }
+    cat("...finished with run_test_xgb_Models...")
+
+    # test.xgboost.parallel.10Kdata()
 }
 
-run_test_xgb_Models <- function(seed){
-    data(agaricus.train, package='xgboost')
-    data(agaricus.test, package='xgboost')
-    dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
-    dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
-    watchlist <- list(eval = dtest, train = dtrain)
-    param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
-                  objective = "binary:logistic", eval_metric = "auc")
-    bst <- xgb.train(param, dtrain, nrounds = 500, watchlist)
-    return(bst)
-}
-
-
-cl <- makeForkCluster(2, outfile = "")
-registerDoParallel(cl); Sys.sleep(2)
-
-cat("...run_test_xgb_Models...")
-r <- foreach(n=seq.int(8), .packages=c('xgboost')) %dopar% {
-    run_test_xgb_Models(n)
-}
-cat("...finished with run_test_xgb_Models...")
-
-test.xgboost.parallel.10Kdata()

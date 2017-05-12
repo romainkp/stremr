@@ -153,7 +153,7 @@ fit_iTMLE <- function(OData,
   ## For est of S(t) over vector of ts, estimate for highest t first going down to smallest t
   ## This is a more efficient when parallelizing, since larger t implies more model runs & longer run time
   ## ------------------------------------------------------------------------------------------------
-  est_name <- "iTMLE"
+  est_name <- ifelse(use_DR_transform, "DRtransform", "iTMLE")
   tmle.run.res <- try(
     if (parallel) {
       mcoptions <- list(preschedule = FALSE)

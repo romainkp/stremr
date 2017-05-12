@@ -1,25 +1,39 @@
-tmle.update <- function(Qkplus1, Qk_hat, IPWts, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE) {
+tmle.update <- function(Qkplus1, Qk_hat, IPWts,
+                        lower_bound_zero_Q = TRUE,
+                        skip_update_zero_Q = TRUE,
+                        up_trunc_offset = stremrOptions("up_trunc_offset"),
+                        low_trunc_offset = stremrOptions("low_trunc_offset"),
+                        eps_tol = stremrOptions("eps_tol")
+                        ) {
+
   QY.star <- NA
+
   if (sum(abs(IPWts)) < 10^-9) {
+
     update.Qstar.coef <- 0
     # if (gvars$verbose)
-    message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
-    warning("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
-  } else if ((sum(Qkplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
+    message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon to 0")
+    # warning("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
+
+  # } else if ((sum(Qkplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
+  } else if (((all(Qkplus1[IPWts > 0] < eps_tol)) || (all(Qkplus1[IPWts > 0] > (1-eps_tol)))) && skip_update_zero_Q) {
+    message("GLM TMLE update cannot be performed since the outcomes (Qkplus1) are either all 0 or all 1, setting epsilon to 0")
     update.Qstar.coef <- 0
+
   } else {
+
     #************************************************
     # TMLE update via weighted univariate ML (espsilon is intercept)
     #************************************************
     if (lower_bound_zero_Q) {
-      Qkplus1[Qkplus1 < 10^(-4)] <- 10^(-4)
-      Qk_hat[Qk_hat < 10^(-4)] <- 10^(-4)
+      Qkplus1[Qkplus1 < eps_tol] <- eps_tol
+      Qkplus1[Qkplus1 > (1 - eps_tol)] <- (1 - eps_tol)
     }
-    off_TMLE <- qlogis(Qk_hat)
-    # off_TMLE[off_TMLE == Inf] <- 20
-    # off_TMLE[off_TMLE == -Inf] <- -20
-    off_TMLE[off_TMLE >= 20] <- 20
-    off_TMLE[off_TMLE <= -11] <- -11.0
+
+    off_TMLE <- truncate_offset(qlogis(Qk_hat), up_trunc_offset, low_trunc_offset)
+    # off_TMLE <- qlogis(Qk_hat)
+    # off_TMLE[off_TMLE >= up_trunc_offset] <- up_trunc_offset
+    # off_TMLE[off_TMLE <= low_trunc_offset] <- low_trunc_offset
 
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
                                           y = Qkplus1, weights = IPWts, offset = off_TMLE,
