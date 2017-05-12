@@ -54,6 +54,7 @@ r_binary_packages:
 r_github_packages:
   - jimhester/covr
   - osofr/gridisl
+  - jeremyrcoyle/origami
   - schloerke/travisDrat
 
 r_packages:
