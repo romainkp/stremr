@@ -9,7 +9,7 @@
 if(getRversion() >= "2.15.1") {
   utils::globalVariables(c("cens", "surv", "CI95up", "CI95low", "up", "low", "time", "group",
                            "dx1", "dx2", "dx1_name", "dx2_name", "RD",
-                           "RD.SE", "time", "contrast"))
+                           "RD.SE", "time", "contrast", "element_text", "estimates", "rank1", "rank2", "time_idx"))
 }
 
 #' Survival curves with ggplot2
@@ -235,7 +235,8 @@ ggsurv <- function(
 #' @param ymax The maximum value of the y axis. The default (\code{ymax=NULL}) is to use \code{ggplot}
 #' to automatically adjust the limits of the y-axis.
 #' @param facet Set to \code{TRUE} to create a facet of plots by first / last tx name
-#' @param font_size Font size for facet labels, legend text and legend title
+#' @param font_size Font size for facet labels, legend text and legend title.
+#' @param line_RD_plot Connect the point risk differences with a plotted line (using \code{geom_line}).
 #' @param x_breaks Vector of breaks to display on x-axis
 #' @param axis_font_size Control the font size of x and y axis, leave as NULL for default.
 #' @param x_axis_font_angle Control the angle of rotation for x-axis labels (default is 0).

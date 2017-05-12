@@ -1,6 +1,7 @@
 test.GRID.h2o.xgboost.10Kdata <- function() {
   reqxgb <- requireNamespace("xgboost", quietly = TRUE)
-  if (!reqxgb) return()
+  reqh2o <- requireNamespace("h2o", quietly = TRUE)
+  if (!reqxgb || !reqh2o) return(NULL)
 
   ## -----------------------------------------------------------------------
   ## ****************************** IMPORTANT ******************************
@@ -16,10 +17,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## -----------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
-  options(stremr.verbose = TRUE)
-  options(gridisl.verbose = TRUE)
-  # options(stremr.verbose = FALSE)
-  # options(gridisl.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "speedglm__glm")
 
   library("data.table")
   library("magrittr")
@@ -33,7 +35,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
   # select only the first 1,000 IDs
-  # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+  Odat_DT <- Odat_DT[ID %in% (1:100), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   ## -----------------------------------------------------------------------
@@ -66,10 +68,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
   trunc_IPW <- 10
-  tvals <- 0:8
+  # tvals <- 0:8
+  tvals <- 0:2
   tmax <- 13
   ## number of folds for CV:
-  nfolds <- 10
+  nfolds <- 3
   tbreaks = c(1:8,11,14)-1
 
   ## This dataset defines all parameters that we like to vary in this analysis (including different interventions)
@@ -106,6 +109,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
   models_g <-
+     gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+                       nlambdas = 5, lambda_search = TRUE,
+                       param_grid = list(
+                        alpha = c(0.5)
+                       ))
     # gridisl::defModel(estimator = "xgboost__glm",
     #                   family = "binomial",
     #                   nrounds = 100,
@@ -113,12 +121,6 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     #                   interactions = list(c("CVD", "highA1c")))
     #  #                   +
      # gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
-
-     gridisl::defModel(estimator = "h2o__glm", family = "binomial",
-                       nlambdas = 5, lambda_search = TRUE,
-                       param_grid = list(
-                        alpha = c(0, 0.5)
-                       ))
 
     ## ----------------------------------------------------------------
     ## AN EXAMPLE OF A GIANT GRID OF MODELS.
@@ -413,7 +415,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
   results <- results %>%
               # nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates")
-              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE,.key = "estimates")
+              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE, .key = "estimates")
 
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
   ## The RDs data no longer needs the intervened_TRT column
@@ -478,7 +480,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   longSURV <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, estimates) %>%
               unnest(estimates) %>%
-              gather(key = est, value = estimates, NPMSM, MSM.crude, MSM, GCOMP, TMLE) %>%
+              gather(key = est, value = estimates, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE) %>%
               filter(est %in% ests) %>%
               select(-intervened_TRT) %>%
               nest(estimates, .key = "estimates") %>%
@@ -487,7 +489,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Visualize all survival curves at once with a single interactive trelliscope panel
   ## (install via: devtools::install_github("hafen/trelliscopejs"))
   reqtrell <- requireNamespace("trelliscopejs", quietly = TRUE)
-  if (reqtrell) {
+  if (reqtrell && FALSE) {
     longSURV %>%
       trelliscopejs::trelliscope(name = "test", panel_col = "SURVplot")
       longSURV
@@ -510,12 +512,12 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   longRDs <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, RDs) %>%
               unnest(RDs) %>%
-              gather(key = est, value = RDs, NPMSM, MSM.crude, MSM, GCOMP, TMLE) %>%
+              gather(key = est, value = RDs, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE) %>%
               filter(est %in% ests) %>%
               mutate(RDplot = map(RDs, ~ ggRD(.x)))
 
   reqtrell <- requireNamespace("trelliscopejs", quietly = TRUE)
-  if (reqtrell) {
+  if (reqtrell && FALSE) {
     longRDs %>%
       trelliscopejs::trelliscope(name = "test", panel_col = "RDplot")
       longRDs

@@ -742,7 +742,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       idx <- seq_len(n)
       fold_idx <- split(idx, folds)
       fold <- function(v, test) {
-        origami:::make_fold(v, setdiff(idx, test), test)
+        origami::make_fold(v, setdiff(idx, test), test)
       }
       purrr::map2((1:k), fold_idx, fold)
     },

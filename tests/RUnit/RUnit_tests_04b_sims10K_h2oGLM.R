@@ -10,14 +10,22 @@
 
 test.h2oglm.IPW.MSM.10Kdata <- function() {
   reqh2o <- requireNamespace("h2o", quietly = TRUE)
-  if (reqh2o) {
+  if (!reqh2o) { return(NULL) }
+
     options(width = 100)
     `%+%` <- function(a, b) paste0(a, b)
     require("data.table")
     require("h2o")
+    library("stremr")
+    # options(stremr.verbose = TRUE)
+    # options(gridisl.verbose = TRUE)
+    options(stremr.verbose = FALSE)
+    options(gridisl.verbose = FALSE)
+    set_all_stremr_options(estimator = "speedglm__glm")
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
+    Odat_DT <- Odat_DT[ID %in% (1:50), ]
     setkeyv(Odat_DT, cols = c("ID", "t"))
 
     # ---------------------------------------------------------------------------
@@ -35,13 +43,13 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     # IMPORT DATA
     # ----------------------------------------------------------------
     # options(stremr.verbose = TRUE)
-    set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm", fit.method = "cv", fold_column = "fold_ID")
+    set_all_stremr_options(estimator = "h2o__glm", fit_method = "cv", fold_column = "fold_ID")
     h2o::h2o.init(nthreads = 1)
 
     OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
     # to see the input data.table:
     # OData$dat.sVar
-    OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
+    OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
     OData$dat.sVar[]
     OData$fold_column <- NULL
     OData$nfolds <- NULL
@@ -61,7 +69,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
 
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                            family = "binomial", solver = "L_BFGS")
+                            family = "binomial", solver = "L_BFGS", lambda_search = FALSE)
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
@@ -76,13 +84,13 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
 
     # names(MSM.IPAW)
     # MSM.IPAW[["St"]]
-    MSM.IPAW[["estimates"]]
+    # MSM.IPAW[["estimates"]]
     # pl <- ggsurv(MSM.IPAW[["estimates"]])
     # pl
 
     # names(MSM.IPAW)
     # MSM.IPAW$St
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
         # make_report_rmd(OData,
         #             MSM = MSM.IPAW,
         #             # AddFUPtables = TRUE,
@@ -93,6 +101,5 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
         #             RDtables = get_MSM_RDs(MSM.IPAW, t.periods.RDs = c(12, 15), getSEs = TRUE),
         #             WTtables = get_wtsummary(MSM.IPAW$wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
         #             file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
-  }
 
 }

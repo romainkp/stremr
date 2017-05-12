@@ -10,10 +10,10 @@ fit_iTMLE(OData, tvals, Qforms, intervened_TRT = NULL,
   estimator = stremrOptions("estimator"),
   fit_method = stremrOptions("fit_method"),
   fold_column = stremrOptions("fold_column"), stratifyQ_by_rule = FALSE,
-  useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, CVTMLE = FALSE,
-  trunc_weights = 10^6, parallel = FALSE, return_fW = FALSE,
-  use_DR_transform = FALSE, stabilize = FALSE, reg_Q = NULL,
-  verbose = getOption("stremr.verbose"), ...)
+  stratify_by_last = TRUE, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
+  CVTMLE = FALSE, trunc_weights = 10^6, parallel = FALSE,
+  return_fW = FALSE, use_DR_transform = FALSE, stabilize = FALSE,
+  reg_Q = NULL, verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -55,6 +55,10 @@ current time-point t (rule followers). For the latter option, the observation wo
 the person's treatment did not match their supposed counterfactual treatment at any time-point up to and including current
 time-point t.}
 
+\item{stratify_by_last}{Only used when \code{stratifyQ_by_rule} is \code{TRUE}.
+Set to \code{TRUE} for stratification by last time-point, set to \code{FALSE} for stratification by all time-points (rule-followers).
+See \code{stratifyQ_by_rule} for more details.}
+
 \item{useonly_t_TRT}{Use for intervening only on some subset of observation and time-specific treatment nodes.
 Should be a character string with a logical expression that defines the subset of intervention observations.
 For example, using \code{TRT==0} will intervene only at observations with the value of \code{TRT} being equal to zero.
@@ -87,13 +91,9 @@ the way up to time-point \code{t}.}
 modeling functions that are called from this routine,
 e.g., \code{family = "binomial"} can be used to specify the model family.
 Note that all such arguments must be named.}
-
-\item{stratify_by_last}{Only used when \code{stratifyQ_by_rule} is \code{TRUE}.
-Set to \code{TRUE} for stratification by last time-point, set to \code{FALSE} for stratification by all time-points (rule-followers).
-See \code{stratifyQ_by_rule} for more details.}
 }
 \value{
-An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
+An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
 }
 \description{
 Interventions on up to 3 nodes are allowed: \code{CENS}, \code{TRT} and \code{MONITOR}.

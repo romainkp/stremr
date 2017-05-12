@@ -5,24 +5,24 @@ test.CV_TMLE.10Kdata <- function() {
     if (!reqxgb || !reqh2o) return(NULL)
 
     `%+%` <- function(a, b) paste0(a, b)
+    library("stremr")
     library("h2o")
     library("xgboost")
     library("data.table")
     setDTthreads(1)
     library("foreach")
     library("doParallel")
-    library("gridisl")
-    # library("stremr")
+    # library("gridisl")
 
-    options(stremr.verbose = TRUE)
-    # options(stremr.verbose = FALSE)
-    options(gridisl.verbose = TRUE)
-    # options(gridisl.verbose = FALSE)
+    # options(stremr.verbose = TRUE)
+    options(stremr.verbose = FALSE)
+    # options(gridisl.verbose = TRUE)
+    options(gridisl.verbose = FALSE)
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
-    # select only the first 1,000 IDs
-    # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+    # select only the first 100 IDs
+    Odat_DT <- Odat_DT[ID %in% (1:100), ]
     setkeyv(Odat_DT, cols = c("ID", "t"))
 
     # ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ test.CV_TMLE.10Kdata <- function() {
     # IMPORT DATA
     # ----------------------------------------------------------------
     OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
-    OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID", seed = 12345)
+    OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
     OData$dat.sVar[]
     OData$fold_column <- NULL
     OData$nfolds <- NULL

@@ -36,6 +36,11 @@ test.helperfuns <- function() {
 
 test.model.fits.stratify <- function() {
   require("data.table")
+  require("stremr")
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "speedglm__glm")
+
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
   # ------------------------------------------------------------------------------------------------------
@@ -55,7 +60,7 @@ test.model.fits.stratify <- function() {
   gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
-  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t_name = "t", tvals = c(0:2),
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           intervened_TRT = "TI_0",
@@ -82,7 +87,7 @@ test.model.fits.stratify <- function() {
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
   # options(stremr.verbose = TRUE)
-  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t_name = "t", tvals = c(0:2),
                 covars = c("highA1c", "lastNat1"),
                 CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
                 gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
@@ -108,7 +113,7 @@ test.model.fits.stratify <- function() {
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
   # system.time(
-  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t_name = "t", tvals = c(0:2),
                 covars = c("highA1c", "lastNat1"),
                 CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
                 gform_CENS = gform_CENS,
@@ -137,7 +142,7 @@ test.model.fits.stratify <- function() {
   #               list("TI[t] ~ CVD[t] + highA1c[t] + N[t-1]", t>0))
   gform_MONITOR <- "N ~ 1"
 
-  res <- stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+  res <- stremr(OdataNoCENS.DT, ID = "ID", t_name = "t", tvals = c(0:2),
                 covars = c("highA1c", "lastNat1"),
                 CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
                 gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
@@ -154,6 +159,11 @@ test.model.fits.stratify <- function() {
 
 test.error.fits.stratify <- function() {
   require("data.table")
+  require("stremr")
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "speedglm__glm")
+
   data(OdataNoCENS)
   OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA
   # head(OdataNoCENS)
@@ -169,7 +179,7 @@ test.error.fits.stratify <- function() {
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
   checkException(
-      stremr(OdataNoCENS.DT, ID = "ID", t = "t",
+      stremr(OdataNoCENS.DT, ID = "ID", t_name = "t", tvals = c(0:2),
             covars = c("highA1c", "lastNat1"),
             CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,

@@ -133,7 +133,7 @@ SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
 predict.SDR.updater.TMLE <- function(object, newdata, ...) {
   mfit <- object$object
   offset <- truncate_offset(newdata[, "offset"])
-  pred <- stremr:::logit_linkinv(offset + mfit$coef)
+  pred <- logit_linkinv(offset + mfit$coef)
   pred
 }
 
@@ -145,7 +145,7 @@ predict.SDR.updater.glm <- function(object, newdata, ...) {
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
   Xmat <- cbind(Intercept = 1L, as.matrix(newdata))
   eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
-  pred <- stremr:::logit_linkinv(offset + eta)
+  pred <- logit_linkinv(offset + eta)
   pred
 }
 

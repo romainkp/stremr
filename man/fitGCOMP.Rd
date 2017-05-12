@@ -124,7 +124,7 @@ e.g., \code{family = "binomial"} can be used to specify the model family.
 Note that all such arguments must be named.}
 }
 \value{
-An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
+An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
 }
 \description{
 Interventions on up to 3 nodes are allowed: \code{CENS}, \code{TRT} and \code{MONITOR}.
@@ -135,7 +135,7 @@ Requires column name(s) that specify the counterfactual node values or the count
 \examples{
 options(stremr.verbose = TRUE)
 require("data.table")
-set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
+set_all_stremr_options(estimator = "speedglm__glm")
 
 # ----------------------------------------------------------------------
 # Simulated Data
@@ -188,7 +188,7 @@ AKME.St.1
 # Bounded IPW
 # ----------------------------------------------------------------------
 IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") \%>\%
-             directIPW(OData)
+            directIPW(OData)
 IPW.St.1[]
 
 # ----------------------------------------------------------------------
@@ -202,9 +202,9 @@ survMSM_res$St
 # ----------------------------------------------------------------------
 # Sequential G-COMP
 # ----------------------------------------------------------------------
-t.surv <- c(0:15)
+t.surv <- c(0:10)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params = list(fit.package = "speedglm", fit.algorithm = "glm")
+params <- gridisl::defModel(estimator = "speedglm__glm")
 
 \dontrun{
 gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1",
@@ -238,7 +238,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
 # Fitting Propensity scores with Random Forests:
 # ----------------------------------------------------------------------
 \dontrun{
-set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
+set_all_stremr_options(estimator = "h2o__randomForest")
 require("h2o")
 h2o::h2o.init(nthreads = -1)
 gform_CENS <- "C ~ highA1c + lastNat1"
@@ -248,11 +248,11 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS,
                         stratify_CENS = stratify_CENS)
 
 # For Gradient Boosting machines:
-set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
+set_all_stremr_options(estimator = "h2o__gbm")
 # Use `H2O-3` distributed implementation of GLM
-set_all_stremr_options(fit.package = "h2o", fit.algorithm = "glm")
+set_all_stremr_options(estimator = "h2o__glm")
 # Use Deep Neural Nets:
-set_all_stremr_options(fit.package = "h2o", fit.algorithm = "deeplearning")
+set_all_stremr_options(estimator = "h2o__deeplearning")
 }
 
 # ----------------------------------------------------------------------
@@ -260,11 +260,13 @@ set_all_stremr_options(fit.package = "h2o", fit.algorithm = "deeplearning")
 # Fine tuning modeling with optional tuning parameters.
 # ----------------------------------------------------------------------
 \dontrun{
-params_TRT = list(fit.package = "h2o", fit.algorithm = "gbm", ntrees = 50,
-    learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8,
-    balance_classes = TRUE)
-params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
-params_MONITOR = list(fit.package = "speedglm", fit.algorithm = "glm")
+params_TRT = gridisl::defModel(estimator = "h2o__gbm", ntrees = 50,
+                              learn_rate = 0.05,
+                              sample_rate = 0.8,
+                              col_sample_rate = 0.8,
+                              balance_classes = TRUE)
+params_CENS = gridisl::defModel(estimator = "speedglm__glm")
+params_MONITOR = gridisl::defModel(estimator = "speedglm__glm")
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,
@@ -278,9 +280,9 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-models = list(fit.package = "h2o", fit.algorithm = "randomForest",
-                ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
-                col_sample_rate = 0.8, balance_classes = TRUE)
+models = gridisl::defModel(estimator = "h2o__randomForest",
+                           ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
+                           col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
@@ -289,9 +291,9 @@ tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-models = list(fit.package = "h2o", fit.algorithm = "randomForest",
-                ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
-                col_sample_rate = 0.8, balance_classes = TRUE)
+models = gridisl::defModel(estimator = "h2o__randomForest",
+                           ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
+                           col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)

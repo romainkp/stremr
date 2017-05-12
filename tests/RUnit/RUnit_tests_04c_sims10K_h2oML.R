@@ -12,17 +12,24 @@
 # Test h2o randomForest, GBM and deeplearning
 # ---------------------------------------------------------------------------
 test.h2o.ALL.ML.allestimators10Kdata <- function() {
-  reqh2o <- requireNamespace("h2o", quietly = TRUE)
-  if (reqh2o) {
+    reqh2o <- requireNamespace("h2o", quietly = TRUE)
+    if (!reqh2o) return(NULL)
+
+    options(width = 100)
     `%+%` <- function(a, b) paste0(a, b)
-    options(stremr.verbose = FALSE)
     require("data.table")
     require("h2o")
+    library("stremr")
+    # options(stremr.verbose = TRUE)
+    # options(gridisl.verbose = TRUE)
+    options(stremr.verbose = FALSE)
+    options(gridisl.verbose = FALSE)
+    set_all_stremr_options(estimator = "speedglm__glm")
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
-    # select only the first 1,000 IDs
-    Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+    # select only the first 100 IDs
+    Odat_DT <- Odat_DT[ID %in% (1:100), ]
     setkeyv(Odat_DT, cols = c("ID", "t"))
 
     # ---------------------------------------------------------------------------
@@ -59,7 +66,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH randomForest
     # ----------------------------------------------------------------
-    set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
+    set_all_stremr_options(estimator = "h2o__randomForest")
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
@@ -78,7 +85,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH gbm
     # ----------------------------------------------------------------
-    set_all_stremr_options(fit.package = "h2o", fit.algorithm = "gbm")
+    set_all_stremr_options(estimator = "h2o__gbm")
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
@@ -116,14 +123,13 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ h2o random forest
     # ---------------------------------------------------------------------------------------------------------
-
-    params = gridisl::defModel(estimator = "h2o__randomForest", ntrees = 20, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
+    params = gridisl::defModel(estimator = "h2o__randomForest", ntrees = 10, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
     # params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
-    t.surv <- c(3)
+    t.surv <- c(2)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
     tmle_est$estimates[]
 
     h2o::h2o.shutdown(prompt = FALSE)
-  }
+
 }

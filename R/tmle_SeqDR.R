@@ -28,6 +28,9 @@
 #' current time-point t (rule followers). For the latter option, the observation would be considered a non-follower if
 #' the person's treatment did not match their supposed counterfactual treatment at any time-point up to and including current
 #' time-point t.
+#' @param stratify_by_last Only used when \code{stratifyQ_by_rule} is \code{TRUE}.
+#' Set to \code{TRUE} for stratification by last time-point, set to \code{FALSE} for stratification by all time-points (rule-followers).
+#' See \code{stratifyQ_by_rule} for more details.
 #' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
 #' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
@@ -41,9 +44,6 @@
 #' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
 #' Use the provided function \code{\link{define_CVfolds}} to
 #' define such folds or define the folds using your own method.
-#' @param stratify_by_last Only used when \code{stratifyQ_by_rule} is \code{TRUE}.
-#' Set to \code{TRUE} for stratification by last time-point, set to \code{FALSE} for stratification by all time-points (rule-followers).
-#' See \code{stratifyQ_by_rule} for more details.
 #' @param CVTMLE Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
 #' Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
@@ -60,7 +60,7 @@
 #' modeling functions that are called from this routine,
 #' e.g., \code{family = "binomial"} can be used to specify the model family.
 #' Note that all such arguments must be named.
-#' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
+#' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
 #' @export
 fit_iTMLE <- function(OData,
                     tvals,
@@ -73,6 +73,7 @@ fit_iTMLE <- function(OData,
                     fit_method = stremrOptions("fit_method"),
                     fold_column = stremrOptions("fold_column"),
                     stratifyQ_by_rule = FALSE,
+                    stratify_by_last = TRUE,
                     useonly_t_TRT = NULL,
                     useonly_t_MONITOR = NULL,
                     CVTMLE = FALSE,
@@ -84,7 +85,6 @@ fit_iTMLE <- function(OData,
                     reg_Q = NULL,
                     verbose = getOption("stremr.verbose"), ...) {
 
-  stratify_by_last  <- TRUE ## if stratifying we are always stratifying by last treatment only
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
@@ -304,7 +304,7 @@ fit_iTMLE_onet <- function(OData,
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
     ## The following two lines allow for a slightly simplified (shallower) tree representation of GenericModel-type classes.
-    ## This also means that stratifying Q fits by some covariate value will not possible with this approach
+    ## This also means that stratifying Q fits by some covariate value will not possible with this approach
     ## (i.e., such stratifications would have to be implemented locally by the actual model fitting functions).
     reg_i <- reg$clone()
     reg <- reg_i$ChangeManyToOneRegresssion(1, reg)

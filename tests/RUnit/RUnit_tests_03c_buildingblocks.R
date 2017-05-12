@@ -2,9 +2,11 @@
 # Testing stremr building blocks with standard glm.fit
 # ------------------------------------------------------------------------------------------------------
 test.buildingblocks <- function() {
-  options(stremr.verbose = TRUE)
   require("data.table")
-  set_all_stremr_options(fit.package = "glm", fit.algorithm = "glm")
+  require("stremr")
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "glm__glm")
 
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
@@ -114,7 +116,7 @@ test.buildingblocks <- function() {
   # --------------------------------
   # Sequential G-COMP:
   # --------------------------------
-  t.surv <- c(0:4)
+  t.surv <- c(0:2)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
@@ -123,9 +125,4 @@ test.buildingblocks <- function() {
   # stratified modeling by rule followers only:
   tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est[]
-
-  tmle_est3 <- fitTMLE(OData, tvals = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, stabilize = TRUE)
-  tmle_est4 <- fitTMLE(OData, tvals = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, trunc_weights = 2)
-
-  options(stremr.verbose = FALSE)
 }

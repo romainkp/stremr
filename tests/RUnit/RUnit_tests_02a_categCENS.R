@@ -1,6 +1,10 @@
 test.model.fits.categorCENSOR <- function() {
-  options(stremr.verbose = TRUE)
   require("data.table")
+  require("stremr")
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "speedglm__glm")
+
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
   # ------------------------------------------------------------------------------------------------------
@@ -26,7 +30,7 @@ test.model.fits.categorCENSOR <- function() {
   gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
-  res <- stremr(OdataCatCENS, ID = "ID", t = "t",
+  res <- stremr(OdataCatCENS, ID = "ID", t_name = "t", tvals = c(0:2),
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           intervened_TRT = "TI_0",
@@ -45,7 +49,7 @@ test.model.fits.categorCENSOR <- function() {
   gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
 
-  res <- stremr(OdataCatCENS, ID = "ID", t = "t",
+  res <- stremr(OdataCatCENS, ID = "ID", t_name = "t", tvals = c(0:2),
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
@@ -89,7 +93,7 @@ test.model.fits.categorCENSOR <- function() {
   gform_MONITOR <- "N ~ 1"
 
   # system.time(
-  res <- stremr(OdataCatCENS, ID = "ID", t = "t",
+  res <- stremr(OdataCatCENS, ID = "ID", t_name = "t", tvals = c(0:2),
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
@@ -104,7 +108,12 @@ test.model.fits.categorCENSOR <- function() {
 }
 
 test.model.fits.categorCENSOR2 <- function() {
-  options(stremr.verbose = TRUE)
+  require("data.table")
+  require("stremr")
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "speedglm__glm")
+
   #-------------------------------------------------------------------
   # EXAMPLE WITH CATEGORICAL CENSORING (3 levels)
   #-------------------------------------------------------------------
@@ -159,9 +168,9 @@ test.model.fits.categorCENSOR2 <- function() {
                             new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
 
   # Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
-  res <- stremr(OdataDT, intervened_TRT = "dhigh",
+  res <- stremr(OdataDT, intervened_TRT = "dhigh", tvals = c(0:2),
                 # intervened_MONITOR = "gstar.N",
-                ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
+                ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1"),
                 CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
                 TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
                 MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")

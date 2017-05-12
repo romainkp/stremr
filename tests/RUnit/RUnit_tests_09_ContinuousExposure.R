@@ -1,9 +1,8 @@
 test.ContinModel <- function() {
-  options(stremr.verbose = TRUE)
+  require("stremr")
+  options(stremr.verbose = FALSE)
   require("data.table")
   data(OdataNoCENS)
-  # data(OdatDT_10K)
-  # Odat_DT <- OdatDT_10K
   Odat_DT <- as.data.table(OdataNoCENS, key=c(ID, t))
 
   # define lagged N, first value is always 1 (always monitored at the first time point):

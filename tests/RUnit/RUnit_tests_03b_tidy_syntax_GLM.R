@@ -21,14 +21,16 @@ test.tidy.speedglm.10Kdata <- function() {
   library("purrr")
   library("dtplyr")
   library("dplyr")
-
-  options(stremr.verbose = TRUE)
-  options(gridisl.verbose = TRUE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "speedglm__glm")
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
   # select only the first 1,000 IDs
-  # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+  Odat_DT <- Odat_DT[ID %in% (1:500), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   ## -----------------------------------------------------------------------
@@ -61,7 +63,7 @@ test.tidy.speedglm.10Kdata <- function() {
   ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
   trunc_IPW <- 10
-  tvals <- 0:8
+  tvals <- 0:3
   tmax <- 13
   tbreaks = c(1:8,11,14)-1
 
@@ -208,7 +210,7 @@ test.tidy.speedglm.10Kdata <- function() {
 
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
   results <- results %>%
-             nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE, .key = "estimates")
+             nest(intervened_TRT, NPMSM, MSM.crude, MSM, directIPW, GCOMP, TMLE, CVTMLE, .key = "estimates")
 
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
   ## The RDs data no longer needs the intervened_TRT column

@@ -4,7 +4,8 @@ if(getRversion() >= "2.15.1") {
   utils::globalVariables(c("gstar.CAN", "g0.CAN", "wt.by.t", "rule.follower.gCAN", "new.TRT.gstar",
                             "N.risk", "N.follow.rule", "stab.P", "cum.stab.P", "cum.IPAW",
                             "rule.name", "glm.IPAW.predictP1", "St.KM", "Wt.OUTCOME",
-                            "St_ht_IPAW", "ht.NPMSM", "ht.KM", "EIC_i_t0", "EIC_i_tplus"))
+                            "St_ht_IPAW", "ht.NPMSM", "ht.KM", "EIC_i_t0", "EIC_i_tplus",
+                            "g0.A", "g0.C", "g0.N"))
 }
 
 process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {

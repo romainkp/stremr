@@ -230,7 +230,7 @@ fitCVTMLE <- function(...) {
 #' modeling functions that are called from this routine,
 #' e.g., \code{family = "binomial"} can be used to specify the model family.
 #' Note that all such arguments must be named.
-#' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
+#' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
 #' @seealso \code{\link{stremr-package}} for the general overview of the package.
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
@@ -622,7 +622,7 @@ fitGCOMP_onet <- function(OData,
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
     ## The following two lines allow for a slightly simplified (shallower) tree representation of GenericModel-type classes.
-    ## This also means that stratifying Q fits by some covariate value will not possible with this approach
+    ## This also means that stratifying Q fits by some covariate value will not possible with this approach
     ## (i.e., such stratifications would have to be implemented locally by the actual model fitting functions).
     reg_i <- reg$clone()
     reg <- reg_i$ChangeManyToOneRegresssion(1, reg)

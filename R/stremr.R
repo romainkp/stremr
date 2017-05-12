@@ -8,6 +8,20 @@
 #' @importFrom stats as.formula glm na.exclude rbinom terms.formula pnorm quasibinomial
 NULL
 
+#' Fast C++ version of the inverse logit link function (expit)
+#'
+#' The conversion performed is given by 1/(1+exp(-eta))
+#'
+#' @param eta The argument to be converted
+#' @rdname logit_linkinv
+#' @export logit_linkinv
+"logit_linkinv"
+
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("estimates", "FUPtimes_tabs", "MSM", "MSM.crude", "NPMSM", "trunc_MSM", "trunc_TMLE", "trunc_weight", "wts_data", "wts_tabs"))
+}
+
+
 tryCatch.W.E <- function(expr){
   W <- NULL
   w.handler <- function(w){ # warning handler
@@ -120,7 +134,7 @@ GetWarningsToSuppress <- function(update.step=FALSE) {
 #'  and the survival OUTCOME variable (\code{OUTCOME}).
 # @param estimators (NOT IMPLEMENTED) Character vector with estimator names.
 #' @param ID Unique subject identifier column name in \code{data}.
-#' @param t The name of the time/period variable in \code{data}.
+#' @param t_name The name of the time/period variable in \code{data}.
 #' @param covars Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
 #' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.
 #' @param CENS Column name of the censoring variable(s) in \code{data}.
@@ -134,9 +148,6 @@ GetWarningsToSuppress <- function(update.step=FALSE) {
 #' @param TRT A column name in \code{data} for the exposure/treatment variable(s).
 #' @param MONITOR A column name in \code{data} for the indicator(s) of monitoring events.
 #' @param OUTCOME  A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.
-#' @param noCENScat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
-#' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
-#' for variables specifed in \code{CENS}.
 #' @param gform_TRT  Regression formula(s) for propensity score for the exposure/treatment(s): P(A(t) | W). See Details.
 #' @param gform_CENS  Regression formula(s) for estimating the propensity score for the censoring mechanism: P(C(t) | W). See Details.
 #' @param gform_MONITOR  Regression formula(s) for estimating the propensity score for the MONITORing process: P(N(t) | W). See Details.
@@ -166,8 +177,8 @@ GetWarningsToSuppress <- function(update.step=FALSE) {
 #' @param trunc_IPW_MSM Weight truncation for IPW-based functions.
 #' @param trunc_IPW_TMLE Weight trunction for TMLE.
 #' @param seed Random generator seed.
-#' @param MSMGLMpkg Package to use for MSM GLM fits (see \code{\link{MSM}}).
-#' @param tbreaks Same as in \code{\link{MSM}}.
+#' @param MSMGLMpkg Package to use for MSM GLM fits (see \code{\link{survMSM}}).
+#' @param tbreaks Same as in \code{\link{survMSM}}.
 #' @param start_h2o_cluster Start h2o cluster?
 #' @param nthreads Number of threads (CPUs) to use for h2o cluster?
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.
@@ -175,7 +186,7 @@ GetWarningsToSuppress <- function(update.step=FALSE) {
 #' @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/1_stremr_example.R
 #' @export
-stremr <- function(data, ID = "Subj_ID", t = "time_period",
+stremr <- function(data, ID = "Subj_ID", t_name = "time_period",
                    covars, CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y",
                    gform_CENS, gform_TRT, gform_MONITOR,
                    stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
@@ -216,7 +227,7 @@ stremr <- function(data, ID = "Subj_ID", t = "time_period",
   # ------------------------------------------------------------------
   # - BLOCK 1: Process inputs and define OData R6 object
   # ------------------------------------------------------------------
-  OData <- importData(data, ID = ID, t = t, covars = covars,
+  OData <- importData(data, ID = ID, t_name = t_name, covars = covars,
                       CENS = CENS, TRT = TRT, MONITOR = MONITOR,
                       OUTCOME = OUTCOME, noCENScat = noCENScat,
                       remove_extra_rows = remove_extra_rows, verbose = verbose)

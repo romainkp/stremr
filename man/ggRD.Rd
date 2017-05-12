@@ -91,7 +91,9 @@ to automatically adjust the limits of the y-axis.}
 
 \item{facet}{Set to \code{TRUE} to create a facet of plots by first / last tx name}
 
-\item{font_size}{Font size for facet labels, legend text and legend title}
+\item{font_size}{Font size for facet labels, legend text and legend title.}
+
+\item{line_RD_plot}{Connect the point risk differences with a plotted line (using \code{geom_line}).}
 
 \item{x_breaks}{Vector of breaks to display on x-axis}
 

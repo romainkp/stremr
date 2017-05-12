@@ -3,8 +3,11 @@ test.iterTMLE.10Kdata <- function() {
   options(stremr.verbose = FALSE)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
+  set_all_stremr_options(estimator = "speedglm__glm")
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
+  Odat_DT <- Odat_DT[ID %in% (1:100), ]
+  setkeyv(Odat_DT, cols = c("ID", "t"))
 
   # ---------------------------------------------------------------------------
   # Define some summaries (lags C[t-1], A[t-1], N[t-1])
@@ -21,7 +24,7 @@ test.iterTMLE.10Kdata <- function() {
   # IMPORT DATA
   # ----------------------------------------------------------------
   # options(stremr.verbose = TRUE)
-  set_all_stremr_options(estimator = "speedglm__glm")
+
   OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   # ------------------------------------------------------------------
   # Fit propensity scores for Treatment, Censoring & Monitoring

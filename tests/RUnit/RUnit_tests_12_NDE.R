@@ -3,13 +3,14 @@
 ## -- Will not intervene on g nodes that satisfy the logical expression provided to this arg
 # ---------------------------------------------------------------------------
 test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
+  require("stremr")
   options(stremr.verbose = FALSE)
   options(width = 100)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
-  Odat_DT <- Odat_DT[ID %in% (1:5000), ]
+  Odat_DT <- Odat_DT[ID %in% (1:100), ]
   # define intervention on N as 0101010101...
   Odat_DT[, ("N.star.0101") := t%%2]
   setkeyv(Odat_DT, cols = c("ID", "t"))
@@ -77,7 +78,7 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   ## ---------------------------------------------------------------------------------------------------------
   ## TMLE / GCOMP with a stochastic intervention on MONITOR
   ## ---------------------------------------------------------------------------------------------------------
-  t.surv <- c(4,5)
+  t.surv <- c(0:2)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
@@ -94,7 +95,7 @@ test.speedglm.stochastic.TMLE.NDE.1Kdata <- function() {
   ## ---------------------------------------------------------------------------------------------------------
   ## TMLE / GCOMP with a static intervention on MONITOR under NDE assumption
   ## ---------------------------------------------------------------------------------------------------------
-  t.surv <- c(4,5)
+  t.surv <- c(0:2)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",

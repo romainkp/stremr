@@ -4,7 +4,7 @@
 \alias{stremr}
 \title{Run all estimators (KM, hazard-IPW, direct-IPW, GCOMP plug-in and TMLE).}
 \usage{
-stremr(data, ID = "Subj_ID", t = "time_period", covars, CENS = "C",
+stremr(data, ID = "Subj_ID", t_name = "time_period", covars, CENS = "C",
   TRT = "A", MONITOR = "N", OUTCOME = "Y", gform_CENS, gform_TRT,
   gform_MONITOR, stratify_CENS = NULL, stratify_TRT = NULL,
   stratify_MONITOR = NULL, intervened_TRT = NULL, noCENScat = 0L,
@@ -28,7 +28,7 @@ and the survival OUTCOME variable (\code{OUTCOME}).}
 
 \item{ID}{Unique subject identifier column name in \code{data}.}
 
-\item{t}{The name of the time/period variable in \code{data}.}
+\item{t_name}{The name of the time/period variable in \code{data}.}
 
 \item{covars}{Vector of names with time varying and baseline covariates in \code{data}. This argument does not need to be specified, by default all variables
 that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME} will be considered as covariates.}
@@ -66,9 +66,7 @@ Each list item is a character vector of stratification subsets for the correspon
 
 \item{intervened_TRT}{Column name in \code{data} containing the counterfactual probabilities of following a specific treatment regimen.}
 
-\item{noCENScat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
-Use this to modify the default reference category (no CENSoring / continuation of follow-up)
-for variables specifed in \code{CENS}.}
+\item{noCENScat}{Same as in \code{\link{importData}}.}
 
 \item{remove_extra_rows}{Same as in \code{\link{importData}}.}
 
@@ -98,17 +96,15 @@ for variables specifed in \code{CENS}.}
 
 \item{seed}{Random generator seed.}
 
-\item{MSMGLMpkg}{Package to use for MSM GLM fits (see \code{\link{MSM}}).}
+\item{MSMGLMpkg}{Package to use for MSM GLM fits (see \code{\link{survMSM}}).}
 
-\item{tbreaks}{Same as in \code{\link{MSM}}.}
+\item{tbreaks}{Same as in \code{\link{survMSM}}.}
 
 \item{start_h2o_cluster}{Start h2o cluster?}
 
 \item{nthreads}{Number of threads (CPUs) to use for h2o cluster?}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
-
-\item{noCENScat}{Same as in \code{\link{importData}}.}
 }
 \value{
 ...

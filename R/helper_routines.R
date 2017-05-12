@@ -5,7 +5,6 @@ if(getRversion() >= "2.15.1") {
   utils::globalVariables(c(".", "dx1", "dx2"))
 }
 
-
 #' Evaluate the long format dataset of risk differences over estimated survival time-points
 #'
 #' The risk difference (RD) of regimens 1 (dx1) and 2 (dx2) at time-point \code{t} is
