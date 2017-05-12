@@ -127,45 +127,5 @@ test.buildingblocks <- function() {
   tmle_est3 <- fitTMLE(OData, tvals = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, stabilize = TRUE)
   tmle_est4 <- fitTMLE(OData, tvals = c(3,4), intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE, trunc_weights = 2)
 
-  # --------------------------------
-  res <- stremr(OdataDT, ID = "ID", t = "t",
-          covars = c("highA1c", "lastNat1"), intervened_TRT = "TI.set1",
-          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
-          gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
-          # noCENScat = 0L)
-  res$estimates
-
-  checkTrue(all.equal(res$estimates[["St.NPMSM"]], survNPIPW_ests[["St.NPMSM"]]))
-  checkTrue(all.equal(res$estimates[["St.KM"]], survNPIPW_ests[["St.KM"]]))
-  # res$dataDT
-
-  # --------------------------------
-  # EXAMPLE 2:
-  # --------------------------------
-  gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
-  strat.str <- c("t == 0L", "t > 0")
-  stratify_CENS <- rep(list(strat.str), 3)
-  names(stratify_CENS) <- c("C", "TI", "N")
-  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
-  gform_MONITOR <- "N ~ 1"
-
-  OData <- importData(OdataDT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1")
-  OData <- fitPropensity(OData = OData, gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
-  wts.DT <- getIPWeights(OData = OData) # , gstar_TRT = ..., gstar_MONITOR = ...)
-  survNP_res <- survNPMSM(wts.DT, OData)
-  survNPIPW_ests <- survNP_res$estimates
-
-  res <- stremr(OdataDT, ID = "ID", t = "t",
-          covars = c("highA1c", "lastNat1"),
-          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
-          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-          gform_TRT = gform_TRT,
-          gform_MONITOR = gform_MONITOR)
-          # noCENScat = 0L)
-  # res$estimates
-  # res$dataDT
-  checkTrue(all.equal(res$estimates[["St.NPMSM"]], survNPIPW_ests[["St.NPMSM"]]))
-  checkTrue(all.equal(res$estimates[["St.KM"]], survNPIPW_ests[["St.KM"]]))
-
   options(stremr.verbose = FALSE)
 }

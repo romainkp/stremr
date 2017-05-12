@@ -22,6 +22,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     library("data.table")
     library("h2o")
 
+    t.periods.RDs <- 0:4
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
     # select only the first 1,000 IDs
@@ -90,15 +91,15 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     tmle_est_dhigh[["estimates"]]
 
     if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData,
-                        NPMSM = list(surv_dlow, surv_dhigh),
-                        wts_data = list(wts.St.dlow, wts.St.dhigh),
-                        MSM = MSM.IPAW,
-                        AddFUPtables = TRUE,
-                        # openFile = FALSE,
-                        openFile = TRUE,
-                        WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                        file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+        # make_report_rmd(OData,
+        #                 NPMSM = list(surv_dlow, surv_dhigh),
+        #                 wts_data = list(wts.St.dlow, wts.St.dhigh),
+        #                 MSM = MSM.IPAW,
+        #                 AddFUPtables = TRUE,
+        #                 # openFile = FALSE,
+        #                 openFile = TRUE,
+        #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+        #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
     }
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
@@ -131,16 +132,15 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                               getSEs = TRUE,
                               glm_package = "speedglm")
 
-
     MSM.IPAW.both[["estimates"]]
     MSM.IPAW_dlow[["estimates"]]
     MSM.IPAW_dhigh[["estimates"]]
 
-    t.periods.RDs <- 0:10
-    MSM.RDtables = get_MSM_RDs(MSM.IPAW.both, t.periods.RDs, getSEs = TRUE)
-    MSM.RDtables2 = get_RDs(MSM.IPAW.both, "St.MSM", getSEs = TRUE)
-    MSM.RDtables
-    MSM.RDtables2
+    # t.periods.RDs <- 0:10
+    # MSM.RDtables = get_MSM_RDs(MSM.IPAW.both, t.periods.RDs, getSEs = TRUE)
+    # MSM.RDtables2 = get_RDs(MSM.IPAW.both, "St.MSM", getSEs = TRUE)
+    # MSM.RDtables
+    # MSM.RDtables2
 }
 
 # ---------------------------------------------------------------------------
@@ -635,28 +635,6 @@ test.xgboost.10Kdata <- function() {
 
     stopCluster(cl)
   }
-}
-
-
-test.xgboost.RFs.10Kdata <- function() {
-   # ----------------------------------------------------------------
-    # FIT PROPENSITY SCORES WITH randomForest (not implemented)
-    # ----------------------------------------------------------------
-    # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "drf")
-    # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-    #                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
-
-    # wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
-    # surv_dlow <- survNPMSM(wts.St.dlow, OData)
-    # wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
-    # surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
-
-    # if (rmarkdown::pandoc_available(version = "1.12.3"))
-    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-    #                 AddFUPtables = TRUE,
-    #                 openFile = FALSE,
-    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 }
 
 test.xgboost.grid.10Kdata <- function() {

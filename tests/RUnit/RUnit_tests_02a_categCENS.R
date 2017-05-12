@@ -10,6 +10,8 @@ test.model.fits.categorCENSOR <- function() {
   OdataCatCENS[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
   OdataCatCENS[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]
 
+  OdataCatCENS[, "TI_0" := 0L]
+
   # head(OdataCatCENS)
   # nrow(OdataCatCENS)
   # table(OdataCatCENS[,"Y.tplus1"])
@@ -27,9 +29,10 @@ test.model.fits.categorCENSOR <- function() {
   res <- stremr(OdataCatCENS, ID = "ID", t = "t",
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
+          intervened_TRT = "TI_0",
           gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
           # noCENScat = 0L)
-  res$estimates
+  # res$estimates
   # res$dataDT
 
   # --------------------------------
@@ -47,27 +50,30 @@ test.model.fits.categorCENSOR <- function() {
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
           gform_TRT = gform_TRT,
+          intervened_TRT = "TI_0",
           gform_MONITOR = gform_MONITOR)
           # noCENScat = 0L)
-  res$estimates
+  # res$estimates
   # res$dataDT
 
   # --------------------------------
   # EXAMPLE 3:
   # --------------------------------
-  # options(stremr.verbose = TRUE)
-  gform_CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
-  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
-  gform_MONITOR <- "N ~ 1"
-  res <- stremr(OdataCatCENS, ID = "ID", t = "t",
-          covars = c("highA1c", "lastNat1"),
-          CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
-          gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
-          gform_TRT = gform_TRT,
-          gform_MONITOR = gform_MONITOR,
-          noCENScat = 1L)
+  # # options(stremr.verbose = TRUE)
+  # gform_CENS <- c("C + TI ~ highA1c + lastNat1", "N ~ highA1c + lastNat1 + C + TI")
+  # gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+  # gform_MONITOR <- "N ~ 1"
+  # res <- stremr(OdataCatCENS, ID = "ID", t = "t",
+  #         covars = c("highA1c", "lastNat1"),
+  #         CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
+  #         gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
+  #         gform_TRT = gform_TRT,
+  #         intervened_TRT = "TI_0",
+  #         tbreaks = c(4,6),
+  #         gform_MONITOR = gform_MONITOR,
+  #         noCENScat = 1L)
     # )
-  res$estimates
+  # res$estimates
   # res$dataDT
 
   # --------------------------------
@@ -89,9 +95,10 @@ test.model.fits.categorCENSOR <- function() {
           gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
           gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
           gform_MONITOR = gform_MONITOR,
+          intervened_TRT = "TI_0",
           noCENScat = 0L)
     # )
-  res$estimates
+  # res$estimates
   # res$dataDT
 
 }
@@ -109,7 +116,7 @@ test.model.fits.categorCENSOR2 <- function() {
   OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) %in% 0), by = ID]
   # Define lagged N, first value is always 1 (always monitored at the first time point):
   OdataDT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
-
+  OdataDT[, "TI_0" := 0L]
   #-------------------------------------------------------------------
   # Regressions for modeling the exposure (TRT)
   #-------------------------------------------------------------------
@@ -152,12 +159,13 @@ test.model.fits.categorCENSOR2 <- function() {
                             new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
 
   # Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
-  res <- stremr(OdataDT, intervened_TRT = "dhigh", intervened_MONITOR = "gstar.N",
+  res <- stremr(OdataDT, intervened_TRT = "dhigh",
+                # intervened_MONITOR = "gstar.N",
                 ID = "ID", t = "t", covars = c("highA1c", "lastNat1"),
                 CENS = "CatC", gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
                 TRT = "TI", gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
                 MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1")
 
-  res$estimates
-  res$dataDT
+  # res$estimates
+  # res$dataDT
 }
