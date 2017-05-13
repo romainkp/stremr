@@ -63,6 +63,14 @@ r_packages:
 
 #   - bindata
 install:
+  - Rscript -e 'install.packages("methods")'
+  - Rscript -e 'install.packages("statmod")'
+  - Rscript -e 'install.packages("stats")'
+  - Rscript -e 'install.packages("graphics")'
+  - Rscript -e 'install.packages("RCurl")'
+  - Rscript -e 'install.packages("jsonlite")'
+  - Rscript -e 'install.packages("tools")'
+  - Rscript -e 'install.packages("utils")'
   - Rscript -e 'install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))'
 
 env:
