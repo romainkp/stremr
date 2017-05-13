@@ -85,7 +85,7 @@ test.model.fits.stratify <- function() {
   Odat_DT_test <- OdataNoCENS.DT
   Odat_DT_test[, "C1" := C]
   Odat_DT_test[, "C2" := C]
-  OData <- importData(Odat_DT_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+  OData <- importData(Odat_DT_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1")
   OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
                                 stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 

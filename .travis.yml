@@ -60,10 +60,10 @@ os:
 r_github_packages:
   - jimhester/covr
   - schloerke/travisDrat
+  - osofr/gridisl
 
-r_packages:
-  - ggiraph
-
+# r_packages:
+#   - ggiraph
 # - xgboost
 # - bindata
 
