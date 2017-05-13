@@ -91,6 +91,7 @@ install.packages("data.table", type = "source",
 
 To obtain documentation for specific relevant functions in `stremr` package:
 ```R
+?stremr
 ?importData
 ?fitPropensity
 ?getIPWeights
@@ -98,9 +99,7 @@ To obtain documentation for specific relevant functions in `stremr` package:
 ?survNPMSM
 ?survMSM
 ?fitGCOMP
-?fitTMLE
 ?fit_iTMLE
-?fit_iterTMLE
 ```
 
 <!-- <a name="Reports"></a>
