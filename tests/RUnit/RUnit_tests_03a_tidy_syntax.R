@@ -89,7 +89,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## IMPORT DATA
   ## ----------------------------------------------------------------
   library("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 2)
 
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
@@ -108,16 +108,17 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
   models_g <-
-     gridisl::defModel(estimator = "h2o__glm", family = "binomial",
-                       nlambdas = 5, lambda_search = TRUE,
-                       param_grid = list(
-                        alpha = c(0.5)
-                       ))
-    # gridisl::defModel(estimator = "xgboost__glm",
-    #                   family = "binomial",
-    #                   nrounds = 100,
-    #                   # early_stopping_rounds = 2,
-    #                   interactions = list(c("CVD", "highA1c")))
+     # gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+     #                   # lambda_search = FALSE,
+     #                   # nlambdas = 5,
+     #                   param_grid = list(
+     #                    alpha = 0
+     #                    # alpha = c(0.5)
+     #                   ))
+    gridisl::defModel(estimator = "xgboost__glm", family = "binomial")
+                      # nrounds = 100,
+                      # early_stopping_rounds = 2,
+                      # interactions = list(c("CVD", "highA1c")))
     #  #                   +
      # gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
@@ -521,5 +522,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
       trelliscopejs::trelliscope(name = "test", panel_col = "RDplot")
       longRDs
   }
+
+  h2o::h2o.shutdown(prompt = FALSE)
 
 }

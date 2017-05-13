@@ -76,8 +76,9 @@ test.CV_TMLE.10Kdata <- function() {
                           )
 
     ## regularlized glm with h2o
-    models_g <<- gridisl::defModel(estimator = "h2o__glm", family = "binomial",
-                                    nlambdas = 5, lambda_search = TRUE,
+    models_g <<- gridisl::defModel(estimator = "xgboost__glm", family = "binomial",
+    # models_g <<- gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+                                    # nlambdas = 5, lambda_search = TRUE,
                                     param_grid = list(
                                         alpha = c(0, 0.5, 1)
                                   ))

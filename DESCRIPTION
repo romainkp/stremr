@@ -32,32 +32,31 @@ Imports:
     dplyr,
     ggplot2,
     gridisl,
+    h2o,
     magrittr,
     methods,
     origami,
+    pander,
+    purrr,
     R6,
     Rcpp,
     rmarkdown,
-    pander,
-    purrr,
     speedglm,
     stats,
     tibble,
     tidyr,
-    zoo
+    zoo,
+    xgboost
 LinkingTo: Rcpp
 Suggests:
     doParallel,
     foreach,
     ggiraph,
-    h2o,
     knitr,
-    RUnit,
-    xgboost
-Remotes:
-    jeremyrcoyle/origami,
-    osofr/gridisl,
-    url::http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R/src/contrib/h2o_3.10.2.2.tar.gz
+    RUnit
+Remotes: github::jeremyrcoyle/origami,
+    github::osofr/gridisl,
+    url::https://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R/src/contrib/h2o_3.10.2.2.tar.gz
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1
