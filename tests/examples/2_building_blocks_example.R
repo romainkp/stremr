@@ -72,7 +72,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 params <- gridisl::defModel(estimator = "speedglm__glm")
 
 \dontrun{
-gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                           Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
@@ -80,7 +80,7 @@ gcomp_est[]
 # TMLE
 # ----------------------------------------------------------------------
 \dontrun{
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                     Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
@@ -148,7 +148,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 models = gridisl::defModel(estimator = "h2o__randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
@@ -159,7 +159,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 models = gridisl::defModel(estimator = "h2o__randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }

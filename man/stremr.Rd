@@ -80,15 +80,15 @@ Each list item is a character vector of stratification subsets for the correspon
 
 \item{fit_method_g}{Same as \code{fit_method} in \code{\link{fitPropensity}}.}
 
-\item{models_Q}{Same as \code{models} in \code{\link{fitGCOMP}}.}
+\item{models_Q}{Same as \code{models} in \code{\link{fit_GCOMP}}.}
 
-\item{fit_method_Q}{Same as \code{fit_method} in \code{\link{fitGCOMP}}.}
+\item{fit_method_Q}{Same as \code{fit_method} in \code{\link{fit_GCOMP}}.}
 
-\item{Qforms}{Same as in \code{\link{fitGCOMP}}.}
+\item{Qforms}{Same as in \code{\link{fit_GCOMP}}.}
 
-\item{tvals}{Same as in \code{\link{fitGCOMP}}.}
+\item{tvals}{Same as in \code{\link{fit_GCOMP}}.}
 
-\item{stratifyQ_by_rule}{Same as in \code{\link{fitGCOMP}}.}
+\item{stratifyQ_by_rule}{Same as in \code{\link{fit_GCOMP}}.}
 
 \item{trunc_IPW_MSM}{Weight truncation for IPW-based functions.}
 

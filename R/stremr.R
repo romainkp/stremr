@@ -169,11 +169,11 @@ GetWarningsToSuppress <- function(update.step=FALSE) {
 #' @param models_TRT Same as in \code{\link{fitPropensity}}.
 #' @param models_MONITOR Same as in \code{\link{fitPropensity}}.
 #' @param fit_method_g Same as \code{fit_method} in \code{\link{fitPropensity}}.
-#' @param models_Q Same as \code{models} in \code{\link{fitGCOMP}}.
-#' @param fit_method_Q Same as \code{fit_method} in \code{\link{fitGCOMP}}.
-#' @param Qforms Same as in \code{\link{fitGCOMP}}.
-#' @param tvals Same as in \code{\link{fitGCOMP}}.
-#' @param stratifyQ_by_rule Same as in \code{\link{fitGCOMP}}.
+#' @param models_Q Same as \code{models} in \code{\link{fit_GCOMP}}.
+#' @param fit_method_Q Same as \code{fit_method} in \code{\link{fit_GCOMP}}.
+#' @param Qforms Same as in \code{\link{fit_GCOMP}}.
+#' @param tvals Same as in \code{\link{fit_GCOMP}}.
+#' @param stratifyQ_by_rule Same as in \code{\link{fit_GCOMP}}.
 #' @param trunc_IPW_MSM Weight truncation for IPW-based functions.
 #' @param trunc_IPW_TMLE Weight trunction for TMLE.
 #' @param seed Random generator seed.
@@ -349,7 +349,7 @@ stremr <- function(data, ID = "Subj_ID", t_name = "time_period",
   GCOMP <-analysis %>%
     dplyr::distinct(intervened_TRT, stratifyQ_by_rule) %>%
     dplyr::mutate(GCOMP = purrr::map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fitGCOMP(intervened_TRT = .x,
+          ~ fit_GCOMP(intervened_TRT = .x,
                      stratifyQ_by_rule = .y,
                      tvals = tvals,
                      OData = OData,
@@ -366,7 +366,7 @@ stremr <- function(data, ID = "Subj_ID", t_name = "time_period",
     dplyr::distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
   TMLE <- TMLE %>%
-    dplyr::mutate(TMLE = purrr::pmap(TMLE, fitTMLE,
+    dplyr::mutate(TMLE = purrr::pmap(TMLE, fit_TMLE,
                    tvals = tvals,
                    OData = OData,
                    models = models_Q,

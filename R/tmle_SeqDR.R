@@ -257,7 +257,7 @@ fit_iTMLE_onet <- function(OData,
 
   # ------------------------------------------------------------------------------------------------
   #  ****** Qkplus1 THIS NEEDS TO BE MOVED OUT OF THE MAIN data.table *****
-  # Running fitGCOMP_onet might conflict with different Qkplus1
+  # Running fit_GCOMP_onet might conflict with different Qkplus1
   # ------------------------------------------------------------------------------------------------
   # **** G-COMP: Initiate Qkplus1 - (could be multiple if more than one regimen)
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)

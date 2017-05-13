@@ -117,7 +117,7 @@ test.CV_TMLE.10Kdata <- function() {
     t.surv <- c(0:2)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    CV_tmle_est <- fitCVTMLE(OData, tvals = t.surv,
+    CV_tmle_est <- fit_CVTMLE(OData, tvals = t.surv,
                           intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                           stratifyQ_by_rule = FALSE,
                           fit_method = "cv", # fit_method = "none",
@@ -136,7 +136,7 @@ test.CV_TMLE.10Kdata <- function() {
     #  8:     TMLE    8       NA 0.7875892          NA           TRUE              0 pooled 0.006395675
     #  9:     TMLE    9       NA 0.7680555          NA           TRUE              0 pooled 0.006687276
     # 10:     TMLE   10       NA 0.7545343          NA           TRUE              0 pooled 0.006843401
-    tmle_est <- fitTMLE(OData, tvals = t.surv,
+    tmle_est <- fit_TMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         fit_method = "cv", # fit_method = "none",
@@ -156,7 +156,7 @@ test.CV_TMLE.10Kdata <- function() {
     #  9:     TMLE    9       NA 0.7684924          NA           TRUE              0 pooled 0.006624978
     # 10:     TMLE   10       NA 0.7549844          NA           TRUE              0 pooled 0.006795919
 
-    CV_tmle_est <- fitCVTMLE(OData, tvals = t.surv,
+    CV_tmle_est <- fit_CVTMLE(OData, tvals = t.surv,
                           intervened_TRT = "gTI.dlow", Qforms = Qforms, models = params,
                           stratifyQ_by_rule = FALSE,
                           fit_method = "cv", # fit_method = "none",
@@ -175,7 +175,7 @@ test.CV_TMLE.10Kdata <- function() {
     #  8:     TMLE    8       NA 0.8982760          NA           TRUE              0 pooled 0.008269477
     #  9:     TMLE    9       NA 0.8797293          NA           TRUE              0 pooled 0.008987486
     # 10:     TMLE   10       NA 0.8612292          NA           TRUE              0 pooled 0.009661293
-    tmle_est <- fitTMLE(OData, tvals = t.surv,
+    tmle_est <- fit_TMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dlow", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         fit_method = "cv", # fit_method = "none",

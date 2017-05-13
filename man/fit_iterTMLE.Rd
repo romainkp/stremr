@@ -2,18 +2,18 @@
 % Please edit documentation in R/tmle.R
 \name{fit_iterTMLE}
 \alias{fit_iterTMLE}
-\title{Iterative TMLE wrapper for \code{fitGCOMP}}
+\title{Iterative TMLE wrapper for \code{fit_GCOMP}}
 \usage{
 fit_iterTMLE(...)
 }
 \arguments{
-\item{...}{Arguments that will be passed down to the underlying function \code{fitGCOMP}}
+\item{...}{Arguments that will be passed down to the underlying function \code{fit_GCOMP}}
 }
 \value{
 \code{data.table} with survival by time for sequential GCOMP and iterative TMLE
 }
 \description{
-Calls \code{fitGCOMP} with argument \code{iterTMLE = TRUE}.
+Calls \code{fit_GCOMP} with argument \code{iterTMLE = TRUE}.
 }
 \examples{
 options(stremr.verbose = TRUE)
@@ -90,7 +90,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 params <- gridisl::defModel(estimator = "speedglm__glm")
 
 \dontrun{
-gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                           Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 gcomp_est[]
 }
@@ -98,7 +98,7 @@ gcomp_est[]
 # TMLE
 # ----------------------------------------------------------------------
 \dontrun{
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
                     Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 }
@@ -166,7 +166,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 models = gridisl::defModel(estimator = "h2o__randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = TRUE)
 }
@@ -177,13 +177,13 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 models = gridisl::defModel(estimator = "h2o__randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
             Qforms = Qforms, models = models,
             stratifyQ_by_rule = FALSE)
 }
 
 }
 \seealso{
-\code{\link{fitGCOMP}}
+\code{\link{fit_GCOMP}}
 }
 

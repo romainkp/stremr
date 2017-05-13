@@ -168,7 +168,7 @@ test.tidy.speedglm.10Kdata <- function() {
   GCOMP <-analysis %>%
         distinct(intervened_TRT, stratifyQ_by_rule) %>%
         mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fitGCOMP(intervened_TRT = .x,
+          ~ fit_GCOMP(intervened_TRT = .x,
                         stratifyQ_by_rule = .y,
                         tvals = tvals,
                         OData = OData,
@@ -183,7 +183,7 @@ test.tidy.speedglm.10Kdata <- function() {
           distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
   TMLE <- TMLE %>%
-        mutate(TMLE = pmap(TMLE, fitTMLE,
+        mutate(TMLE = pmap(TMLE, fit_TMLE,
                            tvals = tvals,
                            OData = OData,
                            Qforms = Qforms)) %>%
@@ -191,7 +191,7 @@ test.tidy.speedglm.10Kdata <- function() {
         rename(trunc_TMLE = trunc_weight)
 
   CVTMLE <- CVTMLE %>%
-        mutate(CVTMLE = pmap(CVTMLE, fitCVTMLE,
+        mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
                            tvals = tvals,
                            OData = OData,
                            Qforms = Qforms)) %>%

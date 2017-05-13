@@ -19,9 +19,9 @@ make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, WTtables, FUPtables,
 
 \item{NPMSM}{Optional list of a resulting calls to \code{survNPMSM} or a result of a single call to \code{\link{survNPMSM}}.}
 
-\item{TMLE}{Optional list of a resulting calls to \code{fitTMLE} or a result of a single call to \code{\link{fitTMLE}}.}
+\item{TMLE}{Optional list of a resulting calls to \code{fit_TMLE} or a result of a single call to \code{\link{fit_TMLE}}.}
 
-\item{GCOMP}{Optional list of a resulting calls to \code{fitGCOMP} or a result of a single call to \code{\link{fitGCOMP}}.}
+\item{GCOMP}{Optional list of a resulting calls to \code{fit_GCOMP} or a result of a single call to \code{\link{fit_GCOMP}}.}
 
 \item{WTtables}{Table(s) with distribution(s) of the IPTW weights, a result of calling the function \code{\link{get_wtsummary}}}
 

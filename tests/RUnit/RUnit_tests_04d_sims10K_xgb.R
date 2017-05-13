@@ -75,11 +75,11 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     ## ----------------------------------------------------------------------------------------------------
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.periods.RDs)+1))
     # set_all_stremr_options(estimator = "speedglm__glm")
-    tmle_est_dlow <- fitTMLE(OData, tvals = t.periods.RDs, intervened_TRT = "gTI.dlow",
+    tmle_est_dlow <- fit_TMLE(OData, tvals = t.periods.RDs, intervened_TRT = "gTI.dlow",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
                         estimator = "speedglm__glm",
                         family = "quasibinomial")
-    tmle_est_dhigh <- fitTMLE(OData, tvals = t.periods.RDs, intervened_TRT = "gTI.dhigh",
+    tmle_est_dhigh <- fit_TMLE(OData, tvals = t.periods.RDs, intervened_TRT = "gTI.dhigh",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
                         estimator = "speedglm__glm",
                         family = "quasibinomial")
@@ -327,28 +327,28 @@ test.xgboost.10Kdata <- function() {
     # TMLE w/ xgboost glm and CV
     # ---------------------------------------------------------------------------------------------------------
     # params = list(fit.package = "xgboost", fit.algorithm = "glm", family = "quasibinomial") # , objective = "reg:logistic"
-    checkException(tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE))
+    checkException(tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE))
 
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "glm", fit_method = "cv", fold_column = "fold_ID")
     # t.surv <- c(0:10)
     t.surv <- c(0:2)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    tmle_est_dlow <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    tmle_est_dlow <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
                         estimator = "xgboost__glm",
                         family = "quasibinomial", nthread = 1)
-    # tmle_est_dhigh <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    # tmle_est_dhigh <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
     #                     Qforms = Qforms, stratifyQ_by_rule = FALSE,
     #                     estimator = "xgboost__glm",
     #                     family = "quasibinomial", nthread = 1)
     tmle_est_dlow[["estimates"]]
     # tmle_est_dhigh[["estimates"]]
 
-    gcomp_est_dlow <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    gcomp_est_dlow <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              estimator = "xgboost__glm",
                              family = "quasibinomial", nthread = 1)
-    # gcomp_est_dhigh <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    # gcomp_est_dhigh <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
     #                          Qforms = Qforms, stratifyQ_by_rule = FALSE,
     #                          estimator = "xgboost__glm",
     #                          family = "quasibinomial", nthread = 1)
@@ -371,22 +371,22 @@ test.xgboost.10Kdata <- function() {
     # set_all_stremr_options(fit.package = "xgboost", fit.algorithm = "gbm", fit_method = "cv", fold_column = "fold_ID")
     t.surv <- c(0:2)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    tmle_est_dlow <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    tmle_est_dlow <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
                         estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
                         family = "quasibinomial", nrounds  = 5, early_stopping_rounds = 2, nthread = 1)
-    # tmle_est_dhigh <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    # tmle_est_dhigh <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
     #                     Qforms = Qforms, stratifyQ_by_rule = FALSE,
     #                     estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
     #                     family = "quasibinomial", nrounds = 5, early_stopping_rounds = 2, nthread = 1)
     tmle_est_dlow[["estimates"]]
     # tmle_est_dhigh[["estimates"]]
 
-    gcomp_est_dlow <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    gcomp_est_dlow <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
                              family = "quasibinomial", nrounds = 5, early_stopping_rounds = 2, nthread = 1)
-    # gcomp_est_dhigh <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    # gcomp_est_dhigh <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
     #                          Qforms = Qforms, stratifyQ_by_rule = FALSE,
     #                          estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
     #                          family = "quasibinomial", nrounds = 5, early_stopping_rounds = 2, nthread = 1)
@@ -411,20 +411,20 @@ test.xgboost.10Kdata <- function() {
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     params <- gridisl::defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 1)
 
-    tmle_est_dlow <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    tmle_est_dlow <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
                         models = params, fit_method = "cv", fold_column = "fold_ID")
 
-    tmle_est_dhigh <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    tmle_est_dhigh <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
                         models = params, fit_method = "cv", fold_column = "fold_ID")
     tmle_est_dlow[["estimates"]]
     tmle_est_dhigh[["estimates"]]
 
-    gcomp_est_dlow <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    gcomp_est_dlow <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
-    gcomp_est_dhigh <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
+    gcomp_est_dhigh <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
     gcomp_est_dlow[["estimates"]]
@@ -475,7 +475,7 @@ test.xgboost.10Kdata <- function() {
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                            estimator = "speedglm__glm")
-    tmle_est_dlow <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
+    tmle_est_dlow <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
     tmle_est_dlow[["estimates"]]

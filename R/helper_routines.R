@@ -502,7 +502,7 @@ get_MSM_RDs <- function(MSM, t.periods.RDs, getSEs = TRUE) {
 #'
 #' Produces table(s) with pair-wise risk differences for all regimens that were used for fitting TMLE.
 #' The corresponding SEs are evaluated based on the estimated influence curves (IC).
-#' @param TMLE_list A list of objects returned by \code{\link{fit_iterTMLE}}, \code{\link{fitTMLE}} or \code{\link{fitGCOMP}}.
+#' @param TMLE_list A list of objects returned by \code{\link{fit_iterTMLE}}, \code{\link{fit_TMLE}} or \code{\link{fit_GCOMP}}.
 #' @param t.periods.RDs Vector of time-points for evaluation of pairwise risk differences.
 #' @return A list with RD tables. One table for each time-point in \code{t.periods.RDs}.
 #' @seealso \code{\link{survMSM}} for estimation with MSM.

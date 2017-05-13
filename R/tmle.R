@@ -107,44 +107,42 @@ defineNodeGstarGCOMP <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
 }
 
 # ---------------------------------------------------------------------------------------
-#' Iterative TMLE wrapper for \code{fitGCOMP}
+#' Iterative TMLE wrapper for \code{fit_GCOMP}
 #'
-#' Calls \code{fitGCOMP} with argument \code{iterTMLE = TRUE}.
-#' @param ... Arguments that will be passed down to the underlying function \code{fitGCOMP}
+#' Calls \code{fit_GCOMP} with argument \code{iterTMLE = TRUE}.
+#' @param ... Arguments that will be passed down to the underlying function \code{fit_GCOMP}
 #' @return \code{data.table} with survival by time for sequential GCOMP and iterative TMLE
-#' @seealso \code{\link{fitGCOMP}}
+#' @seealso \code{\link{fit_GCOMP}}
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
 fit_iterTMLE <- function(...) {
-  fitGCOMP(TMLE = FALSE, iterTMLE = TRUE, ...)
+  fit_GCOMP(TMLE = FALSE, iterTMLE = TRUE, ...)
 }
 
 # ---------------------------------------------------------------------------------------
-#' TMLE wrapper for \code{fitGCOMP}
+#' TMLE wrapper for \code{fit_GCOMP}
 #'
-#' Calls \code{fitGCOMP} with argument \code{TMLE = TRUE}.
-#' @param ... Arguments that will be passed down to the underlying function \code{fitGCOMP}
+#' Calls \code{fit_GCOMP} with argument \code{TMLE = TRUE}.
+#' @param ... Arguments that will be passed down to the underlying function \code{fit_GCOMP}
 #' @return \code{data.table} with TMLE survival by time
-#' @seealso \code{\link{fitGCOMP}}
+#' @seealso \code{\link{fit_GCOMP}}
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-# TMLE <- function(...) {
-fitTMLE <- function(...) {
-  fitGCOMP(TMLE = TRUE, ...)
+fit_TMLE <- function(...) {
+  fit_GCOMP(TMLE = TRUE, ...)
 }
 
 # ---------------------------------------------------------------------------------------
-#' CV-TMLE wrapper for \code{fitGCOMP}
+#' CV-TMLE wrapper for \code{fit_GCOMP}
 #'
-#' Calls \code{fitGCOMP} with arguments \code{TMLE = TRUE} and \code{CVTMLE = TRUE}.
-#' @param ... Arguments that will be passed down to the underlying function \code{fitGCOMP}
+#' Calls \code{fit_GCOMP} with arguments \code{TMLE = TRUE} and \code{CVTMLE = TRUE}.
+#' @param ... Arguments that will be passed down to the underlying function \code{fit_GCOMP}
 #' @return \code{data.table} with TMLE survival by time
-#' @seealso \code{\link{fitGCOMP}}
+#' @seealso \code{\link{fit_GCOMP}}
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-# CVTMLE <- function(...) {
-fitCVTMLE <- function(...) {
-  fitGCOMP(TMLE = TRUE, CVTMLE = TRUE, ...)
+fit_CVTMLE <- function(...) {
+  fit_GCOMP(TMLE = TRUE, CVTMLE = TRUE, ...)
 }
 
 
@@ -235,7 +233,7 @@ fitCVTMLE <- function(...) {
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
 # proposed name change:
-fitGCOMP <- function(OData,
+fit_GCOMP <- function(OData,
                         tvals,
                         Qforms,
                         intervened_TRT = NULL,
@@ -266,7 +264,7 @@ fitGCOMP <- function(OData,
                         reg_Q = NULL,
                         verbose = getOption("stremr.verbose"), ...) {
 
-  # cat("Calling fitGCOMP:\n")
+  # cat("Calling fit_GCOMP:\n")
   # cat("intervened_TRT: ", intervened_TRT, "\n")
   # cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n")
   # cat("stratify_by_last: ", stratify_by_last, "\n")
@@ -361,7 +359,7 @@ fitGCOMP <- function(OData,
       '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
-        res <- fitGCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+        res <- fit_GCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
@@ -373,7 +371,7 @@ fitGCOMP <- function(OData,
       res_byt <- vector(mode = "list", length = length(tvals))
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
-        res <- fitGCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+        res <- fit_GCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
@@ -431,7 +429,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
 
 # ------------------------------------------------------------------------------------------------
 # ITERATIVE (UNIVARIATE) TMLE AGLORITHM for a single time-point.
-# Called as part of the fitGCOMP_onet()
+# Called as part of the fit_GCOMP_onet()
 # ------------------------------------------------------------------------------------------------
 iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001) {
   get_field_Qclass <- function(allQmodels, fieldName) {
@@ -522,7 +520,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
 }
 
 # GCOMP_onet <- function(OData,
-fitGCOMP_onet <- function(OData,
+fit_GCOMP_onet <- function(OData,
                              t_period,
                              Qforms,
                              Qstratify,
@@ -575,7 +573,7 @@ fitGCOMP_onet <- function(OData,
 
   # ------------------------------------------------------------------------------------------------
   #  ****** Qkplus1 THIS NEEDS TO BE MOVED OUT OF THE MAIN data.table *****
-  # Running fitGCOMP_onet might conflict with different Qkplus1
+  # Running fit_GCOMP_onet might conflict with different Qkplus1
   # ------------------------------------------------------------------------------------------------
   # **** G-COMP: Initiate Qkplus1 - (could be multiple if more than one regimen)
   # That column keeps the tabs on the running Q-fit (SEQ G-COMP)

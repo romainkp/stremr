@@ -146,7 +146,7 @@ test.CV_TMLE.10Kdata <- function() {
     #                       )
     # DR_trans_est[["estimates"]]
 
-    tmle_est <- fitTMLE(OData, tvals = t.surv,
+    tmle_est <- fit_TMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         fit_method = "cv", # fit_method = "none",
@@ -193,7 +193,7 @@ test.CV_TMLE.10Kdata <- function() {
     #  9:    SeqDR     9 0.8797818 pooled  gTI.dlow
     # 10:    SeqDR    10 0.8615536 pooled  gTI.dlow
 
-    tmle_est <- fitTMLE(OData, tvals = t.surv,
+    tmle_est <- fit_TMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dlow", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         fit_method = "cv", # fit_method = "none",

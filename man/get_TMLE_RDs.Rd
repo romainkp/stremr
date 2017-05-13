@@ -7,7 +7,7 @@
 get_TMLE_RDs(TMLE_list, t.periods.RDs)
 }
 \arguments{
-\item{TMLE_list}{A list of objects returned by \code{\link{fit_iterTMLE}}, \code{\link{fitTMLE}} or \code{\link{fitGCOMP}}.}
+\item{TMLE_list}{A list of objects returned by \code{\link{fit_iterTMLE}}, \code{\link{fit_TMLE}} or \code{\link{fit_GCOMP}}.}
 
 \item{t.periods.RDs}{Vector of time-points for evaluation of pairwise risk differences.}
 }

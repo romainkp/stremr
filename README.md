@@ -16,14 +16,14 @@ Currently available estimators can be roughly categorized into 4 groups:
     - [IPW-adjusted Kaplan-Meier](https://doi.org/10.1002/sim.2174) (`survNPMSM`)
     - [MSM-IPW for the survival hazard](https://doi.org/10.1016/j.jclinepi.2013.01.016) (`survMSM`)
   * Outcome regression:
-    - longitudinal G-formula `GCOMP` ([Bang and Robins, 2005](https://doi.org/10.1111/j.1541-0420.2005.00377.x))
+    - longitudinal G-formula (`GCOMP`) ([Bang and Robins, 2005](https://doi.org/10.1111/j.1541-0420.2005.00377.x))
   * Doubly-robust (DR) approaches:
-    - long-format `TMLE` for longitudinal data ([van der Laan and Gruber, 2012](http://biostats.bepress.com/ucbbiostat/paper290/))
+    - TMLE for longitudinal data (`TMLE`) ([van der Laan and Gruber, 2012](http://biostats.bepress.com/ucbbiostat/paper290/))
     - iterative TMLE (`iterTMLE`)
     - cross-validated TMLE (`CVTMLE`)
   * Sequentially doubly-robust (SDR) approaches:
     - infinite-dimensional TMLE (`iTMLE`) ([Luedtke et al., 2017](https://arxiv.org/abs/1705.02459))
-    - doubly robust unbiased transformations (`DR transform`) ([Rubin and van der Laan, 2006](http://biostats.bepress.com/ucbbiostat/paper208), [Luedtke et al., 2017](https://arxiv.org/abs/1705.02459))
+    - doubly robust unbiased transformations (`DR_transform`) ([Rubin and van der Laan, 2006](http://biostats.bepress.com/ucbbiostat/paper208), [Luedtke et al., 2017](https://arxiv.org/abs/1705.02459))
 
 **Input data**: 
 
@@ -99,7 +99,7 @@ To obtain documentation for specific relevant functions in `stremr` package:
 ?directIPW
 ?survNPMSM
 ?survMSM
-?fitGCOMP
+?fit_GCOMP
 ?fit_iTMLE
 ```
 
@@ -203,12 +203,12 @@ params = list(fit.package = "speedglm", fit.algorithm = "glm")
 
 G-Computation (pooled):
 ```R
-gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 ```
 
 Targeted Maximum Likelihood Estimation (TMLE) (stratified):
 ```R
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
 tmle_est[]
 ```
 
@@ -217,7 +217,7 @@ To parallelize estimation over several time-points (`t.surv`) for either GCOMP o
 require("doParallel")
 registerDoParallel(cores = 40)
 data.table::setthreads(1)
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
 ```
 
 <a name="ML"></a>
@@ -255,7 +255,7 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gf
 
 Other available algorithms are Gradient Boosting Machines (`estimator = "h2o__gbm"`) or Extreme Gradient Boosting (`estimator = "xgboost__gbm"`), distributed GLM (including LASSO and Ridge) (`estimator = "h2o__glm"` or `estimator = "xgboost__glm"`) and Deep Neural Nets (`estimator = "h2o__deeplearning"`).
 
-<!-- Use arguments `params_...` in `fitPropensity()` and `models` in `fitGCOMP()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
+<!-- Use arguments `params_...` in `fitPropensity()` and `models` in `fit_GCOMP()` and `fit_TMLE()` to pass various tuning parameters and select different algorithms for different models:
 ```R
 params_TRT = list(fit.package = "h2o", fit.algorithm = "gbm", ntrees = 50, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
@@ -271,7 +271,7 @@ OData <- fitPropensity(OData,
 ```R
 models = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 
-tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = models, stratifyQ_by_rule = TRUE)
+tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = models, stratifyQ_by_rule = TRUE)
 ```
  -->
 <!-- <a name="SuperLearner"></a>

@@ -119,10 +119,10 @@ test.buildingblocks <- function() {
   t.surv <- c(0:2)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-  gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est[]
 
   # stratified modeling by rule followers only:
-  tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est[]
 }

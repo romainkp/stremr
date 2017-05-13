@@ -88,7 +88,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
   # stratified modeling by rule followers only:
-  gcomp_est1 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
+  gcomp_est1 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
   gcomp_est1$estimates[]
   # > gcomp_est1$estimates[]
   #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
@@ -97,7 +97,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 2:    GCOMP     2 0.9710077      NA          NA          FALSE              3 stratified
   # 3:    GCOMP     3 0.9631855      NA          NA          FALSE              4 stratified
   # 4:    GCOMP    10 0.8660195      NA          NA          FALSE             11 stratified
-  tmle_est1 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
+  tmle_est1 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE, stratify_by_last = FALSE)
   tmle_est1$estimates[]
   #    est_name  time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
   #      <char> <num>   <lgcl>     <num>      <lgcl>         <lgcl>          <int>     <char>
@@ -106,7 +106,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 3:     TMLE     3       NA 0.9578743          NA           TRUE              0 stratified
   # 4:     TMLE    10       NA 0.8613802          NA           TRUE              0 stratified
 
-  gcomp_est1_last_t <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  gcomp_est1_last_t <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   gcomp_est1_last_t$estimates[]
   #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
   #      <char> <num>     <num>  <lgcl>      <lgcl>         <lgcl>          <int>     <char>
@@ -114,7 +114,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 2:    GCOMP     2 0.9775586      NA          NA          FALSE              3 stratified
   # 3:    GCOMP     3 0.9698591      NA          NA          FALSE              4 stratified
   # 4:    GCOMP    10 0.9028223      NA          NA          FALSE             11 stratified
-  tmle_est1_last_t <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  tmle_est1_last_t <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   tmle_est1_last_t$estimates[]
   #    est_name  time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates       type
   #      <char> <num>   <lgcl>     <num>      <lgcl>         <lgcl>          <int>     <char>
@@ -124,8 +124,8 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 4:     TMLE    10       NA 0.8613870          NA           TRUE              0 stratified
 
   # pooling all observations (no stratification):
-  gcomp_est2 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  tmle_est2 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est2 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  tmle_est2 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est2$estimates[]
   #    est_name  time  St.GCOMP St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type
   #      <char> <num>     <num>  <lgcl>      <lgcl>         <lgcl>          <int> <char>
@@ -148,13 +148,13 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # 4:       -0.03282305,-0.02735624,-0.03282305, 0.15442483,-0.02735624,-0.02735624,  gTI.dlow
 
   # stratified modeling by rule followers only:
-  gcomp_est3 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  tmle_est3 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+  tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   gcomp_est3$estimates[]; tmle_est3$estimates[]
 
   # pooling all observations (no stratification):
-  gcomp_est4 <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  tmle_est4 <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est4 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   gcomp_est4$estimates[]; tmle_est4$estimates[]
 
   ## ------------------------------------------------------------------------
@@ -164,12 +164,12 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # registerDoParallel(cores = 2)
   # data.table::setDTthreads(1)
 
-  # gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-  # tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
   # gcomp_est; tmle_est
 
-  # gcomp_est <- fitGCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
-  # tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
+  # tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, stratifyQ_by_rule = FALSE, parallel = TRUE)
   # gcomp_est; tmle_est
 }
 

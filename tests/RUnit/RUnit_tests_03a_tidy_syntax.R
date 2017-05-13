@@ -356,7 +356,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     GCOMP <-analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule) %>%
           mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-            ~ fitGCOMP(intervened_TRT = .x,
+            ~ fit_GCOMP(intervened_TRT = .x,
                           stratifyQ_by_rule = .y,
                           tvals = tvals,
                           OData = OData,
@@ -377,7 +377,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   TMLE_time <- system.time({
     TMLE <- TMLE %>%
-          mutate(TMLE = pmap(TMLE, fitTMLE,
+          mutate(TMLE = pmap(TMLE, fit_TMLE,
                              tvals = tvals,
                              OData = OData,
                              models = models_Q,
@@ -391,7 +391,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   CVTMLE_time <- system.time({
     CVTMLE <- CVTMLE %>%
-          mutate(CVTMLE = pmap(CVTMLE, fitCVTMLE,
+          mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
                              tvals = tvals,
                              OData = OData,
                              models = models_Q,
