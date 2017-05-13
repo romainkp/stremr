@@ -54,6 +54,10 @@ Suggests:
     knitr,
     RUnit,
     xgboost
+Remotes:
+    jeremyrcoyle/origami,
+    osofr/gridisl,
+    url::http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R/src/contrib/h2o_3.10.2.2.tar.gz
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1

@@ -31,11 +31,15 @@ before_install:
   - sudo apt-get install -y libicu-dev
   - sudo apt-get install -y pandoc
 
-install:
-  - Rscript -e 'install.packages(c("methods", "statmod", "stats", "graphics", "RCurl", "jsonlite", "tools", "utils"))'
-  - Rscript -e 'install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))'
-
 r_binary_packages:
+  - methods
+  - statmod
+  - stats
+  - graphics
+  - RCurl
+  - jsonlite
+  - tools
+  - utils
   - assertthat
   - doParallel
   - data.table
@@ -57,8 +61,6 @@ r_binary_packages:
 
 r_github_packages:
   - jimhester/covr
-  - osofr/gridisl
-  - jeremyrcoyle/origami
   - schloerke/travisDrat
 
 r_packages:
