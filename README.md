@@ -41,9 +41,10 @@ The exposure, monitoring and censoring variables can be coded as either binary, 
 
 **Model fitting:**
  - Separate models are fit for the observed censoring, exposure and monitoring mechanisms.
+ - Separate outcome regression models can be specified for each time-point.
  - Each model can be stratified (separate model is fit) by time or any other user-specified stratification criteria. Each strata is defined with by a single logical expression that selects specific observations/rows in the observed data (strata).
- -  By default, all models are fit using `GLM` with `binomial` family (logistic regression). 
- -  Alternatively, model fitting can be also performed with any machine learning algorithm implemented in `h2o` or `xgboost` R packages
+ -  By default, all models are fit with logistic regressions.
+ -  Alternatively, model fitting can be performed with any machine learning algorithm implemented in [`xgboost`](https://github.com/dmlc/xgboost) or [`h2o`](https://github.com/h2oai/h2o-3) R packages.
  -  One can select the best model from an ensemble of many learners by using cross-validation (supported by [`gridisl`](https://github.com/osofr/gridisl) R package).
 
 **Overview**:
