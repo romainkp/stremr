@@ -12,7 +12,7 @@ The package implements several estimators of the expected counterfactual outcome
 Currently available estimators can be roughly categorized into 4 groups:
 
   * Propensity-score / Inverse Probability Weighted (IPW):
-    - direct (bounded) IPW ('directIPW')
+    - direct (bounded) IPW (`directIPW`)
     - [IPW-adjusted Kaplan-Meier](https://doi.org/10.1002/sim.2174) (`survNPMSM`)
     - [MSM-IPW for the survival hazard](https://doi.org/10.1016/j.jclinepi.2013.01.016) (`survMSM`)
   * Outcome regression:
