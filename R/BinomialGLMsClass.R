@@ -1,3 +1,4 @@
+# nocov start
 #' @import data.table
 NULL
 
@@ -225,3 +226,4 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
     Yvals = NULL
   )
 )
+# nocov end

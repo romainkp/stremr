@@ -13,7 +13,8 @@ fit_iTMLE(OData, tvals, Qforms, intervened_TRT = NULL,
   stratify_by_last = TRUE, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
   CVTMLE = FALSE, trunc_weights = 10^6, parallel = FALSE,
   return_fW = FALSE, use_DR_transform = FALSE, stabilize = FALSE,
-  reg_Q = NULL, verbose = getOption("stremr.verbose"), ...)
+  reg_Q = NULL, SDR_model = NULL, verbose = getOption("stremr.verbose"),
+  ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -84,6 +85,9 @@ empirical conditional probability of having followed the rule at time-point \cod
 the way up to time-point \code{t}.}
 
 \item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}
+
+\item{SDR_model}{The xgboost parameter settings for iTMLE non-parametric regression targeting.
+If missing/NULL the default parameter settings will be used.}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 

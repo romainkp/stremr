@@ -1,3 +1,4 @@
+# nocov start
 SDRtransform <- R6Class(classname = "SDRtransform",
   inherit = GenericModel,
   portable = TRUE,
@@ -122,3 +123,4 @@ SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
     }
   )
 )
+# nocov end

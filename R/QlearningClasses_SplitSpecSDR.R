@@ -216,11 +216,10 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
                       "SDR.updater.glm",
                       "SDR.updater.xgb",
                       "SDR.updater.xgb.delta1",
-                      # "SDR.updater.xgb.delta2",
-                      "SDR.updater.xgb.delta3"
-                      # "SDR.updater.xgb.delta4"
+                      "SDR.updater.xgb.delta2",
+                      "SDR.updater.xgb.delta3",
+                      "SDR.updater.xgb.delta4"
                       )
-        # , "SDR.updater.speedglmTMLE"
 
         library("abind")
         # SDR_SL_fit <- origami::origami_SuperLearner(folds = folds,

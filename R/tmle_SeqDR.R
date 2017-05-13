@@ -55,6 +55,8 @@
 #' empirical conditional probability of having followed the rule at time-point \code{t}, given the subject has followed the rule all
 #' the way up to time-point \code{t}.
 #' @param reg_Q (ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.
+#' @param SDR_model The xgboost parameter settings for iTMLE non-parametric regression targeting.
+#' If missing/NULL the default parameter settings will be used.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -83,7 +85,14 @@ fit_iTMLE <- function(OData,
                     use_DR_transform = FALSE,
                     stabilize = FALSE,
                     reg_Q = NULL,
+                    SDR_model = NULL,
                     verbose = getOption("stremr.verbose"), ...) {
+
+  if (is.null(SDR_model)) {
+    SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6, learning_rate = .1, nrounds = 50)
+    # SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6, nrounds = 10)
+    # SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6)
+  }
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -160,7 +169,7 @@ fit_iTMLE <- function(OData,
       '%dopar%' <- foreach::'%dopar%'
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
-        res <- fit_iTMLE_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
+        res <- fit_iTMLE_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, SDR_model = SDR_model, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -169,7 +178,7 @@ fit_iTMLE <- function(OData,
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
         cat("Estimating parameter E[Y_d(t)] for t = " %+% t_period, "\n")
-        res <- fit_iTMLE_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, verbose = verbose)
+        res <- fit_iTMLE_onet(OData, t_period, Qforms, stratifyQ_by_rule, CVTMLE = CVTMLE, models = models_control, return_fW = return_fW, use_DR_transform = use_DR_transform, stabilize = stabilize, SDR_model = SDR_model, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -217,6 +226,7 @@ fit_iTMLE_onet <- function(OData,
                         return_fW = FALSE,
                         use_DR_transform = FALSE,
                         stabilize = FALSE,
+                        SDR_model,
                         verbose = getOption("stremr.verbose"),
                         ...) {
   gvars$verbose <- verbose
@@ -272,10 +282,6 @@ fit_iTMLE_onet <- function(OData,
   Q_regs_list <- vector(mode = "list", length = length(Qstratas_by_t))
   names(Q_regs_list) <- unlist(Qstratas_by_t)
   class(Q_regs_list) <- c(class(Q_regs_list), "ListOfRegressionForms")
-
-  # SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6, nrounds = 10)
-  SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6, learning_rate = .1, nrounds = 50)
-  # SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6)
 
   for (i in seq_along(Q_regs_list)) {
     regform <- process_regform(as.formula(Qforms_single_t[[i]]), sVar.map = nodes, factor.map = new.factor.names)

@@ -1,3 +1,4 @@
+# nocov start
 # ## Generic for fitting the logistic (binomial family) GLM model
 # ## h2ofit <- function(fit, ...) UseMethod("h2ofit")
 
@@ -421,3 +422,5 @@
 #   class(fit) <- c(class(fit)[1], c("H2Omodel"))
 #   return(fit)
 # }
+
+# nocov end
