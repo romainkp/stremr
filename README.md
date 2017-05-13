@@ -393,7 +393,7 @@ Currently implemented **estimators** include:
 ### Citation
 
 To cite `stremr` in publications, please use:
-> Sofrygin O, van der Laan MJ, Neugebauer R (2017). *stremr: Simulating Longitudinal Data with Causal Inference Applications.* R package version x.x.xx
+> Sofrygin O, van der Laan MJ, Neugebauer R (2017). *stremr: Streamlined Estimation for Static, Dynamic and Stochastic Treatment Regimes in Longitudinal Data.* R package version x.x.xx
 
 
 ### Funding
