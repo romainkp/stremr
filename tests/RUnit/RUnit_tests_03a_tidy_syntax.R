@@ -103,8 +103,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ----------------------------------------------------------------
   ## This example uses a discrete SuperLearner: best model will be selected on the basis of CV-MSE.
   ## Use cross-validation to select best model for g (set 'fit_method_g <- "none"' to just fit a single model w/out CV)
-  # fit_method_g <- "cv"
-  fit_method_g <- "none"
+  fit_method_g <- "cv"
+  # fit_method_g <- "none"
 
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
