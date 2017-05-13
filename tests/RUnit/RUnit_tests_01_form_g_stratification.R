@@ -64,11 +64,31 @@ test.model.fits.stratify <- function() {
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
           intervened_TRT = "TI_0",
-          gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR)
+          gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR,
+          start_h2o_cluster = FALSE)
   # res$estimates
   # res$dataDT
   # res$wts_data
   # res$OData.R6
+
+  ## ------------------------------------------------------------------------
+  ## TEST FOR PROBLEMS WITH > 1 REGRESSION AND > 1 STATA (SHOULD WORK)
+  ## ------------------------------------------------------------------------
+  gform_TRT = "TI ~ CVD + highA1c + N.tminus1"
+  gform_MONITOR <- "N ~ 1"
+  stratify_TRT <- list(
+    TI=c("t == 0L", "t == 1L", "t == 2L", "t == 3L", "t == 4L", "t == 5L", "t > 5L")
+    )
+
+  gform_CENS_test <- c("C1 ~ highA1c", "C2 ~ highA1c")
+  stratify_CENS_test <- list(C1=c("t < 16", "t == 16"), C2=c("t < 16", "t == 16"))
+  Odat_DT_test <- OdataNoCENS.DT
+  Odat_DT_test[, "C1" := C]
+  Odat_DT_test[, "C2" := C]
+  OData <- importData(Odat_DT_test, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = c("C1","C2"), TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+  OData <- fitPropensity(OData, gform_CENS = gform_CENS_test, stratify_CENS = stratify_CENS_test, gform_TRT = gform_TRT,
+                                stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+
 
   # --------------------------------
   # EXAMPLE 2:
@@ -95,7 +115,8 @@ test.model.fits.stratify <- function() {
                 gform_MONITOR = gform_MONITOR,
                 intervened_TRT = "TI_0",
                 # MSMGLMpkg = "h2o",
-                tbreaks = c(4,6))
+                tbreaks = c(4,6),
+                start_h2o_cluster = FALSE)
                 # noCENScat = 0L)
 
   # res$estimates
@@ -121,7 +142,8 @@ test.model.fits.stratify <- function() {
                 gform_TRT = gform_TRT,
                 gform_MONITOR = gform_MONITOR,
                 intervened_TRT = "TI_0",
-                tbreaks = c(4,6))
+                tbreaks = c(4,6),
+                start_h2o_cluster = FALSE)
   # res$estimates
   # res$dataDT
   # res$wts_data
@@ -149,7 +171,8 @@ test.model.fits.stratify <- function() {
                 gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
                 gform_MONITOR = gform_MONITOR,
                 intervened_TRT = "TI_0",
-                tbreaks = c(4,6))
+                tbreaks = c(4,6),
+                start_h2o_cluster = FALSE)
 
   # res$estimates
   # res$dataDT
@@ -186,7 +209,8 @@ test.error.fits.stratify <- function() {
             gform_TRT = gform_TRT,
             gform_MONITOR = gform_MONITOR,
             intervened_TRT = "TI_0",
-            tbreaks = c(4,6))
+            tbreaks = c(4,6),
+            start_h2o_cluster = FALSE)
       )
 
 }
