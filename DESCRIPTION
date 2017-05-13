@@ -57,6 +57,6 @@ Suggests:
 Remotes: github::jeremyrcoyle/origami,
     github::osofr/gridisl,
     url::https://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R/src/contrib/h2o_3.10.2.2.tar.gz
-License: GPL (>= 2)
+License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 5.0.1

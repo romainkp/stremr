@@ -5,6 +5,7 @@ test.directRegressionDefn.10Kdata <- function() {
   set_all_stremr_options(estimator = "speedglm__glm")
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
+  Odat_DT <- Odat_DT[ID %in% (1:100), ]
 
   # ---------------------------------------------------------------------------
   # Define some summaries (lags C[t-1], A[t-1], N[t-1])

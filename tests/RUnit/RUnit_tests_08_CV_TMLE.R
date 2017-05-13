@@ -66,14 +66,14 @@ test.CV_TMLE.10Kdata <- function() {
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                             estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
-                            family = "quasibinomial", rounds = 5, early_stopping_rounds = 2)
+                            family = "quasibinomial", rounds = 5)
     ## h2o gbm
-    OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                           estimator = "h2o__gbm", distribution = "bernoulli",
-                           models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
-                          fit_method = "cv", fold_column = "fold_ID", ntrees = 5
-                          )
+    # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
+    #                        stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
+    #                        estimator = "h2o__gbm", distribution = "bernoulli",
+    #                        models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+    #                       fit_method = "cv", fold_column = "fold_ID", ntrees = 5
+    #                       )
 
     ## regularlized glm with h2o
     models_g <<- gridisl::defModel(estimator = "xgboost__glm", family = "binomial",
@@ -111,10 +111,9 @@ test.CV_TMLE.10Kdata <- function() {
     params <- gridisl::defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
                                 nthread = 2,
-                                nrounds = 5,
-                                early_stopping_rounds = 2)
+                                nrounds = 5)
 
-    t.surv <- c(1:4)
+    t.surv <- c(0:2)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
     CV_tmle_est <- fitCVTMLE(OData, tvals = t.surv,

@@ -19,8 +19,8 @@ notest.xgboost.parallel.10Kdata <- function() {
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
-    # select only the first 1,000 IDs
-    # Odat_DT <- Odat_DT[ID %in% (1:1000), ]
+    # select only the first 100 IDs
+    Odat_DT <- Odat_DT[ID %in% (1:100), ]
     setkeyv(Odat_DT, cols = c("ID", "t"))
 
     # ---------------------------------------------------------------------------

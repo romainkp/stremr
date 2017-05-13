@@ -22,7 +22,7 @@ test.CV_TMLE.10Kdata <- function() {
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
     # select only the first 100 IDs
-    Odat_DT <- Odat_DT[ID %in% (1:100), ]
+    Odat_DT <- Odat_DT[ID %in% (1:50), ]
     setkeyv(Odat_DT, cols = c("ID", "t"))
 
     # ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ test.CV_TMLE.10Kdata <- function() {
                                 early_stopping_rounds = 2)
 
     # t.surv <- c(1:10)
-    t.surv <- 2
+    t.surv <- 1
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
     SDR_est <- stremr:::fit_iTMLE(OData, tvals = t.surv,
@@ -136,15 +136,15 @@ test.CV_TMLE.10Kdata <- function() {
     #  9:    SeqDR     9 0.7699733 pooled gTI.dhigh
     # 10:    SeqDR    10 0.7559333 pooled gTI.dhigh
 
-    DR_trans_est <- stremr:::fit_iTMLE(OData, tvals = t.surv,
-                           intervened_TRT = "gTI.dhigh", Qforms = Qforms,
-                           stratifyQ_by_rule = FALSE,
-                           fit_method = "none",
-                           models = params,
-                           return_fW = TRUE,
-                           use_DR_transform = TRUE # stabilize = FALSE,
-                          )
-    DR_trans_est[["estimates"]]
+    # DR_trans_est <- stremr:::fit_iTMLE(OData, tvals = t.surv,
+    #                        intervened_TRT = "gTI.dhigh", Qforms = Qforms,
+    #                        stratifyQ_by_rule = FALSE,
+    #                        fit_method = "none",
+    #                        models = params,
+    #                        return_fW = TRUE,
+    #                        use_DR_transform = TRUE # stabilize = FALSE,
+    #                       )
+    # DR_trans_est[["estimates"]]
 
     tmle_est <- fitTMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,

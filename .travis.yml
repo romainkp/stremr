@@ -67,6 +67,11 @@ r_packages:
 # - xgboost
 # - bindata
 
+addons:
+  apt:
+    packages:
+      - libicu-dev
+      - pandoc
 env:
  global:
    - CRAN: http://cran.rstudio.com

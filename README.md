@@ -46,17 +46,16 @@ Currently implemented **estimators** include:
  - Separate models are fit for the observed censoring, exposure and monitoring mechanisms.
  - Each model can be stratified (separate model is fit) by time or any other user-specified stratification criteria. Each strata is defined with by a single logical expression that selects specific observations/rows in the observed data (strata).
  -  By default, all models are fit using `GLM` with `binomial` family (logistic regression). 
- -  Alternatively, model fitting can be also performed with any machine learning algorithm implemented in `H2O-3` (faster distributed penalized `GLM`, `Random Forest`, `Gradient Boosting Machines` and `Deep Neural Network`).
- -  Finally, one can select the best model from an ensemble of H2O learners via cross-validation. Grid search (`h2o.grid`) allows for user-friendly model specification and fitting over multi-dimensional parameter space with various stopping criteria (random, discrete, max number of models, max time allocated, etc).
- -  The ensemble of many models can be combined into a single (more powerful) model with Grid **SuperLearner** (`gridisl`). 
+ -  Alternatively, model fitting can be also performed with any machine learning algorithm implemented in `h2o` or `xgboost` R packages
+ -  One can select the best model from an ensemble of many learners by using cross-validation (supported by `gridisl` R package).
 
 **Overview**:
 * [Installing `stremr` and Documentation](#Installation)
 * [Automated Reports](#Reports)
 * [Example with Simulated Data](#Example1)
 * [Sequential G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data](#GCOMPTMLE)
-* [Machine Learning Algorithms](#H2OML)
-* [Ensemble Learning with SuperLearner (based on `h2oEnsemble` R package)](#SuperLearner)
+* [Machine Learning](#ML)
+* [Ensemble Learning with Discrete SuperLearner (based on `gridisl` R package)](#gridisl)
 
 <a name="Installation"></a>
 ### Installation and Documentation
@@ -84,29 +83,6 @@ For optimal performance, we also recommend installing the development version of
 remove.packages("data.table")                         # First remove the current version
 install.packages("data.table", type = "source",
     repos = "http://Rdatatable.github.io/data.table") # Then install devel version
-```
-
-For modeling with `H2O-3` machine learning libraries we recommend directly installing the latest version of the `h2o` R package ([can also see the instructions here](https://github.com/h2oai/h2o-3/tree/master/h2o-r#installation-from-within-r)):
-```R
-if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
-if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-# Next, we download packages that H2O depends on.
-if (! ("methods" %in% rownames(installed.packages()))) { install.packages("methods") }
-if (! ("statmod" %in% rownames(installed.packages()))) { install.packages("statmod") }
-if (! ("stats" %in% rownames(installed.packages()))) { install.packages("stats") }
-if (! ("graphics" %in% rownames(installed.packages()))) { install.packages("graphics") }
-if (! ("RCurl" %in% rownames(installed.packages()))) { install.packages("RCurl") }
-if (! ("jsonlite" %in% rownames(installed.packages()))) { install.packages("jsonlite") }
-if (! ("tools" %in% rownames(installed.packages()))) { install.packages("tools") }
-if (! ("utils" %in% rownames(installed.packages()))) { install.packages("utils") }
-# Now we download, install and initialize the H2O package for R.
-install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))
-```
-
-
-Documentation with general overview of the package functions and datasets:
-```R
-?stremr-package
 ```
 
 <!-- For specific documentation on how to run `stremr()` function:
@@ -217,7 +193,7 @@ survMSM_res$St
 ```
 
 <a name="GCOMPTMLE"></a>
-### Sequential G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal time-to-event data.
+### G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal time-to-event data.
 
 Define time-points of interest, regression formulas and software to be used for fitting the sequential outcome models:
 ```R
@@ -245,12 +221,30 @@ data.table::setthreads(1)
 tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
 ```
 
-<a name="H2OML"></a>
-### Machine Learning Algorithms
+<a name="ML"></a>
+### Machine Learning
 
-To perform all modeling with `H2O-3` distributed Random Forest algorithm just set the global package options `fit.package = "h2o"` and `fit.algorithm = "randomForest"` prior to calling any fitting function:
+For less error-prone fitting with `h2o` (especially if using `estimator="h2o__glm"`, please install this version of `h2o` R package:
+
 ```R
-set_all_stremr_options(fit.package = "h2o", fit.algorithm = "randomForest")
+if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+# Next, we download packages that H2O depends on.
+if (! ("methods" %in% rownames(installed.packages()))) { install.packages("methods") }
+if (! ("statmod" %in% rownames(installed.packages()))) { install.packages("statmod") }
+if (! ("stats" %in% rownames(installed.packages()))) { install.packages("stats") }
+if (! ("graphics" %in% rownames(installed.packages()))) { install.packages("graphics") }
+if (! ("RCurl" %in% rownames(installed.packages()))) { install.packages("RCurl") }
+if (! ("jsonlite" %in% rownames(installed.packages()))) { install.packages("jsonlite") }
+if (! ("tools" %in% rownames(installed.packages()))) { install.packages("tools") }
+if (! ("utils" %in% rownames(installed.packages()))) { install.packages("utils") }
+# Now we download, install and initialize the H2O package for R.
+install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))
+```
+
+To set-up `stremr` so that it performs any model fitting with distributed Random Forest just set the global options `estimator = "h2o__randomForest"`:
+```R
+set_all_stremr_options(estimator = "h2o__randomForest")
 
 require("h2o")
 h2o::h2o.init(nthreads = -1)
@@ -258,9 +252,9 @@ h2o::h2o.init(nthreads = -1)
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR, stratify_CENS = stratify_CENS)
 ```
 
-Other available algorithms are `H2O-3` Gradient Boosting Machines (`fit.algorithm = "gbm"`), distributed GLM (including LASSO and Ridge) (`fit.algorithm = "glm"`) and Deep Neural Nets (`fit.algorithm = "deeplearning"`).
+Other available algorithms are Gradient Boosting Machines (`estimator = "h2o__gbm"` or `estimator = "xgboost__gbm"`), distributed GLM (including LASSO and Ridge) (`estimator = "h2o__glm"` or `estimator = "xgboost__glm"`) and Deep Neural Nets (`estimator = "h2o__deeplearning"`).
 
-Use arguments `params_...` in `fitPropensity()` and `models` in `fitGCOMP()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
+<!-- Use arguments `params_...` in `fitPropensity()` and `models` in `fitGCOMP()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
 ```R
 params_TRT = list(fit.package = "h2o", fit.algorithm = "gbm", ntrees = 50, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 params_CENS = list(fit.package = "speedglm", fit.algorithm = "glm")
@@ -270,14 +264,15 @@ OData <- fitPropensity(OData,
           gform_TRT = gform_TRT, params_TRT = params_TRT,
           gform_MONITOR = gform_MONITOR, params_MONITOR = params_MONITOR)
 ```
-
-Running TMLE based on the previous fit of the propensity scores. Also applying Random Forest to estimate the sequential outcome model:
+ -->
+ 
+<!-- Running TMLE based on the previous fit of the propensity scores. Also applying Random Forest to estimate the sequential outcome model:
 ```R
 models = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
 
 tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = models, stratifyQ_by_rule = TRUE)
 ```
-
+ -->
 <!-- <a name="SuperLearner"></a>
 ###Ensemble Learning with SuperLearner (based on `gridisl` R package)
 
@@ -394,4 +389,27 @@ The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One ne
  -->
 
 ### Copyright
-This software is distributed under the GPL-2 license.
+The contents of this repository are distributed under the MIT license.
+```
+The MIT License (MIT)
+
+Copyright (c) 2015-2017 Oleg Sofrygin 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

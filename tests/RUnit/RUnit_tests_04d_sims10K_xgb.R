@@ -86,7 +86,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     tmle_est_dlow[["estimates"]]
     tmle_est_dhigh[["estimates"]]
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
         # make_report_rmd(OData,
         #                 NPMSM = list(surv_dlow, surv_dhigh),
         #                 wts_data = list(wts.St.dlow, wts.St.dhigh),
@@ -483,8 +483,8 @@ test.xgboost.10Kdata <- function() {
     if (rmarkdown::pandoc_available(version = "1.12.3"))
     make_report_rmd(OData,
                 # AddFUPtables = FALSE,
-                openFile = TRUE,
-                # openFile = FALSE,
+                # openFile = TRUE,
+                openFile = FALSE,
                 NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
                 TMLE = list(tmle_est_dlow)
                 )
