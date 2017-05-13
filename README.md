@@ -54,6 +54,7 @@ The exposure, monitoring and censoring variables can be coded as either binary, 
 * [Sequential G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data](#GCOMPTMLE)
 * [Machine Learning](#ML)
 * [Ensemble Learning with Discrete SuperLearner (based on `gridisl` R package)](#gridisl)
+* [Details on some estimators](#estimators)
 
 <a name="Installation"></a>
 ### Installation and Documentation
@@ -375,8 +376,8 @@ OData <- fitPropensity(OData,
 The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One needs to specify the relevant parameters and the ensemble models as part of the `models` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
  -->
 
-
-### Some details on estimators
+<a name="estimator"></a>
+### Details on some estimators
 
 Currently implemented **estimators** include:
 
