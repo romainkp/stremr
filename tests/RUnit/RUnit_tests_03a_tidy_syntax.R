@@ -116,12 +116,12 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
      #                    alpha = 0
      #                    # alpha = c(0.5)
      #                   ))
-    # gridisl::defModel(estimator = "xgboost__glm", family = "binomial", nthread)
+    gridisl::defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1)
                       # nrounds = 100,
                       # early_stopping_rounds = 2,
                       # interactions = list(c("CVD", "highA1c")))
      #                   +
-     gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
+     # gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
     ## ----------------------------------------------------------------
     ## AN EXAMPLE OF A GIANT GRID OF MODELS.
