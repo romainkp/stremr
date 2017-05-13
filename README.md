@@ -18,9 +18,9 @@ Currently available estimators can be roughly categorized into 4 groups:
   * Outcome regression:
     - longitudinal G-formula `GCOMP` ([Bang and Robins, 2005](https://doi.org/10.1111/j.1541-0420.2005.00377.x))
   * Doubly-robust (DR) approaches:
-    - longitudinal long format `TMLE` ([van der Laan and Gruber, 2012](http://biostats.bepress.com/ucbbiostat/paper290/))
-    - iterative longitudinal TMLE (`iterTMLE`)
-    - longitudinal cross-validated TMLE (`CVTMLE`)
+    - long-format `TMLE` for longitudinal data ([van der Laan and Gruber, 2012](http://biostats.bepress.com/ucbbiostat/paper290/))
+    - iterative TMLE (`iterTMLE`)
+    - cross-validated TMLE (`CVTMLE`)
   * Sequentially doubly-robust (SDR) approaches:
     - infinite-dimensional TMLE (`iTMLE`) ([Luedtke et al., 2017](https://arxiv.org/abs/1705.02459))
     - doubly robust unbiased transformations (`DR transform`) ([Rubin and van der Laan, 2006](http://biostats.bepress.com/ucbbiostat/paper208), [Luedtke et al., 2017](https://arxiv.org/abs/1705.02459))
