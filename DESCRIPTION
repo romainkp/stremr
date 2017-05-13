@@ -1,22 +1,21 @@
 Package: stremr
-Title: Streamlined Estimation of Survival for Static, Dynamic and Stochastic Treatment and Monitoring Regimes
+Title: Streamlined Estimation for Static, Dynamic and Stochastic Treatment Regimes in Longitudinal Data
 Version: 0.7.99
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
     person("Romain", "Neugebauer", role="aut", email="Romain.S.Neugebauer@kp.org"))
-Description: Analysis of longitudinal time-to-event or time-to-failure data.
-    Estimates the counterfactual discrete survival curve under static, dynamic and
+Description: Analysis of longitudinal data with binary (time-to-event) or continuous outcomes.
+    Estimates the mean counterfactual outcome or counterfactual survival under static, dynamic and
     stochastic interventions on treatment (exposure) and monitoring events over time.
     Adjusts for measured time-varying confounding and informative right-censoring.
-    Possible estimators are: bounded IPW, hazard-based IPW (AKME), MSM-IPW, GCOMP,
-    standard LTMLE and iterative LTMLE.
-    Nuisance parameters can be modeled with machine learning algorithms implemented in
-    xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets).
-    Simple syntax for specifying large grids of tuning parameters, including random
-    grid search over parameter space.
-    Model selection can be performed via V-fold cross-validation or random validation splits.
-    The exposure, monitoring and censoring variables can be coded as either binary,
+    Possible estimators are: bounded IPW, hazard-based IPW (NPMSM), hazard-based IPW MSM, 
+    direct plug-in for longitudinal G-formula (GCOMP), long-format TMLE and infinite-dimensional 
+    TMLE (iTMLE).
+    Use data-adaptive estimation with machine learning algorithms implemented in
+    xgboost or h2o (Extreme Gradient Boosting, Random Forest, Deep Neural Nets).
+    Perform model selection with V-fold cross-validation.
+    The exposure, monitoring and censoring variables can be binary,
     categorical or continuous. Each can be multivariate (e.g., can use more than one
     column of dummy indicators for different censoring events).
     The input data needs to be in long format.
