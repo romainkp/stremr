@@ -1,4 +1,4 @@
-
+# nocov start
 #' Plot survival estimates using base R graphics
 #' @param surv_list A list with survival estimates, one per regimen.
 #' @param t The vector of time values for plotting.
@@ -52,3 +52,5 @@ f_obtain_St <- function(sysArg, est_obj, optArgReport, est_name = "St.TMLE", t_n
   if(length(userArg) > 0) sysArg <- c(sysArg, optArgReport[userArg])
   return(sysArg)
 }
+
+# nocov end

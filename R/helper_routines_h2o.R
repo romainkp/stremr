@@ -1,3 +1,5 @@
+# nocov start
+
 # helper function for h2o frames
 h2o.plogis <- function(x) {
   h2o_exp_x <- h2o::h2o.exp(x)
@@ -82,3 +84,5 @@ tmle.update.h2o <- function(prev_Qkplus1, init_Q_fitted_only, IPWts, lower_bound
     print("tmle update: " %+% update.Qstar.coef)
   return(fit)
 }
+
+# nocov end

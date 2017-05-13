@@ -382,6 +382,7 @@ makeFreqTable <- function(rawFreq){
   return(fineFreq)
 }
 
+# nocov start
 make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.period, t.value, se.RDscale.Sdt.K, TMLE = FALSE){
   if (missing(se.RDscale.Sdt.K)) {
     se.RDscale.Sdt.K <- matrix(NA, nrow = length(S.IPAW), ncol = length(S.IPAW))
@@ -440,12 +441,12 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.peri
   rownames(RDtable) <- NULL
   return(list(RDtable = RDtable, caption = caption))
 }
+# nocov end
 
 
 
 
-
-
+# nocov start
 ## RD:
 getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx, getSEs) {
   se.RDscale.Sdt.K <- matrix(NA, nrow = length(S2.IPAW), ncol = length(S2.IPAW))
@@ -465,7 +466,9 @@ getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx, getSE
   }
   return(se.RDscale.Sdt.K)
 }
+# nocov end
 
+# nocov start
 #' Risk Difference Estimates and SEs for IPW-MSM
 #'
 #' Produces table(s) with pair-wise risk differences for all regimens that were used for fitting IPW-MSM.
@@ -532,3 +535,4 @@ get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
   }
   return(RDs.TMLE.tperiods)
 }
+# nocov end
