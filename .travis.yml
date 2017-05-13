@@ -78,9 +78,9 @@ env:
    - CRAN: http://cran.rstudio.com
 
 after_success:
-  - Rscript -e "packagedocs::deploy_travis()"
   - Rscript -e 'covr::coveralls()'
 
+# - Rscript -e "packagedocs::deploy_travis()"
 # - Rscript -e "travisDrat::deploy_drat()"
 
 on_failure:

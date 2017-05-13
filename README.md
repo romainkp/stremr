@@ -6,40 +6,37 @@ stremr
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
 [![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg)](https://coveralls.io/github/osofr/stremr)
 
-Analysis of longitudinal time-to-event or time-to-failure data.
-Estimates the counterfactual discrete survival curve under static, dynamic and stochastic interventions on treatment (exposure) and monitoring events over time. Adjusts for *measured* time-varying confounding and informative right-censoring. 
-Currently implemented estimators are: 
+Analysis of longitudinal data, with continuous or time-to-event (binary) outcome.
+The package implements several estimators of the expected counterfactual outcome under static, dynamic or stochastic interventions over multiple time-points. Adjusts for *measured* time-varying confounding and informative right-censoring.
 
-    bounded IPW, 
-    adjusted Kaplan-Meier (AKME), 
-    MSM-IPW for hazard, 
-    Iterative G-Computation, 
-    standard L-TMLE and 
-    iterative L-TMLE.
+Currently available estimators can be roughly categorized into 4 groups:
 
-    
-Nuisance parameters can be modeled with machine learning R packages `xgboost` and `h2o` (**GLM**, **Regularized GLM** **Distributed Random Forest (RF)**, **Distributed Gradient Boosting Machines (GBM)**, **Deep Neural Nets**). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits. The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events). The input data needs to be in long format.
-
-
-Currently implemented **estimators** include:
- - **Kaplan-Meier** Estimator. No adjustment for time-varying confounding or informative right-censoring.
- - [**Inverse Probability Weighted (IPW) Kaplan-Meier**](#survNPMSM). Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. This estimator inverse weights each observation based on the exposure/censoring model fits (propensity scores).
- - [**Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival**](#directIPW). Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
- - [**Inverse Probability Weighted Marginal Structural Model (IPW-MSM)**](#survMSM) for the hazard function, mapped into survival. Currently only logistic regression is allowed where covariates are time-points and regime/rule indicators. This estimator is also based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points and includes optional weight stabilization.
- - [**Recursive G-Computation (GCOMP)**](#GCOMPTMLE). Also known as the iterative G-Computation formula or Q-learning. Directly estimates the outcome model while adjusting for time-varying confounding. Estimation can be stratified by rule/regime followed or pooled across all rules/regimes.
- - [**Targeted Maximum Likelihood Estimator (TMLE)**](#GCOMPTMLE) for longitudinal data. Also known as the Targeted Minimum Loss-based Estimator. Doubly robust and semi-parametrically efficient estimator that targets the initial outcome model fits (GCOMP) with IPW.
- - **Iterative Targeted Maximum Likelihood Estimator (I-TMLE)** for longitudinal data. Fits sequential G-Computation and then iteratively performs targeting for all pooled Q's until convergence. 
+  * Propensity-score / Inverse Probability Weighted (IPW):
+    - direct (bounded) IPW ('directIPW')
+    - [IPW-adjusted Kaplan-Meier](https://doi.org/10.1002/sim.2174) (`survNPMSM`)
+    - [MSM-IPW for the survival hazard](https://doi.org/10.1016/j.jclinepi.2013.01.016) (`survMSM`)
+  * Outcome regression:
+    - longitudinal G-formula `GCOMP` ([Bang and Robins, 2005](https://doi.org/10.1111/j.1541-0420.2005.00377.x))
+  * Doubly-robust (DR) approaches:
+    - longitudinal long format `TMLE` ([van der Laan and Gruber, 2012](http://biostats.bepress.com/ucbbiostat/paper290/))
+    - iterative longitudinal TMLE (`iterTMLE`)
+    - longitudinal cross-validated TMLE (`CVTMLE`)
+  * Sequentially doubly-robust (SDR) approaches:
+    - infinite-dimensional TMLE (`iTMLE`) ([Luedtke et al., 2017](https://arxiv.org/abs/1705.02459))
+    - doubly robust unbiased transformations (`DR transform`) ([Rubin and van der Laan, 2006](http://biostats.bepress.com/ucbbiostat/paper208), [Luedtke et al., 2017](https://arxiv.org/abs/1705.02459))
 
 **Input data**: 
- - Time-to-event (possibly) right-censored data has to be in long format.
+
+The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events). The input data needs to be in long format.
+
+ - Possibly right-censored data has to be in long format.
  - Each row must contain a subject identifier (`ID`) and the integer indicator of the current time (`t`), e.g., day, week, month, year.
  - The package assumes that the temporal ordering of covariates in each row is **fixed** according to (`ID`, `t`, `L`,`C`,`A`,`N`,`Y`), where 
      * `L` -- Time-varying and baseline covariates.
      * `C` -- Indicators of right censoring events at time `t`; this can be either a single categorical or several binary columns.
      * `A` -- Exposure (treatment) at time `t`; this can be multivariate (more than one column) and each column can be binary, categorical or continuous.
      * `N` -- Indicator of being monitored at time point `t+1` (binary).
-     * `Y` -- Time-to-event outcome (binary).
- - Note that the follow-up is assumed to end when either the outcome of interest (`Y[t]=1`) or right-censoring events are observed.
+     * `Y` -- Outcome (binary 0/1 or continuous between 0 and 1).
  - Categorical censoring can be useful for representing all of the censoring events with a single column (variable).
 
 **Model fitting:**
@@ -75,10 +72,10 @@ devtools::install_github('osofr/stremr')
 For ensemble learning with SuperLearner we recommend installing the latest development version of the `gridisl` R package:
 
 ```R
-devtools::install_github('osofr/gridisl', build_vignettes = FALSE)
+devtools::install_github('osofr/gridisl')
 ```
 
-For optimal performance, we also recommend installing the development version of `data.table`:
+For optimal performance, we also recommend installing the latest version of `data.table` package:
 ```R
 remove.packages("data.table")                         # First remove the current version
 install.packages("data.table", type = "source",
@@ -101,6 +98,7 @@ To obtain documentation for specific relevant functions in `stremr` package:
 ?survMSM
 ?fitGCOMP
 ?fitTMLE
+?fit_iTMLE
 ?fit_iterTMLE
 ```
 
@@ -193,7 +191,7 @@ survMSM_res$St
 ```
 
 <a name="GCOMPTMLE"></a>
-### G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal time-to-event data.
+### Longitudinal GCOMP (G-formula) and TMLE.
 
 Define time-points of interest, regression formulas and software to be used for fitting the sequential outcome models:
 ```R
@@ -222,7 +220,9 @@ tmle_est <- fitTMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = 
 ```
 
 <a name="ML"></a>
-### Machine Learning
+### Data-adaptive estimation, machine-learning and cross-validation
+
+Nuisance parameters can be modeled with machine learning R packages `xgboost` and `h2o` (*GLM*, *Regularized GLM* *Distributed Random Forest (RF)*, *Extreme Gradient Boosting (GBM)*, *Deep Neural Nets*). The package provides simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits.
 
 For less error-prone fitting with `h2o` (especially if using `estimator="h2o__glm"`, please install this version of `h2o` R package:
 
@@ -252,7 +252,7 @@ h2o::h2o.init(nthreads = -1)
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR, stratify_CENS = stratify_CENS)
 ```
 
-Other available algorithms are Gradient Boosting Machines (`estimator = "h2o__gbm"` or `estimator = "xgboost__gbm"`), distributed GLM (including LASSO and Ridge) (`estimator = "h2o__glm"` or `estimator = "xgboost__glm"`) and Deep Neural Nets (`estimator = "h2o__deeplearning"`).
+Other available algorithms are Gradient Boosting Machines (`estimator = "h2o__gbm"`) or Extreme Gradient Boosting (`estimator = "xgboost__gbm"`), distributed GLM (including LASSO and Ridge) (`estimator = "h2o__glm"` or `estimator = "xgboost__glm"`) and Deep Neural Nets (`estimator = "h2o__deeplearning"`).
 
 <!-- Use arguments `params_...` in `fitPropensity()` and `models` in `fitGCOMP()` and `fitTMLE()` to pass various tuning parameters and select different algorithms for different models:
 ```R
@@ -374,6 +374,20 @@ OData <- fitPropensity(OData,
 
 The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One needs to specify the relevant parameters and the ensemble models as part of the `models` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
  -->
+
+
+### Some details on estimators
+
+Currently implemented **estimators** include:
+
+ - *Kaplan-Meier* Estimator. No adjustment for time-varying confounding or informative right-censoring.
+ - *Inverse Probability Weighted (IPW) Kaplan-Meier (`survNPMSM`)*. Also known as the Adjusted Kaplan Meier (AKME). Also known as the saturated (non-parametric) IPW-MSM estimator of the survival hazard. This estimator inverse weights each observation based on the exposure/censoring model fits (propensity scores).
+ - *Bounded Inverse Probability Weighted (B-IPW) Estimator of Survival('directIPW')*. Estimates the survival directly (without hazard), also based on the exposure/censoring model fit (propensity scores).
+ - *Inverse Probability Weighted Marginal Structural Model (`survMSM`)* for the hazard function, mapped into survival. Currently only logistic regression is allowed where covariates are time-points and regime/rule indicators. This estimator is also based on the exposure/censoring model fit (propensity scores), but allows additional smoothing over multiple time-points and includes optional weight stabilization.
+ - *Longitudinal G-formula (`GCOMP`)*. Also known as the iterative G-Computation formula or Q-learning. Directly estimates the outcome model while adjusting for time-varying confounding. Estimation can be stratified by rule/regime followed or pooled across all rules/regimes.
+ - *Longitudinal Targeted Minimum-Loss-based Estimator (`TMLE`)*. Also known as L-TMLE. Doubly robust and semi-parametrically efficient estimator that de-biases each outcome regression fit with a targeting step, using IPW.
+ - *Iterative TMLE (`iterTMLE`)* for longitudinal data. Fits sequential G-Computation and then iteratively performs targeting for all pooled Q's until convergence. 
+ - *Infinite-dimensional TMLE (`iTMLE`)* for longitudinal data. Fits sequential G-Computation and performs additional *infinite-dimensional* targeting to achieve sequential double robustness. 
 
 ### Citation
 
