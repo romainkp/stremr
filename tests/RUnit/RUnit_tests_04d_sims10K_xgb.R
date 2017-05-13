@@ -208,13 +208,13 @@ test.xgboost.10Kdata <- function() {
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
     surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                    AddFUPtables = TRUE,
-                    openFile = FALSE,
-                    # openFile = TRUE,
-                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 AddFUPtables = TRUE,
+    #                 openFile = FALSE,
+    #                 # openFile = TRUE,
+    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # model_fits_gA <- OData$modelfit.gA$get.fits()
     # models <- model_fits_gA[[3]]$get_best_models()
@@ -243,22 +243,22 @@ test.xgboost.10Kdata <- function() {
     # OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]]
     # class(OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]])
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                    AddFUPtables = TRUE,
-                    openFile = FALSE,
-                    # openFile = TRUE,
-                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 AddFUPtables = TRUE,
+    #                 openFile = FALSE,
+    #                 # openFile = TRUE,
+    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                    AddFUPtables = TRUE,
-                    openFile = FALSE,
-                    # openFile = TRUE,
-                    ymin = 0.8,
-                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 AddFUPtables = TRUE,
+    #                 openFile = FALSE,
+    #                 # openFile = TRUE,
+    #                 ymin = 0.8,
+    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH xgboost gbm and no CV
@@ -275,13 +275,13 @@ test.xgboost.10Kdata <- function() {
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
     surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                    AddFUPtables = TRUE,
-                    openFile = FALSE,
-                    # openFile = TRUE,
-                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 AddFUPtables = TRUE,
+    #                 openFile = FALSE,
+    #                 # openFile = TRUE,
+    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # ----------------------------------------------------------------
     # FIT PROPENSITY SCORES WITH xgboost gbm and V fold CV
@@ -303,24 +303,24 @@ test.xgboost.10Kdata <- function() {
     pl1 <- ggsurv(list(surv_dlow[["estimates"]], surv_dhigh[["estimates"]]))
     pl2 <- ggsurv(list(surv_dlow[["estimates"]], surv_dhigh[["estimates"]]), surv_name = "St."%+%"KM")
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                    AddFUPtables = TRUE,
-                    # openFile = TRUE,
-                    openFile = FALSE,
-                    plotKM = TRUE,
-                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 AddFUPtables = TRUE,
+    #                 # openFile = TRUE,
+    #                 openFile = FALSE,
+    #                 plotKM = TRUE,
+    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-        make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                    AddFUPtables = TRUE,
-                    # openFile = TRUE,
-                    openFile = FALSE,
-                    plotKM = TRUE,
-                    use_ggplot = FALSE,
-                    WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
-                    file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    #     make_report_rmd(OData, NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 AddFUPtables = TRUE,
+    #                 # openFile = TRUE,
+    #                 openFile = FALSE,
+    #                 plotKM = TRUE,
+    #                 use_ggplot = FALSE,
+    #                 WTtables = get_wtsummary(list(wts.St.dlow, wts.St.dhigh), cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE),
+    #                 file.name = "sim.data.example.fup", title = "Custom Report Title", author = "Insert Author Name")
 
     # OData$Qlearn.fit$get.fits()
     # ---------------------------------------------------------------------------------------------------------
@@ -355,15 +355,15 @@ test.xgboost.10Kdata <- function() {
     gcomp_est_dlow[["estimates"]]
     gcomp_est_dhigh[["estimates"]]
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-    make_report_rmd(OData,
-                    # AddFUPtables = FALSE,
-                    # openFile = TRUE,
-                    openFile = FALSE,
-                    NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                    GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
-                    TMLE = list(tmle_est_dlow, tmle_est_dhigh)
-                    )
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    # make_report_rmd(OData,
+    #                 # AddFUPtables = FALSE,
+    #                 # openFile = TRUE,
+    #                 openFile = FALSE,
+    #                 NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #                 GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
+    #                 TMLE = list(tmle_est_dlow, tmle_est_dhigh)
+    #                 )
 
    # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ xgboost gbm and CV
@@ -393,15 +393,15 @@ test.xgboost.10Kdata <- function() {
     gcomp_est_dlow[["estimates"]]
     gcomp_est_dhigh[["estimates"]]
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-    make_report_rmd(OData,
-                # AddFUPtables = FALSE,
-                # openFile = TRUE,
-                openFile = FALSE,
-                NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
-                TMLE = list(tmle_est_dlow, tmle_est_dhigh)
-                )
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    # make_report_rmd(OData,
+    #             # AddFUPtables = FALSE,
+    #             # openFile = TRUE,
+    #             openFile = FALSE,
+    #             NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #             GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
+    #             TMLE = list(tmle_est_dlow, tmle_est_dhigh)
+    #             )
 
     # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ xgboost gbm and CV (WITH EXPLICIT PARAMETER SPECS FOR GBM)
@@ -430,15 +430,15 @@ test.xgboost.10Kdata <- function() {
     gcomp_est_dlow[["estimates"]]
     gcomp_est_dhigh[["estimates"]]
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-    make_report_rmd(OData,
-                # AddFUPtables = FALSE,
-                # openFile = TRUE,
-                openFile = FALSE,
-                NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
-                TMLE = list(tmle_est_dlow, tmle_est_dhigh)
-                )
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    # make_report_rmd(OData,
+    #             # AddFUPtables = FALSE,
+    #             # openFile = TRUE,
+    #             openFile = FALSE,
+    #             NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #             GCOMP = list(gcomp_est_dlow, gcomp_est_dhigh),
+    #             TMLE = list(tmle_est_dlow, tmle_est_dhigh)
+    #             )
 
     # ---------------------------------------------------------------------------------------------------------
     # GCOMP w/ xgboost gbm and CV (WITH EXPLICIT PARAMETER SPECS FOR GBM)
@@ -480,12 +480,12 @@ test.xgboost.10Kdata <- function() {
                              models = params, fit_method = "cv", fold_column = "fold_ID")
     tmle_est_dlow[["estimates"]]
 
-    if (rmarkdown::pandoc_available(version = "1.12.3"))
-    make_report_rmd(OData,
-                # AddFUPtables = FALSE,
-                # openFile = TRUE,
-                openFile = FALSE,
-                NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
-                TMLE = list(tmle_est_dlow)
-                )
+    # if (rmarkdown::pandoc_available(version = "1.12.3"))
+    # make_report_rmd(OData,
+    #             # AddFUPtables = FALSE,
+    #             # openFile = TRUE,
+    #             openFile = FALSE,
+    #             NPMSM = list(surv_dlow, surv_dhigh), wts_data = list(wts.St.dlow, wts.St.dhigh),
+    #             TMLE = list(tmle_est_dlow)
+    #             )
 }

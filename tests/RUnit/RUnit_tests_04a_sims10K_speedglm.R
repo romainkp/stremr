@@ -35,7 +35,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   ## ---------------------------------------------------------------------------
   # Odat_DT <- obsDTg05_1mil
   Odat_DT <- OdatDT_10K
-  Odat_DT <- Odat_DT[ID %in% (1:500), ]
+  Odat_DT <- Odat_DT[ID %in% (1:100), ]
   lagnodes <- c("C", "TI", "N")
   newVarnames <- lagnodes %+% ".tminus1"
   Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]

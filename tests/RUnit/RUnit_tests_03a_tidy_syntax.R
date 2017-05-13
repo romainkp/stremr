@@ -88,8 +88,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ----------------------------------------------------------------
   ## IMPORT DATA
   ## ----------------------------------------------------------------
-  library("h2o")
-  h2o::h2o.init(nthreads = 2)
+  # library("h2o")
+  # h2o::h2o.init(nthreads = 2)
 
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)

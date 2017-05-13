@@ -46,7 +46,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     # options(stremr.verbose = TRUE)
     set_all_stremr_options(estimator = "xgboost__glm", fit_method = "cv", fold_column = "fold_ID")
     # set_all_stremr_options(estimator = "h2o__glm", fit_method = "cv", fold_column = "fold_ID")
-    h2o::h2o.init(nthreads = 2)
+    # h2o::h2o.init(nthreads = 2)
 
     OData <- importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
     # to see the input data.table:

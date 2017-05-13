@@ -72,6 +72,7 @@ addons:
     packages:
       - libicu-dev
       - pandoc
+
 env:
  global:
    - CRAN: http://cran.rstudio.com
