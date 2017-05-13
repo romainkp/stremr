@@ -31,6 +31,10 @@ before_install:
   - sudo apt-get install -y libicu-dev
   - sudo apt-get install -y pandoc
 
+install:
+  - Rscript -e 'install.packages("methods", "statmod", "stats", "graphics", "RCurl", "jsonlite", "tools", "utils")'
+  - Rscript -e 'install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))'
+
 r_binary_packages:
   - assertthat
   - doParallel
@@ -62,16 +66,6 @@ r_packages:
   - xgboost
 
 #   - bindata
-install:
-  - Rscript -e 'install.packages("methods")'
-  - Rscript -e 'install.packages("statmod")'
-  - Rscript -e 'install.packages("stats")'
-  - Rscript -e 'install.packages("graphics")'
-  - Rscript -e 'install.packages("RCurl")'
-  - Rscript -e 'install.packages("jsonlite")'
-  - Rscript -e 'install.packages("tools")'
-  - Rscript -e 'install.packages("utils")'
-  - Rscript -e 'install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))'
 
 env:
  global:
