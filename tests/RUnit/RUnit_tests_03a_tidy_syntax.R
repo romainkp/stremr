@@ -1,7 +1,7 @@
 test.GRID.h2o.xgboost.10Kdata <- function() {
   reqxgb <- requireNamespace("xgboost", quietly = TRUE)
   reqh2o <- requireNamespace("h2o", quietly = TRUE)
-  if (!reqxgb || !reqh2o) return(NULL)
+  if (!reqxgb || !reqh2o) return(TRUE)
 
   ## -----------------------------------------------------------------------
   ## ****************************** IMPORTANT ******************************
@@ -103,7 +103,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ----------------------------------------------------------------
   ## This example uses a discrete SuperLearner: best model will be selected on the basis of CV-MSE.
   ## Use cross-validation to select best model for g (set 'fit_method_g <- "none"' to just fit a single model w/out CV)
-  fit_method_g <- "cv"
+  # fit_method_g <- "cv"
+  fit_method_g <- "none"
 
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
@@ -115,12 +116,12 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
      #                    alpha = 0
      #                    # alpha = c(0.5)
      #                   ))
-    gridisl::defModel(estimator = "xgboost__glm", family = "binomial")
+    # gridisl::defModel(estimator = "xgboost__glm", family = "binomial", nthread)
                       # nrounds = 100,
                       # early_stopping_rounds = 2,
                       # interactions = list(c("CVD", "highA1c")))
-    #  #                   +
-     # gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
+     #                   +
+     gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
     ## ----------------------------------------------------------------
     ## AN EXAMPLE OF A GIANT GRID OF MODELS.
@@ -523,6 +524,6 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
       longRDs
   }
 
-  h2o::h2o.shutdown(prompt = FALSE)
+  # h2o::h2o.shutdown(prompt = FALSE)
 
 }
