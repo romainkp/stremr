@@ -49,7 +49,6 @@ test.GCOMP.TMLE.10Kdata <- function() {
   ## --------------------------------
   # options(stremr.verbose = FALSE)
   # options(stremr.verbose = TRUE)
-  # set_all_stremr_options(fit.package = "speedglm", fit.algorithm = "glm")
 
   # import data into stremr object:
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
