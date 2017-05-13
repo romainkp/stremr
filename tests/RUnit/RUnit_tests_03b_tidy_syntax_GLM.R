@@ -19,7 +19,6 @@ test.tidy.speedglm.10Kdata <- function() {
   library("tibble")
   library("tidyr")
   library("purrr")
-  library("dtplyr")
   library("dplyr")
   # options(stremr.verbose = TRUE)
   # options(gridisl.verbose = TRUE)

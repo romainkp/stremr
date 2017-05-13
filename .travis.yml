@@ -58,11 +58,12 @@ r_github_packages:
   - schloerke/travisDrat
 
 r_packages:
-  - h2o
   - ggiraph
   - xgboost
 
 #   - bindata
+install:
+  - Rscript -e 'install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))'
 
 env:
  global:

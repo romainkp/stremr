@@ -29,7 +29,6 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   library("tibble")
   library("tidyr")
   library("purrr")
-  library("dtplyr")
   library("dplyr")
 
   data(OdatDT_10K)
