@@ -162,7 +162,7 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   catNames <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
   catNames[1] <- paste("<", cutoffs[1], sep="")
   for(i in 1:(length(cutoffs)-1)){
-    catNames[i+1] <- paste("[",cutoffs[i],", ",cutoffs[i+1],"[",sep="")
+    catNames[i+1] <- paste("$[$",cutoffs[i],", ",cutoffs[i+1],"$[$",sep="")
   }
   catNames[length(cutoffs)+1] <- paste(">=",cutoffs[length(cutoffs)],sep="")
   if (na.yes) catNames[length(cutoffs) + 2] <- "Missing"
