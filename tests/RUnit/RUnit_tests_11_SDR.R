@@ -1,4 +1,4 @@
-test.CV_TMLE.10Kdata <- function() {
+test.iTMLE.10Kdata <- function() {
     reqxgb <- requireNamespace("xgboost", quietly = TRUE)
     reqh2o <- requireNamespace("h2o", quietly = TRUE)
     if (!reqxgb || !reqh2o) return(NULL)
@@ -115,7 +115,7 @@ test.CV_TMLE.10Kdata <- function() {
                         parallel = FALSE,
                         return_fW = FALSE)
                         # parallel = TRUE)
-    SDR_est[["estimates"]]
+    # SDR_est[["estimates"]]
     # fW_fit <- SDR_est[["estimates"]][["fW_fit"]][[1]]
     # preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
     # MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
@@ -154,7 +154,7 @@ test.CV_TMLE.10Kdata <- function() {
                         parallel = FALSE,
                         return_fW = TRUE)
                         # parallel = TRUE)
-    tmle_est[["estimates"]]
+    # tmle_est[["estimates"]]
     # fW_fit <- tmle_est[["estimates"]][["fW_fit"]][[1]]
     # preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
     # MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
@@ -180,7 +180,7 @@ test.CV_TMLE.10Kdata <- function() {
                           fold_column = "fold_ID",
                           parallel = FALSE)
                            # parallel = TRUE)
-    SDR_est[["estimates"]]
+    # SDR_est[["estimates"]]
     #       <char> <int>     <num> <char>    <char>
     #  1:    SeqDR     1 0.9882525 pooled  gTI.dlow
     #  2:    SeqDR     2 0.9663698 pooled  gTI.dlow
@@ -200,7 +200,7 @@ test.CV_TMLE.10Kdata <- function() {
                         fold_column = "fold_ID",
                         parallel = FALSE)
                         # parallel = TRUE)
-    tmle_est[["estimates"]]
+    # tmle_est[["estimates"]]
     #     est_name  time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
     #       <char> <int>   <lgcl>     <num>      <lgcl>         <lgcl>          <int> <char>       <num>
     #  1:     TMLE     1       NA 0.9883911          NA           TRUE              0 pooled 0.001819630

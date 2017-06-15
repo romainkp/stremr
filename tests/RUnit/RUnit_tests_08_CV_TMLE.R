@@ -101,10 +101,10 @@ test.CV_TMLE.10Kdata <- function() {
     wts.St.dhigh_hold <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", holdout = TRUE)
     surv_dhigh_hold <- survNPMSM(wts.St.dhigh_hold, OData)
 
-    surv_dlow
-    surv_dlow_hold
-    surv_dhigh
-    surv_dhigh_hold
+    # surv_dlow
+    # surv_dlow_hold
+    # surv_dhigh
+    # surv_dhigh_hold
 
     # ---------------------------------------------------------------------------------------------------------
     # CV TMLE w/ xgboost gbm and cross-validation selection of Q
@@ -124,7 +124,7 @@ test.CV_TMLE.10Kdata <- function() {
                           fold_column = "fold_ID",
                           parallel = FALSE)
                            # parallel = TRUE)
-    CV_tmle_est[["estimates"]]
+    # CV_tmle_est[["estimates"]]
     #     est_name time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
     #  1:     TMLE    1       NA 0.9751527          NA           TRUE              0 pooled 0.001979373
     #  2:     TMLE    2       NA 0.9467156          NA           TRUE              0 pooled 0.003072020
@@ -143,7 +143,7 @@ test.CV_TMLE.10Kdata <- function() {
                         fold_column = "fold_ID",
                         parallel = FALSE)
                         # parallel = TRUE)
-    tmle_est[["estimates"]]
+    # tmle_est[["estimates"]]
     #     est_name time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
     #  1:     TMLE    1       NA 0.9751499          NA           TRUE              0 pooled 0.001968397
     #  2:     TMLE    2       NA 0.9466906          NA           TRUE              0 pooled 0.003061770
@@ -163,7 +163,7 @@ test.CV_TMLE.10Kdata <- function() {
                           fold_column = "fold_ID",
                           parallel = FALSE)
                            # parallel = TRUE)
-    CV_tmle_est[["estimates"]]
+    # CV_tmle_est[["estimates"]]
     #     est_name time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
     #  1:     TMLE    1       NA 0.9883379          NA           TRUE              0 pooled 0.001826879
     #  2:     TMLE    2       NA 0.9661213          NA           TRUE              0 pooled 0.004778864
@@ -182,7 +182,7 @@ test.CV_TMLE.10Kdata <- function() {
                         fold_column = "fold_ID",
                         parallel = FALSE)
                         # parallel = TRUE)
-    tmle_est[["estimates"]]
+    # tmle_est[["estimates"]]
     #     est_name time St.GCOMP   St.TMLE St.iterTMLE ALLsuccessTMLE nFailedUpdates   type     SE.TMLE
     #  1:     TMLE    1       NA 0.9883911          NA           TRUE              0 pooled 0.001819630
     #  2:     TMLE    2       NA 0.9661918          NA           TRUE              0 pooled 0.004766402

@@ -55,7 +55,8 @@ Suggests:
     RUnit,
     testthat,
     mockery
-Remotes: github::jeremyrcoyle/origami,
+Remotes: 
+    github::jeremyrcoyle/origami,
     github::osofr/gridisl
 License: MIT + file LICENSE
 LazyData: true
