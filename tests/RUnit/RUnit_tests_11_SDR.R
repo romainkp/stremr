@@ -106,7 +106,7 @@ test.iTMLE.10Kdata <- function() {
     t.surv <- 4
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    SDR_est <- stremr:::fit_iTMLE(OData, tvals = t.surv,
+    SDR_est <- fit_iTMLE(OData, tvals = t.surv,
                         intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params,
                         stratifyQ_by_rule = FALSE,
                         # fit_method = "cv",
@@ -136,7 +136,7 @@ test.iTMLE.10Kdata <- function() {
 
     ## WILL RETURN ERROR WITH REGULAR VERSION OF XGBOOST
     ## xgboost has to be recompiled to allow logistic loss y>1 or y<0.
-    # DR_trans_est <- stremr:::fit_iTMLE(OData, tvals = t.surv,
+    # DR_trans_est <- fit_iTMLE(OData, tvals = t.surv,
     #                        intervened_TRT = "gTI.dhigh", Qforms = Qforms,
     #                        stratifyQ_by_rule = FALSE,
     #                        fit_method = "none",

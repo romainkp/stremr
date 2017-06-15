@@ -5,6 +5,8 @@ context("NDE assumption")
 ## ---------------------------------------------------------------------------------
   require("stremr")
   options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+
   options(width = 100)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
@@ -151,7 +153,7 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
   expect_true(
   all.equal(
     paste0(gcomp_est3[["estimates"]][["St.GCOMP"]], collapse = ","),
-    "0.989999999994757,0.977605017200815,0.96640066868087,0.900457218199797")
+    "0.989999999994757,0.967939608547372,0.961609342301288,0.883919336536042"
   )
 
   # stratified modeling by rule followers only:
@@ -171,7 +173,6 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
     paste0(tmle_est4[["estimates"]][["St.TMLE"]], collapse = ","),
     "0.990000000017421,0.965155755596925,0.950465241673256,0.869326959247925")
   )
-
 
 })
 
