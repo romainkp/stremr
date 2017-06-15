@@ -23,4 +23,3 @@ The corresponding SEs are evaluated based on the estimated influence curves (IC)
 \seealso{
 \code{\link{survMSM}} for estimation with MSM.
 }
-

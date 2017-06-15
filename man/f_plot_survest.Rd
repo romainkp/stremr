@@ -32,4 +32,3 @@ If omitted the survival for all t values will be plotted.}
 \description{
 Plot survival estimates using base R graphics
 }
-

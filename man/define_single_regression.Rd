@@ -45,4 +45,3 @@ with formula/strata and model controls.
 This function is for advanced users. It provides explicit and manual control
 over every single model fit, e.g., every strata of the exposure propensity score.
 }
-

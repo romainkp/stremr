@@ -182,4 +182,3 @@ OdataDT <- defineIntervedTRT(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "h
 \seealso{
 \code{\link{stremr-package}} for the general overview of the package,
 }
-

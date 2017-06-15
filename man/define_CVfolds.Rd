@@ -18,4 +18,3 @@ define_CVfolds(data, nfolds = 5, fold_column = "fold_ID", seed = NULL)
 \description{
 Define fold ID column for cross-validation
 }
-

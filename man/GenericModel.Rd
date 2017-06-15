@@ -51,6 +51,6 @@ This R6 class Class for defining, fitting and predicting the probability model
   \item{\code{wipe.alldat}}{...}
 }
 }
+
 \keyword{R6}
 \keyword{class}
-

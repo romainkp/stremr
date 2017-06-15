@@ -66,6 +66,6 @@ The class \code{DataStorageClass} is the only way the package uses to access the
    \item{\code{nodes}}{...}
 }
 }
+
 \keyword{R6}
 \keyword{class}
-

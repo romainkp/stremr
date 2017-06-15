@@ -12,4 +12,3 @@ logit_linkinv(eta)
 \description{
 The conversion performed is given by 1/(1+exp(-eta))
 }
-

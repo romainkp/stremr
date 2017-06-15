@@ -56,8 +56,8 @@ Suggests:
     testthat,
     mockery
 Remotes: 
-    github::jeremyrcoyle/origami,
+    github::jeremyrcoyle/origami@old-stable,
     github::osofr/gridisl
 License: MIT + file LICENSE
 LazyData: true
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

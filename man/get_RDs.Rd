@@ -43,4 +43,3 @@ The RDs are evaluated for all intersecting time-points in the input data
 than 2 regimens the RDs between all regimens are evaluated in their order
 of appearance. This order can be controlled with the argument \code{order}.
 }
-

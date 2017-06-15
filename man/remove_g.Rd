@@ -20,4 +20,3 @@ Clean up the DataStorage object by removing all g (IPW) modeling fits.
 This helps save up some RAM for running G-COMP / TMLE when working with large data.
 Call this function AFTER fitting IPW (g), but before calling TMLE.
 }
-

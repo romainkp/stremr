@@ -15,4 +15,3 @@ Show all current option settings
 \seealso{
 \code{\link{set_all_stremr_options}}
 }
-

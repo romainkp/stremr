@@ -33,4 +33,3 @@ stremrOptions('fit_method', 'cv')
 \seealso{
 \code{\link{set_all_stremr_options}}
 }
-

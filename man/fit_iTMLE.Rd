@@ -105,4 +105,3 @@ Adjustment will be based on the inverse of the propensity score fits for the obs
 multiplied by the indicator of not being censored and the probability of each intervention in \code{intervened_TRT} and \code{intervened_MONITOR}.
 Requires column name(s) that specify the counterfactual node values or the counterfactual probabilities of each node being 1 (for stochastic interventions).
 }
-

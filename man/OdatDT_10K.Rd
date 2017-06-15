@@ -30,4 +30,3 @@ The binary exposure is \code{TI} and binary outcome is \code{Y.tplus1}. See /tes
 for R code that generated this data as well as R code that uses stremr to analyze this data.
 }
 \keyword{datasets}
-

@@ -69,4 +69,3 @@ To reset all options to their defaults simply run \code{set_all_stremr_options()
 \seealso{
 \code{\link{stremrOptions}}, \code{\link{print_stremr_opts}}
 }
-

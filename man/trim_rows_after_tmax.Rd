@@ -20,4 +20,3 @@ Clean up the DataStorage object by removing all extra rows after certain time-po
 by \code{tmax}. This will also have the effect of removing all the extra weights.
 Can be useful when running TMLE with very large data, trimming the extra rows will free up some RAM.
 }
-

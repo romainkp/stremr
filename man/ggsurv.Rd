@@ -90,4 +90,3 @@ See http://ggobi.github.io/ggally/#ggallyggsurv for additional modifications of 
 \author{
 Original R code by Edwin Thoen \email{edwinthoen@gmail.com}, modified by Oleg Sofrygin \email{oleg.sofrygin@gmail.com}
 }
-

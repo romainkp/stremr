@@ -153,10 +153,11 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
   expect_true(
   all.equal(
     paste0(gcomp_est3[["estimates"]][["St.GCOMP"]], collapse = ","),
-    "0.989999999994757,0.967939608547372,0.961609342301288,0.883919336536042"
+    "0.989999999994757,0.967939608547372,0.961609342301288,0.883919336536042")
   )
 
-  # stratified modeling by rule followers only:
+  ## stratified modeling by rule followers only:
+
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   expect_true(

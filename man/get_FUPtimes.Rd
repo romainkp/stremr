@@ -23,4 +23,3 @@ Subject specific follow-up times for each regimen in \code{wts_data}.
 \seealso{
 \code{\link{getIPWeights}} for evaluation of IP-weights.
 }
-

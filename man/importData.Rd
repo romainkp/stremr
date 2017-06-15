@@ -226,4 +226,3 @@ tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 }
 
 }
-

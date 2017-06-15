@@ -41,4 +41,3 @@ Performs an SDR update using a main-terms GLM (logistic regression with \code{sp
 This function is passed along as a separate learner
 to the SuperLearner implementation of origami package
 }
-

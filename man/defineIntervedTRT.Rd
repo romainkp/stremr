@@ -63,6 +63,7 @@ Subject is switched to treatment when the biomarker \code{I} crosses the thresho
   MONITOR(t) at time-point t is defined as the indicator of being observed (having an office visit) at time point t+1 (next timepoint after t)
   It is assumed that MONITOR(t) is always 0 for the very first time-point.
 }
+
 \examples{
 
 \dontrun{
@@ -88,4 +89,3 @@ OdataDT <- defineIntervedTRT(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "h
                           CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1",
                           new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
 }
-

@@ -26,4 +26,3 @@ Produces various table summaries of IP-Weights.
 \seealso{
 \code{\link{getIPWeights}} for evaluation of IP-weights.
 }
-

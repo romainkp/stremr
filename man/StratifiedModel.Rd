@@ -36,6 +36,6 @@ The stratification criteria is determined by the \code{R} expression in the fiel
   \item{\code{cats}}{...}
 }
 }
+
 \keyword{R6}
 \keyword{class}
-

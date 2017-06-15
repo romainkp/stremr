@@ -25,4 +25,3 @@ Simulated dataset containing 1,000 i.i.d. observations organized in long format 
 The binary exposure is \code{TI} and binary outcome is \code{Y.tplus1}. See /tests/ for R code that generated this data.
 }
 \keyword{datasets}
-

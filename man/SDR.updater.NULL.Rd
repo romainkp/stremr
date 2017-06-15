@@ -26,4 +26,3 @@ which contains the offsets converted to logit-linear scale.}
 Returns the inputs Y as they are, without updating. This function is passed along as a separate learner
 to the SuperLearner implementation of origami package
 }
-

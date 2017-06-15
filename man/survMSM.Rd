@@ -104,6 +104,7 @@ indicators: I(\code{mint} <= t <=1 ) and I(1 < t <= \code{tmax}).
 If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
 for every unique period in the observed data.
 }
+
 \examples{
 #-------------------------------------------------------------------
 # Simulated data with informative right-censoring
@@ -213,4 +214,3 @@ make_report_rmd(OData, MSM = IPW_MSM_res,
 \seealso{
 \code{\link{fitPropensity}}, \code{\link{getIPWeights}}.
 }
-
