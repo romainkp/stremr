@@ -12,10 +12,10 @@ test.iTMLE.10Kdata <- function() {
     library("doParallel")
     library("stremr")
 
-    options(stremr.verbose = TRUE)
-    options(gridisl.verbose = TRUE)
-    # options(stremr.verbose = FALSE)
-    # options(gridisl.verbose = FALSE)
+    # options(stremr.verbose = TRUE)
+    # options(gridisl.verbose = TRUE)
+    options(stremr.verbose = FALSE)
+    options(gridisl.verbose = FALSE)
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
@@ -172,7 +172,7 @@ test.iTMLE.10Kdata <- function() {
     #  9:     TMLE     9       NA 0.7684924          NA           TRUE              0 pooled 0.006624978
     # 10:     TMLE    10       NA 0.7549844          NA           TRUE              0 pooled 0.006795919
 
-    SDR_est <- stremr:::fit_iTMLE(OData, tvals = t.surv,
+    SDR_est <- fit_iTMLE(OData, tvals = t.surv,
                           intervened_TRT = "gTI.dlow", Qforms = Qforms, models = params,
                           stratifyQ_by_rule = FALSE,
                           # fit_method = "cv",
