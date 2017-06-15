@@ -439,7 +439,13 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     if (any(is.na(subset_idx)))
       stop("the subset index evaluation for the expression '" %+% useonly_t_NODE %+% "' resulted in NAs")
 
-    gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
+    # gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
+    ## fix above bug, vs. 1:
+    # gstar.NODE[!(1:length(gstar.NODE)) %in% subset_idx] <- g.obs[!(1:length(g.obs)) %in% subset_idx]
+    ## fix above bug, vs. 2:
+    idx_set_to_g0 <- setdiff(1:length(gstar.NODE), subset_idx)
+    gstar.NODE[idx_set_to_g0] <- g.obs[idx_set_to_g0]
+
   } else {
     # use the actual observed exposure probability (no intervention on NODE)
     gstar.NODE <- g.obs
