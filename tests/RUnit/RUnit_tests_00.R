@@ -4,6 +4,7 @@ if(FALSE) {
   # to automatically enter browser when error shows up:
   # options(error=recover)
   # library("RUnit")
+  # library("testthat")
   # library("roxygen2")
   setwd(".."); setwd(".."); getwd()
 
