@@ -1,8 +1,9 @@
 
 # unit tests will not be done if RUnit is not available
-setwd("..")
-getwd()
-library(RUnit)
+# setwd("..")
+# getwd()
+# library(RUnit)
+
 if(require("RUnit", quietly=TRUE)) {
     ## --- Setup ---
 
