@@ -20,10 +20,6 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
     #************************************************
     # TMLE update via weighted univariate ML (espsilon is intercept)
     #************************************************
-    # if (lower_bound_zero_Q) {
-    #   Qkplus1[Qkplus1 < eps_tol] <- eps_tol
-    #   Qkplus1[Qkplus1 > (1 - eps_tol)] <- (1 - eps_tol)
-    # }
 
     off_TMLE <- Qk_hat
 
