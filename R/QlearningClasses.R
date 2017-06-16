@@ -15,10 +15,6 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
     message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon to 0")
     # warning("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
 
-  # } else if (((all(Qkplus1[IPWts > 0] < eps_tol)) || (all(Qkplus1[IPWts > 0] > (1-eps_tol)))) && skip_update_zero_Q) {
-  #   message("GLM TMLE update cannot be performed since the outcomes (Qkplus1) are either all 0 or all 1, setting epsilon to 0")
-  #   update.Qstar.coef <- 0
-
   } else {
 
     #************************************************
@@ -30,15 +26,10 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
     # }
 
     off_TMLE <- Qk_hat
-    # off_TMLE <- truncate_offset(qlogis(Qk_hat), up_trunc_offset, low_trunc_offset)
-    # off_TMLE <- qlogis(Qk_hat)
-    # off_TMLE[off_TMLE >= up_trunc_offset] <- up_trunc_offset
-    # off_TMLE[off_TMLE <= low_trunc_offset] <- low_trunc_offset
 
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
                                           y = Qkplus1, weights = IPWts, offset = off_TMLE,
                                           # method=c('eigen','Cholesky','qr'),
-                                          # family = quasibinomial(),
                                           family = gaussian(),
                                           trace = FALSE, maxit = 1000),
                   silent = TRUE)

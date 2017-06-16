@@ -286,9 +286,9 @@ fit_GCOMP <- function(OData,
   OData$follow_rule <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
   sVar.exprs <- capture.exprs(...)
-  # browser()
   sVar.exprs[["family"]] <- "gaussian"
   sVar.exprs[["distribution"]] <- "gaussian"
+
   models_control <- c(list(models = models), list(reg_Q = reg_Q), opt_params = list(sVar.exprs))
   models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]

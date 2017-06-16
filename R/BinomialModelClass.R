@@ -38,8 +38,6 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                                             fold_column = fold_column,
                                             subset_idx = subset_idx)
   })
-  # browser()
-  # str(model.fit$PredictionModels[[1]]$reg$model_contrl)
 
   if (inherits(model.fit, "try-error")) {
     message("...trying to run speedglm as a backup...")
