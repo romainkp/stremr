@@ -15,22 +15,22 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
     message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon to 0")
     # warning("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
 
-  # } else if ((sum(Qkplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
-  } else if (((all(Qkplus1[IPWts > 0] < eps_tol)) || (all(Qkplus1[IPWts > 0] > (1-eps_tol)))) && skip_update_zero_Q) {
-    message("GLM TMLE update cannot be performed since the outcomes (Qkplus1) are either all 0 or all 1, setting epsilon to 0")
-    update.Qstar.coef <- 0
+  # } else if (((all(Qkplus1[IPWts > 0] < eps_tol)) || (all(Qkplus1[IPWts > 0] > (1-eps_tol)))) && skip_update_zero_Q) {
+  #   message("GLM TMLE update cannot be performed since the outcomes (Qkplus1) are either all 0 or all 1, setting epsilon to 0")
+  #   update.Qstar.coef <- 0
 
   } else {
 
     #************************************************
     # TMLE update via weighted univariate ML (espsilon is intercept)
     #************************************************
-    if (lower_bound_zero_Q) {
-      Qkplus1[Qkplus1 < eps_tol] <- eps_tol
-      Qkplus1[Qkplus1 > (1 - eps_tol)] <- (1 - eps_tol)
-    }
+    # if (lower_bound_zero_Q) {
+    #   Qkplus1[Qkplus1 < eps_tol] <- eps_tol
+    #   Qkplus1[Qkplus1 > (1 - eps_tol)] <- (1 - eps_tol)
+    # }
 
-    off_TMLE <- truncate_offset(qlogis(Qk_hat), up_trunc_offset, low_trunc_offset)
+    off_TMLE <- Qk_hat
+    # off_TMLE <- truncate_offset(qlogis(Qk_hat), up_trunc_offset, low_trunc_offset)
     # off_TMLE <- qlogis(Qk_hat)
     # off_TMLE[off_TMLE >= up_trunc_offset] <- up_trunc_offset
     # off_TMLE[off_TMLE <= low_trunc_offset] <- low_trunc_offset
@@ -38,7 +38,9 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
                                           y = Qkplus1, weights = IPWts, offset = off_TMLE,
                                           # method=c('eigen','Cholesky','qr'),
-                                          family = quasibinomial(), trace = FALSE, maxit = 1000),
+                                          # family = quasibinomial(),
+                                          family = gaussian(),
+                                          trace = FALSE, maxit = 1000),
                   silent = TRUE)
 
     if (inherits(m.Qstar, "try-error")) { # TMLE update failed
@@ -275,8 +277,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # print("EIC_i_t_calc_unadjusted"); print(mean(EIC_i_t_calc_unadjusted))
 
         ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        Qk_hat <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
-        iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
+        Qk_hat <- Qk_hat + update.Qstar.coef
+        iQ_all <- iQ_all + update.Qstar.coef
 
         EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
         # print("EIC_i_t_calc_adjusted"); print(mean(EIC_i_t_calc))
@@ -334,7 +336,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## Update the model predictions (Qk_hat) for initial Q[k] from GCOMP at time-point k.
       ## Based on TMLE update, the predictions now include ALL obs that are newly censored and just stopped following the rule at k:
       Qk_hat <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
-      Qk_hat_updated <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
+      Qk_hat_updated <- Qk_hat + update.Qstar.coef
       # Save all predicted vals as Qk_hat[k] in row k or first target and then save targeted values:
       data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_updated]
 
