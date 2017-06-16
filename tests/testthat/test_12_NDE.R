@@ -119,7 +119,9 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
   t.surv <- c(0:3)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+
   print(paste0(gcomp_est3[["estimates"]][["St.GCOMP"]], collapse = ","))
+
   expect_true(
   all.equal(
     paste0(gcomp_est3[["estimates"]][["St.GCOMP"]], collapse = ","),
@@ -128,7 +130,9 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
 
   # stratified modeling by rule followers only:
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+
   print(paste0(tmle_est3[["estimates"]][["St.TMLE"]], collapse = ","))
+
   expect_true(
   all.equal(
     paste0(tmle_est3[["estimates"]][["St.TMLE"]], collapse = ","),
@@ -137,7 +141,9 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
 
   # pooling all observations (no stratification):
   tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+
   print(paste0(tmle_est4[["estimates"]][["St.TMLE"]], collapse = ","))
+
   expect_true(
   all.equal(
     paste0(tmle_est4[["estimates"]][["St.TMLE"]], collapse = ","),
