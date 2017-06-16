@@ -26,8 +26,7 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
                                           y = Qkplus1, weights = IPWts, offset = off_TMLE,
                                           # method=c('eigen','Cholesky','qr'),
-                                          family = gaussian(),
-                                          trace = FALSE, maxit = 1000),
+                                          family = gaussian(), trace = FALSE, maxit = 1000),
                   silent = TRUE)
 
     if (inherits(m.Qstar, "try-error")) { # TMLE update failed
