@@ -64,7 +64,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     OData$fold_column <- NULL
     OData$nfolds <- NULL
 
-    params_g <- gridisl::defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 1)
+    params_g <- defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 1)
     OData <- fitPropensity(OData,
                             gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
@@ -239,7 +239,6 @@ test.xgboost.10Kdata <- function() {
     surv_dhigh <- survNPMSM(wts.St.dhigh, OData)
 
     # str(OData)
-    # library("gridisl")
     # OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]]
     # class(OData$modelfit.gA$get.fits()[[1]]$get_best_models()[[1]])
 
@@ -409,7 +408,7 @@ test.xgboost.10Kdata <- function() {
     # params = list(fit.package = "xgboost", fit.algorithm = "gbm", family = "quasibinomial") # , objective = "reg:logistic"
     t.surv <- c(0:2)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    params <- gridisl::defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 1)
+    params <- defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 1)
 
     tmle_est_dlow <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
@@ -453,7 +452,7 @@ test.xgboost.10Kdata <- function() {
     # t.surv <- c(0:10)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
 
-    params <- gridisl::defModel(estimator = "xgboost__gbm",
+    params <- defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
                                 search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
                                 seed = 23,

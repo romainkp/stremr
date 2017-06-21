@@ -123,7 +123,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ h2o random forest
     # ---------------------------------------------------------------------------------------------------------
-    params = gridisl::defModel(estimator = "h2o__randomForest", ntrees = 10, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
+    params = defModel(estimator = "h2o__randomForest", ntrees = 10, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
     # params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
     t.surv <- c(2)
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
