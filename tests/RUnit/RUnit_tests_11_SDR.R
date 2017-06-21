@@ -13,9 +13,9 @@ test.iTMLE.10Kdata <- function() {
     library("stremr")
 
     # options(stremr.verbose = TRUE)
-    # options(gridisl.verbose = TRUE)
+    options(gridisl.verbose = TRUE)
     options(stremr.verbose = FALSE)
-    options(gridisl.verbose = FALSE)
+    # options(gridisl.verbose = FALSE)
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
@@ -72,11 +72,11 @@ test.iTMLE.10Kdata <- function() {
     # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
     #                        stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
     #                        estimator = "h2o__gbm", distribution = "bernoulli",
-    #                        models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+    #                        models_MONITOR = defModel(estimator = "speedglm__glm", family = "quasibinomial"),
     #                       fit_method = "cv", fold_column = "fold_ID"
     #                       )
     # ## regularlized glm with h2o
-    # models_g <<- gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+    # models_g <- defModel(estimator = "h2o__glm", family = "binomial",
     #                                 nlambdas = 5, lambda_search = TRUE,
     #                                 param_grid = list(
     #                                     alpha = c(0, 0.5, 1)
@@ -84,7 +84,7 @@ test.iTMLE.10Kdata <- function() {
     # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
     #                        stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
     #                        models_CENS = models_g, models_TRT = models_g,
-    #                        models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+    #                        models_MONITOR = defModel(estimator = "speedglm__glm", family = "quasibinomial"),
     #                       fit_method = "cv", fold_column = "fold_ID"
     #                       )
 
@@ -96,7 +96,7 @@ test.iTMLE.10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # CV TMLE w/ xgboost gbm and cross-validation selection of Q
     # ---------------------------------------------------------------------------------------------------------
-    params <- gridisl::defModel(estimator = "xgboost__gbm",
+    params <- defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
                                 nthread = 1,
                                 nrounds = 5,
@@ -113,12 +113,12 @@ test.iTMLE.10Kdata <- function() {
                         fit_method = "none",
                         # fold_column = "fold_ID",
                         parallel = FALSE,
-                        return_fW = FALSE)
+                        return_fW = TRUE)
                         # parallel = TRUE)
-    # SDR_est[["estimates"]]
-    # fW_fit <- SDR_est[["estimates"]][["fW_fit"]][[1]]
-    # preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
-    # MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
+    SDR_est[["estimates"]]
+    fW_fit <- SDR_est[["estimates"]][["fW_fit"]][[1]]
+    preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
+    MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)
     # MSE_err # [1] 0.07085635
 
     #         est_name  time    St.SDR   type rule.name

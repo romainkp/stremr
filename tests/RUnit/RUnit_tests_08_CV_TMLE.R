@@ -11,7 +11,6 @@ test.CV_TMLE.10Kdata <- function() {
     setDTthreads(1)
     library("foreach")
     library("doParallel")
-    # library("gridisl")
 
     # options(stremr.verbose = TRUE)
     options(stremr.verbose = FALSE)
@@ -70,23 +69,23 @@ test.CV_TMLE.10Kdata <- function() {
     # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
     #                        stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
     #                        estimator = "h2o__gbm", distribution = "bernoulli",
-    #                        models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+    #                        models_MONITOR = defModel(estimator = "speedglm__glm", family = "quasibinomial"),
     #                       fit_method = "cv", fold_column = "fold_ID", ntrees = 5
     #                       )
 
     ## regularlized glm with h2o
-    models_g <<- gridisl::defModel(estimator = "xgboost__glm", family = "binomial",
+    models_g <<- defModel(estimator = "xgboost__glm", family = "binomial",
                                    nthread = 1,
                                     param_grid = list(
                                         alpha = c(0, 0.5, 1)
                                   ))
-    # models_g <<- gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+    # models_g <<- defModel(estimator = "h2o__glm", family = "binomial",
                                     # nlambdas = 5, lambda_search = TRUE,
 
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                            models_CENS = models_g, models_TRT = models_g,
-                           models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+                           models_MONITOR = defModel(estimator = "speedglm__glm", family = "quasibinomial"),
                           fit_method = "cv", fold_column = "fold_ID"
                           )
 
@@ -109,7 +108,7 @@ test.CV_TMLE.10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # CV TMLE w/ xgboost gbm and cross-validation selection of Q
     # ---------------------------------------------------------------------------------------------------------
-    params <- gridisl::defModel(estimator = "xgboost__gbm",
+    params <- defModel(estimator = "xgboost__gbm",
                                 family = "quasibinomial",
                                 nthread = 1,
                                 nrounds = 5)

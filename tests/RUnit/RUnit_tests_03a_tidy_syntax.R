@@ -109,19 +109,19 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
   models_g <-
-     # gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+     # defModel(estimator = "h2o__glm", family = "binomial",
      #                   # lambda_search = FALSE,
      #                   # nlambdas = 5,
      #                   param_grid = list(
      #                    alpha = 0
      #                    # alpha = c(0.5)
      #                   ))
-    gridisl::defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1)
+    defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1)
                       # nrounds = 100,
                       # early_stopping_rounds = 2,
                       # interactions = list(c("CVD", "highA1c")))
      #                   +
-     # gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
+     # defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
     ## ----------------------------------------------------------------
     ## AN EXAMPLE OF A GIANT GRID OF MODELS.
@@ -169,7 +169,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     #   )
 
     # models_g <<-
-     #  gridisl::defModel(estimator = "xgboost__gbm", family = "binomial",
+     #  defModel(estimator = "xgboost__gbm", family = "binomial",
      #                      nrounds = 200, # nrounds = 500,
      #                      early_stopping_rounds = 3,
      #                      interactions = list(c("CVD", "highA1c")),
@@ -181,7 +181,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
      #                      lambda = 2,
      #                      alpha = 0.5,
      #                      max_delta_step = 2) +
-     #  gridisl::defModel(estimator = "xgboost__drf", family = "binomial",
+     #  defModel(estimator = "xgboost__drf", family = "binomial",
      #                      nrounds = 200, # nrounds = 500,
      #                      early_stopping_rounds = 3,
      #                      interactions = list(c("CVD", "highA1c")),
@@ -193,7 +193,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
      #                      lambda = 2,
      #                      alpha = 0.5,
      #                      max_delta_step = 2) +
-     #  gridisl::defModel(estimator = "xgboost__gbm",
+     #  defModel(estimator = "xgboost__gbm",
      #                      family = "binomial",
      #                      search_criteria = list(strategy = "RandomDiscrete", max_models = 100),
      #                      seed = 23,
@@ -217,13 +217,13 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
      #                          max_delta_step = c(0, 1, 2, 5, 10)
      #                          )
      #                      ) +
-     # gridisl::defModel(estimator = "h2o__glm", family = "binomial", alpha = 0, lambda = 0, lambda_search = FALSE) +
-     # gridisl::defModel(estimator = "h2o__glm", family = "binomial",
+     # defModel(estimator = "h2o__glm", family = "binomial", alpha = 0, lambda = 0, lambda_search = FALSE) +
+     # defModel(estimator = "h2o__glm", family = "binomial",
      #                   nlambdas = 5, lambda_search = TRUE,
      #                   param_grid = list(
      #                    alpha = c(0, .5, 1)
      #                   )) +
-     #  gridisl::defModel(estimator = "h2o__randomForest",
+     #  defModel(estimator = "h2o__randomForest",
      #                distribution = "bernoulli",
      #                seed = 23,
      #                search_criteria = list(
@@ -231,7 +231,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
      #                param_grid = RF_hyper,
      #                binomial_double_trees = TRUE,
      #                stopping_metric = "MSE", stopping_rounds = 3, score_tree_interval = 1) +
-     #    gridisl::defModel(estimator = "h2o__gbm",
+     #    defModel(estimator = "h2o__gbm",
      #                distribution = "bernoulli",
      #                seed = 23,
      #                search_criteria = list(
@@ -251,7 +251,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Use speedglm to fit all Q.
   ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
-  models_Q <-  gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  models_Q <-  defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
   ## ------------------------------------------------------------------------
   ## Alternative specifications of Q models for iterative G-COMP (Q) -- NONPARAMETRIC REGRESSION (GBM) + REGULARIZED GLM
@@ -259,7 +259,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   # ## This example uses a discrete SuperLearner: best model will be selected on the basis of CV-MSE.
   # fit_method_Q <- "cv"
   # models_Q <<-
-  #   gridisl::defModel(estimator = "xgboost__gbm", family = "binomial",
+  #   defModel(estimator = "xgboost__gbm", family = "binomial",
   #                       nrounds = 200,
   #                       early_stopping_rounds = 3,
   #                       interactions = list(c("TI", "highA1c"), c("TI", "CVD"), c("TI", "lastNat1")),
@@ -271,7 +271,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   #                       lambda = 2,
   #                       alpha = 0.5,
   #                       max_delta_step = 2) +
-  #   gridisl::defModel(estimator = "xgboost__glm",
+  #   defModel(estimator = "xgboost__glm",
   #                     family = "quasibinomial",
   #                     seed = 23,
   #                     nrounds = 500,
