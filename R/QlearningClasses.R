@@ -319,7 +319,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           self$fold_y_names <- paste0("Qkplus1_f", folds_seq)
           ## initialize the values of fold-specific outcomes for next Q iteration, this is done for the very first Q regression:
           if (is.null(fold_y_names))
-            data$dat.sVar[, (self$fold_y_names) := as.numeric(get(OData$nodes$Ynode))]
+            data$dat.sVar[, (self$fold_y_names) := as.numeric(get(data$nodes$Ynode))]
           ## define split-specific / fold-specific Q predictions in the dataset as the outcomes for next Q regression  (separate column for each fold)
           for (split in folds_seq) {
             data$dat.sVar[newsubset_idx, paste0("Qkplus1_f", split) := private$probA1_byfold[[split]]]
