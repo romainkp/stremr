@@ -10,10 +10,10 @@ context("origami Super Learner")
   ## -----------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
-  options(stremr.verbose = TRUE)
-  options(gridisl.verbose = TRUE)
-  # options(stremr.verbose = FALSE)
-  # options(gridisl.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
   library("data.table")
   library("magrittr")
   library("ggplot2")
@@ -165,17 +165,22 @@ context("origami Super Learner")
   ## Fit propensity score models.
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
+test_that("fitting g w/ Super Learner", {
+
   OData <- fitPropensity(OData,
                           gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                           models_CENS = models_g, models_TRT = models_g, models_MONITOR = models_g,
                           fit_method = fit_method_g,
-                          fold_column = fold_column)
+                          fold_column = fold_column
+
+})
 
   ## ------------------------------------------------------------
   ## RUN IPW ANALYSES
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
+test_that("evaluating IPW", {
   IPW_time <- system.time({
     IPW <-  analysis %>%
           rename(trunc_weight = trunc_MSM) %>%
@@ -226,10 +231,12 @@ context("origami Super Learner")
                nest(intervened_TRT, wts_tabs, FUPtimes_tabs, .key = "IPWtabs")
 
   IPW <- IPW %>% select(-wts_data, -wts_tabs, -FUPtimes_tabs)
+})
 
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
+test_that("fitting Q w/ origami Super Learner, with byfold = TRUE", {
   GCOMP_time <- system.time({
     GCOMP <-analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule) %>%
@@ -246,13 +253,14 @@ context("origami Super Learner")
           mutate(GCOMP = map(GCOMP, "estimates"))
   })
   GCOMP_time_hrs <- GCOMP_time[3]/60/60
+})
 
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
   ## ------------------------------------------------------------
-  TMLE <- CVTMLE <- analysis %>%
-          rename(trunc_weight = trunc_TMLE) %>%
-          distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
+  # TMLE <- CVTMLE <- analysis %>%
+  #         rename(trunc_weight = trunc_TMLE) %>%
+  #         distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
   # TMLE_time <- system.time({
   #   TMLE <- TMLE %>%
@@ -306,7 +314,6 @@ context("origami Super Learner")
                   map(~ get_RDs(.x)) %>%
                   as_tibble()
                   ))
-
 
   ## ------------------------------------------------------------
   ## Uncomment and run this to remove the individual EIC estimates from MSM and TMLE estimates.
@@ -405,4 +412,4 @@ context("origami Super Learner")
 
   # h2o::h2o.shutdown(prompt = FALSE)
 
-}
+# }
