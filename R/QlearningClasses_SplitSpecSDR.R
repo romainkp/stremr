@@ -12,7 +12,7 @@ cv_validation_preds <- function(fold, split_preds_Qk_hat) {
 }
 
 ## Split-specific predictions for new data (for all nrow(data).
-## Uses offsets that could might be also split specific
+## Uses offsets that could might be also split-specific
 cv_split_preds <- function(fold, data, fits_Qk, split_preds_Qk_hat, use_full = FALSE) {
   ## These will be automatically defined in the calling frame of this function
   ## when the cross-validator that calls cv_split_preds()
@@ -157,7 +157,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         # data$dat.sVar[(QModel_Qkplus1$subset_idx - 1)[subset_Qplus1_newQ], ]
         ## THESE ARE IDs in Y that need to be replaced (not failures, i.e., why is not deterministic), must MATCH TO ABOVE IN LENGTH
         subset_Y <- which(use_subset_idx %in% (QModel_Qkplus1$subset_idx-1))
-        data$dat.sVar[use_subset_idx[subset_Y], ]
+        # data$dat.sVar[use_subset_idx[subset_Y], ]
       }
 
       ## 4A. The model update. Univariate logistic regression (TMLE)
@@ -280,7 +280,7 @@ SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
         self$split_preds_Qk_hat <- split_preds_Qk_hat
 
         ## Validation (out-of-sample) predictions for the split-specific SuperLearner (n predictions by combining all validation folds in newdata)
-        ## All this is does is takes the list of previous split-spec predictions (above call to cross_validate) and
+        ## This function takes the list of previous split-spec predictions (above call to cross_validate) and
         ## extracts the validation set predictions from each fold. It then stacks these predictions together to obtain n validation predictions.
         Qk_hat_star_all <- origami::cross_validate(cv_validation_preds,
                                                    folds_pred_dat,

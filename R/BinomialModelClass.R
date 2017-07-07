@@ -3,7 +3,7 @@
 ## Call \code{gridisl} and fit a single regression model.
 ## All model fitting in stremr is performed via this function.
 ## ----------------------------------------------------------------------------------
-fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx) {
+fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx, ...) {
 
   if (is.null(model_contrl[["fit_method"]]))
     stop("'fit_method' must be specified")
@@ -11,7 +11,7 @@ fit_single_regression <- function(data, nodes, models, model_contrl, predvars, o
   method <- model_contrl[["fit_method"]]
   fold_column <- model_contrl[["fold_column"]]
 
-  if ((method %in% "cv") && is.null(fold_column) && is.null(data$fold_column)) {
+  if ((method %in% c("cv", "origamiSL")) && is.null(fold_column) && is.null(data$fold_column)) {
 
     stop(
 "Must manually define the folds and specify the 'fold_column' to be able to perform cross-validation (method = 'cv').
@@ -21,22 +21,24 @@ b) Setting the 'fold_column' option to the name of the column that contains the 
 c) Passing the name of the existing fold column as the argument 'fold_column' of the calling function")
 
   ## Manually provided column name with fold IDs, perform some check and save the fold information
-  } else if ((method %in% "cv") && !is.null(fold_column)) {
+  } else if ((method %in% c("cv", "origamiSL")) && !is.null(fold_column)) {
 
     if (!is.character(fold_column)) stop("argument 'fold_column' must be a string")
     data$define_CVfolds(fold_column = fold_column)
 
   ## Use the existing fold ID column (previously defined by calling define_CVfolds())
-  } else if ((method %in% "cv") && is.null(fold_column)) fold_column <- data$fold_column
+  } else if ((method %in% c("cv", "origamiSL")) && is.null(fold_column)) fold_column <- data$fold_column
 
   model.fit <- try({
-                  model.fit <- gridisl::fit(models,
-                                            method = method,
-                                            ID = nodes$IDnode, t_name = nodes$tnode,
-                                            x = predvars, y = outvar,
-                                            data = data,
-                                            fold_column = fold_column,
-                                            subset_idx = subset_idx)
+    gridisl::fit(models,
+                method = method,
+                ID = nodes$IDnode,
+                t_name = nodes$tnode,
+                x = predvars,
+                y = outvar,
+                data = data,
+                fold_column = fold_column,
+                subset_idx = subset_idx, ...)
   })
 
   if (inherits(model.fit, "try-error")) {
@@ -52,13 +54,15 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
 
     model.fit <- gridisl::fit(glm_model,
-                               method = method,
-                               ID = nodes$IDnode, t_name = nodes$tnode,
-                               x = predvars, y = outvar,
-                               data = data,
-                               verbose = gvars$verbose,
-                               fold_column = fold_column,
-                               subset_idx = subset_idx)
+                             method = method,
+                             ID = nodes$IDnode,
+                             t_name = nodes$tnode,
+                             x = predvars,
+                             y = outvar,
+                             data = data,
+                             verbose = gvars$verbose,
+                             fold_column = fold_column,
+                             subset_idx = subset_idx)
 
   }
 
@@ -176,6 +180,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     # uses private$model.fit to generate predictions for data:
     predict = function(newdata, holdout = FALSE, ...) {
       assert_that(self$is.fitted)
+      # browser()
 
       if (missing(newdata) && is.null(private$probA1)) {
         private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
@@ -188,7 +193,8 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       } else {
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
-        private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit, newdata = newdata,
+        private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
+                                              newdata = newdata,
                                               add_subject_data = FALSE,
                                               subset_idx = self$subset_idx,
                                               # use_best_retrained_model = TRUE,

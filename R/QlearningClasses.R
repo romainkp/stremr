@@ -114,6 +114,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     classify = FALSE,
     TMLE = TRUE,
     CVTMLE = FALSE,
+    byfold_Q = FALSE,
     nIDs = integer(),
     stratifyQ_by_rule = FALSE,
     lower_bound_zero_Q = TRUE,
@@ -123,6 +124,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     t_period = integer(),
     keep_idx = FALSE,         # keep current indices (do not remove them right after fitting)
     idx_used_to_fit_initQ = NULL,
+    fold_y_names = NULL,
 
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
@@ -137,8 +139,11 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$skip_update_zero_Q <- reg$skip_update_zero_Q
       self$t_period <- reg$t_period
       self$regimen_names <- reg$regimen_names
+
       self$TMLE <- reg$TMLE
       self$CVTMLE <- reg$CVTMLE
+      self$byfold_Q <- reg$byfold_Q
+
       self$keep_idx <- reg$keep_idx
 
       if (gvars$verbose == 2) {print("initialized Q class"); reg$show()}
@@ -165,7 +170,16 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       return(subset_idx)
     },
 
-    fit = function(overwrite = FALSE, data, ...) { # Move overwrite to a field? ... self$overwrite
+    fit = function(overwrite = FALSE, data, Qlearn.fit, ...) { # Move overwrite to a field? ... self$overwrite
+
+      prevQ_indx <- which(self$all_Qregs_indx %in% (self$Qreg_counter+1))
+      if (length(prevQ_indx) > 0 && self$byfold_Q) {
+        prevQ <- Qlearn.fit$getPsAsW.models()[[prevQ_indx]]
+        fold_y_names <- prevQ$fold_y_names
+      } else {
+        fold_y_names <- NULL
+      }
+
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
@@ -182,7 +196,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$n_obs_fit <- length(self$subset_idx)
 
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
-      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
+      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
       self$is.fitted <- TRUE
 
       # **********************************************************************
@@ -231,7 +245,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       iQ_all <- probA1
 
       ## print("initial mean(Qkplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
-
       ## **********************************************************************
       ## Iteration step for G-COMP
       ## (*) Update are performed only among obs who were involved in fitting the initial Q (self$idx_used_to_fit_initQ)
@@ -299,20 +312,35 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         ## Next training fold model can check if some of its indices overlap with 'train_idx_to_replace'
         ## How do we pass these predictions and store them?
         ## train_idx_to_replace <- (self$idx_used_to_fit_initQ - 1)
-
         data$dat.sVar[newsubset_idx, ("Qkplus1") := iQ_all]
 
+        if (self$byfold_Q) {
+          folds_seq <- seq_along(private$probA1_byfold)
+          self$fold_y_names <- paste0("Qkplus1_f", folds_seq)
+          ## initialize the values of fold-specific outcomes for next Q iteration, this is done for the very first Q regression:
+          if (is.null(fold_y_names))
+            data$dat.sVar[, (self$fold_y_names) := as.numeric(get(OData$nodes$Ynode))]
+          ## define split-specific / fold-specific Q predictions in the dataset as the outcomes for next Q regression  (separate column for each fold)
+          for (split in folds_seq) {
+            data$dat.sVar[newsubset_idx, paste0("Qkplus1_f", split) := private$probA1_byfold[[split]]]
+          }
+        }
+
         private$probA1 <- NULL
+
       } else {
         ## save prediction P(Q.kplus=1):
         private$probAeqa <- iQ_all
         private$probA1 <- NULL
       }
 
+
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       self$wipe.alldat
-      if (!self$keep_idx) self$wipe.all.indices # If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
+      ## If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
+      if (!self$keep_idx) self$wipe.all.indices
+
       # **********************************************************************
       invisible(self)
     },
@@ -358,6 +386,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
     # Predict the response P(Bin = 1|sW = sw); Uses private$model.fit to generate predictions for data:
     predict = function(newdata, subset_idx, ...) {
+      probA1 <- NULL
+      probA1_byfold <- NULL
       ## For CV-TMLE need to use holdout predictions
       ## These are also referred to as predictions from all validation splits, or holdouts or out-of-sample predictions
       # holdout <- self$CVTMLE
@@ -385,6 +415,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
 
         if (!self$CVTMLE) {
+
           probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                         newdata = newdata,
                                         add_subject_data = FALSE,
@@ -392,6 +423,18 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                         # use_best_retrained_model = TRUE,
                                         holdout = FALSE,
                                         verbose = gvars$verbose)
+
+          if (self$byfold_Q) {
+            probA1_byfold <- gridisl::predict_SL(modelfit = private$model.fit,
+                                       newdata = newdata,
+                                       add_subject_data = FALSE,
+                                       subset_idx = subset_idx,
+                                       byfold = TRUE,
+                                       # use_best_retrained_model = TRUE,
+                                       verbose = gvars$verbose)
+            private$probA1_byfold <- probA1_byfold[["pred"]]
+          }
+
         } else {
           probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
                                         newdata = newdata,
@@ -403,7 +446,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           probA1[, ("idx") := self$idx_used_to_fit_initQ]
 
           newObs_idx <- setdiff(subset_idx, self$idx_used_to_fit_initQ)
-          if (length(newObs_idx)) {
+          if (length(newObs_idx) > 0) {
             probA1_newObs <- gridisl::predict_SL(modelfit = private$model.fit,
                                                  newdata = newdata,
                                                  add_subject_data = FALSE,
@@ -421,10 +464,11 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
+
         ## check that predictions P(A=1 | dmat) exist for all obs
         if (any(is.na(private$probA1) & !is.nan(private$probA1))) {
         # if (any(is.na(private$probA1) )) { # & !is.nan(private$probA1)
-          stop("some of the predicted probabilities during seq Gcomp resulted in NAs, which indicates an error of a prediction routine")
+          stop("some of the predicted probabilities during seq g-comp resulted in NAs, which indicates an error of a prediction routine")
         }
 
         ## Remove all modeling grid obj for xgboost (all the CV / training set models)
@@ -530,6 +574,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
   active = list(
     wipe.alldat = function() {
       private$probA1 <- NULL
+      private$probA1_byfold <- NULL
       # private$model.fit <- NULL
       # private$probAeqa <- NULL
       # self$binomialModelObj$emptydata
@@ -540,6 +585,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$idx_used_to_fit_initQ <- NULL
       self$subset_idx <- NULL
     },
+    getprobA1_byfold = function() { private$probA1_byfold },
     getfit = function() { private$model.fit },
     getTMLEfit = function() { private$TMLE.fit }
   ),
@@ -549,6 +595,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     TMLE.fit = list(NA),
     .outvar = NULL,
     probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
-    probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
+    probAeqa = NULL,   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
+    probA1_byfold = NULL
   )
 )

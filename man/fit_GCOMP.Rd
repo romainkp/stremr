@@ -12,10 +12,10 @@ fit_GCOMP(OData, tvals, Qforms, intervened_TRT = NULL,
   fold_column = stremrOptions("fold_column"), TMLE = FALSE,
   stratifyQ_by_rule = FALSE, stratify_by_last = TRUE, Qstratify = NULL,
   useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, iterTMLE = FALSE,
-  CVTMLE = FALSE, IPWeights = NULL, trunc_weights = 10^6,
-  weights = NULL, max_iter = 15, adapt_stop = TRUE,
-  adapt_stop_factor = 10, tol_eps = 0.001, parallel = FALSE,
-  return_wts = FALSE, return_fW = FALSE, reg_Q = NULL,
+  CVTMLE = FALSE, byfold_Q = FALSE, IPWeights = NULL,
+  trunc_weights = 10^6, weights = NULL, max_iter = 15,
+  adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
+  parallel = FALSE, return_wts = FALSE, return_fW = FALSE, reg_Q = NULL,
   verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
@@ -42,7 +42,9 @@ See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible v
 This argument is ignored when the fitting procedures are already defined via the argument \code{models}.}
 
 \item{fit_method}{Model selection approach. Can be either \code{"none"} - no model selection or
-\code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).}
+\code{"cv"} - discrete Super Learner using V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs) or
+\code{"origamiSL"} - continuous Super Learner that uses the \code{origami} R package to select the
+convex combination of the model predictions (aka model stacking).}
 
 \item{fold_column}{The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
 Use the provided function \code{\link{define_CVfolds}} to
@@ -78,7 +80,10 @@ Leave as \code{NULL} when intervening on all observations/time-points.}
 When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.}
 
 \item{CVTMLE}{Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
-Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..}
+Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect.}
+
+\item{byfold_Q}{(ADVANCED USE) Fit iterative means (Q parameter) using "by-fold" (aka "fold-specific" or "split-specific") cross-validation approach.
+Only works with \code{fit_method}=\code{"origamiSL"}.}
 
 \item{IPWeights}{(Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)}
 

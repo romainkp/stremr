@@ -184,7 +184,9 @@ fit_CVTMLE <- function(...) {
 #' @param iterTMLE Set to \code{TRUE} to run the iterative univariate TMLE instead of the usual longitudinal TMLE.
 #' When set to \code{TRUE} this will also provide the standard sequential Gcomp as party of the output.
 #' @param CVTMLE Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
-#' Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..
+#' Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect.
+#' @param byfold_Q (ADVANCED USE) Fit iterative means (Q parameter) using "by-fold" (aka "fold-specific" or "split-specific") cross-validation approach.
+#' Only works with \code{fit_method}=\code{"origamiSL"}.
 #' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
@@ -211,9 +213,11 @@ fit_CVTMLE <- function(...) {
 #' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
 #' This argument is ignored when the fitting procedures are already defined via the argument \code{models}.
 #' @param fit_method Model selection approach. Can be either \code{"none"} - no model selection or
-#' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
-# \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
-# where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
+#' \code{"cv"} - discrete Super Learner using V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs) or
+#' \code{"origamiSL"} - continuous Super Learner that uses the \code{origami} R package to select the
+#' convex combination of the model predictions (aka model stacking).
+#  \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
+#  where \code{TRUE} indicates that this row will be selected as part of the model validation sample).
 #' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
 #' Use the provided function \code{\link{define_CVfolds}} to
 #' define such folds or define the folds using your own method.
@@ -251,6 +255,7 @@ fit_GCOMP <- function(OData,
                         useonly_t_MONITOR = NULL,
                         iterTMLE = FALSE,
                         CVTMLE = FALSE,
+                        byfold_Q = FALSE,
                         IPWeights = NULL,
                         trunc_weights = 10^6,
                         weights = NULL,
@@ -277,6 +282,9 @@ fit_GCOMP <- function(OData,
   assert_that(is.logical(adapt_stop))
 
   if (TMLE & iterTMLE) stop("Either 'TMLE' or 'iterTMLE' must be set to FALSE. Cannot estimate both within a single algorithm run.")
+
+  if (byfold_Q && !(fit_method %in% "origamiSL"))
+    stop("Running byfold_Q=TRUE requires seting fit_method='origamiSL'")
 
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
   # ------------------------------------------------------------------------------------------------
@@ -360,7 +368,7 @@ fit_GCOMP <- function(OData,
       res_byt <- foreach::foreach(t_idx = rev(seq_along(tvals)), .options.multicore = mcoptions) %dopar% {
         t_period <- tvals[t_idx]
         res <- fit_GCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
-                                TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
+                                TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
                                 return_fW = return_fW, verbose = verbose)
@@ -372,7 +380,7 @@ fit_GCOMP <- function(OData,
       for (t_idx in rev(seq_along(tvals))) {
         t_period <- tvals[t_idx]
         res <- fit_GCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
-                                TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE,
+                                TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
                                 return_fW = return_fW, verbose = verbose)
@@ -528,6 +536,7 @@ fit_GCOMP_onet <- function(OData,
                              TMLE,
                              iterTMLE,
                              CVTMLE = FALSE,
+                             byfold_Q = FALSE,
                              models,
                              max_iter = 10,
                              adapt_stop = TRUE,
@@ -580,6 +589,7 @@ fit_GCOMP_onet <- function(OData,
   # ------------------------------------------------------------------------------------------------
   OData$dat.sVar[, ("EIC_i_t") := 0.0] # set the initial (default values of the t-specific and i-specific EIC estimates)
   OData$dat.sVar[, "Qkplus1" := as.numeric(get(OData$nodes$Ynode))] # set the initial values of Q (the observed outcome node)
+
   if ("Qk_hat" %in% names(OData$dat.sVar)) {
     OData$dat.sVar[, "Qk_hat" := NULL]
   }
@@ -607,6 +617,7 @@ fit_GCOMP_onet <- function(OData,
                                      t_period = Qperiods[i],
                                      TMLE = TMLE,
                                      CVTMLE = CVTMLE,
+                                     byfold_Q = byfold_Q,
                                      keep_idx = ifelse(iterTMLE, TRUE, FALSE),
                                      stratifyQ_by_rule = stratifyQ_by_rule,
                                      outvar = "Qkplus1",
@@ -629,7 +640,7 @@ fit_GCOMP_onet <- function(OData,
 
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
   Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-  Qlearn.fit$fit(data = OData)
+  Qlearn.fit$fit(data = OData, Qlearn.fit = Qlearn.fit)
   # Qlearn.fit$getPsAsW.models()[[1]]
   OData$Qlearn.fit <- Qlearn.fit
 

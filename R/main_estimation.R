@@ -382,6 +382,7 @@ fitPropensity <- function(OData,
   # They are accessed later from modelfits.g0
 
   h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs), silent = TRUE)
+
   if (inherits(h_gN, "try-error")) { # if failed, it means that prediction cannot be done without newdata
     h_gN <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs)
   }
