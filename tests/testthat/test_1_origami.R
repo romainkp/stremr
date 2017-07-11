@@ -172,7 +172,7 @@ test_that("fitting g w/ Super Learner", {
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                           models_CENS = models_g, models_TRT = models_g, models_MONITOR = models_g,
                           fit_method = fit_method_g,
-                          fold_column = fold_column
+                          fold_column = fold_column)
 
 })
 
@@ -411,5 +411,4 @@ test_that("fitting Q w/ origami Super Learner, with byfold = TRUE", {
   # }
 
   # h2o::h2o.shutdown(prompt = FALSE)
-
 # }
