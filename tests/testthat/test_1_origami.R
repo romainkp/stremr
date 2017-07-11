@@ -165,7 +165,7 @@ context("origami Super Learner")
   ## Fit propensity score models.
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
-test_that("fitting g w/ Super Learner", {
+# test_that("fitting g w/ Super Learner", {
 
   OData <- fitPropensity(OData,
                           gform_CENS = gform_CENS, gform_TRT = gform_TRT,
@@ -174,13 +174,13 @@ test_that("fitting g w/ Super Learner", {
                           fit_method = fit_method_g,
                           fold_column = fold_column)
 
-})
+# })
 
   ## ------------------------------------------------------------
   ## RUN IPW ANALYSES
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
-test_that("evaluating IPW", {
+# test_that("evaluating IPW", {
   IPW_time <- system.time({
     IPW <-  analysis %>%
           rename(trunc_weight = trunc_MSM) %>%
@@ -231,12 +231,12 @@ test_that("evaluating IPW", {
                nest(intervened_TRT, wts_tabs, FUPtimes_tabs, .key = "IPWtabs")
 
   IPW <- IPW %>% select(-wts_data, -wts_tabs, -FUPtimes_tabs)
-})
+# })
 
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
-test_that("fitting Q w/ origami Super Learner, with byfold = TRUE", {
+# test_that("fitting Q w/ origami Super Learner, with byfold = TRUE", {
   GCOMP_time <- system.time({
     GCOMP <-analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule) %>%
@@ -253,7 +253,7 @@ test_that("fitting Q w/ origami Super Learner, with byfold = TRUE", {
           mutate(GCOMP = map(GCOMP, "estimates"))
   })
   GCOMP_time_hrs <- GCOMP_time[3]/60/60
-})
+# })
 
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
