@@ -85,7 +85,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
   regs <- vector(mode="list", length=length(regforms))
   for (idx in seq_along(regforms)) {
     res <- process_regform(as.formula(regforms[[idx]]), sVar.map = sVar.map, factor.map = factor.map)
-    if (using.default && gvars$verbose)
+    if (using.default && gvars$verbose && !is.null(res$outvars))
       message("Using the default regression formula: " %+% paste0(res$outvars, collapse="+") %+% " ~ " %+% paste0(res$predvars, collapse="+"))
 
       if (!is.null(outvar.class)) {
@@ -152,8 +152,15 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
                           subset_exprs = NULL,
                           model_contrl = NULL,
                           censoring = FALSE) {
-      assert_that(is.character(outvar))
+
+      assert_that(is.character(outvar) || is.null(outvar))
       assert_that(is.character(predvars) || is.null(predvars))
+
+      if (is.null(outvar)) {
+        outvar <- "NULL"
+        outvar.class <- list("NULL")
+      }
+
       self$outvar <- outvar
       self$predvars <- predvars
       self$outvar.class <- self$checkInputList(outvar.class)

@@ -126,6 +126,7 @@ define_single_regression <- function(OData,
 #' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME}
 #' will be considered as covariates.
 #' @param CENS Column name of the censoring variable(s) in \code{data}.
+#' Leave as missing if not intervening on censoring / no right-censoring in the input data.
 #' Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
 #' For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event
 #' (this cannot be changed).
@@ -138,6 +139,7 @@ define_single_regression <- function(OData,
 #' Note that factors are not allowed in \code{CENS}.
 #' @param TRT A column name in \code{data} for the exposure/treatment variable(s).
 #' @param MONITOR A column name in \code{data} for the indicator(s) of monitoring events.
+#' Leave as missing if not intervening on monitoring.
 #' @param OUTCOME A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.
 #' @param noCENScat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 #' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
@@ -154,9 +156,9 @@ importData <- function(data,
                        ID = "Subject_ID",
                        t_name = "time_period",
                        covars,
-                       CENS = "C",
+                       CENS = NULL, # CENS = "C",
                        TRT = "A",
-                       MONITOR = "N",
+                       MONITOR = NULL, # MONITOR = "N",
                        OUTCOME = "Y",
                        noCENScat = 0L,
                        remove_extra_rows = TRUE,
@@ -169,6 +171,11 @@ importData <- function(data,
     cat('\n')
     cat(paste0(current.options, collapse = '\n'), '\n')
   }
+
+  if (missing(TRT)) stop("treatment column names must be specified w/ arg 'TRT'")
+  if (missing(CENS)) CENS <- NULL
+  if (missing(MONITOR)) MONITOR <- NULL
+
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
     covars <- setdiff(colnames(data), c(ID, t_name, CENS, TRT, MONITOR, OUTCOME))
   }
@@ -231,26 +238,38 @@ importData <- function(data,
   for (logical.varnm in logical.Ls) {
     OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   }
+
   for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
   for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
   for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
   for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
+
   return(OData)
 }
 
 # ---------------------------------------------------------------------------------------
 #' Define and fit propensity score models.
 #'
-#' Defines and fits regression models for the propensity scores for censoring, treatment and monitoring.
+#' Defines and fits estimators for the propensity scores, separately for censoring, treatment and monitoring events.
+#' When there is right-censoring and/or not intervening on monitoring, only the propensity score model for treatment will be estimated.
 #'
 #' @param OData Input data object created by \code{importData} function.
-#' @param gform_CENS ...
-#' @param gform_TRT ...
-#' @param gform_MONITOR ...
-#' @param stratify_CENS ...
-#' @param stratify_TRT ...
-#' @param stratify_MONITOR ...
+#' @param gform_CENS Specify the regression formula for the right-censoring mechanism,
+#' in the format "CensVar1 + CensVar2 ~ Predictor1 + Predictor2".
+#' Leave as missing for data with no right-censoring.
+#' @param gform_TRT Specify the regression formula for the treatment mechanism, in the format "TRTVar1 + TRTVar2 ~ Predictor1 + Predictor2".
+#' @param gform_MONITOR  Specify the regression formula for the treatment mechanism, in the format "TRTVar1 + TRTVar2 ~ Predictor1 + Predictor2".
+#' Leave as missing for data with no monitoring events or when not intervening on monitoring.
+#' @param stratify_CENS Define strata(s) for censoring model(s).
+#' Must be a list of logical expressions (input the expression as character strings).
+#' When missing (default), the censoring model(s) are fit by pooling all available observations, across all time-points.
+#' @param stratify_TRT Define strata(s) for treatment model(s).
+#' Must be a list of logical expressions (input the expression as character strings).
+#' When missing (default), the treatment model(s) are fit by pooling all available (uncensored) observations, across all time-points.
+#' @param stratify_MONITOR Define strata(s) for monitoring model(s).
+#' Must be a list of logical expressions (input the expression as character strings).
+#' When missing (default), the monitoring model is fit by pooling all available (uncensored) observations, across all time-points.
 #' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s) with
 #' \code{gridisl} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
@@ -278,13 +297,16 @@ importData <- function(data,
 #' @param fold_column The column name in the input data (ordered factor) that contains the fold IDs to be used as part of the validation sample.
 #' Use the provided function \code{\link{define_CVfolds}} to
 #' define such folds or define the folds using your own method.
-#' @param reg_CENS ...
-#' @param reg_TRT ...
-#' @param reg_MONITOR ...
+#' @param reg_CENS (ADVANCED FEATURE). Manually define and input the regression specification for each strata of censoring model,
+#' using the function \code{\link{define_single_regression}}.
+#' @param reg_TRT (ADVANCED FEATURE). Manually define and input the regression specification for each strata of treatment model,
+#' using the function \code{\link{define_single_regression}}.
+#' @param reg_MONITOR (ADVANCED FEATURE). Manually define and input the regression specification for each strata of monitoring model,
+#' using the function \code{\link{define_single_regression}}.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional
-#' arguments will be passed on directly to all \code{GridSL}
+#' arguments will be passed on directly to all \code{gridisl}
 #' modeling functions that are called from this routine,
 #' e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments
 #' must be named.
@@ -308,7 +330,8 @@ fitPropensity <- function(OData,
                           reg_CENS,
                           reg_TRT,
                           reg_MONITOR,
-                          verbose = getOption("stremr.verbose"), ...) {
+                          verbose = getOption("stremr.verbose"),
+                          ...) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes

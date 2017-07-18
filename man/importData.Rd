@@ -5,8 +5,9 @@
 \title{Import data, define various nodes, define dummies for factor columns and define OData R6 object}
 \usage{
 importData(data, ID = "Subject_ID", t_name = "time_period", covars,
-  CENS = "C", TRT = "A", MONITOR = "N", OUTCOME = "Y", noCENScat = 0L,
-  remove_extra_rows = TRUE, verbose = getOption("stremr.verbose"))
+  CENS = NULL, TRT = "A", MONITOR = NULL, OUTCOME = "Y",
+  noCENScat = 0L, remove_extra_rows = TRUE,
+  verbose = getOption("stremr.verbose"))
 }
 \arguments{
 \item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns,
@@ -25,6 +26,7 @@ that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and
 will be considered as covariates.}
 
 \item{CENS}{Column name of the censoring variable(s) in \code{data}.
+Leave as missing if not intervening on censoring / no right-censoring in the input data.
 Each separate variable specified in \code{CENS} can be either binary (0/1 valued integer) or categorical (integer).
 For binary indicators of CENSoring, the value of 1 indicates the CENSoring or end of follow-up event
 (this cannot be changed).
@@ -38,7 +40,8 @@ Note that factors are not allowed in \code{CENS}.}
 
 \item{TRT}{A column name in \code{data} for the exposure/treatment variable(s).}
 
-\item{MONITOR}{A column name in \code{data} for the indicator(s) of monitoring events.}
+\item{MONITOR}{A column name in \code{data} for the indicator(s) of monitoring events.
+Leave as missing if not intervening on monitoring.}
 
 \item{OUTCOME}{A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.}
 

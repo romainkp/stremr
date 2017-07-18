@@ -15,17 +15,26 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
 
-\item{gform_CENS}{...}
+\item{gform_CENS}{Specify the regression formula for the right-censoring mechanism,
+in the format "CensVar1 + CensVar2 ~ Predictor1 + Predictor2".
+Leave as missing for data with no right-censoring.}
 
-\item{gform_TRT}{...}
+\item{gform_TRT}{Specify the regression formula for the treatment mechanism, in the format "TRTVar1 + TRTVar2 ~ Predictor1 + Predictor2".}
 
-\item{gform_MONITOR}{...}
+\item{gform_MONITOR}{Specify the regression formula for the treatment mechanism, in the format "TRTVar1 + TRTVar2 ~ Predictor1 + Predictor2".
+Leave as missing for data with no monitoring events or when not intervening on monitoring.}
 
-\item{stratify_CENS}{...}
+\item{stratify_CENS}{Define strata(s) for censoring model(s).
+Must be a list of logical expressions (input the expression as character strings).
+When missing (default), the censoring model(s) are fit by pooling all available observations, across all time-points.}
 
-\item{stratify_TRT}{...}
+\item{stratify_TRT}{Define strata(s) for treatment model(s).
+Must be a list of logical expressions (input the expression as character strings).
+When missing (default), the treatment model(s) are fit by pooling all available (uncensored) observations, across all time-points.}
 
-\item{stratify_MONITOR}{...}
+\item{stratify_MONITOR}{Define strata(s) for monitoring model(s).
+Must be a list of logical expressions (input the expression as character strings).
+When missing (default), the monitoring model is fit by pooling all available (uncensored) observations, across all time-points.}
 
 \item{models_CENS}{Optional parameter specifying the models for fitting the censoring mechanism(s) with
 \code{gridisl} R package.
@@ -57,17 +66,20 @@ are specified.}
 Use the provided function \code{\link{define_CVfolds}} to
 define such folds or define the folds using your own method.}
 
-\item{reg_CENS}{...}
+\item{reg_CENS}{(ADVANCED FEATURE). Manually define and input the regression specification for each strata of censoring model,
+using the function \code{\link{define_single_regression}}.}
 
-\item{reg_TRT}{...}
+\item{reg_TRT}{(ADVANCED FEATURE). Manually define and input the regression specification for each strata of treatment model,
+using the function \code{\link{define_single_regression}}.}
 
-\item{reg_MONITOR}{...}
+\item{reg_MONITOR}{(ADVANCED FEATURE). Manually define and input the regression specification for each strata of monitoring model,
+using the function \code{\link{define_single_regression}}.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
 
 \item{...}{When all or some of the \code{models_...} arguments are NOT specified, these additional
-arguments will be passed on directly to all \code{GridSL}
+arguments will be passed on directly to all \code{gridisl}
 modeling functions that are called from this routine,
 e.g., \code{family = "binomial"} can be used to specify the model family. Note that all such arguments
 must be named.}
@@ -76,7 +88,8 @@ must be named.}
 ...
 }
 \description{
-Defines and fits regression models for the propensity scores for censoring, treatment and monitoring.
+Defines and fits estimators for the propensity scores, separately for censoring, treatment and monitoring events.
+When there is right-censoring and/or not intervening on monitoring, only the propensity score model for treatment will be estimated.
 }
 \examples{
 options(stremr.verbose = TRUE)

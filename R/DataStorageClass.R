@@ -636,7 +636,11 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
     ## logical vector of length nrow(data), indicating if the person has not been censored (yet) at current t
     eval_uncensored = function() {
-      return(self$dat.sVar[, list(uncensored = as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat))), .SDcols = self$nodes$Cnodes][["uncensored"]])
+      if (!is.null(self$nodes$Cnodes)) {
+        return(self$dat.sVar[, list(uncensored = as.logical(rowSums(.SD, na.rm = TRUE) == eval(self$noCENScat))), .SDcols = self$nodes$Cnodes][["uncensored"]])
+      } else {
+        return(rep.int(TRUE, nrow(self$dat.sVar)))
+      }
     },
 
     ## integer vector of rows in data for observations (over all time-points) who have not been censored yet at each t

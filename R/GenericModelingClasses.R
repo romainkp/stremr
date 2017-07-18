@@ -28,6 +28,7 @@ newsummarymodel.SDRtransformQModel <- function(regClass, reg, ...) SDRtransformQ
 
 # For evaluating propensity scores under g.star (counterfactual probabilities)
 newsummarymodel.deterministic <- function(regClass, reg, ...) DeterministicBinaryOutcomeModel$new(reg = reg, ...)
+newsummarymodel.NULL <- function(regClass, reg, ...) NULLOutcomeModel$new(reg = reg, ...)
 
 prettyprint_GenericModel <- function(self, reg, all.outvar.bin) {
   print("#----------------------------------------------------------------------------------")
@@ -113,8 +114,6 @@ GenericModel <- R6Class(classname = "GenericModel",
       if (gvars$verbose == 2) prettyprint_GenericModel(self, reg, all.outvar.bin)
       # Factorize the joint into univariate regressions, by dimensionality of the outcome variable (sA_nms):
       for (k_i in 1:self$n_regs) {
-
-        # browser()
 
         if ("ListOfRegressionForms" %in% class(reg)) {
           reg_i <- reg[[k_i]]
