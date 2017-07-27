@@ -559,6 +559,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # needs to know how to add new columns (not backed up yet) TO SAME backup data.table
     backupNodes = function(nodes) {
       nodes <- nodes[!is.null(nodes)]
+      nodes <- nodes[!is.na(nodes)]
       for (node in nodes) CheckVarNameExists(self$dat.sVar, node)
       private$.saveGstarsDT <- self$dat.sVar[, nodes, with = FALSE]
       return(invisible(self))
@@ -566,6 +567,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
     restoreNodes = function(nodes) {
       nodes <- nodes[!is.null(nodes)]
+      nodes <- nodes[!is.na(nodes)]
       for (node in nodes) CheckVarNameExists(self$dat.sVar, node)
       if (is.null(private$.saveGstarsDT)) stop("Nodes in dat.sVar cannot be restored, private$.saveGstarsDT is null!")
       self$dat.sVar[, (nodes) := private$.saveGstarsDT[, nodes, with = FALSE]]

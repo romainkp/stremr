@@ -337,9 +337,9 @@ fitPropensity <- function(OData,
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  if (!is.null(models_CENS)) assert_that(is.ModelStack(models_CENS))
-  if (!is.null(models_TRT)) assert_that(is.ModelStack(models_TRT))
-  if (!is.null(models_MONITOR)) assert_that(is.ModelStack(models_MONITOR))
+  if (!is.null(models_CENS) && !is.na(models_CENS)) assert_that(is.ModelStack(models_CENS))
+  if (!is.null(models_TRT)  && !is.na(models_TRT)) assert_that(is.ModelStack(models_TRT))
+  if (!is.null(models_MONITOR)  && !is.na(models_MONITOR)) assert_that(is.ModelStack(models_MONITOR))
 
   sVar.exprs <- capture.exprs(...)
 
@@ -441,7 +441,7 @@ fitPropensity <- function(OData,
 ## When intervened_NODE contains more than one rule-column, evaluate g^* for each and
 ## multiply to get a single joint probability (at each time point).
 defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
-  if (!is.null(intervened_NODE)) {
+  if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
     # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
@@ -548,8 +548,8 @@ getIPWeights <- function(OData,
     g_preds <- OData$g_holdout_preds
   }
 
-  if (!is.null(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
-  if (!is.null(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
+  if (!is.null(useonly_t_TRT) && !is.na(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
+  if (!is.null(useonly_t_MONITOR) && !is.na(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
 
   # print("CALLING IP WEIGHTS NOW"); print("intervened_TRT"); print(intervened_TRT)
@@ -561,7 +561,7 @@ getIPWeights <- function(OData,
   # (2) gstar.TRT: prob of following one treatment rule; and
   # (3) gstar.MONITOR prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
-  if (is.null(g_preds))
+  if (is.null(g_preds) || is.na(g_preds))
     stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
   if (any(!(c("g0.A", "g0.C", "g0.N") %in% names(g_preds))))
     stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")
