@@ -359,7 +359,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }
-      if (!is.null(subset_exprs)) {
+      if (!is.null(subset_exprs) && !is.na(subset_exprs)) {
         if (is.logical(subset_exprs)) {
           return(which(res & subset_exprs))
         } else if (is.character(subset_exprs)) {
@@ -571,7 +571,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       for (node in nodes) CheckVarNameExists(self$dat.sVar, node)
       if (is.null(private$.saveGstarsDT)) stop("Nodes in dat.sVar cannot be restored, private$.saveGstarsDT is null!")
       self$dat.sVar[, (nodes) := private$.saveGstarsDT[, nodes, with = FALSE]]
-      # self$dat.sVar[, (nodes) := private$.saveGstarsDT[, nodes, with = FALSE], with = FALSE]
       return(invisible(self))
     },
 
@@ -579,9 +578,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     replaceNodesVals = function(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames) {
       for (node_idx in seq_along(nodes_to_repl)) {
         if (length(subset_idx) > 0) {
-        # if (sum(subset_idx) > 0) {
           source_node <- self$dat.sVar[subset_idx, (source_for_repl[node_idx]), with = FALSE][[source_for_repl[node_idx]]]
-          self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := as.numeric(source_node)]
+          self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node]
         }
       }
       return(invisible(self))
