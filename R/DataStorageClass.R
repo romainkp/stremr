@@ -359,6 +359,9 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }
+
+      if (length(subset_exprs)==0L && !is.null(subset_exprs)) return(as.integer(subset_exprs))
+
       if (!is.null(subset_exprs) && !is.na(subset_exprs)) {
         if (is.logical(subset_exprs)) {
           return(which(res & subset_exprs))

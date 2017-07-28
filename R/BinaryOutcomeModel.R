@@ -119,6 +119,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
                                               verbose = gvars$verbose)
 
       } else {
+
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
         private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,

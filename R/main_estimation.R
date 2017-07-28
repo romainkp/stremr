@@ -458,6 +458,7 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     }
     gstar.NODE.obj <- GenericModel$new(reg = regs_list, DataStorageClass.g0 = OData)
     gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
+
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
 
     if (any(is.na(subset_idx)))
