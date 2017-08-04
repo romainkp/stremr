@@ -701,6 +701,7 @@ directIPW <- function(wts_data, OData, weights, trunc_weights = 10^6, return_wts
   resultDT <- data.table(merge(numIPW, denomIPW, by = t_name))
   # resultDT <- data.table(est_name = "DirectBoundedIPW", merge(numIPW, denomIPW, by = t_name))
   resultDT[, ("St.directIPW") := (1 - risk.t[[1]])]
+  resultDT[, "rule.name" := rule.name]
 
   ## STANDARDIZE THE NAME OF THE 'time' VARIABLE
   setnames(resultDT, t_name, "time")
