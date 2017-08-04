@@ -40,8 +40,8 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
 
   ## Use default name for the column with survival estimates
   if (missing(St_name)) {
-    estimator_short <- attr(St_data[[1]], "estimator_short")
-    if (is.null(estimator_short)) estimator_short <- St_data[[1]][["est_name"]]
+    estimator_short <- unique(attr(St_data[[1]], "estimator_short"))
+    if (is.null(estimator_short)) estimator_short <- unique(St_data[[1]][["est_name"]])
     if (is.null(estimator_short)) {
       stop("Cannot automatically detect the name of the column that contains the estimates. Please provide the name using 'St_name = ...'.")
     }
