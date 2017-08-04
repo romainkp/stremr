@@ -717,8 +717,11 @@ directIPW <- function(wts_data, OData, weights, trunc_weights = 10^6, return_wts
   #   setkeyv(resultDT, cols = "time")
   # }
 
-  resultDT <- data.frame(resultDT)
-  attr(resultDT, "estimator_short") <- "directIPW"
+  est_name <- "directIPW"
+  resultDT <- cbind(est_name = est_name, resultDT)
+  # resultDT <- data.frame(resultDT)
+
+  attr(resultDT, "estimator_short") <- est_name
   attr(resultDT, "estimator_long") <- "Direct Bounded IPW"
   attr(resultDT, "trunc_weights") <- trunc_weights
   attr(resultDT, "rule_name") <- rule.name
@@ -821,17 +824,18 @@ survNPMSM <- function(wts_data,
     setkeyv(St_ht_IPAW, cols = "time")
   }
 
-  # St_ht_IPAW <- data.frame(St_ht_IPAW)
+  est_name <- "NPMSM"
+  resultDT <- cbind(est_name = est_name, St_ht_IPAW)
 
-  attr(St_ht_IPAW, "estimator_short") <- "NPMSM"
-  attr(St_ht_IPAW, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
-  attr(St_ht_IPAW, "trunc_weights") <- trunc_weights
-  attr(St_ht_IPAW, "rule_name") <- rule.name
-  attr(St_ht_IPAW, "time") <- St_ht_IPAW[["time"]]
-  # estimates <- St_ht_IPAW
+  attr(resultDT, "estimator_short") <- est_name
+  attr(resultDT, "estimator_long") <- "NPMSM (Non-Parametric Marginal Structural Model) / AKME (IPW Adjusted Kaplan-Meier)"
+  attr(resultDT, "trunc_weights") <- trunc_weights
+  attr(resultDT, "rule_name") <- rule.name
+  attr(resultDT, "time") <- resultDT[["time"]]
+  # estimates <- resultDT
   # names(estimates) <- rule.name
 
-  result_object <- list(estimates = St_ht_IPAW)
+  result_object <- list(estimates = resultDT)
 
   if (return_wts) result_object[["wts_data"]] <- wts_data_used
 
@@ -1131,17 +1135,19 @@ survMSM <- function(wts_data,
   ##  Separate row for each time-point t;
   ##  "estimates" contains IC.St (observation-specific IC estimates for S(t)) saved in a column
   MSM_out <- lapply(rules_TRT, function(rule_name) {
+      est_name <- "MSM"
       estimates <- data.table(time = periods,
                               ht.MSM = hazard.IPAW[[rule_name]],
                               St.MSM = S2.IPAW[[rule_name]],
                               SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
                               rule.name = rep(rule_name, length(periods)))
+      estimates <- cbind(est_name = est_name, estimates)
 
       n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
       for (i in 1:n_ts)
         estimates[i, ("IC.St") := list(list(IC.Var.S.d[[rule_name]][["IC.S"]][i, ]))]
 
-      attr(estimates, "estimator_short") <- "MSM"
+      attr(estimates, "estimator_short") <- est_name
       attr(estimates, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
       attr(estimates, "nID") <- nID
       attr(estimates, "rule_name") <- rule_name

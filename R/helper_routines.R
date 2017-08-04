@@ -37,21 +37,27 @@ if(getRversion() >= "2.15.1") {
 #' @return A long format dataset (\code{tibble}) with risk differences.
 #' @export
 get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data)) {
-  estimator_short <- attr(St_data[[1]], "estimator_short")
 
   ## Use default name for the column with survival estimates
-  if (missing(St_name))
+  if (missing(St_name)) {
+    estimator_short <- attr(St_data[[1]], "estimator_short")
+    if (is.null(estimator_short)) estimator_short <- St_data[[1]][["est_name"]]
+    if (is.null(estimator_short)) {
+      stop("Cannot automatically detect the name of the column that contains the estimates. Please provide the name using 'St_name = ...'.")
+    }
     St_name <- "St." %+% estimator_short
+  }
 
   ## check that the influence curve column exists in all survival datasets
   ## if not, automatically set getSEs to FALSE
   if (!all(unlist(purrr::map( St_data, ~ "IC.St" %in% names(.x) ))))
     getSEs <- FALSE
 
-  nIDs <- attr(St_data[[1]], "nID")
+  # nIDs <- attr(St_data[[1]], "nID")
 
   ## Grab all available follow-up time-points by regimen:
-  time_bydx_obs <- lapply(St_data, function(St) attr(St, "time"))
+  # time_bydx_obs <- lapply(St_data, function(St) attr(St, "time"))
+  time_bydx_obs <- lapply(St_data, function(St) St[["time"]])
 
   ## Find the intersection of follow-up time-points across all regimens
   ## Will evaluate all RDs only at these intersected f-up time-points
@@ -62,7 +68,8 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
     stop("name of the survival estimates column cannot be found in one of the input datasets: " %+% St_name)
 
   tx_idx <- seq_along(St_data)
-  tx_names <- unlist(lapply(St_data, function(St) attr(St, "rule_name")))
+  # tx_names <- unlist(lapply(St_data, function(St) attr(St, "rule_name")))
+  tx_names <- unlist(lapply(St_data, function(St) unique(St[["rule.name"]])))
 
   ## TO EVALUATE RD (dx1 - dx2) IS THE SAME AS EVALUATING S.t_dx2 - S.t_dx1
   eval_RDs_two_tx <- function(dx1, dx2, time_idx, St_name, ...) {
@@ -70,6 +77,11 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
   }
 
   eval_SEs_two_tx <- function(dx1, dx2, time_idx, ...) {
+    nIDs_1 <- length(St_data[[dx1]][["IC.St"]])
+    nIDs_2 <- length(St_data[[dx2]][["IC.St"]])
+    if (nIDs_1 != nIDs_2)
+      stop("Cannot evaluate RDs from two ICs for dx1 and dx2, since their lengths differ: " %+% nIDs_1 %+% " vs. " %+% nIDs_2)
+    nIDs <- nIDs_1
     sqrt(sum(( St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] )^2) / nIDs^2)
   }
 
