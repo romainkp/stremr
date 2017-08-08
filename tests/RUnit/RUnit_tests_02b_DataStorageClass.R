@@ -15,6 +15,13 @@ test.DataStorageClass <- function() {
   gform_TRT = "continA ~ CVD + highA1c + N.tminus1"
   gform_MONITOR <- "N ~ 1"
 
+  ## testing the printing functionality and testing the functionality to obtain the data
+  OData
+  print(OData)
+  OData$print()
+  intputDT <- get_data(OData)
+  intputDT[]
+
   # testing various methods of DataStorageClass:
   OData$addYnode(OdataNoCENS[["Y.tplus1"]])
   checkException(OData$get.outvar(var = "blah"))

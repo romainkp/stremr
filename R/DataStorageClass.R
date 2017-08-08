@@ -2,6 +2,16 @@
   var$get.dat.sVar(indx)
 }
 
+print.DataStorageClass <- function(object){
+  object$print()
+}
+
+#' Extract input data from DataStorageClass
+#'
+#' @param data Object of class \code{DataStorageClass} (returned by calling \code{importData} function).
+#' @export
+get_data = function(data) return(data$dat.sVar)
+
 #-----------------------------------------------------------------------------
 # DataStorageClass CLASS STRUCTURE:
 #-----------------------------------------------------------------------------
@@ -769,6 +779,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         self$H2Oframe_ID <- h2o::h2o.getId(H2Oframe)
       }
       return(invisible(H2Oframe))
+    },
+    print = function(){
+      cat("\nThis R6 object (class 'DataStorageClass') stores the input data as 'data.table'.",
+          "\nTo access the data, use the syntax 'object_name$dat.sVar' or 'get_data(object_name)'.",
+          "\nTo modify the input column(s), use modify-by-reference ':=' syntax of the data.table",
+          "\nor call importData() for a new, modified input.",
+          "\nPlease see ?data.table for more info.\n")
+      print(self$dat.sVar)
     }
   ),
 
