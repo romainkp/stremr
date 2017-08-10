@@ -61,6 +61,9 @@ r_github_packages:
   - jimhester/covr
   - schloerke/travisDrat
 
+r_packages:
+  - covr
+
 # - osofr/gridisl
 # r_packages:
 #   - ggiraph
@@ -78,7 +81,10 @@ env:
    - CRAN: http://cran.rstudio.com
 
 after_success:
-  - Rscript -e 'covr::coveralls()'
+  - Rscript -e 'covr::codecov()'
+
+# after_success:
+#   - Rscript -e 'covr::coveralls()'
 
 # - Rscript -e "packagedocs::deploy_travis()"
 # - Rscript -e "travisDrat::deploy_drat()"
