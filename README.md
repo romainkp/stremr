@@ -129,6 +129,7 @@ Load the data:
 ```R
 require("stremr")
 require("data.table")
+require("magrittr")
 data(OdataNoCENS)
 OdataDT <- as.data.table(OdataNoCENS, key=c(ID, t))
 ```
@@ -139,22 +140,30 @@ OdataDT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by 
 OdataDT[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]
 ```
 
-Import input data into `stremr` object `DataStorageClass` and define relevant covariates:
-```R
-OData <- importData(OdataDT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "N.tminus1"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1")
-```
-
 Define counterfactual exposures. In this example we define one intervention as always treated  and another as never treated. Such intervention can be defined conditionally on other variables (dynamic intervention). Similarly, one can define the intervention as a probability that the counterfactual exposure is 1 at each time-point `t` (for stochastic interventions).
 ```R
 OdataDT[, ("TI.set1") := 1L]
 OdataDT[, ("TI.set0") := 0L]
 ```
 
-Regressions for modeling the propensity scores for censoring (`CENS`), exposure (`TRT`) and monitoring (`MONITOR`). By default, each of these propensity scores is fit with a common model that pools across all available time points (smoothing over time).
+Import input data into `stremr` object `DataStorageClass` and define relevant covariates:
 ```R
-gform_CENS <- "C + TI + N ~ highA1c + lastNat1"
+OData <- importData(OdataDT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "N.tminus1"), CENS = "C", TRT = "TI", OUTCOME = "Y.tplus1")
+```
+
+Once the data has been imported, it is still possible to inspect it and modify it, as shown in this example:
+```R
+print(OData)
+get_data(OData)[, ("TI.set0") := 1L]
+print(OData)
+get_data(OData)[, ("TI.set0") := 0L]
+print(OData)
+```
+
+Regressions for modeling the propensity scores for censoring (`CENS`) and exposure (`TRT`). By default, each of these propensity scores is fit with a common model that pools across all available time points (smoothing over all time-points).
+```R
+gform_CENS <- "C ~ highA1c + lastNat1"
 gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
-gform_MONITOR <- "N ~ 1"
 ```
 
 Stratification, that is, fitting separate models for different time-points, is enabled with logical expressions in arguments `stratify_...` (see `?fitPropensity`). For example, the logical expression below states that we want to fit the censoring mechanism with a separate model for time point 16, while pooling with a common model fit over time-points 0 to 15. Any logical expression can be used to define such stratified modeling. This can be similarly applied to modeling the exposure mechanism (`stratify_TRT`) and the monitoring mechanism (`stratify_MONITOR`).
@@ -164,31 +173,89 @@ stratify_CENS <- list(C=c("t < 16", "t == 16"))
 
 Fit the propensity scores for censoring, exposure and monitoring:
 ```R
-OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR, stratify_CENS = stratify_CENS)
+OData <- fitPropensity(OData,
+                       gform_CENS = gform_CENS,
+                       gform_TRT = gform_TRT,
+                       stratify_CENS = stratify_CENS)
 ```
 
-<a name="survNPMSM"></a>Estimate survival based on non-parametric MSM (IPTW-ADJUSTED KM):
+<a name="survNPMSM"></a>Estimate survival based on non-parametric/saturated IPW-MSM (IPTW-ADJUSTED KM):
 ```R
-require("magrittr")
 AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
              survNPMSM(OData) %$%
              estimates
-AKME.St.1
 ```
+
+The result is a `data.table` that contains the estimates of the counterfactual survival for each time-point, for the treatment regimen `TI.set1`. In this particular case, the column `St.NPMSM` contains the survival estimates for IPW-NPMSM and the first row represents the estimated proportion alive at the end of the first cycle / time-point. Note that the column `St.KM` 
+contains the unadjusted/crude estimates of survival (should be equivalent to 
+standard Kaplan-Meier estimates for most cases).
+```R
+AKME.St.1[]
+    est_name time   sum_Y_IPW sum_all_IPAW    ht.NPMSM  St.NPMSM       ht.KM     St.KM rule.name
+ 1:    NPMSM    0   1.6610718     38.13840 0.043553792 0.9564462 0.047337278 0.9526627   TI.set1
+ 2:    NPMSM    1   0.8070748     48.10323 0.016777974 0.9403990 0.018633540 0.9349112   TI.set1
+ 3:    NPMSM    2   1.0721508     65.59519 0.016344959 0.9250282 0.012658228 0.9230769   TI.set1
+ 4:    NPMSM    3   0.0000000     91.16229 0.000000000 0.9250282 0.000000000 0.9230769   TI.set1
+ 5:    NPMSM    4   3.4232039    132.03450 0.025926586 0.9010454 0.025641026 0.8994083   TI.set1
+ 6:    NPMSM    5   2.7647724    182.07477 0.015184819 0.8873632 0.026315789 0.8757396   TI.set1
+ 7:    NPMSM    6   0.6840395    257.65098 0.002654907 0.8850073 0.013513514 0.8639053   TI.set1
+ 8:    NPMSM    7   7.2912160    375.48517 0.019418120 0.8678221 0.013698630 0.8520710   TI.set1
+ 9:    NPMSM    8  11.8316412    540.78252 0.021878742 0.8488353 0.034722222 0.8224852   TI.set1
+10:    NPMSM    9   7.8472558    766.65939 0.010235648 0.8401469 0.007194245 0.8165680   TI.set1
+11:    NPMSM   10   0.0000000   1131.74617 0.000000000 0.8401469 0.000000000 0.8165680   TI.set1
+12:    NPMSM   11  19.6818394   1698.64910 0.011586760 0.8304123 0.014492754 0.8047337   TI.set1
+13:    NPMSM   12 112.5585923   2500.60892 0.045012473 0.7930334 0.044117647 0.7692308   TI.set1
+14:    NPMSM   13  76.8430786   3426.37023 0.022426963 0.7752481 0.015384615 0.7573964   TI.set1
+15:    NPMSM   14   0.0000000   4968.01401 0.000000000 0.7752481 0.000000000 0.7573964   TI.set1
+16:    NPMSM   15 398.1827812   7488.93955 0.053169448 0.7340285 0.046875000 0.7218935   TI.set1
+17:    NPMSM   16   0.0000000  10147.78922 0.000000000 0.7340285 0.000000000 0.7218935   TI.set1
+```
+
 
 <a name="directIPW"></a>Estimate survival with bounded IPW:
 ```R
 IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
-            directIPW(OData)
-IPW.St.1[]
+            directIPW(OData) %$%
+            estimates
 ```
+
+As before, the result is a `data.table` with estimates of the counterfactual survival for each time-point, for the treatment regimen `TI.set1`, located in column `St.directIPW`.
+
+```R
+IPW.St.1[]
+     est_name time   sum_Y_IPW    sum_IPW St.directIPW rule.name
+ 1: directIPW    0    9.828827   225.6710    0.9564462   TI.set1
+ 2: directIPW    1   14.841714   308.6067    0.9519073   TI.set1
+ 3: directIPW    2   21.627479   430.0012    0.9497037   TI.set1
+ 4: directIPW    3   21.627479   606.0012    0.9643112   TI.set1
+ 5: directIPW    4   43.571094   868.0025    0.9498030   TI.set1
+ 6: directIPW    5   61.760385  1241.4314    0.9502507   TI.set1
+ 7: directIPW    6   66.382274  1802.6454    0.9631751   TI.set1
+ 8: directIPW    7  116.322109  2638.1985    0.9559085   TI.set1
+ 9: directIPW    8  198.486284  3871.7562    0.9487348   TI.set1
+10: directIPW    9  254.941362  5714.0214    0.9553832   TI.set1
+11: directIPW   10  254.941362  8456.0006    0.9698508   TI.set1
+12: directIPW   11  397.563386 12563.9928    0.9683569   TI.set1
+13: directIPW   12 1225.200094 18784.3937    0.9347756   TI.set1
+14: directIPW   13 1816.300699 27581.8941    0.9341488   TI.set1
+15: directIPW   14 1816.300699 40628.9102    0.9552954   TI.set1
+16: directIPW   15 4927.103677 60323.6409    0.9183222   TI.set1
+17: directIPW   16 4927.103677 88105.7038    0.9440774   TI.set1
+```
+
 
 <a name="survMSM"></a>Estimate hazard with IPW-MSM then map into survival estimate. Using two regimens and smoothing over two intervals of time-points:
 ```R
 wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "TI.set1", rule_name = "TI1")
 wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "TI.set0", rule_name = "TI0")
 survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1,)
-survMSM_res$St
+```
+
+In this particular case the output is a little different, with separate survival tables for each regimen. The output of `survMSM` is hence a list, 
+with one item for each counterfactual treatment regimen considered during the estimation. The actual estimates of survival are located in the column(s) `St.MSM`. Note that `survMSM` output also contains the standard error estimates of survival at each time-point in column(s) `SE.MSM`. Finally, the output table also contains the subject-specific estimates of the influence-curve (influence-function) in column(s) `IC.St`. These influence function estimates can be used for deriving the inference for the estimates of counterfactual risk-differences (see function `get_RDs` for more information).
+```R
+survMSM_res[["TI0"]][["estimates"]]
+survMSM_res[["TI1"]][["estimates"]]
 ```
 
 <a name="GCOMPTMLE"></a>
@@ -198,12 +265,13 @@ Define time-points of interest, regression formulas and software to be used for 
 ```R
 t.surv <- c(0:15)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-params = list(fit.package = "speedglm", fit.algorithm = "glm")
+params = defModel(estimator = "speedglm__glm")
 ```
 
 G-Computation (pooled):
 ```R
 gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+gcomp_est[]
 ```
 
 Targeted Maximum Likelihood Estimation (TMLE) (stratified):
@@ -215,8 +283,7 @@ tmle_est[]
 To parallelize estimation over several time-points (`t.surv`) for either GCOMP or TMLE use argument `parallel = TRUE`:
 ```R
 require("doParallel")
-registerDoParallel(cores = 40)
-data.table::setthreads(1)
+registerDoParallel(cores = parallel::detectCores())
 tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE, parallel = TRUE)
 ```
 
@@ -225,7 +292,7 @@ tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms =
 
 Nuisance parameters can be modeled with machine learning R packages `xgboost` and `h2o` (*GLM*, *Regularized GLM* *Distributed Random Forest (RF)*, *Extreme Gradient Boosting (GBM)*, *Deep Neural Nets*). The package provides simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits.
 
-For less error-prone fitting with `h2o` (especially if using `estimator="h2o__glm"`, please install this version of `h2o` R package:
+For less error-prone training with `h2o` (especially if using `estimator="h2o__glm"`, please install this version of `h2o` R package:
 
 ```R
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
@@ -243,14 +310,16 @@ if (! ("utils" %in% rownames(installed.packages()))) { install.packages("utils")
 install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))
 ```
 
-To set-up `stremr` so that it performs any model fitting with distributed Random Forest just set the global options `estimator = "h2o__randomForest"`:
+Use `stremr` to estimate the exposure / treatment propensity model with h2o's Random Forest (`models_TRT` argument), while the rest of the propensity scores (censoring/monitoring) are estimated with `speedglm` (setting the global option `estimator = "speedglm__glm"` for the default estimator):
 ```R
-set_all_stremr_options(estimator = "h2o__randomForest")
-
 require("h2o")
+set_all_stremr_options(estimator = "speedglm__glm")
 h2o::h2o.init(nthreads = -1)
-
-OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR, stratify_CENS = stratify_CENS)
+OData <- fitPropensity(OData,
+                       gform_CENS = gform_CENS,
+                       gform_TRT = gform_TRT,
+                       models_TRT = defModel(estimator = "h2o__randomForest", ntrees = 20),
+                       stratify_CENS = stratify_CENS)
 ```
 
 Other available algorithms are Gradient Boosting Machines (`estimator = "h2o__gbm"`) or Extreme Gradient Boosting (`estimator = "xgboost__gbm"`), distributed GLM (including LASSO and Ridge) (`estimator = "h2o__glm"` or `estimator = "xgboost__glm"`) and Deep Neural Nets (`estimator = "h2o__deeplearning"`).
