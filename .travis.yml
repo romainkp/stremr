@@ -80,8 +80,8 @@ env:
  global:
    - CRAN: http://cran.rstudio.com
 
-after_success:
-  - Rscript -e 'library(covr); codecov()'
+# after_success:
+#   - Rscript -e 'library(covr); codecov()'
 
 # after_success:
 #   - Rscript -e 'covr::coveralls()'
