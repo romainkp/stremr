@@ -10,7 +10,7 @@ ggsurv(estimates, CI = TRUE, CI_line = FALSE, plot_cens = TRUE,
   size_ci = size_est, size_pt = size_est + 0.3, cens_size = 2,
   cens_shape = 3, back_white = TRUE, xlab = "Time", ylab = "Survival",
   main = "", legend_pos = "right", surv_name = "St." \%+\%
-  estimates[[1L]][["est_name"]][1L], SE_name = "St." \%+\%
+  estimates[[1L]][["est_name"]][1L], SE_name = "SE." \%+\%
   estimates[[1L]][["est_name"]][1L], order_legend = TRUE, t_int_sel = NULL,
   ymin = NULL, ...)
 }

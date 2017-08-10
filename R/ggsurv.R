@@ -83,7 +83,7 @@ ggsurv <- function(
   # surv_name = "St." %+% attr(estimates[[1]], "estimator_short"),
   # SE_name = "SE." %+% attr(estimates[[1]], "estimator_short"),
   surv_name = "St." %+% estimates[[1L]][["est_name"]][1L],
-  SE_name = "St." %+% estimates[[1L]][["est_name"]][1L],
+  SE_name = "SE." %+% estimates[[1L]][["est_name"]][1L],
   order_legend = TRUE,
   t_int_sel = NULL,
   ymin = NULL,
