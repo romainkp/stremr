@@ -56,10 +56,10 @@ test_that("readme examples run as expected without errors", {
   params = defModel(estimator = "speedglm__glm")
 
   gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
-  gcomp_est[]
+  gcomp_est$estimates[]
 
   tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
-  tmle_est[]
+  tmle_est$estimates[]
 
   # require("doParallel")
   # registerDoParallel(cores = parallel::detectCores())

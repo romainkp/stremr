@@ -271,13 +271,47 @@ params = defModel(estimator = "speedglm__glm")
 G-Computation (pooled):
 ```R
 gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
-gcomp_est[]
+gcomp_est$estimates[]
+    est_name time  St.GCOMP St.TMLE ALLsuccessTMLE nFailedUpdates   type              IC.St fW_fit rule.name
+ 1:    GCOMP    0 0.9837583      NA          FALSE              1 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 2:    GCOMP    1 0.9699022      NA          FALSE              2 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 3:    GCOMP    2 0.9537822      NA          FALSE              3 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 4:    GCOMP    3 0.9536816      NA          FALSE              4 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 5:    GCOMP    4 0.9435752      NA          FALSE              5 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 6:    GCOMP    5 0.9365108      NA          FALSE              6 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 7:    GCOMP    6 0.9301773      NA          FALSE              7 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 8:    GCOMP    7 0.9220874      NA          FALSE              8 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+ 9:    GCOMP    8 0.9041587      NA          FALSE              9 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+10:    GCOMP    9 0.8985005      NA          FALSE             10 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+11:    GCOMP   10 0.8921008      NA          FALSE             11 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+12:    GCOMP   11 0.8824520      NA          FALSE             12 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+13:    GCOMP   12 0.8722062      NA          FALSE             13 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+14:    GCOMP   13 0.8629417      NA          FALSE             14 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+15:    GCOMP   14 0.8535260      NA          FALSE             15 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
+16:    GCOMP   15 0.8308013      NA          FALSE             16 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
 ```
 
 Targeted Maximum Likelihood Estimation (TMLE) (stratified):
 ```R
 tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
-tmle_est[]
+tmle_est$estimates[]
+    est_name time St.GCOMP   St.TMLE ALLsuccessTMLE nFailedUpdates       type     SE.TMLE
+ 1:     TMLE    0       NA 0.9841239           TRUE              0 stratified 0.003437779
+ 2:     TMLE    1       NA 0.9708251           TRUE              0 stratified 0.004487063
+ 3:     TMLE    2       NA 0.9560193           TRUE              0 stratified 0.006488542
+ 4:     TMLE    3       NA 0.9542215           TRUE              0 stratified 0.006523122
+ 5:     TMLE    4       NA 0.9315179           TRUE              0 stratified 0.013681747
+ 6:     TMLE    5       NA 0.9156610           TRUE              0 stratified 0.018556380
+ 7:     TMLE    6       NA 0.9126152           TRUE              0 stratified 0.018832465
+ 8:     TMLE    7       NA 0.8939666           TRUE              0 stratified 0.039208992
+ 9:     TMLE    8       NA 0.8714242           TRUE              0 stratified 0.064389208
+10:     TMLE    9       NA 0.8637853           TRUE              0 stratified 0.084159099
+11:     TMLE   10       NA 0.8566241           TRUE              0 stratified 0.086498972
+12:     TMLE   11       NA 0.8535889           TRUE              0 stratified 0.162073528
+13:     TMLE   12       NA 0.8114768           TRUE              0 stratified 0.424281803
+14:     TMLE   13       NA 0.7998705           TRUE              0 stratified 0.583413428
+15:     TMLE   14       NA 0.7926579           TRUE              0 stratified 0.598088468
+16:     TMLE   15       NA 0.7926579           TRUE              0 stratified 1.590704888
 ```
 
 To parallelize estimation over several time-points (`t.surv`) for either GCOMP or TMLE use argument `parallel = TRUE`:
