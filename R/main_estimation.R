@@ -261,15 +261,24 @@ importData <- function(data,
 #' @param gform_TRT Specify the regression formula for the treatment mechanism, in the format "TRTVar1 + TRTVar2 ~ Predictor1 + Predictor2".
 #' @param gform_MONITOR  Specify the regression formula for the treatment mechanism, in the format "TRTVar1 + TRTVar2 ~ Predictor1 + Predictor2".
 #' Leave as missing for data with no monitoring events or when not intervening on monitoring.
-#' @param stratify_CENS Define strata(s) for censoring model(s).
-#' Must be a list of logical expressions (input the expression as character strings).
-#' When missing (default), the censoring model(s) are fit by pooling all available observations, across all time-points.
+#' @param stratify_CENS Define strata(s) for each censoring variable from \code{gform_CENS}.
+#' Must be named list containing the logical expressions (the logical expressions must be provided as character strings).
+#' When missing (default), all censoring models will be fit by pooling all available observations, across all time-points.
+#' When used the censoring models in \code{gform_CENS} will be trained separately on each strata (defined by separate logical expressions).
+#' If the \code{gform_CENS} contains more than one censoring variable
+#' then this argumement (\code{stratify_CENS}) must provide separate stratas for each censoring variable or be left as missing.
+#' For example, when \code{gform_CENS}="CensVar1 + CensVar2 ~ Predictor1 + Predictor2", this argument should be a list of length two,
+#' with list items named as "CensVar1" and "CensVar2". The expressions in stratify_CENS[["CensVar1"]] define the training stratas
+#' for censoring variable \code{CensVar1}, while the expressions in stratify_CENS[["CensVar1"]] define the training stratas
+#' for \code{CensVar2}. See additional examples below.
 #' @param stratify_TRT Define strata(s) for treatment model(s).
 #' Must be a list of logical expressions (input the expression as character strings).
 #' When missing (default), the treatment model(s) are fit by pooling all available (uncensored) observations, across all time-points.
+#' The rules are the same as for \code{stratify_CENS}.
 #' @param stratify_MONITOR Define strata(s) for monitoring model(s).
 #' Must be a list of logical expressions (input the expression as character strings).
 #' When missing (default), the monitoring model is fit by pooling all available (uncensored) observations, across all time-points.
+#' The rules are the same as for \code{stratify_CENS}.
 #' @param models_CENS Optional parameter specifying the models for fitting the censoring mechanism(s) with
 #' \code{gridisl} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
