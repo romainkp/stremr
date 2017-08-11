@@ -27,7 +27,6 @@ Depends:
     R (>= 3.2.1)
 Imports:
     assertthat,
-    covr,
     data.table,
     dplyr,
     ggplot2,
