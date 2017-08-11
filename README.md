@@ -252,7 +252,7 @@ survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1
 ```
 
 In this particular case the output is a little different, with separate survival tables for each regimen. The output of `survMSM` is hence a list, 
-with one item for each counterfactual treatment regimen considered during the estimation. The actual estimates of survival are located in the column(s) `St.MSM`. Note that `survMSM` output also contains the standard error estimates of survival at each time-point in column(s) `SE.MSM`. Finally, the output table also contains the subject-specific estimates of the influence-curve (influence-function) in column(s) `IC.St`. These influence function estimates can be used for deriving the inference for the estimates of counterfactual risk-differences (see function `get_RDs` for more information).
+with one item for each counterfactual treatment regimen considered during the estimation. The actual estimates of survival are located in the column(s) `St.MSM`. Note that `survMSM` output also contains the standard error estimates of survival at each time-point in column(s) `SE.MSM`. Finally, the output table also contains the subject-specific estimates of the influence-curve (influence-function) in column(s) `IC.St`. These influence function estimates can be used for constructing the confidence intervals of the counterfactual risk-differences for two contrasting treatments (see help for `get_RDs` function for more information).
 ```R
 survMSM_res[["TI0"]][["estimates"]]
 survMSM_res[["TI1"]][["estimates"]]
@@ -268,9 +268,13 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 params = defModel(estimator = "speedglm__glm")
 ```
 
-G-Computation (pooled):
+To run iterative means substitution estimator (G-Computation), where all at risk observations are `pooled` for fitting each outcome regression (Q-regression):
 ```R
 gcomp_est <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+```
+
+The output table of `fit_GCOMP` contains the following information, with the column `St.GCOMP` containing the survival estimates for each time period:
+```R
 gcomp_est$estimates[]
     est_name time  St.GCOMP St.TMLE ALLsuccessTMLE nFailedUpdates   type              IC.St fW_fit rule.name
  1:    GCOMP    0 0.9837583      NA          FALSE              1 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
@@ -291,9 +295,13 @@ gcomp_est$estimates[]
 16:    GCOMP   15 0.8308013      NA          FALSE             16 pooled NA,NA,NA,NA,NA,NA,   NULL   TI.set1
 ```
 
-Targeted Maximum Likelihood Estimation (TMLE) (stratified):
+To run the longitudinal `long format` Targeted Minimum-Loss Estimation (TMLE), `stratified` by rule-followers for fitting each outcome regression (Q-regression):
 ```R
 tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1", Qforms = Qforms, models = params, stratifyQ_by_rule = TRUE)
+```
+
+The output table of `fit_TMLE` contains the following information, with the column `St.TMLE` containing the survival estimates for each time period. In addition, the column `SE.TMLE` contains the standard error estimates and the column and the column `IC.St` contains the subject-specific estimates of the efficient influence curve. The letter estimates are useful for constructing the confidence intervals of risk differences for two contrasting treatments (see help for `get_RDs` function for more information).
+```R
 tmle_est$estimates[]
     est_name time St.GCOMP   St.TMLE ALLsuccessTMLE nFailedUpdates       type     SE.TMLE
  1:     TMLE    0       NA 0.9841239           TRUE              0 stratified 0.003437779

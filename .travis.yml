@@ -81,9 +81,9 @@ env:
    - CRAN: http://cran.rstudio.com
 
 after_success:
-  - travis_wait Rscript -e 'library(covr); coveralls()'
+  - travis_wait Rscript -e 'library(covr); codecov()'
 
-# - travis_wait Rscript -e 'library(covr); codecov()'
+# - travis_wait Rscript -e 'library(covr); coveralls()'
 # - Rscript -e "packagedocs::deploy_travis()"
 # - Rscript -e "travisDrat::deploy_drat()"
 
