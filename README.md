@@ -4,7 +4,8 @@ stremr
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/stremr)](https://CRAN.R-project.org/package=stremr)
 [![](https://cranlogs.r-pkg.org/badges/stremr)](https://CRAN.R-project.org/package=stremr)
 [![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
-[![Coverage Status](https://coveralls.io/repos/github/osofr/stremr/badge.svg)](https://coveralls.io/github/osofr/stremr)
+[![codecov](https://codecov.io/gh/osofr/stremr/branch/master/graph/badge.svg)](https://codecov.io/gh/osofr/stremr)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 
 Analysis of longitudinal data, with continuous or time-to-event (binary) outcome.
 The package implements several estimators of the expected counterfactual outcome under static, dynamic or stochastic interventions over multiple time-points. Adjusts for *measured* time-varying confounding and informative right-censoring.
