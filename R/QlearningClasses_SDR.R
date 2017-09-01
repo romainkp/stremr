@@ -63,10 +63,10 @@ eval_weights_k = function(data, ignore_tmin = NULL, ignore_max = NULL, reverse_w
 
 ## ---------------------------------------------------------------------
 ## R6 class for fitting SDR procedure
-## Inherits from \code{GenericModel}.
+## Inherits from \code{ModelGeneric}.
 ## ---------------------------------------------------------------------
 SDRModel <- R6Class(classname = "SDRModel",
-  inherit = GenericModel,
+  inherit = ModelGeneric,
   portable = TRUE,
   class = TRUE,
   public = list(
@@ -159,10 +159,10 @@ SDRModel <- R6Class(classname = "SDRModel",
 ## ---------------------------------------------------------------------
 ## R6 Class for Sequentially Double Robustness Targeting Procedure
 ## Internal implementation of Q-learning functionality.
-## Inherits from \code{QlearnModel} R6 Class.
+## Inherits from \code{ModelQlearn} R6 Class.
 ## ---------------------------------------------------------------------
-SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
-  inherit = QlearnModel,
+SDRModelQlearn  <- R6Class(classname = "SDRModelQlearn",
+  inherit = ModelQlearn,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,

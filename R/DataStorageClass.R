@@ -81,154 +81,154 @@ trim_rows_after_tmax <- function(OData, tmax = OData$max.t) {
 # -----------------------------------------------------------------------------
 # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
 # -----------------------------------------------------------------------------
-fast.load.to.H2O <- function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
-  tmpf <- tempfile(fileext = ".csv")
-  assertthat::assert_that(is.data.table(dat.sVar))
+# fast.load.to.H2O <- function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
+#   tmpf <- tempfile(fileext = ".csv")
+#   assertthat::assert_that(is.data.table(dat.sVar))
 
-  # devDTvs <- exists("fwrite", where = "package:data.table")
+#   # devDTvs <- exists("fwrite", where = "package:data.table")
 
-  if (!use_DTfwrite) {
-    message("For optimal performance please install the most recent version of data.table package.")
-    H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
-  } else {
-    data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
+#   if (!use_DTfwrite) {
+#     message("For optimal performance please install the most recent version of data.table package.")
+#     H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
+#   } else {
+#     data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
 
-    types <- sapply(dat.sVar, class)
-    types <- gsub("integer64", "numeric", types)
-    types <- gsub("integer", "numeric", types)
-    types <- gsub("double", "numeric", types)
-    types <- gsub("complex", "numeric", types)
-    types <- gsub("logical", "enum", types)
-    types <- gsub("factor", "enum", types)
-    types <- gsub("character", "string", types)
-    types <- gsub("Date", "Time", types)
+#     types <- sapply(dat.sVar, class)
+#     types <- gsub("integer64", "numeric", types)
+#     types <- gsub("integer", "numeric", types)
+#     types <- gsub("double", "numeric", types)
+#     types <- gsub("complex", "numeric", types)
+#     types <- gsub("logical", "enum", types)
+#     types <- gsub("factor", "enum", types)
+#     types <- gsub("character", "string", types)
+#     types <- gsub("Date", "Time", types)
 
-    # replace all irregular characters to conform with destination_frame regular exprs format:
-    tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
-    tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
-    tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+#     # replace all irregular characters to conform with destination_frame regular exprs format:
+#     tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
+#     tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
+#     tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
 
-    H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
-                                        header = TRUE,
-                                        col.types = types,
-                                        na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
-                                        destination_frame = destination_frame)
+#     H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
+#                                         header = TRUE,
+#                                         col.types = types,
+#                                         na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
+#                                         destination_frame = destination_frame)
 
-    file.remove(tmpf)
-  }
-  return(invisible(H2O.dat.sVar))
-}
+#     file.remove(tmpf)
+#   }
+#   return(invisible(H2O.dat.sVar))
+# }
 
 ## ---------------------------------------------------------------------
 # Detecting vector types: sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 ## ---------------------------------------------------------------------
-detect.col.types <- function(sVar_mat){
-  detect_vec_type <- function(vec) {
-    vec_nomiss <- vec[!gvars$misfun(vec)]
-    nvals <- data.table::uniqueN(vec_nomiss)
-    if (nvals <= 2L) {
-      sVartypes$bin
-    } else if ((nvals <= maxncats) && (is.integerish(vec_nomiss))) {
-      sVartypes$cat
-    } else {
-      sVartypes$cont
-    }
-  }
+# detect.col.types <- function(sVar_mat){
+#   detect_vec_type <- function(vec) {
+#     vec_nomiss <- vec[!gvars$misfun(vec)]
+#     nvals <- data.table::uniqueN(vec_nomiss)
+#     if (nvals <= 2L) {
+#       sVartypes$bin
+#     } else if ((nvals <= maxncats) && (is.integerish(vec_nomiss))) {
+#       sVartypes$cat
+#     } else {
+#       sVartypes$cont
+#     }
+#   }
 
-  assert_that(is.integerish(stremrOptions("maxncats")) && stremrOptions("maxncats") > 1)
+#   assert_that(is.integerish(stremrOptions("maxncats")) && stremrOptions("maxncats") > 1)
 
-  maxncats <- stremrOptions("maxncats")
-  sVartypes <- gvars$sVartypes
-  if (is.matrix(sVar_mat)) { # for matrix:
-    return(as.list(apply(sVar_mat, 2, detect_vec_type)))
-  } else if (is.data.table(sVar_mat)) { # for data.table:
-    return(as.list(sVar_mat[, lapply(.SD, detect_vec_type)]))
-  } else {
-    stop("unrecognized sVar_mat class: " %+% class(sVar_mat))
-  }
-}
+#   maxncats <- stremrOptions("maxncats")
+#   sVartypes <- gvars$sVartypes
+#   if (is.matrix(sVar_mat)) { # for matrix:
+#     return(as.list(apply(sVar_mat, 2, detect_vec_type)))
+#   } else if (is.data.table(sVar_mat)) { # for data.table:
+#     return(as.list(sVar_mat[, lapply(.SD, detect_vec_type)]))
+#   } else {
+#     stop("unrecognized sVar_mat class: " %+% class(sVar_mat))
+#   }
+# }
 
-## ---------------------------------------------------------------------
-# Normalizing / Defining bin intervals / Converting contin. to ordinal / Converting ordinal to bin indicators
-## ---------------------------------------------------------------------
-normalize <- function(x) {
-  if (abs(max(x) - min(x)) > gvars$tolerr) { # Normalize to 0-1 only when x is not constant
-    return((x - min(x)) / (max(x) - min(x)))
-  } else {  # What is the thing to do when x constant? Set to abs(x), abs(x)/x or 0???
-    return(x)
-  }
-}
-# Define bin cutt-offs for continuous x:
-define.intervals <- function(x, nbins, bin_bymass, bin_bydhist, max_nperbin) {
-  x <- x[!gvars$misfun(x)]  # remove missing vals
-  nvals <- length(unique(x))
-  if (is.na(nbins)) nbins <- as.integer(length(x) / max_nperbin)
-  # if nbins is too high, for ordinal, set nbins to n unique obs and cancel quantile based interval defns
-  if (nvals < nbins) {
-    nbins <- nvals
-    bin_bymass <- FALSE
-  }
-  if (abs(max(x) - min(x)) > gvars$tolerr) {  # when x is not constant
-    if ((bin_bymass) & !is.null(max_nperbin)) {
-      if ((length(x) / max_nperbin) > nbins) nbins <- as.integer(length(x) / max_nperbin)
-    }
-    intvec <- seq.int(from = min(x), to = max(x) + 1, length.out = (nbins + 1)) # interval type 1: bin x by equal length intervals of 0-1
-  } else {  # when x is constant, force the smallest possible interval to be at least [0,1]
-    intvec <- seq.int(from = min(0L, min(x)), to = max(1L, max(x)), length.out = (nbins + 1))
-  }
-  if (bin_bymass) {
-    intvec <- quantile(x = x, probs = normalize(intvec)) # interval type 2: bin x by mass (quantiles of 0-1 intvec as probs)
-    intvec[1] <- intvec[1] - 0.01
-    intvec[length(intvec)] <- intvec[length(intvec)] + 0.01
-  } else if (bin_bydhist) {
-    stop("... binning continuous variable: dhist bin definitions are no longer available...")
-    # intvec <- dhist(x, plot = FALSE, nbins = nbins)$xbr
-    # intvec[1] <- intvec[1] - 0.01
-    # intvec[length(intvec)] <- intvec[length(intvec)] + 0.01
-  }
-  # adding -Inf & +Inf as leftmost & rightmost cutoff points to make sure all future data points end up in one of the intervals:
-  intvec <- c(min(intvec)-1000L, intvec, max(intvec)+1000L)
-  return(intvec)
-}
-# Turn any x into ordinal (1, 2, 3, ..., nbins) for a given interval cutoffs (length(intervals)=nbins+1)
-make.ordinal <- function(x, intervals) findInterval(x = x, vec = intervals, rightmost.closed = TRUE)
-# Make dummy indicators for ordinal x (sA[j]) Approach used: creates B_j that jumps to 1 only once and stays 1 (degenerate) excludes reference category (last)
-make.bins_mtx_1 <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins) {
-  n <- length(x.ordinal)
-  new.cats <- 1:nbins
-  dummies_mat <- matrix(1L, nrow = n, ncol = length(new.cats))
-  for(cat in new.cats[-length(new.cats)]) {
-    subset_Bj0 <- x.ordinal > levels[cat]
-    dummies_mat[subset_Bj0, cat] <- 0L
-    subset_Bjmiss <- x.ordinal < levels[cat]
-    dummies_mat[subset_Bjmiss, cat] <- gvars$misval
-  }
-  dummies_mat[, new.cats[length(new.cats)]] <- gvars$misval
-  colnames(dummies_mat) <- bin.nms
-  return(dummies_mat)
-}
+# ## ---------------------------------------------------------------------
+# # Normalizing / Defining bin intervals / Converting contin. to ordinal / Converting ordinal to bin indicators
+# ## ---------------------------------------------------------------------
+# normalize <- function(x) {
+#   if (abs(max(x) - min(x)) > gvars$tolerr) { # Normalize to 0-1 only when x is not constant
+#     return((x - min(x)) / (max(x) - min(x)))
+#   } else {  # What is the thing to do when x constant? Set to abs(x), abs(x)/x or 0???
+#     return(x)
+#   }
+# }
+# # Define bin cutt-offs for continuous x:
+# define.intervals <- function(x, nbins, bin_bymass, bin_bydhist, max_nperbin) {
+#   x <- x[!gvars$misfun(x)]  # remove missing vals
+#   nvals <- length(unique(x))
+#   if (is.na(nbins)) nbins <- as.integer(length(x) / max_nperbin)
+#   # if nbins is too high, for ordinal, set nbins to n unique obs and cancel quantile based interval defns
+#   if (nvals < nbins) {
+#     nbins <- nvals
+#     bin_bymass <- FALSE
+#   }
+#   if (abs(max(x) - min(x)) > gvars$tolerr) {  # when x is not constant
+#     if ((bin_bymass) & !is.null(max_nperbin)) {
+#       if ((length(x) / max_nperbin) > nbins) nbins <- as.integer(length(x) / max_nperbin)
+#     }
+#     intvec <- seq.int(from = min(x), to = max(x) + 1, length.out = (nbins + 1)) # interval type 1: bin x by equal length intervals of 0-1
+#   } else {  # when x is constant, force the smallest possible interval to be at least [0,1]
+#     intvec <- seq.int(from = min(0L, min(x)), to = max(1L, max(x)), length.out = (nbins + 1))
+#   }
+#   if (bin_bymass) {
+#     intvec <- quantile(x = x, probs = normalize(intvec)) # interval type 2: bin x by mass (quantiles of 0-1 intvec as probs)
+#     intvec[1] <- intvec[1] - 0.01
+#     intvec[length(intvec)] <- intvec[length(intvec)] + 0.01
+#   } else if (bin_bydhist) {
+#     stop("... binning continuous variable: dhist bin definitions are no longer available...")
+#     # intvec <- dhist(x, plot = FALSE, nbins = nbins)$xbr
+#     # intvec[1] <- intvec[1] - 0.01
+#     # intvec[length(intvec)] <- intvec[length(intvec)] + 0.01
+#   }
+#   # adding -Inf & +Inf as leftmost & rightmost cutoff points to make sure all future data points end up in one of the intervals:
+#   intvec <- c(min(intvec)-1000L, intvec, max(intvec)+1000L)
+#   return(intvec)
+# }
+# # Turn any x into ordinal (1, 2, 3, ..., nbins) for a given interval cutoffs (length(intervals)=nbins+1)
+# make.ordinal <- function(x, intervals) findInterval(x = x, vec = intervals, rightmost.closed = TRUE)
+# # Make dummy indicators for ordinal x (sA[j]) Approach used: creates B_j that jumps to 1 only once and stays 1 (degenerate) excludes reference category (last)
+# make.bins_mtx_1 <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins) {
+#   n <- length(x.ordinal)
+#   new.cats <- 1:nbins
+#   dummies_mat <- matrix(1L, nrow = n, ncol = length(new.cats))
+#   for(cat in new.cats[-length(new.cats)]) {
+#     subset_Bj0 <- x.ordinal > levels[cat]
+#     dummies_mat[subset_Bj0, cat] <- 0L
+#     subset_Bjmiss <- x.ordinal < levels[cat]
+#     dummies_mat[subset_Bjmiss, cat] <- gvars$misval
+#   }
+#   dummies_mat[, new.cats[length(new.cats)]] <- gvars$misval
+#   colnames(dummies_mat) <- bin.nms
+#   return(dummies_mat)
+# }
 
-# put the first level (category) as a reference (last category) for categorical censoring
-make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.level = gvars$noCENScat) {
-  n <- length(x.ordinal)
-  new.ref.level <- levels[length(levels)]+1
-  levels <- c(levels[-which(levels %in% ref.level)], new.ref.level)
-  x.ordinal[as.integer(x.ordinal)==as.integer(ref.level)] <- new.ref.level
+# # put the first level (category) as a reference (last category) for categorical censoring
+# make.bins_mtx_cens <- function(x.ordinal, nbins, bin.nms, levels = 1:nbins, ref.level = gvars$noCENScat) {
+#   n <- length(x.ordinal)
+#   new.ref.level <- levels[length(levels)]+1
+#   levels <- c(levels[-which(levels %in% ref.level)], new.ref.level)
+#   x.ordinal[as.integer(x.ordinal)==as.integer(ref.level)] <- new.ref.level
 
-  new.cats <- 1:nbins
-  dummies_mat <- matrix(1L, nrow = n, ncol = length(new.cats))
-  for(cat in new.cats[-length(new.cats)]) {
-    subset_Bj0 <- x.ordinal > levels[cat]
-    dummies_mat[subset_Bj0, cat] <- 0L
-    subset_Bjmiss <- x.ordinal < levels[cat]
-    dummies_mat[subset_Bjmiss, cat] <- gvars$misval
-  }
-  dummies_mat[, new.cats[length(new.cats)]] <- gvars$misval
-  colnames(dummies_mat) <- bin.nms
-  return(dummies_mat)
-}
+#   new.cats <- 1:nbins
+#   dummies_mat <- matrix(1L, nrow = n, ncol = length(new.cats))
+#   for(cat in new.cats[-length(new.cats)]) {
+#     subset_Bj0 <- x.ordinal > levels[cat]
+#     dummies_mat[subset_Bj0, cat] <- 0L
+#     subset_Bjmiss <- x.ordinal < levels[cat]
+#     dummies_mat[subset_Bjmiss, cat] <- gvars$misval
+#   }
+#   dummies_mat[, new.cats[length(new.cats)]] <- gvars$misval
+#   colnames(dummies_mat) <- bin.nms
+#   return(dummies_mat)
+# }
 
-is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
+# is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 
 ## ---------------------------------------------------------------------
 #' R6 class for storing, managing, subsetting and manipulating the input data.
@@ -240,7 +240,7 @@ is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 #'  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
 #'  For continous sVar this class provides methods for detecting / setting bin intervals,
 #'  normalization, disretization and construction of bin indicators.
-#'  The pointers to this class get passed on to \code{GenericModel} functions: \code{$fit()},
+#'  The pointers to this class get passed on to \code{ModelGeneric} functions: \code{$fit()},
 #'  \code{$predict()} and \code{$predictAeqa()}.
 #'
 #' @docType class
@@ -316,8 +316,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     curr_data_A_g0 = TRUE,  # is the current data in OdataDT generated under observed (g0)? If FALSE, current data is under g.star (intervention)
     fold_column = NULL,
     nfolds = NULL,
-    H2Oframe = NULL,
-    H2Oframe_ID = NULL,
+    # H2Oframe = NULL,
+    # H2Oframe_ID = NULL,
 
     initialize = function(Odata, nodes, YnodeVals, det.Y, noCENScat,...) {
       assert_that(is.data.frame(Odata) | is.data.table(Odata))
@@ -339,8 +339,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
       if (!missing(YnodeVals)) self$addYnode(YnodeVals = YnodeVals, det.Y = det.Y)
 
-      if (gvars$verbose) cat("...detecting the type of each input column...")
-      self$def.types.sVar() # Define the type of each sVar[i]: bin, cat or cont
+      # if (gvars$verbose) cat("...detecting the type of each input column...")
+      # self$def.types.sVar() # Define the type of each sVar[i]: bin, cat or cont
 
       invisible(self)
     },
@@ -392,7 +392,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     # ---------------------------------------------------------------------
-    # Functions for subsetting/returning covariate design mat for BinaryOutcomeModel Class or outcome variable
+    # Functions for subsetting/returning covariate design mat for ModelUnivariate Class or outcome variable
     # ---------------------------------------------------------------------
     get.dat.sVar = function(rowsubset = TRUE, covars) {
       if (!missing(covars)) {
@@ -409,14 +409,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           stop("self$dat.sVar is of unrecognized class: " %+% class(self$dat.sVar))
         }
         # columns to select from binned continuous/cat var matrix (if it was previously constructed):
-        if (!is.null(self$dat.bin.sVar)) {
-          sel.binsA <- intersect(covars, colnames(self$dat.bin.sVar))
-        } else {
-          sel.binsA <- NULL
-        }
-        if (length(sel.binsA)>0) {
-          dfsel <- cbind(dfsel, self$dat.bin.sVar[rowsubset, sel.binsA, drop = FALSE])
-        }
+        # if (!is.null(self$dat.bin.sVar)) {
+        #   sel.binsA <- intersect(covars, colnames(self$dat.bin.sVar))
+        # } else {
+        #   sel.binsA <- NULL
+        # }
+        # if (length(sel.binsA)>0) {
+        #   dfsel <- cbind(dfsel, self$dat.bin.sVar[rowsubset, sel.binsA, drop = FALSE])
+        # }
         found_vars <- covars %in% colnames(dfsel)
         if (!all(found_vars)) stop("some covariates can't be found: "%+%
                                     paste(covars[!found_vars], collapse=","))
@@ -430,8 +430,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       if (length(self$nodes) < 1) stop("DataStorageClass$nodes list is empty!")
       if (var %in% self$names.sVar) {
         out <- self$dat.sVar[rowsubset, var, with = FALSE]
-      } else if (var %in% colnames(self$dat.bin.sVar)) {
-        out <- self$dat.bin.sVar[rowsubset, var]
       } else if ((var %in% self$nodes$Ynode) && !is.null(self$YnodeVals)) {
         out <- self$YnodeVals[rowsubset]
       } else {
@@ -449,107 +447,107 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # --------------------------------------------------
     # Create a matrix of dummy bin indicators for categorical/continuous sVar
     # --------------------------------------------------
-    binirize.sVar = function(name.sVar, ...) {
-      private$.active.bin.sVar <- name.sVar
-      if (self$is.sVar.cont(name.sVar)) {
-        private$binirize.cont.sVar(name.sVar, ...)
-      } else if (self$is.sVar.cat(name.sVar)) {
-        if (self$is.sVar.CENS(name.sVar)) {
-          private$binirize.cat.CENS.sVar(name.sVar, ...)
-        } else {
-          private$binirize.cat.sVar(name.sVar, ...)
-        }
-      } else {
-        stop("...can only call $binirize.sVar for continuous or categorical sVars...")
-      }
-    },
+    # binirize.sVar = function(name.sVar, ...) {
+    #   private$.active.bin.sVar <- name.sVar
+    #   if (self$is.sVar.cont(name.sVar)) {
+    #     private$binirize.cont.sVar(name.sVar, ...)
+    #   } else if (self$is.sVar.cat(name.sVar)) {
+    #     if (self$is.sVar.CENS(name.sVar)) {
+    #       private$binirize.cat.CENS.sVar(name.sVar, ...)
+    #     } else {
+    #       private$binirize.cat.sVar(name.sVar, ...)
+    #     }
+    #   } else {
+    #     stop("...can only call $binirize.sVar for continuous or categorical sVars...")
+    #   }
+    # },
 
     # ------------------------------------------------------------------------------------------------------------
     # Binning methods for categorical/continuous sVar
     # ------------------------------------------------------------------------------------------------------------
-    bin.nms.sVar = function(name.sVar, nbins) { name.sVar%+%"_"%+%"B."%+%(1L:nbins) }, # Return names of bin indicators for sVar:
-    # pooled.bin.nm.sVar = function(name.sVar) { name.sVar %+% "_allB.j" },
-    detect.sVar.intrvls = function(name.sVar, nbins, bin_bymass, bin_bydhist, max_nperbin) {
-      tol.int <- 0.001
-      int <- define.intervals(x = self$get.sVar(name.sVar), nbins = nbins, bin_bymass = bin_bymass, bin_bydhist = bin_bydhist, max_nperbin = max_nperbin)
-      diffvec <- diff(int)
-      if (sum(abs(diffvec) < tol.int) > 0) {
-        if (gvars$verbose) {
-          message("No. of categories for " %+% name.sVar %+% " was collapsed from " %+%
-                  (length(int)-1) %+% " to " %+% (length(int[diffvec >= tol.int])-1) %+% " due to too few obs.")
-          print("old intervals: "); print(as.numeric(int))
-        }
-        # Just taking unique interval values is insufficient
-        # Instead need to drop all intervals that are "too close" to each other based on some tol value
-        # remove all intervals (a,b) where |b-a| < tol.int, but always keep the very first interval (int[1])
-        int <- c(int[1], int[2:length(int)][abs(diffvec) >= tol.int])
-        if (gvars$verbose) print("new intervals: "); print(as.numeric(int))
-      }
-      return(int)
-    },
-    detect.cat.sVar.levels = function(name.sVar) {
-      levels <- sort(unique(self$get.sVar(name.sVar)))
-      return(levels)
-    },
-    # return the bin widths vector for the discretized continuous sVar (private$.ord.sVar):
-    get.sVar.bw = function(name.sVar, intervals) {
-      if (!(self$active.bin.sVar %in% name.sVar)) stop("current discretized sVar name doesn't match name.sVar in get.sVar.bin.widths()")
-      if (is.null(self$ord.sVar)) stop("sVar hasn't been discretized yet")
-      intrvls.width <- diff(intervals)
-      intrvls.width[intrvls.width <= gvars$tolerr] <- 1
-      ord.sVar_bw <- intrvls.width[self$ord.sVar]
-      return(ord.sVar_bw)
-    },
-   # return the bin widths vector for the discretized continuous sVar (self$ord.sVar):
-    get.sVar.bwdiff = function(name.sVar, intervals) {
-      if (!(self$active.bin.sVar %in% name.sVar)) stop("current discretized sVar name doesn't match name.sVar in get.sVar.bin.widths()")
-      if (is.null(self$ord.sVar)) stop("sVar hasn't been discretized yet")
-      ord.sVar_leftint <- intervals[self$ord.sVar]
-      diff_bw <- self$get.sVar(name.sVar) - ord.sVar_leftint
-      return(diff_bw)
-    },
+   #  bin.nms.sVar = function(name.sVar, nbins) { name.sVar%+%"_"%+%"B."%+%(1L:nbins) }, # Return names of bin indicators for sVar:
+   #  # pooled.bin.nm.sVar = function(name.sVar) { name.sVar %+% "_allB.j" },
+   #  detect.sVar.intrvls = function(name.sVar, nbins, bin_bymass, bin_bydhist, max_nperbin) {
+   #    tol.int <- 0.001
+   #    int <- define.intervals(x = self$get.sVar(name.sVar), nbins = nbins, bin_bymass = bin_bymass, bin_bydhist = bin_bydhist, max_nperbin = max_nperbin)
+   #    diffvec <- diff(int)
+   #    if (sum(abs(diffvec) < tol.int) > 0) {
+   #      if (gvars$verbose) {
+   #        message("No. of categories for " %+% name.sVar %+% " was collapsed from " %+%
+   #                (length(int)-1) %+% " to " %+% (length(int[diffvec >= tol.int])-1) %+% " due to too few obs.")
+   #        print("old intervals: "); print(as.numeric(int))
+   #      }
+   #      # Just taking unique interval values is insufficient
+   #      # Instead need to drop all intervals that are "too close" to each other based on some tol value
+   #      # remove all intervals (a,b) where |b-a| < tol.int, but always keep the very first interval (int[1])
+   #      int <- c(int[1], int[2:length(int)][abs(diffvec) >= tol.int])
+   #      if (gvars$verbose) print("new intervals: "); print(as.numeric(int))
+   #    }
+   #    return(int)
+   #  },
+   #  detect.cat.sVar.levels = function(name.sVar) {
+   #    levels <- sort(unique(self$get.sVar(name.sVar)))
+   #    return(levels)
+   #  },
+   #  # return the bin widths vector for the discretized continuous sVar (private$.ord.sVar):
+   #  get.sVar.bw = function(name.sVar, intervals) {
+   #    if (!(self$active.bin.sVar %in% name.sVar)) stop("current discretized sVar name doesn't match name.sVar in get.sVar.bin.widths()")
+   #    if (is.null(self$ord.sVar)) stop("sVar hasn't been discretized yet")
+   #    intrvls.width <- diff(intervals)
+   #    intrvls.width[intrvls.width <= gvars$tolerr] <- 1
+   #    ord.sVar_bw <- intrvls.width[self$ord.sVar]
+   #    return(ord.sVar_bw)
+   #  },
+   # # return the bin widths vector for the discretized continuous sVar (self$ord.sVar):
+   #  get.sVar.bwdiff = function(name.sVar, intervals) {
+   #    if (!(self$active.bin.sVar %in% name.sVar)) stop("current discretized sVar name doesn't match name.sVar in get.sVar.bin.widths()")
+   #    if (is.null(self$ord.sVar)) stop("sVar hasn't been discretized yet")
+   #    ord.sVar_leftint <- intervals[self$ord.sVar]
+   #    diff_bw <- self$get.sVar(name.sVar) - ord.sVar_leftint
+   #    return(diff_bw)
+   #  },
 
-    # --------------------------------------------------
-    # Replace all missing (NA) values with a default integer (0)
-    # --------------------------------------------------
-    fixmiss_sVar = function() {
-      if (is.matrix(self$dat.sVar)) {
-        private$fixmiss_sVar_mat()
-      } else if (is.data.table(self$dat.sVar)) {
-        private$fixmiss_sVar_DT()
-      } else {
-        stop("self$dat.sVar is of unrecognized class")
-      }
-    },
+   #  # --------------------------------------------------
+   #  # Replace all missing (NA) values with a default integer (0)
+   #  # --------------------------------------------------
+   #  fixmiss_sVar = function() {
+   #    if (is.matrix(self$dat.sVar)) {
+   #      private$fixmiss_sVar_mat()
+   #    } else if (is.data.table(self$dat.sVar)) {
+   #      private$fixmiss_sVar_DT()
+   #    } else {
+   #      stop("self$dat.sVar is of unrecognized class")
+   #    }
+   #  },
 
     # --------------------------------------------------
     # Methods for sVar types. Define the type (class) of each variable (sVar) in input data: gvars$sVartypes$bin,  gvars$sVartypes$cat or gvars$sVartypes$cont
     # --------------------------------------------------
     # type.sVar acts as a flag: only detect types when !is.null(type.sVar), otherwise can pass type.sVar = list(sVar = NA, ...) or a value type.sVar = NA/gvars$sVartypes$bin/etc
-    def.types.sVar = function(type.sVar = NULL) {
-      if (is.null(type.sVar)) {
-        private$.type.sVar <- detect.col.types(self$dat.sVar)
-      } else {
-        n.sVar <- length(self$names.sVar)
-        len <- length(type.sVar)
-        assert_that((len == n.sVar) || (len == 1L))
-        if (len == n.sVar) { # set types for each variable
-          assert_that(is.list(type.sVar))
-          assert_that(all(names(type.sVar) %in% self$names.sVar))
-        } else { # set one type for all vars
-          assert_that(is.string(type.sVar))
-          type.sVar <- as.list(rep(type.sVar, n.sVar))
-          names(type.sVar) <- self$names.sVar
-        }
-        private$.type.sVar <- type.sVar
-      }
-      invisible(self)
-    },
-    set.sVar.type = function(name.sVar, new.type) { private$.type.sVar[[name.sVar]] <- new.type },
-    get.sVar.type = function(name.sVar) { if (missing(name.sVar)) { private$.type.sVar } else { private$.type.sVar[[name.sVar]] } },
-    is.sVar.bin = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$bin },
-    is.sVar.cat = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cat },
-    is.sVar.cont = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cont },
+    # def.types.sVar = function(type.sVar = NULL) {
+    #   if (is.null(type.sVar)) {
+    #     private$.type.sVar <- detect.col.types(self$dat.sVar)
+    #   } else {
+    #     n.sVar <- length(self$names.sVar)
+    #     len <- length(type.sVar)
+    #     assert_that((len == n.sVar) || (len == 1L))
+    #     if (len == n.sVar) { # set types for each variable
+    #       assert_that(is.list(type.sVar))
+    #       assert_that(all(names(type.sVar) %in% self$names.sVar))
+    #     } else { # set one type for all vars
+    #       assert_that(is.string(type.sVar))
+    #       type.sVar <- as.list(rep(type.sVar, n.sVar))
+    #       names(type.sVar) <- self$names.sVar
+    #     }
+    #     private$.type.sVar <- type.sVar
+    #   }
+    #   invisible(self)
+    # },
+    # set.sVar.type = function(name.sVar, new.type) { private$.type.sVar[[name.sVar]] <- new.type },
+    # get.sVar.type = function(name.sVar) { if (missing(name.sVar)) { private$.type.sVar } else { private$.type.sVar[[name.sVar]] } },
+    # is.sVar.bin = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$bin },
+    # is.sVar.cat = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cat },
+    # is.sVar.cont = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$cont },
     is.sVar.CENS = function(name.sVar) { name.sVar %in% self$nodes$Cnodes },
 
     # ---------------------------------------------------------------------
@@ -766,28 +764,28 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         origami::make_fold(v, setdiff(idx, test), test)
       }
       purrr::map2((1:k), fold_idx, fold)
-    },
+    }
 
     # -----------------------------------------------------------------------------
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------
-    fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
-      if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
-      H2Oframe <- fast.load.to.H2O(dat.sVar, destination_frame = destination_frame)
-      if (saveH2O) {
-        self$H2Oframe <- H2Oframe
-        self$H2Oframe_ID <- h2o::h2o.getId(H2Oframe)
-      }
-      return(invisible(H2Oframe))
-    },
-    print = function(){
-      cat("\nThis R6 object (class 'DataStorageClass') stores the input data as 'data.table'.",
-          "\nTo access the data, use the syntax 'object_name$dat.sVar' or 'get_data(object_name)'.",
-          "\nTo modify the input column(s), use modify-by-reference ':=' syntax of the data.table",
-          "\nor call importData() for a new, modified input.",
-          "\nPlease see ?data.table for more info.\n")
-      print(self$dat.sVar)
-    }
+    # fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
+    #   if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
+    #   H2Oframe <- fast.load.to.H2O(dat.sVar, destination_frame = destination_frame)
+    #   if (saveH2O) {
+    #     self$H2Oframe <- H2Oframe
+    #     self$H2Oframe_ID <- h2o::h2o.getId(H2Oframe)
+    #   }
+    #   return(invisible(H2Oframe))
+    # },
+    # print = function(){
+    #   cat("\nThis R6 object (class 'DataStorageClass') stores the input data as 'data.table'.",
+    #       "\nTo access the data, use the syntax 'object_name$dat.sVar' or 'get_data(object_name)'.",
+    #       "\nTo modify the input column(s), use modify-by-reference ':=' syntax of the data.table",
+    #       "\nor call importData() for a new, modified input.",
+    #       "\nPlease see ?data.table for more info.\n")
+    #   print(self$dat.sVar)
+    # }
   ),
 
   active = list(
@@ -806,21 +804,21 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.mat.sVar <- dat.sVar
       }
     },
-    dat.bin.sVar = function(dat.bin.sVar) {
-      if (missing(dat.bin.sVar)) {
-        return(private$.mat.bin.sVar)
-      } else {
-        assert_that(is.matrix(dat.bin.sVar))
-        private$.mat.bin.sVar <- dat.bin.sVar
-      }
-    },
+    # dat.bin.sVar = function(dat.bin.sVar) {
+    #   if (missing(dat.bin.sVar)) {
+    #     return(private$.mat.bin.sVar)
+    #   } else {
+    #     assert_that(is.matrix(dat.bin.sVar))
+    #     private$.mat.bin.sVar <- dat.bin.sVar
+    #   }
+    # },
     backup.savedGstarsDT = function() { private$.saveGstarsDT },
     emptydat.sVar = function() { private$.mat.sVar <- NULL },         # wipe out mat.sVar
     # wipe out binirized .mat.sVar:
-    emptydat.bin.sVar = function() {
-      private$.mat.bin.sVar <- NULL
-      private$.active.bin.sVar <- NULL
-    },
+    # emptydat.bin.sVar = function() {
+    #   private$.mat.bin.sVar <- NULL
+    #   private$.active.bin.sVar <- NULL
+    # },
     noNA.Ynodevals = function(noNA.Yvals) {
       if (missing(noNA.Yvals)) return(private$.protected.YnodeVals)
       else private$.protected.YnodeVals <- noNA.Yvals
@@ -856,7 +854,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         assert_that(is.data.table(IPwts))
         private$.IPwts <- IPwts
       }
-    },
+    }
     # IPwts_by_regimen_h2o = function(IPwts) {
     #   if (missing(IPwts)) {
     #     return(private$.IPwts_h2o)
@@ -866,9 +864,9 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     #   }
     # },
 
-    active.bin.sVar = function() { private$.active.bin.sVar },
-    ord.sVar = function() { private$.ord.sVar },
-    type.sVar = function() { private$.type.sVar }
+    # active.bin.sVar = function() { private$.active.bin.sVar },
+    # ord.sVar = function() { private$.ord.sVar },
+    # type.sVar = function() { private$.type.sVar }
   ),
 
   private = list(
@@ -881,94 +879,50 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     .mat.bin.sVar = NULL,         # Temporary storage mat for bin indicators on currently binarized continous sVar (from private$.active.bin.sVar)
     .ord.sVar = NULL,             # Ordinal (cat) transform for continous sVar
     # sVar.object = NULL,         # DefineSummariesClass object that contains / evaluates sVar expressions
-    .type.sVar = NULL,            # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
+    # .type.sVar = NULL,            # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
     .uncensored = NULL,       # logical vector for all observation indices that are not censored at current t
     .follow_rule = NULL,   # logical vector for all observation indices that are following the current rule of interest at current t
-    .IPwts = NULL,
+    .IPwts = NULL
     # .IPwts_h2o = NULL,
     # Replace all missing (NA) values with a default integer (0) for matrix
-    fixmiss_sVar_mat = function() {
-      self$dat.sVar[gvars$misfun(self$dat.sVar)] <- gvars$misXreplace
-      invisible(self)
-    },
+    # fixmiss_sVar_mat = function() {
+    #   self$dat.sVar[gvars$misfun(self$dat.sVar)] <- gvars$misXreplace
+    #   invisible(self)
+    # },
     # Replace all missing (NA) values with a default integer (0) for data.table
-    fixmiss_sVar_DT = function() {
-      # see http://stackoverflow.com/questions/7235657/fastest-way-to-replace-nas-in-a-large-data-table
-      dat.sVar <- self$dat.sVar
-      for (j in names(dat.sVar))
-        set(dat.sVar, which(gvars$misfun(dat.sVar[[j]])), j , gvars$misXreplace)
-      invisible(self)
-    },
+    # fixmiss_sVar_DT = function() {
+    #   # see http://stackoverflow.com/questions/7235657/fastest-way-to-replace-nas-in-a-large-data-table
+    #   dat.sVar <- self$dat.sVar
+    #   for (j in names(dat.sVar))
+    #     set(dat.sVar, which(gvars$misfun(dat.sVar[[j]])), j , gvars$misXreplace)
+    #   invisible(self)
+    # }
     # create a vector of ordinal (categorical) vars out of cont. sVar vector:
-    discretize.sVar = function(name.sVar, intervals) {
-      private$.ord.sVar <- make.ordinal(x = self$get.sVar(name.sVar), intervals = intervals)
-      invisible(private$.ord.sVar)
-    },
-    # Create a matrix of bin indicators for continuous sVar:
-    binirize.cont.sVar = function(name.sVar, intervals, nbins, bin.nms) {
-      self$dat.bin.sVar <- make.bins_mtx_1(x.ordinal = private$discretize.sVar(name.sVar, intervals), nbins = nbins, bin.nms = bin.nms)
-      invisible(self$dat.bin.sVar)
-    },
-    # Create a matrix of bin indicators for ordinal sVar:
-    binirize.cat.sVar = function(name.sVar, levels) {
-      nbins <- length(levels)
-      bin.nms <- self$bin.nms.sVar(name.sVar, nbins)
-      self$dat.bin.sVar <- make.bins_mtx_1(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels)
-      invisible(self$dat.bin.sVar)
-    },
+    # discretize.sVar = function(name.sVar, intervals) {
+    #   private$.ord.sVar <- make.ordinal(x = self$get.sVar(name.sVar), intervals = intervals)
+    #   invisible(private$.ord.sVar)
+    # },
+    # # Create a matrix of bin indicators for continuous sVar:
+    # binirize.cont.sVar = function(name.sVar, intervals, nbins, bin.nms) {
+    #   self$dat.bin.sVar <- make.bins_mtx_1(x.ordinal = private$discretize.sVar(name.sVar, intervals), nbins = nbins, bin.nms = bin.nms)
+    #   invisible(self$dat.bin.sVar)
+    # },
+    # # Create a matrix of bin indicators for ordinal sVar:
+    # binirize.cat.sVar = function(name.sVar, levels) {
+    #   nbins <- length(levels)
+    #   bin.nms <- self$bin.nms.sVar(name.sVar, nbins)
+    #   self$dat.bin.sVar <- make.bins_mtx_1(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels)
+    #   invisible(self$dat.bin.sVar)
+    # },
     # Create a matrix of bin indicators for categorical CENSORING sVar (the reference category is gvars$noCENScat):
-    binirize.cat.CENS.sVar = function(name.sVar, levels) {
-      if (gvars$verbose) {
-        message("making matrix for dummies for cat. censoring, reference category is " %+% self$noCENScat)
-      }
-      nbins <- length(levels)
-      bin.nms <- self$bin.nms.sVar(name.sVar, nbins)
-      self$dat.bin.sVar <- make.bins_mtx_cens(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels, ref.level = self$noCENScat)
-      invisible(self$dat.bin.sVar)
-    }
+    # binirize.cat.CENS.sVar = function(name.sVar, levels) {
+    #   if (gvars$verbose) {
+    #     message("making matrix for dummies for cat. censoring, reference category is " %+% self$noCENScat)
+    #   }
+    #   nbins <- length(levels)
+    #   bin.nms <- self$bin.nms.sVar(name.sVar, nbins)
+    #   self$dat.bin.sVar <- make.bins_mtx_cens(x.ordinal = self$get.sVar(name.sVar), nbins = nbins, bin.nms = bin.nms, levels = levels, ref.level = self$noCENScat)
+    #   invisible(self$dat.bin.sVar)
+    # }
   )
 )
-
-    # ## ---------------------------------------------------------------------
-    # # Swap re-saved Anodes and summaries sA with those in main data.table
-    # ## ---------------------------------------------------------------------
-    # swapAnodes = function(Anodes) {
-    #   if (missing(Anodes)) Anodes <- self$nodes$Anodes
-    #   # 1) Save the current values of Anodes and sA in the data:
-    #   temp.Anodes <- self$dat.sVar[, Anodes, with = FALSE]
-    #   if (!is.null(private$.sA_g0_DT) && !is.null(self$save_sA_Vars)) {
-    #     temp.sA <- self$dat.sVar[, self$save_sA_Vars, with = FALSE]
-    #   } else {
-    #     temp.sA <- NULL
-    #   }
-    #   # 2) Restore previously saved Anodes / sA into the data:
-    #   self$restoreAnodes()
-    #   # 3) Over-write the back-up values with new ones:
-    #   private$.A_g0_DT <- temp.Anodes
-    #   private$.sA_g0_DT <- temp.sA
-    #   # 4) Reverse the indicator of current data Anodes:
-    #   self$curr_data_A_g0 <- !self$curr_data_A_g0
-    #   invisible(self)
-    # },
-    # replaceOneNode = function(NodeName, newNodeVal) {
-    #   self$set.sVar(NodeName, newNodeVal)
-    #   invisible(self)
-    # },
-    # replaceManyNodes = function(Nodes, newNodesMat) {
-    #   assert_that(is.matrix(newNodesMat))
-    #   assert_that(ncol(newNodesMat) == length(Nodes))
-    #   for (col in Nodes) {
-    #     idx <- which(Nodes %in% col)
-    #     assert_that(col %in% colnames(newNodesMat))
-    #     assert_that(col %in% colnames(self$dat.sVar))
-    #     self$dat.sVar[, (col) := newNodesMat[, idx]]
-    #   }
-    #   invisible(self)
-    # },
-    # # Replace a column or columns in private$Xmat with new values
-    # replaceCols = function(subset_idx, colnames) {
-    #   for (colname in colnames) {
-    #     private$Xmat[, colname]  <- self$get.dat.sVar(subset_idx, colname)
-    #   }
-    #   return(invisible(self))
-    # },

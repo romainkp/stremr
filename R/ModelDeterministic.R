@@ -1,8 +1,8 @@
 ## ----------------------------------------------------------------------------------
 ## A trivial class for dealing with deterministic outcome modeling
 ## ----------------------------------------------------------------------------------
-DeterministicBinaryOutcomeModel  <- R6Class(classname = "DeterministicBinaryOutcomeModel",
-  inherit = BinaryOutcomeModel,
+ModelDeterministic  <- R6Class(classname = "ModelDeterministic",
+  inherit = ModelUnivariate,
   cloneable = TRUE,
   portable = TRUE,
   class = TRUE,

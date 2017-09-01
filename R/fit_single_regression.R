@@ -28,17 +28,27 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   ## Use the existing fold ID column (previously defined by calling define_CVfolds())
   } else if ((method %in% c("cv", "origamiSL")) && is.null(fold_column)) fold_column <- data$fold_column
 
-  model.fit <- try({
-    gridisl::fit(models,
-                method = method,
-                ID = nodes$IDnode,
-                t_name = nodes$tnode,
-                x = predvars,
-                y = outvar,
-                data = data,
-                fold_column = fold_column,
-                subset_idx = subset_idx, ...)
-  })
+  if (is(models, "Lrnr_base")) {
+
+    ## todo: implement an efficient converter from DataStorageClass into sl3_task object (avoiding a copy unless absolutely necessary)
+    task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar)
+    model.fit <- try({models$train(task)})
+
+  } else {
+
+    model.fit <- try({
+      gridisl::fit(models,
+                  method = method,
+                  ID = nodes$IDnode,
+                  t_name = nodes$tnode,
+                  x = predvars,
+                  y = outvar,
+                  data = data,
+                  fold_column = fold_column,
+                  subset_idx = subset_idx, ...)
+    })
+
+  }
 
   if (inherits(model.fit, "try-error")) {
     message("...trying to run speedglm as a backup...")

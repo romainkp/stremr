@@ -94,10 +94,10 @@ split_cv_SL <- function(fold, Y, X,
 ## ---------------------------------------------------------------------
 ## R6 Class for Split-Specific Sequentially Double Robustness Targeting Procedure
 ## Internal implementation of Q-learning functionality.
-## Inherits from \code{QlearnModel} R6 Class.
+## Inherits from \code{ModelQlearn} R6 Class.
 ## ---------------------------------------------------------------------
-SplitCVSDRQlearnModel  <- R6Class(classname = "SplitCVSDRQlearnModel",
-  inherit = SDRQlearnModel,
+SplitCVSDRModelQlearn  <- R6Class(classname = "SplitCVSDRModelQlearn",
+  inherit = SDRModelQlearn,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,

@@ -16,7 +16,7 @@ The class \code{DataStorageClass} is the only way the package uses to access the
  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
  For continous sVar this class provides methods for detecting / setting bin intervals,
  normalization, disretization and construction of bin indicators.
- The pointers to this class get passed on to \code{GenericModel} functions: \code{$fit()},
+ The pointers to this class get passed on to \code{ModelGeneric} functions: \code{$fit()},
  \code{$predict()} and \code{$predictAeqa()}.
 }
 \details{

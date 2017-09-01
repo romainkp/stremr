@@ -64,7 +64,7 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
 ## ---------------------------------------------------------------------
 ##  R6 class for controlling the internal implementation of Q-learning functionality.
 ##  Supports sequential (recursive) G-computation and longitudinal TMLE.
-##  Inherits from \code{BinaryOutcomeModel} R6 Class.
+##  Inherits from \code{ModelUnivariate} R6 Class.
 ##
 ## @docType class
 ## @format An \code{\link{R6Class}} generator object
@@ -103,8 +103,8 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
 ##    \item{\code{getTMLEfit}}{...}
 ## }
 ## @export
-QlearnModel  <- R6Class(classname = "QlearnModel",
-  inherit = BinaryOutcomeModel,
+ModelQlearn  <- R6Class(classname = "ModelQlearn",
+  inherit = ModelUnivariate,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,

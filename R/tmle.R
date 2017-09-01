@@ -4,11 +4,11 @@
 ## *) The definition of Qperiods below needs to be based on actual periods observed in the data.
 ## *) Stochastic interventions ***
 ##    intervened_TRT/intervened_MONITOR are vectors of counterfactual probs -> need to allow each to be multivariate (>1 cols)
-## *) Accessing correct QlearnModel ***
-##     Need to come up with a good way of accessing correct terminal QlearnModel to get final Q-predictions in private$probAeqa.
+## *) Accessing correct ModelQlearn ***
+##     Need to come up with a good way of accessing correct terminal ModelQlearn to get final Q-predictions in private$probAeqa.
 ##     These predictions are for the final n observations that were used for evaluating E[Y^a].
 ##     However, if we do stratify=TRUE and use a stack version of g-comp with different strata all in one stacked database it will be difficult
-##     to pull the right QlearnModel.
+##     to pull the right ModelQlearn.
 ##     Alternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos).
 ## *) Pooling across regimens ***
 ##     Since new regimen results in new Qkplus1 and hence new outcome -> requires a separate regression for each regimen:
@@ -38,7 +38,7 @@
 ## When the intervention node values are <1 and >0, those are interpreted as probabilities,
 ## i.e., stochastic interventions.
 ## In more detail, the column 0 < intervened_TRT < 1 defines the counterfactual probability that P(TRT[t]^*=1)=intervened_TRT[t].
-## Those are dealt with in QlearnModel class by directly integrating, i.e.,
+## Those are dealt with in ModelQlearn class by directly integrating, i.e.,
 ##  evaluating a weighted sum of predicted Q's with weights given by the probabilities in g.star columns
 ## (on A and N).
 
@@ -630,7 +630,7 @@ fit_GCOMP_onet <- function(OData,
 
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
-    ## The following two lines allow for a slightly simplified (shallower) tree representation of GenericModel-type classes.
+    ## The following two lines allow for a slightly simplified (shallower) tree representation of ModelGeneric-type classes.
     ## This also means that stratifying Q fits by some covariate value will not possible with this approach
     ## (i.e., such stratifications would have to be implemented locally by the actual model fitting functions).
     reg_i <- reg$clone()
@@ -639,7 +639,7 @@ fit_GCOMP_onet <- function(OData,
   }
 
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
-  Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  Qlearn.fit <- ModelGeneric$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
   Qlearn.fit$fit(data = OData, Qlearn.fit = Qlearn.fit)
   # Qlearn.fit$getPsAsW.models()[[1]]
   OData$Qlearn.fit <- Qlearn.fit

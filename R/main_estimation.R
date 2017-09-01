@@ -406,7 +406,7 @@ fitPropensity <- function(OData,
   # Perform S3 method dispatch on ALL_g_regs, which will determine the nested tree of SummaryModel objects
   # Perform fit and prediction
   # ------------------------------------------------------------------------------------------
-  modelfits.g0 <- GenericModel$new(reg = g_CAN_regs_list, DataStorageClass.g0 = OData)
+  modelfits.g0 <- ModelGeneric$new(reg = g_CAN_regs_list, DataStorageClass.g0 = OData)
   modelfits.g0$fit(data = OData, predict = TRUE)
 
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
@@ -465,7 +465,7 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
                                  model_contrl = list(gstar.Name = intervened_NODE[i]))
       regs_list[[i]] <- reg
     }
-    gstar.NODE.obj <- GenericModel$new(reg = regs_list, DataStorageClass.g0 = OData)
+    gstar.NODE.obj <- ModelGeneric$new(reg = regs_list, DataStorageClass.g0 = OData)
     gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
 
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)

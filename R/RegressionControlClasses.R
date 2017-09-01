@@ -92,7 +92,7 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
         outvar.class <- as.list(rep.int(outvar.class, length(res$outvars)))
         names(outvar.class) <- res$outvars
       } else {
-        outvar.class <- OData$type.sVar[res$outvars]
+        outvar.class <- rep.int(list("univariate"), length(res$outvars))
         names(outvar.class) <- res$outvars
       }
       subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
@@ -137,7 +137,7 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
   public = list(
     outvar = character(),          # vector of regression outcome variable names
     predvars = character(),        # vector of predictor names
-    outvar.class = list(),         # Named LIST of outcome class names: binary / continuous / categorical
+    outvar.class = list(),         # Named LIST of outcome class names: binary
     subset_vars = list(),          # Named LIST for subset vars, one list item per outcome in outvar, each list item can be a character vector.
                                    # Later these are tested for missing values, which forms the basis of the logical subset vector)
     subset_exprs = list(),         # Named LIST of subset expressions (as strings), one list item per outcome in outvar.
@@ -219,7 +219,7 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
 
 ## --------------------------------------------------------
 ## GENERAL RegressionClass THAT INHERITS FROM SingleRegressionFormClass
-## THIS CLASS IS used (and subsetted, if needed) BY all classes that inherit from GenericModel class
+## THIS CLASS IS used (and subsetted, if needed) BY all classes that inherit from ModelGeneric class
 ## --------------------------------------------------------
 RegressionClass <- R6Class("RegressionClass",
   inherit = SingleRegressionFormClass,
