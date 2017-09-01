@@ -43,6 +43,7 @@ Imports:
     speedglm,
     sl3,
     stats,
+    SuperLearner,
     tibble,
     tidyr,
     zoo,

@@ -346,9 +346,9 @@ fitPropensity <- function(OData,
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  if (!is.null(models_CENS) && !is.na(models_CENS)) assert_that(is.ModelStack(models_CENS))
-  if (!is.null(models_TRT)  && !is.na(models_TRT)) assert_that(is.ModelStack(models_TRT))
-  if (!is.null(models_MONITOR)  && !is.na(models_MONITOR)) assert_that(is.ModelStack(models_MONITOR))
+  if (!is.null(models_CENS) && suppressWarnings(!is.na(models_CENS))) assert_that(is.ModelStack(models_CENS) || is(models_CENS, "Lrnr_base"))
+  if (!is.null(models_TRT)  && suppressWarnings(!is.na(models_TRT))) assert_that(is.ModelStack(models_TRT) || is(models_TRT, "Lrnr_base"))
+  if (!is.null(models_MONITOR)  && suppressWarnings(!is.na(models_MONITOR))) assert_that(is.ModelStack(models_MONITOR) || is(models_MONITOR, "Lrnr_base"))
 
   sVar.exprs <- capture.exprs(...)
 
@@ -449,6 +449,9 @@ fitPropensity <- function(OData,
 ## for counterfactual A^*(t) / N^*(t) and the observed data values a(t) / n(t).
 ## When intervened_NODE contains more than one rule-column, evaluate g^* for each and
 ## multiply to get a single joint probability (at each time point).
+## This function simply grabs the counterfactual node values (N^*(t)) and compares them
+## to the observed values (N(t)) by evaluating the indicator (N^*(t)=N(t)).
+## The call to fit below is empty, i.e., does nothing other than call ModelDeterministic$predict()
 defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
   if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
@@ -473,10 +476,6 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     if (any(is.na(subset_idx)))
       stop("the subset index evaluation for the expression '" %+% useonly_t_NODE %+% "' resulted in NAs")
 
-    # gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
-    ## fix above bug, vs. 1:
-    # gstar.NODE[!(1:length(gstar.NODE)) %in% subset_idx] <- g.obs[!(1:length(g.obs)) %in% subset_idx]
-    ## fix above bug, vs. 2:
     idx_set_to_g0 <- setdiff(1:length(gstar.NODE), subset_idx)
     gstar.NODE[idx_set_to_g0] <- g.obs[idx_set_to_g0]
 

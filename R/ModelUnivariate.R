@@ -120,28 +120,30 @@ ModelUnivariate  <- R6Class(classname = "ModelUnivariate",
     # uses private$model.fit to generate predictions for data:
     predict = function(newdata, holdout = FALSE, ...) {
       assert_that(self$is.fitted)
+      model.fit <- private$model.fit
 
       if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- private$model.fit$predict()
-        # private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-        #                                       add_subject_data = FALSE,
-        #                                       subset_idx = self$subset_idx,
-        #                                       # use_best_retrained_model = TRUE,
-        #                                       holdout = holdout,
-        #                                       verbose = gvars$verbose)
+        if (is(model.fit, "PredictionStack")) {
+          private$probA1 <- gridisl::predict_SL(modelfit = model.fit, add_subject_data = FALSE, subset_idx = self$subset_idx, holdout = holdout, verbose = gvars$verbose)
+        } else if (is(model.fit, "Lrnr_base")) {
+          private$probA1 <- model.fit$predict()
+        } else {
+          stop("model fit object is of unrecognized class (private$model.fit)")
+        }
+
       } else {
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
-        ## todo: allow passing the DataStorage object directly to task, seamlessly
-        new_task <- sl3::sl3_Task$new(newdata$dat.sVar[self$subset_idx, ], covariates = self$predvars, outcome = self$outvar)
-        private$probA1 <- private$model.fit$predict(new_task)
-        # private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-        #                                       newdata = newdata,
-        #                                       add_subject_data = FALSE,
-        #                                       subset_idx = self$subset_idx,
-        #                                       # use_best_retrained_model = TRUE,
-        #                                       holdout = holdout,
-        #                                       verbose = gvars$verbose)
+        if (is(model.fit, "PredictionStack")) {
+          private$probA1 <- gridisl::predict_SL(modelfit = model.fit, newdata = newdata, add_subject_data = FALSE, subset_idx = self$subset_idx, holdout = holdout, verbose = gvars$verbose)
+        } else if (is(model.fit, "Lrnr_base")) {
+          ## todo: allow passing the DataStorage object directly to task, seamlessly
+          new_task <- sl3::sl3_Task$new(newdata$dat.sVar[self$subset_idx, ], covariates = self$predvars, outcome = self$outvar)
+          private$probA1 <- model.fit$predict(new_task)
+        } else {
+          stop("model fit object is of unrecognized class (private$model.fit)")
+        }
+
       }
       return(invisible(self))
     },

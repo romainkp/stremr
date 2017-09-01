@@ -288,7 +288,7 @@ trim_rows_after_tmax <- function(OData, tmax = OData$max.t) {
 #'    \item{\code{noNA.Ynodevals}}{...}
 #'    \item{\code{nodes}}{...}
 #' }
-#' @importFrom assertthat assert_that is.count is.flag
+#' @importFrom assertthat assert_that is.count is.flag is.string
 #' @export
 DataStorageClass <- R6Class(classname = "DataStorageClass",
   portable = TRUE,

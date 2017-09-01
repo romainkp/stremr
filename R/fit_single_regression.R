@@ -29,9 +29,19 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   } else if ((method %in% c("cv", "origamiSL")) && is.null(fold_column)) fold_column <- data$fold_column
 
   if (is(models, "Lrnr_base")) {
-
     ## todo: implement an efficient converter from DataStorageClass into sl3_task object (avoiding a copy unless absolutely necessary)
-    task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar)
+    ## todo: need to somehow transfer the fold column to task, but only if it actually exists
+    if (!is.null(data$fold_column)) {
+      folds <- data$make_origami_fold_from_column(subset_idx)
+    } else {
+      folds <- NULL
+    }
+    # origami::make_folds(V = 5, cluster_ids = dt_subs$ID)
+    task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ],
+                              covariates = predvars,
+                              outcome = outvar,
+                              id = data$nodes$IDnode,
+                              folds = folds)
     model.fit <- try({models$train(task)})
 
   } else {
@@ -47,30 +57,36 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                   fold_column = fold_column,
                   subset_idx = subset_idx, ...)
     })
-
   }
 
   if (inherits(model.fit, "try-error")) {
-    message("...trying to run speedglm as a backup...")
-    method <- "none"
-    # model_contrl[["fit.package"]] <- "speedglm"
-    # model_contrl[["fit.algorithm"]] <- "glm"
-    glm_model <- models[1]
-    glm_model[[1]][["fit.package"]] <- "speedglm"
-    glm_model[[1]][["fit.algorithm"]] <- "glm"
-    class(glm_model) <- c(class(glm_model), "ModelStack")
-    # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
+    message("...trying to run Lrnr_glm_fast as a backup...")
+    task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar)
+    lrn_model <- sl3::Lrnr_glm_fast$new()
+    model.fit <- try(lrn_model$train(task))
 
-    model.fit <- gridisl::fit(glm_model,
-                             method = method,
-                             ID = nodes$IDnode,
-                             t_name = nodes$tnode,
-                             x = predvars,
-                             y = outvar,
-                             data = data,
-                             verbose = gvars$verbose,
-                             fold_column = fold_column,
-                             subset_idx = subset_idx)
+    # message("...trying to run SL.mean (mean prediction learner) as a backup...")
+    # lrn_model <- sl3::Lrnr_pkg_SuperLearner$new("SL.mean")
+
+    # method <- "none"
+    # # model_contrl[["fit.package"]] <- "speedglm"
+    # # model_contrl[["fit.algorithm"]] <- "glm"
+    # glm_model <- models[1]
+    # glm_model[[1]][["fit.package"]] <- "speedglm"
+    # glm_model[[1]][["fit.algorithm"]] <- "glm"
+    # class(glm_model) <- c(class(glm_model), "ModelStack")
+    # # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
+
+    # model.fit <- gridisl::fit(glm_model,
+    #                          method = method,
+    #                          ID = nodes$IDnode,
+    #                          t_name = nodes$tnode,
+    #                          x = predvars,
+    #                          y = outvar,
+    #                          data = data,
+    #                          verbose = gvars$verbose,
+    #                          fold_column = fold_column,
+    #                          subset_idx = subset_idx)
 
   }
 

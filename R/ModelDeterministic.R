@@ -57,6 +57,7 @@ ModelDeterministic  <- R6Class(classname = "ModelDeterministic",
       } else {
         indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
       }
+
       assert_that(is.integerish(indA)) # check that observed exposure is always a vector of integers
       probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
       # probA1 <- private$probA1[self$getsubset]
