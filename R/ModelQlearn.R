@@ -392,16 +392,19 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## These are also referred to as predictions from all validation splits, or holdouts or out-of-sample predictions
       # holdout <- self$CVTMLE
       assert_that(self$is.fitted)
+      model.fit <- private$model.fit
+
       if (missing(newdata) && !is.null(private$probA1)) {
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         return(private$probA1)
       } else if (missing(newdata) && is.null(private$probA1)) {
-        probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                      add_subject_data = FALSE,
-                                      subset_idx = subset_idx,
-                                      # use_best_retrained_model = TRUE,
-                                      holdout = self$CVTMLE,
-                                      verbose = gvars$verbose)
+        if (is(model.fit, "PredictionStack")) {
+          probA1 <- gridisl::predict_SL(modelfit = model.fit, add_subject_data = FALSE, subset_idx = subset_idx, holdout = self$CVTMLE, verbose = gvars$verbose)
+        } else if (is(model.fit, "Lrnr_base")) {
+          probA1 <- model.fit$predict()
+        } else {
+          stop("model fit object is of unrecognized class (private$model.fit)")
+        }
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
@@ -415,28 +418,34 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         }
 
         if (!self$CVTMLE) {
-
-          probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                        newdata = newdata,
-                                        add_subject_data = FALSE,
-                                        subset_idx = subset_idx,
-                                        # use_best_retrained_model = TRUE,
-                                        holdout = FALSE,
-                                        verbose = gvars$verbose)
-
-          if (self$byfold_Q) {
-            probA1_byfold <- gridisl::predict_SL(modelfit = private$model.fit,
-                                       newdata = newdata,
-                                       add_subject_data = FALSE,
-                                       subset_idx = subset_idx,
-                                       byfold = TRUE,
-                                       # use_best_retrained_model = TRUE,
-                                       verbose = gvars$verbose)
-            private$probA1_byfold <- probA1_byfold[["pred"]]
+          if (is(model.fit, "PredictionStack")) {
+            probA1 <- gridisl::predict_SL(modelfit = model.fit,
+                                          newdata = newdata,
+                                          add_subject_data = FALSE,
+                                          subset_idx = subset_idx,
+                                          # use_best_retrained_model = TRUE,
+                                          holdout = FALSE,
+                                          verbose = gvars$verbose)
+            if (self$byfold_Q) {
+              probA1_byfold <- gridisl::predict_SL(modelfit = model.fit,
+                                         newdata = newdata,
+                                         add_subject_data = FALSE,
+                                         subset_idx = subset_idx,
+                                         byfold = TRUE,
+                                         # use_best_retrained_model = TRUE,
+                                         verbose = gvars$verbose)
+              private$probA1_byfold <- probA1_byfold[["pred"]]
+            }
+          } else if (is(model.fit, "Lrnr_base")) {
+            ## todo: allow passing the DataStorage object directly to task, seamlessly
+            new_task <- sl3::sl3_Task$new(newdata$dat.sVar[self$subset_idx, ], covariates = self$predvars, outcome = self$outvar)
+            probA1 <- model.fit$predict(new_task)
+          } else {
+            stop("model fit object is of unrecognized class (private$model.fit)")
           }
 
         } else {
-          probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
+          probA1 <- gridisl::predict_SL(modelfit = model.fit,
                                         newdata = newdata,
                                         add_subject_data = FALSE,
                                         subset_idx = self$idx_used_to_fit_initQ,
@@ -447,7 +456,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
 
           newObs_idx <- setdiff(subset_idx, self$idx_used_to_fit_initQ)
           if (length(newObs_idx) > 0) {
-            probA1_newObs <- gridisl::predict_SL(modelfit = private$model.fit,
+            probA1_newObs <- gridisl::predict_SL(modelfit = model.fit,
                                                  newdata = newdata,
                                                  add_subject_data = FALSE,
                                                  subset_idx = newObs_idx,

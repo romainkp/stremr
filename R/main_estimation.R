@@ -452,25 +452,37 @@ fitPropensity <- function(OData,
 ## This function simply grabs the counterfactual node values (N^*(t)) and compares them
 ## to the observed values (N(t)) by evaluating the indicator (N^*(t)=N(t)).
 ## The call to fit below is empty, i.e., does nothing other than call ModelDeterministic$predict()
-defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
+defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs, modelfit.g, type_intervened) {
   if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
+    if (!is.null(type_intervened)) {
+      assert_that(length(type_intervened)==length(intervened_NODE))
+      assert_that(is.character(type_intervened))
+      assert_that(all(type_intervened %in% c("bin", "shift", "MSM")))
+    } else {
+      type_intervened <- rep("bin", length(intervened_NODE))
+    }
+
     # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
     regs_list <- vector(mode = "list", length = length(NodeNames))
     names(regs_list) <- c(NodeNames)
     class(regs_list) <- c(class(regs_list), "ListOfRegressionForms")
     for (i in seq_along(NodeNames)) {
+      modelfit.g.node <- modelfit.g$getPsAsW.models()[[i]]
+
       reg <- RegressionClass$new(outvar = NodeNames[i],
                                  predvars = NULL,
                                  outvar.class = list("deterministic"),
                                  subset_vars = list(NodeNames[i]),
-                                 model_contrl = list(gstar.Name = intervened_NODE[i]))
+                                 model_contrl = list(gstar.Name = intervened_NODE[i],
+                                                     type_intervened = type_intervened[i],
+                                                     modelfit.g = modelfit.g.node))
       regs_list[[i]] <- reg
     }
     gstar.NODE.obj <- ModelGeneric$new(reg = regs_list, DataStorageClass.g0 = OData)
-    gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
-
+    gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(newdata = OData, n = OData$nobs)
+    # gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
 
     if (any(is.na(subset_idx)))
@@ -530,6 +542,8 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' This is used for MSMs only and is enabled by default.
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in
 #' \code{trunc_weights} will be truncated.
+#' @param type_intervened_TRT (ADVANCED FEATURE) TBD
+#' @param type_intervened_MONITOR (ADVANCED FEATURE) TBD
 #' @return ...
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
@@ -546,7 +560,9 @@ getIPWeights <- function(OData,
                          reverse_wt_prod = FALSE,
                          holdout = FALSE,
                          eval_stabP = TRUE,
-                         trunc_weights = Inf
+                         trunc_weights = Inf,
+                         type_intervened_TRT = NULL,
+                         type_intervened_MONITOR = NULL
                          ) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
@@ -560,7 +576,8 @@ getIPWeights <- function(OData,
   if (!is.null(useonly_t_TRT) && !is.na(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
   if (!is.null(useonly_t_MONITOR) && !is.na(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
-
+  if (!is.null(type_intervened_TRT) && !is.na(type_intervened_TRT)) assert_that(is.character(type_intervened_TRT))
+  if (!is.null(type_intervened_MONITOR) && !is.na(type_intervened_MONITOR)) assert_that(is.character(type_intervened_MONITOR))
   # print("CALLING IP WEIGHTS NOW"); print("intervened_TRT"); print(intervened_TRT)
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
@@ -578,9 +595,9 @@ getIPWeights <- function(OData,
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
   # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
-  gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, g_preds[["g0.A"]])
+  gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, g_preds[["g0.A"]], OData$modelfit.gA, type_intervened_TRT)
   # Likelihood for monitoring P(N^*(t)=N(t)) under counterfactual intervention N^*(t) on N(t):
-  gstar.MONITOR <- defineNodeGstarIPW(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, g_preds[["g0.N"]])
+  gstar.MONITOR <- defineNodeGstarIPW(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, g_preds[["g0.N"]], OData$modelfit.gN, type_intervened_MONITOR)
 
   # Save all likelihoods relating to propensity scores in separate dataset:
   # wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode, "g0.A", "g0.C", "g0.N", "g0.CAN"), with = FALSE]

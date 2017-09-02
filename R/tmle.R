@@ -227,6 +227,8 @@ fit_CVTMLE <- function(...) {
 #' @param return_fW Return the \code{gridisl} model object from the very last Q regression.
 #' Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).
 #' @param reg_Q (ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.
+#' @param type_intervened_TRT (ADVANCED FEATURE) TBD
+#' @param type_intervened_MONITOR (ADVANCED FEATURE) TBD
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -267,6 +269,8 @@ fit_GCOMP <- function(OData,
                         return_wts = FALSE,
                         return_fW = FALSE,
                         reg_Q = NULL,
+                        type_intervened_TRT = NULL,
+                        type_intervened_MONITOR = NULL,
                         verbose = getOption("stremr.verbose"), ...) {
 
   # cat("Calling fit_GCOMP:\n")
@@ -313,7 +317,9 @@ fit_GCOMP <- function(OData,
                                 useonly_t_MONITOR,
                                 rule_name,
                                 holdout = CVTMLE,
-                                eval_stabP = FALSE)
+                                eval_stabP = FALSE,
+                                type_intervened_TRT = type_intervened_TRT,
+                                type_intervened_MONITOR = type_intervened_MONITOR)
       if (trunc_weights < Inf) IPWeights[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
@@ -596,8 +602,8 @@ fit_GCOMP_onet <- function(OData,
 
 
   # OData$def.types.sVar() ## was a bottleneck, replaced with below:
-  OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
-  OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
+  # OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
+  # OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.

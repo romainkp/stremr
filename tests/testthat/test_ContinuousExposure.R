@@ -1,4 +1,5 @@
 require("stremr")
+require("sl3")
 options(stremr.verbose = FALSE)
 require("data.table")
 data(OdataNoCENS)
@@ -60,23 +61,33 @@ test_that("IPW works with continuous exposure and cond. dens. SuperLearner", {
   lrn2 <- Lrnr_condensier$new(nbins = 5, bin_method = "equal.mass", pool = TRUE)
   sl <- Lrnr_sl$new(learners = Stack$new(lrn1, lrn2),
                     metalearner = Lrnr_solnp_density$new())
+
+  stratify_TRT <- list(continA=c("t == 0L", "t > 0L"))
+
   OData <- fitPropensity(OData = OData,
                         gform_CENS = gform_CENS,
                         gform_TRT = gform_TRT,
+                        stratify_TRT = stratify_TRT,
                         models_TRT = sl)
-  OData$g_preds
+  # OData$g_preds
 
   ## todo: now we need to somehow call sl$predict() on the counterfactual exposure as the outcome (evalute another likelihood)
   ## currently just calling ModelDeterministic$predict() which simply evaluates I(continA=new_continA), which isn't enough
-  wtsDT <- getIPWeights(OData, intervened_TRT = "new_continA")
+  wtsDT <- getIPWeights(OData, intervened_TRT = "new_continA", type_intervened_TRT = "shift")
   survNPMSM <- survNPMSM(wtsDT, OData)
-  survNPMSM <- survDirectIPW(wtsDT, OData)
+  survMSM <- survMSM(wtsDT, OData)
+  IPW <- directIPW(wtsDT, OData)
 
-
+  ## gstar.A should be 1
+  wtsDT_MSM <- getIPWeights(OData, intervened_TRT = "new_continA", type_intervened_TRT = "MSM")
 
   t.surv <- c(0:3)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-  gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "new_continA", Qforms = Qforms, stratifyQ_by_rule = FALSE)
+  tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "new_continA",
+                        Qforms = Qforms,
+                        stratifyQ_by_rule = FALSE,
+                        type_intervened_TRT = "shift")
 
   options(stremr.verbose = FALSE)
 })

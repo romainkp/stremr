@@ -9,7 +9,8 @@ getIPWeights(OData, intervened_TRT = NULL, intervened_MONITOR = NULL,
   rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
   tmax = NULL, ignore_tmin = NULL, ignore_tmax = NULL,
   reverse_wt_prod = FALSE, holdout = FALSE, eval_stabP = TRUE,
-  trunc_weights = Inf)
+  trunc_weights = Inf, type_intervened_TRT = NULL,
+  type_intervened_MONITOR = NULL)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -55,6 +56,10 @@ This is used for MSMs only and is enabled by default.}
 
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in
 \code{trunc_weights} will be truncated.}
+
+\item{type_intervened_TRT}{(ADVANCED FEATURE) TBD}
+
+\item{type_intervened_MONITOR}{(ADVANCED FEATURE) TBD}
 }
 \value{
 ...

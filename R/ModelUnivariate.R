@@ -47,7 +47,7 @@ ModelUnivariate  <- R6Class(classname = "ModelUnivariate",
           sl3_learner <- opt_params[["sl3_learner"]]
           opt_params[["sl3_learner"]] <- NULL
         } else {
-          message("'sl3_learner' argument for sl3 learner object must be specified somewhere, using default GLM learner")
+          message("'sl3_learner' argument for sl3 learner object not found, using default GLM learner 'sl3::Lrnr_glm_fast'")
           if (!("family" %in% names(opt_params))) opt_params[["family"]] <- "quasibinomial"
           sl3_learner <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
         }
@@ -206,6 +206,12 @@ ModelUnivariate  <- R6Class(classname = "ModelUnivariate",
       # **********************************************************************
       return(probAeqa)
     },
+
+    predict.gstar = function(newdata, ...) { # P(A^*[i]=A^*|W=w) - calculating the likelihood for g^*(A)
+      browser()
+
+    },
+
 
     define.subset.idx = function(data) {
       if (is.logical(self$subset_vars)) {

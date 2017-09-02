@@ -16,6 +16,7 @@ fit_GCOMP(OData, tvals, Qforms, intervened_TRT = NULL,
   trunc_weights = 10^6, weights = NULL, max_iter = 15,
   adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
   parallel = FALSE, return_wts = FALSE, return_fW = FALSE, reg_Q = NULL,
+  type_intervened_TRT = NULL, type_intervened_MONITOR = NULL,
   verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
@@ -120,6 +121,10 @@ Note: for large datasets setting this to \code{TRUE} may lead to extremely large
 Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).}
 
 \item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}
+
+\item{type_intervened_TRT}{(ADVANCED FEATURE) TBD}
+
+\item{type_intervened_MONITOR}{(ADVANCED FEATURE) TBD}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 
