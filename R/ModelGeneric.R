@@ -24,7 +24,7 @@ newsummarymodel.SDRtransformQModel <- function(regClass, reg, ...) SDRtransformQ
 
 ## For evaluating propensity scores under g.star (counterfactual probabilities)
 newsummarymodel.deterministic <- function(regClass, reg, ...) ModelDeterministic$new(reg = reg, ...)
-newsummarymodel.NULL <- function(regClass, reg, ...) NULLOutcomeModel$new(reg = reg, ...)
+newsummarymodel.NULL <- function(regClass, reg, ...) ModelNULLOutcome$new(reg = reg, ...)
 
 # ## Summary model constructor for continuous outcome sA[j]:
 # newsummarymodel.contin <- function(regClass, reg, DataStorageClass.g0, ...) ContinModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
