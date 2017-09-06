@@ -283,6 +283,7 @@ fit_GCOMP <- function(OData,
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
   if (!is.null(models)) assert_that(is.ModelStack(models))
+  assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   assert_that(is.logical(adapt_stop))
 
   if (TMLE & iterTMLE) stop("Either 'TMLE' or 'iterTMLE' must be set to FALSE. Cannot estimate both within a single algorithm run.")

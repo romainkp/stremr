@@ -97,7 +97,7 @@ fit_iTMLE <- function(OData,
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  if (!is.null(models)) assert_that(is.ModelStack(models))
+  assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
 
   # ------------------------------------------------------------------------------------------------
