@@ -282,7 +282,6 @@ fit_GCOMP <- function(OData,
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  if (!is.null(models)) assert_that(is.ModelStack(models))
   assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   assert_that(is.logical(adapt_stop))
 
