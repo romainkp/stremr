@@ -198,6 +198,10 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
 
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
+      if (gvars$verbose) {
+        print("Q.init model fit:")
+        print(private$model.fit)
+      }
       self$is.fitted <- TRUE
 
       # **********************************************************************
