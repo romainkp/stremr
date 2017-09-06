@@ -43,6 +43,7 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
 
     if (inherits(m.Qstar, "try-error")) { # TMLE update failed
       # if (gvars$verbose)
+      print(m.Qstar)
       message("GLM TMLE update has failed, setting epsilon = 0")
       warning("GLM TMLE update has failed, setting epsilon = 0")
       update.Qstar.coef <- 0
