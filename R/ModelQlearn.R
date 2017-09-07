@@ -34,7 +34,6 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
     # off_TMLE <- qlogis(Qk_hat)
     # off_TMLE[off_TMLE >= up_trunc_offset] <- up_trunc_offset
     # off_TMLE[off_TMLE <= low_trunc_offset] <- low_trunc_offset
-
     m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
                                           y = Qkplus1, weights = IPWts, offset = off_TMLE,
                                           # method=c('eigen','Cholesky','qr'),
@@ -126,6 +125,8 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
     keep_idx = FALSE,         # keep current indices (do not remove them right after fitting)
     idx_used_to_fit_initQ = NULL,
     fold_y_names = NULL,
+    lwr = 0.0,               ## lower bound for Q predictions
+    upr = 1.0,               ## upper bound for Q predictions
 
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
@@ -202,6 +203,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         print("Q.init model fit:")
         print(private$model.fit)
       }
+
       self$is.fitted <- TRUE
 
       # **********************************************************************
@@ -246,6 +248,8 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
                                         subset_idx = self$subset_idx,
                                         stoch_indicator = stoch_indicator)
       }
+      probA1[probA1 < self$lwr] <- self$lwr
+      probA1[probA1 > self$upr] <- self$upr
 
       iQ_all <- probA1
 
@@ -477,7 +481,11 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         }
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
-        private$probA1 <- probA1[[1]]
+        if (is.matrix(probA1)) {
+          private$probA1 <- probA1[,1]
+        } else {
+          private$probA1 <- probA1[[1]]
+        }
 
         ## check that predictions P(A=1 | dmat) exist for all obs
         if (any(is.na(private$probA1) & !is.nan(private$probA1))) {
