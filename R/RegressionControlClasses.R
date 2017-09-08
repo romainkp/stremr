@@ -296,12 +296,13 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
     TMLE = FALSE,
     CVTMLE = FALSE,
     byfold_Q = FALSE,
-    keep_idx = FALSE,
-    stratifyQ_by_rule = FALSE,
+    keep_idx = FALSE,           ## should ModelQlearn remove internally stored subset of indices used for training?
+    stratifyQ_by_rule = FALSE,  ## train only among those who are following the rule of interest?
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
     regimen_names = NA,
     pool_regimes = FALSE,
+    maxpY = 1.0,                ## max incidence P(Y=1|...) for rare-outcomes TMLE, only works with learners that can handle logistic-link with outcomes > 1
     initialize = function(Qreg_counter,
                           all_Qregs_indx,
                           t_period,
@@ -314,6 +315,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
                           keep_idx,
                           lower_bound_zero_Q = stremrOptions("lower_bound_zero_Q"),
                           skip_update_zero_Q = stremrOptions("skip_update_zero_Q"),
+                          maxpY,
                           ...) {
       self$Qreg_counter <- Qreg_counter
       self$all_Qregs_indx <- all_Qregs_indx
@@ -326,6 +328,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
       if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
       if (!missing(keep_idx)) self$keep_idx <- keep_idx
+      if (!missing(maxpY)) self$maxpY <- maxpY
 
       self$lower_bound_zero_Q <- lower_bound_zero_Q
       self$skip_update_zero_Q <- skip_update_zero_Q

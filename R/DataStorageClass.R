@@ -585,12 +585,24 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       return(invisible(self))
     },
 
-    # Modify the values in node nodes_to_repl in self$dat.sVar with values from source_for_repl using only the IDs in subset_idx:
+    ## Modify the values in node nodes_to_repl in self$dat.sVar with values from source_for_repl using only the IDs in subset_idx
+    ## This is done by reference (modifying the input data.table)
     replaceNodesVals = function(subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames) {
       for (node_idx in seq_along(nodes_to_repl)) {
         if (length(subset_idx) > 0) {
           source_node <- self$dat.sVar[subset_idx, (source_for_repl[node_idx]), with = FALSE][[source_for_repl[node_idx]]]
           self$dat.sVar[subset_idx, (nodes_to_repl[node_idx]) := source_node]
+        }
+      }
+      return(invisible(self))
+    },
+
+    ## Rescale the node values (multply by delta) in a data.table by reference
+    rescaleNodes = function(subset_idx, nodes_to_rescale, delta) {
+      assert_that(is.numeric(delta) || is.integer(delta))
+      for (node_idx in seq_along(nodes_to_rescale)) {
+        if (length(subset_idx) > 0) {
+          self$dat.sVar[subset_idx, (nodes_to_rescale[node_idx]) := get(nodes_to_rescale[node_idx])*delta]
         }
       }
       return(invisible(self))
@@ -607,11 +619,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       data.table::setnames(self$dat.sVar, old = target, new = current)
       data.table::setnames(self$dat.sVar, old = current %+% ".temp.current", new = target)
 
-      # if (!is.null(self$H2Oframe)) {
-      #   names(self$H2Oframe)[names(self$H2Oframe) %in% current] <- current %+% ".temp.current"
-      #   names(self$H2Oframe)[names(self$H2Oframe) %in% target] <- current
-      #   names(self$H2Oframe)[names(self$H2Oframe) %in% (current %+% ".temp.current")] <- target
-      # }
     },
 
     ## Rule followers over time for given exposure node and the counterfactual intervention node
@@ -766,26 +773,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       purrr::map2((1:k), fold_idx, fold)
     }
 
-    # -----------------------------------------------------------------------------
-    # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
-    # -----------------------------------------------------------------------------
-    # fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
-    #   if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
-    #   H2Oframe <- fast.load.to.H2O(dat.sVar, destination_frame = destination_frame)
-    #   if (saveH2O) {
-    #     self$H2Oframe <- H2Oframe
-    #     self$H2Oframe_ID <- h2o::h2o.getId(H2Oframe)
-    #   }
-    #   return(invisible(H2Oframe))
-    # },
-    # print = function(){
-    #   cat("\nThis R6 object (class 'DataStorageClass') stores the input data as 'data.table'.",
-    #       "\nTo access the data, use the syntax 'object_name$dat.sVar' or 'get_data(object_name)'.",
-    #       "\nTo modify the input column(s), use modify-by-reference ':=' syntax of the data.table",
-    #       "\nor call importData() for a new, modified input.",
-    #       "\nPlease see ?data.table for more info.\n")
-    #   print(self$dat.sVar)
-    # }
   ),
 
   active = list(

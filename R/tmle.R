@@ -271,6 +271,7 @@ fit_GCOMP <- function(OData,
                         reg_Q = NULL,
                         type_intervened_TRT = NULL,
                         type_intervened_MONITOR = NULL,
+                        maxpY = 1.0,
                         verbose = getOption("stremr.verbose"), ...) {
 
   # cat("Calling fit_GCOMP:\n")
@@ -377,7 +378,7 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -389,7 +390,7 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -549,6 +550,7 @@ fit_GCOMP_onet <- function(OData,
                              adapt_stop_factor = 10,
                              tol_eps = 0.001,
                              return_fW = FALSE,
+                             maxpY = 1.0,
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -632,7 +634,8 @@ fit_GCOMP_onet <- function(OData,
                                      subset_vars = list("Qkplus1"),
                                      subset_exprs = all_Q_stratify[i],
                                      model_contrl = models,
-                                     censoring = FALSE)
+                                     censoring = FALSE,
+                                     maxpY = maxpY)
 
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.

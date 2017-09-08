@@ -16,7 +16,7 @@ fit_GCOMP(OData, tvals, Qforms, intervened_TRT = NULL,
   trunc_weights = 10^6, weights = NULL, max_iter = 15,
   adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
   parallel = FALSE, return_wts = FALSE, return_fW = FALSE, reg_Q = NULL,
-  type_intervened_TRT = NULL, type_intervened_MONITOR = NULL,
+  type_intervened_TRT = NULL, type_intervened_MONITOR = NULL, maxpY = 1,
   verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{

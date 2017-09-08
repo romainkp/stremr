@@ -10,10 +10,10 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   library("stremr")
   library("sl3")
   library("SuperLearner")
-  # options(stremr.verbose = TRUE)
-  # options(gridisl.verbose = TRUE)
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
+  options(stremr.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
+  # options(stremr.verbose = FALSE)
+  # options(gridisl.verbose = FALSE)
   library("data.table")
   library("magrittr")
   library("ggplot2")
@@ -59,14 +59,11 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
   # tvals <- 0:2
-  tvals <- 10
-  tmax <- 13
-  tbreaks = c(1:8,11,14)-1
-
+  tvals <- 2
   ## This dataset defines all parameters that we like to vary in this analysis (including different interventions)
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
-                  stratifyQ_by_rule = c(TRUE)) %>%
+                  stratifyQ_by_rule = c(FALSE)) %>%
                   cross_d() %>%
                   arrange(stratifyQ_by_rule)
 
@@ -123,27 +120,27 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
-  GCOMP <-analysis %>%
-        distinct(intervened_TRT, stratifyQ_by_rule) %>%
-        mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fit_GCOMP(intervened_TRT = .x,
-                        stratifyQ_by_rule = .y,
-                        tvals = tvals,
-                        OData = OData,
-                        models = models_Q,
-                        Qforms = Qforms,
-                        fit_method = fit_method_Q
-                        ))) %>%
-        mutate(GCOMP = map(GCOMP, "estimates"))
+  # GCOMP <-analysis %>%
+  #       distinct(intervened_TRT, stratifyQ_by_rule) %>%
+  #       mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
+  #         ~ fit_GCOMP(intervened_TRT = .x,
+  #                       stratifyQ_by_rule = .y,
+  #                       tvals = tvals,
+  #                       OData = OData,
+  #                       models = models_Q,
+  #                       Qforms = Qforms,
+  #                       fit_method = fit_method_Q
+  #                       ))) %>%
+  #       mutate(GCOMP = map(GCOMP, "estimates"))
 
 
-  test_that("GCOMP results w/out Monitoring match", {
-    GCOMP[["GCOMP"]][[1]][["St.GCOMP"]]
-    # [1] 0.99 0.99 0.99
+  # test_that("GCOMP results w/out Monitoring match", {
+  #   GCOMP[["GCOMP"]][[1]][["St.GCOMP"]]
+  #   # [1] 0.99 0.99 0.99
 
-    GCOMP[["GCOMP"]][[2]][["St.GCOMP"]]
-    # [1] 0.9900000 0.9719893 0.9593532
-  })
+  #   GCOMP[["GCOMP"]][[2]][["St.GCOMP"]]
+  #   # [1] 0.9900000 0.9719893 0.9593532
+  # })
 
 ## with rare outcomes
 # [[1]]

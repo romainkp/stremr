@@ -110,23 +110,24 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
   class = TRUE,
   public = list(
     reg = NULL,
-    regimen_names = character(), # for future pooling across regimens
+    regimen_names = character(), ## for future pooling across regimens
     classify = FALSE,
     TMLE = TRUE,
     CVTMLE = FALSE,
     byfold_Q = FALSE,
     nIDs = integer(),
-    stratifyQ_by_rule = FALSE,
+    stratifyQ_by_rule = FALSE,  ## train only among those who are following the rule of interest?
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
-    Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
+    Qreg_counter = integer(),    ## Counter for the current sequential Q-regression (min is at 1)
     all_Qregs_indx = integer(),
     t_period = integer(),
-    keep_idx = FALSE,         # keep current indices (do not remove them right after fitting)
+    keep_idx = FALSE,            ## keep current indices (do not remove them right after fitting)
     idx_used_to_fit_initQ = NULL,
     fold_y_names = NULL,
-    lwr = 0.0,               ## lower bound for Q predictions
-    upr = 1.0,               ## upper bound for Q predictions
+    lwr = 0.0,                   ## lower bound for Q predictions
+    upr = 1.0,                   ## upper bound for Q predictions
+    maxpY = 1.0,                 ## max incidence P(Y=1|...) for rare-outcomes TMLE, only works with learners that can handle logistic-link with outcomes > 1
 
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
@@ -141,6 +142,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       self$skip_update_zero_Q <- reg$skip_update_zero_Q
       self$t_period <- reg$t_period
       self$regimen_names <- reg$regimen_names
+      self$maxpY <- reg$maxpY
 
       self$TMLE <- reg$TMLE
       self$CVTMLE <- reg$CVTMLE
@@ -197,13 +199,19 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       nodes <- data$nodes
       self$n_obs_fit <- length(self$subset_idx)
 
+      data$rescaleNodes(subset_idx = self$subset_idx, nodes_to_rescale = self$outvar, delta = 1/self$maxpY)
+      data$dat.sVar[, Qkplus1]
+
       # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
       if (gvars$verbose) {
         print("Q.init model fit:")
         print(private$model.fit)
+        # private$model.fit$get_best_models()
+        # str(private$model.fit$get_best_models())
       }
 
+      data$rescaleNodes(subset_idx = self$subset_idx, nodes_to_rescale = self$outvar, delta = self$maxpY)
       self$is.fitted <- TRUE
 
       # **********************************************************************
@@ -250,8 +258,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       }
       probA1[probA1 < self$lwr] <- self$lwr
       probA1[probA1 > self$upr] <- self$upr
-
-      iQ_all <- probA1
+      iQ_all <- probA1*self$maxpY
 
       ## print("initial mean(Qkplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
       ## **********************************************************************
