@@ -45,7 +45,7 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
     if (is.null(estimator_short)) {
       stop("Cannot automatically detect the name of the column that contains the estimates. Please provide the name using 'St_name = ...'.")
     }
-    St_name <- "St." %+% estimator_short
+    St_name <- paste0("St.", estimator_short)
   }
 
   ## check that the influence curve column exists in all survival datasets
@@ -77,12 +77,13 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
   }
 
   eval_SEs_two_tx <- function(dx1, dx2, time_idx, ...) {
-    nIDs_1 <- length(St_data[[dx1]][["IC.St"]])
-    nIDs_2 <- length(St_data[[dx2]][["IC.St"]])
+    nIDs_1 <- length(St_data[[dx1]][["IC.St"]][[time_idx]])
+    nIDs_2 <- length(St_data[[dx2]][["IC.St"]][[time_idx]])
     if (nIDs_1 != nIDs_2)
       stop("Cannot evaluate RDs from two ICs for dx1 and dx2, since their lengths differ: " %+% nIDs_1 %+% " vs. " %+% nIDs_2)
     nIDs <- nIDs_1
-    sqrt(sum(( St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] )^2) / nIDs^2)
+    SE.diff <- sqrt(sum(( St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] )^2) / nIDs^2)
+    return(SE.diff)
   }
 
   gs <- list(dx1 = tx_idx,

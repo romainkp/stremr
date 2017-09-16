@@ -1,64 +1,3 @@
-tmle.update <- function(Qkplus1, Qk_hat, IPWts,
-                        lower_bound_zero_Q = TRUE,
-                        skip_update_zero_Q = TRUE,
-                        up_trunc_offset = stremrOptions("up_trunc_offset"),
-                        low_trunc_offset = stremrOptions("low_trunc_offset"),
-                        eps_tol = stremrOptions("eps_tol")
-                        ) {
-
-  QY.star <- NA
-
-  if (sum(abs(IPWts)) < 10^-9) {
-
-    update.Qstar.coef <- 0
-    # if (gvars$verbose)
-    message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon to 0")
-    # warning("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
-
-  # } else if ((sum(Qkplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
-  } else if (((all(Qkplus1[IPWts > 0] < eps_tol)) || (all(Qkplus1[IPWts > 0] > (1-eps_tol)))) && skip_update_zero_Q) {
-    message("GLM TMLE update cannot be performed since the outcomes (Qkplus1) are either all 0 or all 1, setting epsilon to 0")
-    update.Qstar.coef <- 0
-
-  } else {
-
-    #************************************************
-    # TMLE update via weighted univariate ML (espsilon is intercept)
-    #************************************************
-    if (lower_bound_zero_Q) {
-      Qkplus1[Qkplus1 < eps_tol] <- eps_tol
-      Qkplus1[Qkplus1 > (1 - eps_tol)] <- (1 - eps_tol)
-    }
-
-    off_TMLE <- truncate_offset(qlogis(Qk_hat), up_trunc_offset, low_trunc_offset)
-    # off_TMLE <- qlogis(Qk_hat)
-    # off_TMLE[off_TMLE >= up_trunc_offset] <- up_trunc_offset
-    # off_TMLE[off_TMLE <= low_trunc_offset] <- low_trunc_offset
-    m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
-                                          y = Qkplus1, weights = IPWts, offset = off_TMLE,
-                                          # method=c('eigen','Cholesky','qr'),
-                                          family = quasibinomial(), trace = FALSE, maxit = 1000),
-                  silent = TRUE)
-
-    if (inherits(m.Qstar, "try-error")) { # TMLE update failed
-      # if (gvars$verbose)
-      print(m.Qstar)
-      message("GLM TMLE update has failed, setting epsilon = 0")
-      warning("GLM TMLE update has failed, setting epsilon = 0")
-      update.Qstar.coef <- 0
-    } else {
-      update.Qstar.coef <- m.Qstar$coef
-    }
-  }
-
-  if (gvars$verbose == 2) cat("...TMLE epsilon update = ", update.Qstar.coef, "\n")
-
-  fit <- list(TMLE_intercept = update.Qstar.coef)
-  class(fit)[2] <- "tmlefit"
-  if (gvars$verbose) print("tmle update: " %+% update.Qstar.coef)
-  return(fit)
-}
-
 ## ---------------------------------------------------------------------
 ## R6 Class for Q-Learning (Iterative G-COMP or TMLE)
 ## ---------------------------------------------------------------------
@@ -199,10 +138,10 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       nodes <- data$nodes
       self$n_obs_fit <- length(self$subset_idx)
 
+      ## multiply the outcomes by delta-factor (for rare-outcomes adjustment with known upper bound = self$maxpY)
       data$rescaleNodes(subset_idx = self$subset_idx, nodes_to_rescale = self$outvar, delta = 1/self$maxpY)
-      data$dat.sVar[, Qkplus1]
 
-      # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
+      ## Fit model using (re-scaled) Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
       if (gvars$verbose) {
         print("Q.init model fit:")
@@ -211,6 +150,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         # str(private$model.fit$get_best_models())
       }
 
+      ## Convert the outcome column back to its original scale (multpily by delta)
       data$rescaleNodes(subset_idx = self$subset_idx, nodes_to_rescale = self$outvar, delta = self$maxpY)
       self$is.fitted <- TRUE
 
@@ -244,23 +184,26 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## *** NEED TO ADD: do MC sampling to perform the same integration for stochastic g^*
       ## ------------------------------------------------------------------------------------------------------------------------
       if (!any_stoch) {
-        probA1 <- self$predictStatic(data,
+        pred_Qk <- self$predictStatic(data,
                                     g0 = interventionNodes.g0,
                                     gstar = interventionNodes.gstar,
                                     subset_idx = self$subset_idx)
       } else {
         # For all stochastic nodes, need to integrate out w.r.t. the support of each node
-        probA1 <- self$predictStochastic(data,
+        pred_Qk <- self$predictStochastic(data,
                                         g0 = interventionNodes.g0,
                                         gstar = interventionNodes.gstar,
                                         subset_idx = self$subset_idx,
                                         stoch_indicator = stoch_indicator)
       }
-      probA1[probA1 < self$lwr] <- self$lwr
-      probA1[probA1 > self$upr] <- self$upr
-      iQ_all <- probA1*self$maxpY
 
-      ## print("initial mean(Qkplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
+      pred_Qk[pred_Qk < self$lwr] <- self$lwr
+      pred_Qk[pred_Qk > self$upr] <- self$upr
+
+      ## rescale the prediction in (0,1) range to its pre-specified bounded range (maximum probability constraint)
+      pred_Qk <- pred_Qk*self$maxpY
+
+      ## TMLE update of initial prediction (will return pred_Qk if not doing TMLE updates)
       ## **********************************************************************
       ## Iteration step for G-COMP
       ## (*) Update are performed only among obs who were involved in fitting the initial Q (self$idx_used_to_fit_initQ)
@@ -268,55 +211,13 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## (*) If person failed at t, he/she could not have participated in model fit at t+1.
       ## (*) Thus the outcome at row t for new failures ("Qkplus1") is always deterministically assigned to 1.
       ## **********************************************************************
-
-      ## The outcome that was used for fitting the initial Q at current time-point k:
-      Qkplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1", with = FALSE][[1]]
-      # data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1" := eval(as.name("Qkplus1"))]
-
-      if (self$TMLE) {
-        ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
-        ## Thus, need to find which elements in predicted Q vector (probA1) where actually used for fitting the init Q
-        idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
-        Qk_hat <- probA1[idx_for_fits_among_preds]
-        # off_TMLE <- qlogis(Qk_hat)
-        # print("initial mean(Qkplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
-
-        ## Cumulative IPWeights for current t=k (from t=0 to k):
-        wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
-
-        ## TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
-        ## tmle update will error out if some predictions are exactly 0
-        private$TMLE.fit <- tmle.update(Qkplus1 = Qkplus1,
-                                        Qk_hat = Qk_hat,
-                                        IPWts = wts_TMLE,
-                                        lower_bound_zero_Q = self$lower_bound_zero_Q,
-                                        skip_update_zero_Q = self$skip_update_zero_Q)
-
-        TMLE_intercept <- private$TMLE.fit$TMLE_intercept
-
-        if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
-          update.Qstar.coef <- TMLE_intercept
-        } else {
-          update.Qstar.coef <- 0
-        }
-
-        # EIC_i_t_calc_unadjusted <- wts_TMLE * (Qkplus1 - Qk_hat)
-        # print("EIC_i_t_calc_unadjusted"); print(mean(EIC_i_t_calc_unadjusted))
-
-        ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
-        Qk_hat <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
-        iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
-
-        EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
-        # print("EIC_i_t_calc_adjusted"); print(mean(EIC_i_t_calc))
-        data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
-      }
+      pred_Qk <- self$TMLE_update(data, pred_Qk)
 
       ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
       ## This is either the initial G-COMP Q or the TMLE targeted version of the initial Q
       ## This prediction includes all newly censored observations.
       ## When stratifying Q fits, these predictions will also include all observations who just stopped following the treatment rule at time point k.
-      data$dat.sVar[self$subset_idx, ("Qk_hat") := iQ_all]
+      data$dat.sVar[self$subset_idx, ("Qk_hat") := pred_Qk]
 
       # Set the outcome for the next Q-regression: put Q[t] in (t-1).
       # only set the Qkplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
@@ -328,7 +229,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         ## Next training fold model can check if some of its indices overlap with 'train_idx_to_replace'
         ## How do we pass these predictions and store them?
         ## train_idx_to_replace <- (self$idx_used_to_fit_initQ - 1)
-        data$dat.sVar[newsubset_idx, ("Qkplus1") := iQ_all]
+        data$dat.sVar[newsubset_idx, ("Qkplus1") := pred_Qk]
 
         if (self$byfold_Q) {
           folds_seq <- seq_along(private$probA1_byfold)
@@ -346,10 +247,9 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
 
       } else {
         ## save prediction P(Q.kplus=1):
-        private$probAeqa <- iQ_all
+        private$probAeqa <- pred_Qk
         private$probA1 <- NULL
       }
-
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
@@ -359,6 +259,50 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
 
       # **********************************************************************
       invisible(self)
+    },
+
+    TMLE_update = function(data, init_Qk) {
+      if (!self$TMLE) {
+
+        return(init_Qk)
+
+      } else if (self$TMLE) {
+
+        ## The outcome (not re-scaled yet by 1/self$maxpY) that was used for fitting the initial Q at current time-point k:
+        Qkplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, self$outvar, with = FALSE][[1]]
+        ## re-scaled initial predictions (from initial outcome model)
+        init_Qk <- init_Qk / self$maxpY
+        ## re-scaled outcomes
+        Y <- Qkplus1 / self$maxpY
+
+        ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
+        ## Thus, need to find which elements in predicted Q vector (init_Qk) where actually used for fitting the init Q
+        idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
+        init_Qk_fitted <- init_Qk[idx_for_fits_among_preds]
+        ## Cumulative IPWeights for current t=k (from t=0 to k):
+        wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
+
+        ## TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
+        X <- data.frame(intercept = rep(1L, length(init_Qk_fitted)), offset = qlogis(init_Qk_fitted))
+        newX <- data.frame(intercept = rep(1L, length(init_Qk)), offset = qlogis(init_Qk))
+
+        ## todo: in case of failure call TMLE.updater.NULL, allow passing custom TMLE updaters
+        xgb.params <- list(nrounds = 100, silent = 1, objective = "reg:logistic", booster = "gblinear", eta = 1, nthread = 1)
+        TMLE.fit <- iTMLE.updater.xgb(Y, X, newX, obsWeights = wts_TMLE, params = xgb.params)
+        # TMLE.fit <- TMLE.updater.speedglm(Y, X, newX, obsWeights = wts_TMLE)
+        # TMLE.fit <- TMLE.updater.glm(Y, X, newX, obsWeights = wts_TMLE)
+        # TMLE.fit <- TMLE.updater.NULL(Y, X, newX, obsWeights = wts_TMLE)
+
+        ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
+        pred_Qk <- TMLE.fit$pred*self$maxpY
+
+        ## evaluate the contribution to the EIC (TMLE variance estimation)
+        Qk_hat <- pred_Qk[idx_for_fits_among_preds]
+        EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
+        data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
+
+        return(pred_Qk)
+      }
     },
 
     # **********************************************************************

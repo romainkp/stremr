@@ -21,10 +21,10 @@ truncate_offset <- function(offset,
 #' @param obsWeights Row-specific weights
 #' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
-SDR.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
+TMLE.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
   # cat("...running no update (epsilon update set to 0)...\n")
   fit <- list(object = list(est.fun = "stats::glm.fit", family = "stats::quasibinomial", coef = 0))
-  class(fit) <- "SDR.updater.TMLE"
+  class(fit) <- "TMLE.updater"
   pred <- predict(fit, newX)
   out <- list(pred = pred, fit = fit)
   out
@@ -44,7 +44,11 @@ SDR.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
 #' @param obsWeights Row-specific weights
 #' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
-SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
+TMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
+  eps_tol = stremrOptions("eps_tol")
+  Y[Y < eps_tol] <- eps_tol
+  Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
+
   # cat("...running glm TMLE update with intercept-only GLM...\n")
   offset <- truncate_offset(X[, "offset"])
   fit.glm <- try(stats::glm.fit(x = matrix(1L, ncol = 1, nrow = length(Y)),
@@ -63,7 +67,7 @@ SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
   }
 
   fit <- list(object = list(est.fun = "stats::glm.fit", family = "quasibinomial", coef = epsilon_coef))
-  class(fit) <- "SDR.updater.TMLE"
+  class(fit) <- "TMLE.updater"
 
   pred <- predict(fit, newX)
   out <- list(pred = pred, fit = fit)
@@ -75,9 +79,13 @@ SDR.updater.glmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
 #' Performs an SDR update using a main-terms GLM (logistic regression with \code{speedglm} package).
 #' This function is passed along as a separate learner
 #' to the SuperLearner implementation of origami package
-#' @rdname SDR.updater.glmTMLE
+#' @rdname TMLE.updater.glm
 #' @export
-SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
+TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
+  eps_tol = stremrOptions("eps_tol")
+  Y[Y < eps_tol] <- eps_tol
+  Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
+
   # cat("...running speedglm TMLE update with intercept-only GLM...\n")
   offset <- truncate_offset(X[, "offset"])
   fit.glm <- speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
@@ -86,7 +94,7 @@ SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
                                      family = quasibinomial(), trace = FALSE, maxit = 1000)
 
   fit <- list(object = list(est.fun = "speedglm::speedglm.wfit", family = "quasibinomial", coef = fit.glm$coef))
-  class(fit) <- "SDR.updater.TMLE"
+  class(fit) <- "TMLE.updater"
 
   pred <- predict(fit, newX)
   out <- list(pred = pred, fit = fit)
@@ -108,7 +116,11 @@ SDR.updater.speedglmTMLE <- function(Y, X, newX, family, obsWeights, ...) {
 #' @param obsWeights Row-specific weights
 #' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
-SDR.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
+iTMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
+  eps_tol = stremrOptions("eps_tol")
+  Y[Y < eps_tol] <- eps_tol
+  Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
+
   # cat("...running SDR update with GLM...\n")
   offset <- truncate_offset(X[, "offset"])
   X <- X[, colnames(X)[!colnames(X) %in% "offset"], drop = FALSE]
@@ -120,7 +132,7 @@ SDR.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
                             control = glm.control(trace = FALSE))
 
   fit <- list(object = list(est.fun = "stats::glm.fit", family = "stats::quasibinomial", coef = fit.glm$coef))
-  class(fit) <- "SDR.updater.glm"
+  class(fit) <- "iTMLE.updater.glm"
   pred <- predict(fit, newX)
   out <- list(pred = pred, fit = fit)
   out
@@ -131,11 +143,11 @@ SDR.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
 #' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=1.
 #' This function is passed along as a separate learner
 #' to the SuperLearner implementation of origami package
-#' @rdname SDR.updater.xgb
+#' @rdname iTMLE.updater.xgb
 #' @export
-SDR.updater.xgb.delta1 <- function(Y, X, newX, family, obsWeights, params, ...) {
+iTMLE.updater.xgb.delta1 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 1
-  SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
+  iTMLE.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
 
 #' iTMLE gbm learner / updater
@@ -143,11 +155,11 @@ SDR.updater.xgb.delta1 <- function(Y, X, newX, family, obsWeights, params, ...) 
 #' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=2.
 #' This function is passed along as a separate learner
 #' to the SuperLearner implementation of origami package
-#' @rdname SDR.updater.xgb
+#' @rdname iTMLE.updater.xgb
 #' @export
-SDR.updater.xgb.delta2 <- function(Y, X, newX, family, obsWeights, params, ...) {
+iTMLE.updater.xgb.delta2 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 2
-  SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
+  iTMLE.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
 
 #' iTMLE gbm learner / updater
@@ -155,11 +167,11 @@ SDR.updater.xgb.delta2 <- function(Y, X, newX, family, obsWeights, params, ...) 
 #' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=3.
 #' This function is passed along as a separate learner
 #' to the SuperLearner implementation of origami package
-#' @rdname SDR.updater.xgb
+#' @rdname iTMLE.updater.xgb
 #' @export
-SDR.updater.xgb.delta3 <- function(Y, X, newX, family, obsWeights, params, ...) {
+iTMLE.updater.xgb.delta3 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 3
-  SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
+  iTMLE.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
 
 #' iTMLE gbm learner / updater
@@ -167,11 +179,11 @@ SDR.updater.xgb.delta3 <- function(Y, X, newX, family, obsWeights, params, ...) 
 #' Performs an SDR update using GBM from \code{xgboost} package with parameter \code{max_delta_step}=4.
 #' This function is passed along as a separate learner
 #' to the SuperLearner implementation of origami package
-#' @rdname SDR.updater.xgb
+#' @rdname iTMLE.updater.xgb
 #' @export
-SDR.updater.xgb.delta4 <- function(Y, X, newX, family, obsWeights, params, ...) {
+iTMLE.updater.xgb.delta4 <- function(Y, X, newX, family, obsWeights, params, ...) {
   params[["max_delta_step"]] <- 4
-  SDR.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
+  iTMLE.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 }
 
 #' iTMLE gbm learner / updater
@@ -190,7 +202,7 @@ SDR.updater.xgb.delta4 <- function(Y, X, newX, family, obsWeights, params, ...) 
 #' @param params Tuning parameters passed on to \code{xgboost}.
 #' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
-SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
+iTMLE.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
   # cat("...running SDR updater xgboost w/ following params: \n "); str(params)
   offset <- truncate_offset(X[, "offset"])
   X <- X[, colnames(X)[!colnames(X) %in% "offset"], drop = FALSE]
@@ -210,31 +222,31 @@ SDR.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
 
   fit.xgb <- xgboost::xgb.train(params = params, data = xgb_dat, nrounds = nrounds)
   fit <- list(object = fit.xgb)
-  class(fit) <- "SDR.updater.xgb"
+  class(fit) <- "iTMLE.updater.xgb"
 
   pred <- predict(fit, newX, ...)
   out <- list(pred = pred, fit = fit)
   out
 }
 
-#' @param object Results of calling \code{SDR.updater.speedglmTMLE} or \code{SDR.updater.glmTMLE}.
+#' @param object Results of calling \code{TMLE.updater.speedglm} or \code{TMLE.updater.glm}.
 #' @param newdata Design matrix with test data for which predictions should be obtained.
 #' Must contain a column named "offset".
-#' @rdname SDR.updater.glmTMLE
+#' @rdname TMLE.updater.glm
 #' @export
-predict.SDR.updater.TMLE <- function(object, newdata, ...) {
+predict.TMLE.updater <- function(object, newdata, ...) {
   mfit <- object$object
   offset <- truncate_offset(newdata[, "offset"])
   pred <- logit_linkinv(offset + mfit$coef)
   pred
 }
 
-#' @param object Results of calling \code{SDR.updater.glm}.
+#' @param object Results of calling \code{iTMLE.updater.glm}.
 #' @param newdata Design matrix with test data for which predictions should be obtained.
 #' Must contain a column named "offset".
-#' @rdname SDR.updater.glm
+#' @rdname iTMLE.updater.glm
 #' @export
-predict.SDR.updater.glm <- function(object, newdata, ...) {
+predict.iTMLE.updater.glm <- function(object, newdata, ...) {
   mfit <- object$object
   offset <- truncate_offset(newdata[, "offset"])
 
@@ -245,12 +257,12 @@ predict.SDR.updater.glm <- function(object, newdata, ...) {
   pred
 }
 
-#' @param object Results of calling \code{SDR.updater.xgb} functions.
+#' @param object Results of calling \code{iTMLE.updater.xgb} functions.
 #' @param newdata Design matrix with test data for which predictions should be obtained.
 #' Must contain a column named "offset".
-#' @rdname SDR.updater.xgb
+#' @rdname iTMLE.updater.xgb
 #' @export
-predict.SDR.updater.xgb <- function (object, newdata, ...)  {
+predict.iTMLE.updater.xgb <- function (object, newdata, ...)  {
   mfit <- object$object
   offset <- truncate_offset(newdata[, "offset"])
 

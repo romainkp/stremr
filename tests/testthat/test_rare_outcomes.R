@@ -29,7 +29,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## -----------------------------------------------------------------------
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
-  newVarnames <- lagnodes %+% ".tminus1"
+  newVarnames <- paste0(lagnodes, ".tminus1")
   Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
   # indicator that the person has never been on treatment up to current t
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
@@ -92,12 +92,12 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1")
-  # OData <- fitPropensity(OData,
-  #                         gform_TRT = gform_TRT,
-  #                         stratify_TRT = stratify_TRT,
-  #                         models_TRT = models_g,
-  #                         fit_method = fit_method_g
-  #                         )
+  OData <- fitPropensity(OData,
+                          gform_TRT = gform_TRT,
+                          stratify_TRT = stratify_TRT,
+                          models_TRT = models_g,
+                          fit_method = fit_method_g
+                          )
   ## Get the dataset with weights:
   # wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)
 
@@ -143,30 +143,46 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
     GCOMP[["GCOMP"]][[2]][["St.GCOMP"]]
   })
 
+
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
   ## ------------------------------------------------------------
-  TMLE <- CVTMLE <- analysis %>%
-          distinct(intervened_TRT, stratifyQ_by_rule)
+ delta <- 0.25
+ TMLE_maxpYdelta <-analysis %>%
+        distinct(intervened_TRT, stratifyQ_by_rule) %>%
+        mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
+          ~ fit_TMLE(intervened_TRT = .x,
+                        stratifyQ_by_rule = .y,
+                        tvals = tvals,
+                        OData = OData,
+                        models = models_Q,
+                        Qforms = Qforms,
+                        fit_method = fit_method_Q,
+                        maxpY = delta
+                        ))) %>%
+        mutate(TMLE = map(TMLE, "estimates"))
 
-    TMLE <- TMLE %>%
-          mutate(TMLE = pmap(TMLE, fit_TMLE,
-                             tvals = tvals,
-                             OData = OData,
-                             models = models_Q,
-                             Qforms = Qforms,
-                             fit_method = fit_method_Q
-                             )) %>%
-          mutate(TMLE = map(TMLE, "estimates"))
+  TMLE_maxpYdelta[["TMLE"]]
 
-  test_that("TMLE results w/out Monitoring match", {
-    # TMLE[["TMLE"]][[1]][["St.TMLE"]]
-    # # [1] 0.99 0.99 0.99
-    # TMLE[["TMLE"]][[1]][["SE.TMLE"]]
-    # # [1] 0.009949874 0.009949874 0.009949874
+ delta <- 1
+ TMLE <-analysis %>%
+        distinct(intervened_TRT, stratifyQ_by_rule) %>%
+        mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
+          ~ fit_TMLE(intervened_TRT = .x,
+                        stratifyQ_by_rule = .y,
+                        tvals = tvals,
+                        OData = OData,
+                        models = models_Q,
+                        Qforms = Qforms,
+                        fit_method = fit_method_Q,
+                        maxpY = delta
+                        ))) %>%
+        mutate(TMLE = map(TMLE, "estimates"))
 
-    # TMLE[["TMLE"]][[2]][["St.TMLE"]]
-    # # [1] 0.9900000 0.9789573 0.9679731
-    # TMLE[["TMLE"]][[2]][["SE.TMLE"]]
-    # # [1] 0.009949874 0.015098587 0.015938640
+  test_that("TMLE with contraint gives similar results", {
+    TMLE_maxpYdelta[["TMLE"]][[1]][["St.TMLE"]]
+    TMLE[["TMLE"]][[1]][["St.TMLE"]]
+
+    TMLE_maxpYdelta[["TMLE"]][[2]][["St.TMLE"]]
+    TMLE[["TMLE"]][[2]][["St.TMLE"]]
   })

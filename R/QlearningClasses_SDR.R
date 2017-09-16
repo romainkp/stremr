@@ -224,8 +224,8 @@ SDRModelQlearn  <- R6Class(classname = "SDRModelQlearn",
         X <- as.matrix(qlogis(Qk_hat))
         newX <- as.matrix(qlogis(Qk_hat_all))
         colnames(X) <- colnames(newX) <- "offset"
-        # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
-        TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        # TMLE.fit <- TMLE.updater.speedglm(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        TMLE.fit <- TMLE.updater.glm(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
         # TMLE.fit <- tmle.update(Qkplus1 = Qkplus1,
@@ -268,10 +268,10 @@ SDRModelQlearn  <- R6Class(classname = "SDRModelQlearn",
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         pred_dat[, ("offset") := qlogis(Qk_hat_all)]
 
-        mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
-        # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        mfit <- iTMLE.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
+        # mfit <- iTMLE.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- TMLE.updater(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- TMLE.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         Qk_hat_star_all <- mfit[["pred"]]
 
         # ## GAM

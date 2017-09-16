@@ -171,9 +171,9 @@ SplitCVSDRModelQlearn  <- R6Class(classname = "SplitCVSDRModelQlearn",
         colnames(X) <- colnames(newX) <- "offset"
 
         ## This will use validation (out-of-sample) Qkplus1 & Qk_hat (offset) for the TMLE updates
-        TMLE.fit <- try(SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts))
+        TMLE.fit <- try(TMLE.updater.speedglm(Y = Qkplus1, X = X, newX = newX, obsWeights = wts))
         if (inherits(TMLE.fit, "try-error")) { # TMLE update w/ speedglm failed
-          TMLE.fit <- try(SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts))
+          TMLE.fit <- try(TMLE.updater.glm(Y = Qkplus1, X = X, newX = newX, obsWeights = wts))
         }
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
@@ -210,15 +210,15 @@ SplitCVSDRModelQlearn  <- R6Class(classname = "SplitCVSDRModelQlearn",
         folds_pred_dat <- data$make_origami_fold_from_column(self$subset_idx + Hk_row_offset)
         # sort(unlist(lapply(folds_pred_dat, "[[", "validation_set")))
 
-        # SL.library <- c( "SDR.updater.NULL")
-        SL.library <- c("SDR.updater.NULL",
-                      "SDR.updater.glmTMLE",
-                      "SDR.updater.glm",
-                      "SDR.updater.xgb",
-                      "SDR.updater.xgb.delta1",
-                      "SDR.updater.xgb.delta2",
-                      "SDR.updater.xgb.delta3",
-                      "SDR.updater.xgb.delta4"
+        # SL.library <- c( "TMLE.updater.NULL")
+        SL.library <- c("TMLE.updater.NULL",
+                      "TMLE.updater.glm",
+                      "iTMLE.updater.glm",
+                      "iTMLE.updater.xgb",
+                      "iTMLE.updater.xgb.delta1",
+                      "iTMLE.updater.xgb.delta2",
+                      "iTMLE.updater.xgb.delta3",
+                      "iTMLE.updater.xgb.delta4"
                       )
 
         library("abind")
@@ -293,10 +293,10 @@ SplitCVSDRModelQlearn  <- R6Class(classname = "SplitCVSDRModelQlearn",
         ## Extract prediction for new data for regular SuperLearner (not split-specific, SL fit used ALL data)
         # Qk_hat_star_all <- as.numeric(predict(SDR_SL_fit, as.matrix(pred_dat))[["pred"]])
 
-        # mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
-        # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- iTMLE.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
+        # mfit <- iTMLE.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- TMLE.updater(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- TMLE.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         # cbind(Qk_hat_star_all, Qk_hat_star_all_2, Qk_hat_star_all - Qk_hat_star_all_2)
         # data_compare_fits <- data.frame(cbind(data$dat.sVar[self$subset_idx, "Qk_hat"], v_Qk_hat_star = Qk_hat_star_all, SL_Qk_hat_star = Qk_hat_star_all_2))
         # head(data_compare_fits)
