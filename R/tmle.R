@@ -292,6 +292,14 @@ fit_GCOMP <- function(OData,
     stop("Running byfold_Q=TRUE requires seting fit_method='origamiSL'")
 
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
+
+  if (!"rule.name" %in% names(OData$dat.sVar)) {
+    rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
+    OData$dat.sVar[, "rule.name" := rule_name]
+  } else {
+    rule_name <- unique(OData$dat.sVar[["rule.name"]])
+  }
+
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
   # ------------------------------------------------------------------------------------------------
@@ -415,7 +423,9 @@ If this error cannot be fixed, consider creating a replicable example and filing
   # IC.Var.S.d <- t(do.call("cbind", ICs_byt))
 
   resultDT <- cbind(est_name = est_name, resultDT)
-  resultDT[, "rule.name" := eval(as.character(rule_name))]
+  if (!"rule.name" %in% names(rule_name)) {
+    resultDT[, "rule.name" := eval(as.character(rule_name))]
+  }
 
   attr(resultDT, "estimator_short") <- est_name
   attr(resultDT, "estimator_long") <- est_name
@@ -602,11 +612,6 @@ fit_GCOMP_onet <- function(OData,
     OData$dat.sVar[, "Qk_hat" := NULL]
   }
 
-
-  # OData$def.types.sVar() ## was a bottleneck, replaced with below:
-  # OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
-  # OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
-
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
   # **** TO DO: This could also be done only once in the main routine, then just subset the appropriate Q_regs_list
@@ -665,26 +670,26 @@ fit_GCOMP_onet <- function(OData,
   ALLsuccessTMLE <- all(successTMLEupdates)
   nFailedUpdates <- sum(!successTMLEupdates)
 
-  ## 1a. Grab last reg predictions from Q-regression objects:
   lastQ_inx <- Qreg_idx[1] # The index for the last Q-fit (first time-point)
-  ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
-  res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()
-  mean_est_t <- mean(res_lastPredQ)
-
-  ## 1b. Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression
-  ## mean_est_t and mean_est_t_2 have to be equal!!!!
-  # lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]] ## allQmodels[[lastQ_inx]]$get.fits()
   lastQ.fit <- allQmodels[[lastQ_inx]]
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
   subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
-  mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Qk_hat"]])
+
+  ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
+  res_lastPredQ <- lastQ.fit$predictAeqa()
+
+  ## Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression
+  mean_est_t_2 <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(Qk_hat)), by = "rule.name"]
+
+  ## evaluate the last predictions by rule (which rule each prediction belongs to)
+  OData$dat.sVar[subset_idx, "res_lastPredQ" := res_lastPredQ]
+  mean_est_t <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(res_lastPredQ)), by = "rule.name"]
 
   if (gvars$verbose) {
-    print("Surv est: " %+% (1 - mean_est_t))
-    print("Surv est 2: " %+% (1 - mean_est_t_2))
+    print("mean est: ");  print(mean_est_t)
+    print("mean est 2: "); print(mean_est_t_2)
     print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ))
-    print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
   }
 
   resDF_onet <- data.table(time = t_period,
@@ -693,11 +698,15 @@ fit_GCOMP_onet <- function(OData,
                            # St.iterTMLE = NA,
                            ALLsuccessTMLE = ALLsuccessTMLE,
                            nFailedUpdates = nFailedUpdates,
-                           type = ifelse(stratifyQ_by_rule, "stratified", "pooled")
+                           type = ifelse(stratifyQ_by_rule, "stratified", "pooled"),
+                           rule.name = unique(OData$dat.sVar[["rule.name"]])
                           )
 
   est_name <- ifelse(TMLE, "St.TMLE", "St.GCOMP")
-  resDF_onet[, (est_name) := (1 - mean_est_t)]
+  resDF_onet <- resDF_onet[mean_est_t_2, on = "rule.name"]
+
+  # mean_est_t_2[, (est_name) := (1 - cum.inc)]
+  resDF_onet[, (est_name) := (1 - cum.inc)]
 
   # ------------------------------------------------------------------------------------------------
   # RUN ITERATIVE TMLE (updating all Q's at once):
@@ -732,27 +741,56 @@ fit_GCOMP_onet <- function(OData,
   IC_i_onet[] <- NA
 
   if (TMLE || iterTMLE) {
-    IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
-    IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
+    IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(nodes$IDnode, "rule.name")]
+    # IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
+
+    IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(ID, "res_lastPredQ", "rule.name"), with = FALSE][,
+      "mean_Q" := mean(res_lastPredQ), by = c("rule.name")][,
+      "EIC_i_t0" := res_lastPredQ-mean_Q][,
+      c("mean_Q", "res_lastPredQ") := list(NULL, NULL)
+      ]
+
+    IC_dt <- IC_dt[IC_dt_t0, on = c(ID, "rule.name")]
+    # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
+    # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
     IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
     IC_dt[, c("EIC_i_t0", "EIC_i_tplus") :=  list(NULL, NULL)]
-    IC_i_onet <- IC_dt[["EIC_i"]]
+
+    ## asymptotic variance (var of the EIC), by rule:
+    IC_Var <- IC_dt[,
+      list("IC_Var" = (1 / (.N)) * sum(EIC_i^2),
+           "TMLE_Var" = (1 / (.N)) * sum(EIC_i^2) / .N
+            ), by = "rule.name"][,
+      "SE.TMLE" := sqrt(TMLE_Var)]
+
+    # IC_i_onet <- IC_dt[["EIC_i"]]
     ## asymptotic variance (var of the EIC):
-    IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
+    # IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
     ## variance of the TMLE estimate (scaled by n):
-    TMLE_Var <- IC_Var / OData$nuniqueIDs
-    ## SE of the TMLE
-    TMLE_SE <- sqrt(TMLE_Var)
+    # TMLE_Var <- IC_Var / OData$nuniqueIDs
+    # ## SE of the TMLE
+    # TMLE_SE <- sqrt(TMLE_Var)
 
     if (gvars$verbose) {
-      print("...empirical mean of the estimated EIC: " %+% mean(IC_dt[["EIC_i"]]))
-      print("...estimated TMLE variance: " %+% TMLE_Var)
+      print("...empirical mean of the estimated EIC: ")
+      print(IC_dt[, list("mean_EIC" = mean(EIC_i)), by = "rule.name"])
+      print("...estimated TMLE variance: ")
+      print(IC_Var)
     }
-    resDF_onet[, ("SE.TMLE") := TMLE_SE]
+    # resDF_onet[, ("SE.TMLE") := TMLE_SE]
+    resDF_onet[IC_Var, on = "rule.name"]
   }
 
+  setkeyv(IC_dt, c("rule.name", ID))
+  IC_i_onet_byrule <- IC_dt[, ID := NULL] %>%
+                      nest(EIC_i, .key = "IC.St") %>%
+                      mutate(IC.St = map(IC.St, ~ .x[[1]]))
+  setDT(IC_i_onet_byrule)
+
+  resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
+
   ## save the i-specific estimates of the EIC as a separate column:
-  resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
+  # resDF_onet[, ("IC.St.2") := list(list(IC_i_onet))]
 
   fW_fit <- lastQ.fit$getfit
   resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
