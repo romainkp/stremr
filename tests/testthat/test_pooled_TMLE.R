@@ -132,7 +132,6 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## ------------------------------------------------------------
   # delta <- mean(Odat_DT[, Y.tplus1], na.rm = TRUE)*5
   delta <- 0.35
-
   GCOMP_maxpYdelta <- fit_GCOMP(intervened_TRT = c("A.star"),
                                 stratifyQ_by_rule = TRUE,
                                 tvals = tvals,
@@ -142,32 +141,13 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                                 fit_method = fit_method_Q,
                                 maxpY = delta
                                 )
-
-  OData$dat.sVar[t==0, list("St.GCOMP" = 1-mean(Qk_hat)), by = rule]
-
-  delta <- 1
-  GCOMP <-analysis %>%
-        distinct(intervened_TRT, stratifyQ_by_rule) %>%
-        mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fit_GCOMP(intervened_TRT = .x,
-                        stratifyQ_by_rule = .y,
-                        tvals = tvals,
-                        OData = OData,
-                        models = models_Q,
-                        Qforms = Qforms,
-                        fit_method = fit_method_Q,
-                        maxpY = delta
-                        ))) %>%
-        mutate(GCOMP = map(GCOMP, "estimates"))
+  GCOMP_maxpYdelta <- GCOMP_maxpYdelta[["estimates"]]
 
   test_that("GCOMP with contraint gives similar results", {
     GCOMP_maxpYdelta[["GCOMP"]][[1]][["St.GCOMP"]]
-    GCOMP[["GCOMP"]][[1]][["St.GCOMP"]]
 
     GCOMP_maxpYdelta[["GCOMP"]][[2]][["St.GCOMP"]]
-    GCOMP[["GCOMP"]][[2]][["St.GCOMP"]]
   })
-
 
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
@@ -183,42 +163,10 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                                 fit_method = fit_method_Q,
                                 maxpY = delta
                                 )
-
- TMLE_maxpYdelta <-analysis %>%
-        distinct(intervened_TRT, stratifyQ_by_rule) %>%
-        mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fit_TMLE(intervened_TRT = .x,
-                        stratifyQ_by_rule = .y,
-                        tvals = tvals,
-                        OData = OData,
-                        models = models_Q,
-                        Qforms = Qforms,
-                        fit_method = fit_method_Q,
-                        maxpY = delta
-                        ))) %>%
-        mutate(TMLE = map(TMLE, "estimates"))
-
-  TMLE_maxpYdelta[["TMLE"]]
-
- delta <- 1
- TMLE <-analysis %>%
-        distinct(intervened_TRT, stratifyQ_by_rule) %>%
-        mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fit_TMLE(intervened_TRT = .x,
-                        stratifyQ_by_rule = .y,
-                        tvals = tvals,
-                        OData = OData,
-                        models = models_Q,
-                        Qforms = Qforms,
-                        fit_method = fit_method_Q,
-                        maxpY = delta
-                        ))) %>%
-        mutate(TMLE = map(TMLE, "estimates"))
+  TMLE_maxpYdelta <- TMLE_maxpYdelta[["estimates"]]
 
   test_that("TMLE with contraint gives similar results", {
     TMLE_maxpYdelta[["TMLE"]][[1]][["St.TMLE"]]
-    TMLE[["TMLE"]][[1]][["St.TMLE"]]
 
     TMLE_maxpYdelta[["TMLE"]][[2]][["St.TMLE"]]
-    TMLE[["TMLE"]][[2]][["St.TMLE"]]
   })

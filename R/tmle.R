@@ -739,8 +739,12 @@ fit_GCOMP_onet <- function(OData,
   # ------------------------------------------------------------------------------------------------
   IC_i_onet <- vector(mode = "numeric", length = OData$nuniqueIDs)
   IC_i_onet[] <- NA
+  ## save the i-specific estimates of the EIC as a separate column:
+  resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
 
   if (TMLE || iterTMLE) {
+    resDF_onet[, ("IC.St") := NULL]
+
     IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(nodes$IDnode, "rule.name")]
     # IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
 
@@ -778,19 +782,15 @@ fit_GCOMP_onet <- function(OData,
       print(IC_Var)
     }
     # resDF_onet[, ("SE.TMLE") := TMLE_SE]
-    resDF_onet[IC_Var, on = "rule.name"]
+    resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
+
+    setkeyv(IC_dt, c("rule.name", ID))
+    IC_i_onet_byrule <- IC_dt[, ID := NULL] %>%
+                        nest(EIC_i, .key = "IC.St") %>%
+                        mutate(IC.St = map(IC.St, ~ .x[[1]]))
+    setDT(IC_i_onet_byrule)
+    resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
   }
-
-  setkeyv(IC_dt, c("rule.name", ID))
-  IC_i_onet_byrule <- IC_dt[, ID := NULL] %>%
-                      nest(EIC_i, .key = "IC.St") %>%
-                      mutate(IC.St = map(IC.St, ~ .x[[1]]))
-  setDT(IC_i_onet_byrule)
-
-  resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
-
-  ## save the i-specific estimates of the EIC as a separate column:
-  # resDF_onet[, ("IC.St.2") := list(list(IC_i_onet))]
 
   fW_fit <- lastQ.fit$getfit
   resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
