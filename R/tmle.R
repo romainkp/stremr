@@ -664,11 +664,11 @@ fit_GCOMP_onet <- function(OData,
   # get the individual TMLE updates and evaluate if any updates have failed
   allQmodels <- Qlearn.fit$getPsAsW.models()
 
-  allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getTMLEfit)
-  TMLEfits <- unlist(allTMLEfits)
-  successTMLEupdates <- !is.na(TMLEfits) & !is.nan(TMLEfits)
-  ALLsuccessTMLE <- all(successTMLEupdates)
-  nFailedUpdates <- sum(!successTMLEupdates)
+  # allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getTMLEfit)
+  # TMLEfits <- unlist(allTMLEfits)
+  # successTMLEupdates <- !is.na(TMLEfits) & !is.nan(TMLEfits)
+  # ALLsuccessTMLE <- all(successTMLEupdates)
+  # nFailedUpdates <- sum(!successTMLEupdates)
 
   lastQ_inx <- Qreg_idx[1] # The index for the last Q-fit (first time-point)
   lastQ.fit <- allQmodels[[lastQ_inx]]
@@ -696,8 +696,8 @@ fit_GCOMP_onet <- function(OData,
                            St.GCOMP = NA,
                            St.TMLE = NA,
                            # St.iterTMLE = NA,
-                           ALLsuccessTMLE = ALLsuccessTMLE,
-                           nFailedUpdates = nFailedUpdates,
+                           # ALLsuccessTMLE = ALLsuccessTMLE,
+                           # nFailedUpdates = nFailedUpdates,
                            type = ifelse(stratifyQ_by_rule, "stratified", "pooled"),
                            rule.name = unique(OData$dat.sVar[["rule.name"]])
                           )
