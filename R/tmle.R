@@ -229,6 +229,10 @@ fit_CVTMLE <- function(...) {
 #' @param reg_Q (ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.
 #' @param type_intervened_TRT (ADVANCED FEATURE) TBD
 #' @param type_intervened_MONITOR (ADVANCED FEATURE) TBD
+#' @param maxpY Maximum probability that the cumulative incidence of the outcome Y(t) is equal to 1.
+#' Useful for upper-bounding the rare-outcomes.
+#' @param TMLE_updater Function for performing the TMLE update. Default is the TMLE updater based on speedglm (called \code{"TMLE.updater.speedglm"}).
+#' Other possible options include \code{"TMLE.updater.glm"} and \code{"iTMLE.updater.xgb"}.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -272,6 +276,7 @@ fit_GCOMP <- function(OData,
                         type_intervened_TRT = NULL,
                         type_intervened_MONITOR = NULL,
                         maxpY = 1.0,
+                        TMLE_updater = "TMLE.updater.speedglm",
                         verbose = getOption("stremr.verbose"), ...) {
 
   # cat("Calling fit_GCOMP:\n")
@@ -386,7 +391,7 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, maxpY = maxpY, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -398,7 +403,7 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, maxpY = maxpY, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -561,6 +566,7 @@ fit_GCOMP_onet <- function(OData,
                              tol_eps = 0.001,
                              return_fW = FALSE,
                              maxpY = 1.0,
+                             TMLE_updater = "TMLE.updater.speedglm",
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -640,7 +646,8 @@ fit_GCOMP_onet <- function(OData,
                                      subset_exprs = all_Q_stratify[i],
                                      model_contrl = models,
                                      censoring = FALSE,
-                                     maxpY = maxpY)
+                                     maxpY = maxpY,
+                                     TMLE_updater = TMLE_updater)
 
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.

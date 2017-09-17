@@ -148,6 +148,20 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## TMLE ANALYSIS
   ## ------------------------------------------------------------
  delta <- 0.25
+ test_that("TMLE error is produced when using default speedglm TMLE updater with re-scaled outcomes (Y/delta)", {
+   expect_error(
+    fit_TMLE(intervened_TRT = "gTI.dlow",
+            stratifyQ_by_rule = FALSE,
+            tvals = tvals,
+            OData = OData,
+            models = models_Q,
+            Qforms = Qforms,
+            fit_method = fit_method_Q,
+            maxpY = delta)
+  )
+})
+
+ delta <- 0.25
  TMLE_maxpYdelta <-analysis %>%
         distinct(intervened_TRT, stratifyQ_by_rule) %>%
         mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
@@ -158,7 +172,8 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                         models = models_Q,
                         Qforms = Qforms,
                         fit_method = fit_method_Q,
-                        maxpY = delta
+                        maxpY = delta,
+                        TMLE_updater = "iTMLE.updater.xgb"
                         ))) %>%
         mutate(TMLE = map(TMLE, "estimates"))
 

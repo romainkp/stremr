@@ -67,6 +67,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
     lwr = 0.0,                   ## lower bound for Q predictions
     upr = 1.0,                   ## upper bound for Q predictions
     maxpY = 1.0,                 ## max incidence P(Y=1|...) for rare-outcomes TMLE, only works with learners that can handle logistic-link with outcomes > 1
+    TMLE_updater = NULL,         ## function to use for TMLE updates
 
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
@@ -82,6 +83,11 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       self$t_period <- reg$t_period
       self$regimen_names <- reg$regimen_names
       self$maxpY <- reg$maxpY
+
+      if (!is.character(reg$TMLE_updater)) stop("'TMLE_updater' must be a character name of an R function.")
+      updater_fun <- get(reg$TMLE_updater)
+      if (!is.function(updater_fun)) stop("'TMLE_updater' must resolve to an existing function name.")
+      self$TMLE_updater <- updater_fun
 
       self$TMLE <- reg$TMLE
       self$CVTMLE <- reg$CVTMLE
@@ -288,7 +294,9 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
 
         ## todo: in case of failure call TMLE.updater.NULL, allow passing custom TMLE updaters
         xgb.params <- list(nrounds = 100, silent = 1, objective = "reg:logistic", booster = "gblinear", eta = 1, nthread = 1)
-        TMLE.fit <- iTMLE.updater.xgb(Y, X, newX, obsWeights = wts_TMLE, params = xgb.params)
+
+        TMLE.fit <- self$TMLE_updater(Y, X, newX, obsWeights = wts_TMLE, params = xgb.params)
+        # TMLE.fit <- iTMLE.updater.xgb(Y, X, newX, obsWeights = wts_TMLE, params = xgb.params)
         # TMLE.fit <- TMLE.updater.speedglm(Y, X, newX, obsWeights = wts_TMLE)
         # TMLE.fit <- TMLE.updater.glm(Y, X, newX, obsWeights = wts_TMLE)
         # TMLE.fit <- TMLE.updater.NULL(Y, X, newX, obsWeights = wts_TMLE)

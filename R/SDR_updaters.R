@@ -46,6 +46,7 @@ TMLE.updater.NULL <- function(Y, X, newX, family, obsWeights, ...) {
 #' @export
 TMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
   eps_tol = stremrOptions("eps_tol")
+  if (any(Y < 0) | any(Y > 1)) stop("TMLE update with glm cannot be performed for outcomes outside of 0-1.")
   Y[Y < eps_tol] <- eps_tol
   Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
 
@@ -83,6 +84,7 @@ TMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
 #' @export
 TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
   eps_tol = stremrOptions("eps_tol")
+  if (any(Y < 0) | any(Y > 1)) stop("TMLE update with speedglm cannot be performed for outcomes outside of 0-1.")
   Y[Y < eps_tol] <- eps_tol
   Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
 
@@ -118,6 +120,7 @@ TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
 #' @export
 iTMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
   eps_tol = stremrOptions("eps_tol")
+  if (any(Y < 0) | any(Y > 1)) stop("TMLE update with glm cannot be performed for outcomes outside of 0-1.")
   Y[Y < eps_tol] <- eps_tol
   Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
 

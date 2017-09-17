@@ -303,6 +303,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
     regimen_names = NA,
     pool_regimes = FALSE,
     maxpY = 1.0,                ## max incidence P(Y=1|...) for rare-outcomes TMLE, only works with learners that can handle logistic-link with outcomes > 1
+    TMLE_updater = "TMLE.updater.speedglm",
     initialize = function(Qreg_counter,
                           all_Qregs_indx,
                           t_period,
@@ -316,6 +317,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
                           lower_bound_zero_Q = stremrOptions("lower_bound_zero_Q"),
                           skip_update_zero_Q = stremrOptions("skip_update_zero_Q"),
                           maxpY,
+                          TMLE_updater,
                           ...) {
       self$Qreg_counter <- Qreg_counter
       self$all_Qregs_indx <- all_Qregs_indx
@@ -329,6 +331,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
       if (!missing(keep_idx)) self$keep_idx <- keep_idx
       if (!missing(maxpY)) self$maxpY <- maxpY
+      if (!missing(TMLE_updater)) self$TMLE_updater <- TMLE_updater
 
       self$lower_bound_zero_Q <- lower_bound_zero_Q
       self$skip_update_zero_Q <- skip_update_zero_Q
@@ -354,7 +357,9 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
            regimen_names = self$regimen_names,
            pool_regimes = self$pool_regimes,
            model_contrl = self$model_contrl,
-           censoring = self$censoring
+           censoring = self$censoring,
+           maxpY = self$maxpY,
+           TMLE_updater = self$TMLE_updater
            )
     }
   )
