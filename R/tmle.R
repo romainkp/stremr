@@ -232,7 +232,7 @@ fit_CVTMLE <- function(...) {
 #' @param maxpY Maximum probability that the cumulative incidence of the outcome Y(t) is equal to 1.
 #' Useful for upper-bounding the rare-outcomes.
 #' @param TMLE_updater Function for performing the TMLE update. Default is the TMLE updater based on speedglm (called \code{"TMLE.updater.speedglm"}).
-#' Other possible options include \code{"TMLE.updater.glm"} and \code{"iTMLE.updater.xgb"}.
+#' Other possible options include \code{"TMLE.updater.glm"}, \code{"linear.TMLE.updater.speedglm"} and \code{"iTMLE.updater.xgb"}.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
