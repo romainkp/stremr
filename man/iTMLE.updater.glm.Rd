@@ -33,5 +33,5 @@ Must contain a column named "offset".}
 \description{
 Performs an SDR update using a main-terms GLM (logistic regression with \code{stats::glm}).
 This function is passed along as a separate learner
-to the SuperLearner implementation of origami package
+to the SuperLearner implementation in \code{origami} package
 }

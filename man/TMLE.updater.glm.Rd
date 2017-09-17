@@ -3,12 +3,15 @@
 \name{TMLE.updater.glm}
 \alias{TMLE.updater.glm}
 \alias{TMLE.updater.speedglm}
+\alias{linear.TMLE.updater.speedglm}
 \alias{predict.TMLE.updater}
 \title{iTMLE univariate glm learner / updater}
 \usage{
 TMLE.updater.glm(Y, X, newX, family, obsWeights, ...)
 
 TMLE.updater.speedglm(Y, X, newX, family, obsWeights, ...)
+
+linear.TMLE.updater.speedglm(Y, X, newX, family, obsWeights, ...)
 
 \method{predict}{TMLE.updater}(object, newdata, ...)
 }
@@ -37,7 +40,11 @@ Must contain a column named "offset".}
 Performs a univariate TMLE update. This function is passed along as a separate learner
 to the SuperLearner implementation of origami package
 
-Performs an SDR update using a main-terms GLM (logistic regression with \code{speedglm} package).
-This function is passed along as a separate learner
-to the SuperLearner implementation of origami package
+Performs TMLE update using a main-terms GLM (logistic regression with \code{speedglm} package).
+This function may be passed to fit_GCOMP / fit_TMLE function.
+May be also used as a separate learner for iTMLE.
+
+Performs linear TMLE update using main-terms GLM (family=gaussian()), based on \code{speedglm} package.
+This function may be passed to fit_GCOMP / fit_TMLE function.
+May be also used as a separate learner for iTMLE.
 }

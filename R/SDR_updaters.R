@@ -75,11 +75,11 @@ TMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
   out
 }
 
-#' iTMLE glm learner / updater
+#' TMLE glm learner / updater
 #'
-#' Performs an SDR update using a main-terms GLM (logistic regression with \code{speedglm} package).
-#' This function is passed along as a separate learner
-#' to the SuperLearner implementation of origami package
+#' Performs TMLE update using a main-terms GLM (logistic regression with \code{speedglm} package).
+#' This function may be passed to fit_GCOMP / fit_TMLE function.
+#' May be also used as a separate learner for iTMLE.
 #' @rdname TMLE.updater.glm
 #' @export
 TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
@@ -103,11 +103,39 @@ TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
   out
 }
 
+#' Linear TMLE glm updater
+#'
+#' Performs linear TMLE update using main-terms GLM (family=gaussian()), based on \code{speedglm} package.
+#' This function may be passed to fit_GCOMP / fit_TMLE function.
+#' May be also used as a separate learner for iTMLE.
+#' @rdname TMLE.updater.glm
+#' @export
+linear.TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
+  eps_tol = stremrOptions("eps_tol")
+  if (any(Y < 0) | any(Y > 1)) stop("TMLE update with speedglm cannot be performed for outcomes outside of 0-1.")
+  Y[Y < eps_tol] <- eps_tol
+  Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
+
+  # cat("...running speedglm TMLE update with intercept-only GLM...\n")
+  offset <- truncate_offset(plogis(X[, "offset"]))
+  fit.glm <- speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
+                                     y = Y, weights = obsWeights, offset = offset,
+                                     # method=c('eigen','Cholesky','qr'),
+                                     family = gaussian(), trace = FALSE, maxit = 1000)
+
+  fit <- list(object = list(est.fun = "speedglm::speedglm.wfit", family = "gaussian", coef = fit.glm$coef))
+  class(fit) <- "linear.TMLE.updater"
+
+  pred <- predict(fit, newX)
+  out <- list(pred = pred, fit = fit)
+  out
+}
+
 #' iTMLE glm learner / updater
 #'
 #' Performs an SDR update using a main-terms GLM (logistic regression with \code{stats::glm}).
 #' This function is passed along as a separate learner
-#' to the SuperLearner implementation of origami package
+#' to the SuperLearner implementation in \code{origami} package
 #' @param Y Input outcomes
 #' @param X Input design matrix with training data.
 #' Must contain a column named "offset", which contains the offsets converted to logit-linear scale.
@@ -241,6 +269,18 @@ predict.TMLE.updater <- function(object, newdata, ...) {
   mfit <- object$object
   offset <- truncate_offset(newdata[, "offset"])
   pred <- logit_linkinv(offset + mfit$coef)
+  pred
+}
+
+#' @param object Results of calling \code{linear.TMLE.updater.speedglm}.
+#' @param newdata Design matrix with test data for which predictions should be obtained.
+#' Must contain a column named "offset".
+#' @rdname linear.TMLE.updater.speedglm
+#' @export
+predict.linear.TMLE.updater <- function(object, newdata, ...) {
+  mfit <- object$object
+  offset <- truncate_offset(plogis(newdata[, "offset"]))
+  pred <- offset + mfit$coef
   pred
 }
 
