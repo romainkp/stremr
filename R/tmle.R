@@ -298,7 +298,9 @@ fit_GCOMP <- function(OData,
 
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
 
+  added_rule_col <- FALSE
   if (!"rule.name" %in% names(OData$dat.sVar)) {
+    added_rule_col <- TRUE
     rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
     OData$dat.sVar[, "rule.name" := rule_name]
   } else {
@@ -422,13 +424,18 @@ If this error cannot be fixed, consider creating a replicable example and filing
 ", call. = TRUE)
   }
 
+  ## remove the newly added rule name column from observed data
+  if (added_rule_col) {
+    OData$dat.sVar[, "rule.name" := NULL]
+  }
+
   resultDT <- rbindlist(res_byt)
   ## to extract the EIC estimates by time point (no longer returning those separately, only as part of the estimates data.table)
   # ICs_byt <- resultDT[["IC.St"]]
   # IC.Var.S.d <- t(do.call("cbind", ICs_byt))
 
   resultDT <- cbind(est_name = est_name, resultDT)
-  if (!"rule.name" %in% names(rule_name)) {
+  if (!"rule.name" %in% names(resultDT)) {
     resultDT[, "rule.name" := eval(as.character(rule_name))]
   }
 
@@ -617,6 +624,9 @@ fit_GCOMP_onet <- function(OData,
   if ("Qk_hat" %in% names(OData$dat.sVar)) {
     OData$dat.sVar[, "Qk_hat" := NULL]
   }
+  if ("res_lastPredQ" %in% names(OData$dat.sVar)) {
+    OData$dat.sVar[, "res_lastPredQ" := NULL]
+  }
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
@@ -755,13 +765,16 @@ fit_GCOMP_onet <- function(OData,
     IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(nodes$IDnode, "rule.name")]
     # IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
 
-    IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(ID, "res_lastPredQ", "rule.name"), with = FALSE][,
+    IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(nodes$IDnode, "res_lastPredQ", "rule.name"), with = FALSE][,
       "mean_Q" := mean(res_lastPredQ), by = c("rule.name")][,
       "EIC_i_t0" := res_lastPredQ-mean_Q][,
       c("mean_Q", "res_lastPredQ") := list(NULL, NULL)
       ]
 
-    IC_dt <- IC_dt[IC_dt_t0, on = c(ID, "rule.name")]
+    ## remove newly added column from observed dataset
+    OData$dat.sVar[, "res_lastPredQ" := NULL]
+
+    IC_dt <- IC_dt[IC_dt_t0, on = c(nodes$IDnode, "rule.name")]
     # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
     # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
     IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
@@ -791,8 +804,8 @@ fit_GCOMP_onet <- function(OData,
     # resDF_onet[, ("SE.TMLE") := TMLE_SE]
     resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
 
-    setkeyv(IC_dt, c("rule.name", ID))
-    IC_i_onet_byrule <- IC_dt[, ID := NULL] %>%
+    setkeyv(IC_dt, c("rule.name", nodes$IDnode))
+    IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
                         nest(EIC_i, .key = "IC.St") %>%
                         mutate(IC.St = map(IC.St, ~ .x[[1]]))
     setDT(IC_i_onet_byrule)

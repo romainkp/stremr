@@ -131,7 +131,7 @@ Can be used for obtaining subject-specific predictions of the counterfactual fun
 Useful for upper-bounding the rare-outcomes.}
 
 \item{TMLE_updater}{Function for performing the TMLE update. Default is the TMLE updater based on speedglm (called \code{"TMLE.updater.speedglm"}).
-Other possible options include \code{"TMLE.updater.glm"} and \code{"iTMLE.updater.xgb"}.}
+Other possible options include \code{"TMLE.updater.glm"}, \code{"linear.TMLE.updater.speedglm"} and \code{"iTMLE.updater.xgb"}.}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 

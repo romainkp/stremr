@@ -134,7 +134,8 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                                 models = models_Q,
                                 Qforms = Qforms,
                                 fit_method = fit_method_Q,
-                                maxpY = delta)
+                                maxpY = delta,
+                                TMLE_updater = "iTMLE.updater.xgb")
 
   delta <- 1
   pooledTMLE_2 <- fit_pooled_TMLE(OData = OData,
