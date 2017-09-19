@@ -47,18 +47,20 @@ fit_pooled_GCOMP <- function(OData, intervened_TRT, ...) {
 #' @seealso \code{\link{fit_GCOMP}}
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
-fit_pooled_TMLE <- function(OData, intervened_TRT, ...) {
+fit_pooled_TMLE <- function(OData, intervened_TRT, IPWeights = NULL, ...) {
   if (length(intervened_TRT) == 1L) stop("pooled TMLE requires more than one intervention, for a single intervention please call 'fit_TMLE' directly.")
   nodes <- OData$nodes
   ## ----------------------------------------------------------------
   ## Evaluate the weights for each regimen, separately. Then rbind into a single dataset of weights.
   ## ----------------------------------------------------------------
-  wts <- purrr::map(intervened_TRT, getIPWeights, OData = OData)
-  wts <- purrr::map(wts, ~ .x[, nodes$IDnode := paste0(eval(as.name(nodes$IDnode)), rule.name)])
-  wts <- rbindlist(wts)
-  setkeyv(wts, c(nodes$IDnode, nodes$tnode))
-  attributes(wts)[['intervened_TRT']] <- "A.star"
-  attributes(wts)[['intervened_MONITOR']] <- NULL
+  if (is.null(IPWeights)) {
+    IPWeights <- purrr::map(intervened_TRT, getIPWeights, OData = OData)
+  }
+  IPWeights <- purrr::map(IPWeights, ~ .x[, nodes$IDnode := paste0(eval(as.name(nodes$IDnode)), rule.name)])
+  IPWeights <- rbindlist(IPWeights)
+  setkeyv(IPWeights, c(nodes$IDnode, nodes$tnode))
+  attributes(IPWeights)[['intervened_TRT']] <- "A.star"
+  attributes(IPWeights)[['intervened_MONITOR']] <- NULL
 
-  fit_pooled_GCOMP(OData = OData, intervened_TRT = intervened_TRT, IPWeights = wts, TMLE = TRUE, ...)
+  fit_pooled_GCOMP(OData = OData, intervened_TRT = intervened_TRT, IPWeights = IPWeights, TMLE = TRUE, ...)
 }

@@ -1021,6 +1021,11 @@ survMSM <- function(wts_data,
   periods <- (mint:tmax)
   periods_idx <- seq_along(periods)
 
+  ## alternative direct approach
+  # msm.fit <- glm("Y.tplus1 ~ as.factor(t):as.factor(rule.name)", family = "quasibinomial", data = wts_data_used, weights = cum.IPAW)
+  # newdat <- data.frame(cross_d(list(t = 0:15, rule.name = c("TI1", "TI0"))))
+  # hz <- predict(msm.fit, newdata = newdat, type = "response")
+
   if (verbose) { print("MSM periods: "); print(periods) }
 
   # Default tbreaks, error checks for tbreaks, plus padding w/ mint & tmax:
