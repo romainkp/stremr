@@ -4,7 +4,7 @@
 \alias{fit_pooled_TMLE}
 \title{Fit TMLE by pooling across more than one regimen}
 \usage{
-fit_pooled_TMLE(OData, intervened_TRT, ...)
+fit_pooled_TMLE(OData, intervened_TRT, IPWeights = NULL, ...)
 }
 \arguments{
 \item{...}{Arguments that will be passed down to the underlying function \code{fit_GCOMP}}
