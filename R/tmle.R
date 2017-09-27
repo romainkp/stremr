@@ -725,18 +725,13 @@ fit_GCOMP_onet <- function(OData,
   est_name <- ifelse(TMLE, "St.TMLE", "St.GCOMP")
   resDF_onet <- resDF_onet[mean_est_t_2, on = "rule.name"]
 
-  # mean_est_t_2[, (est_name) := (1 - cum.inc)]
   resDF_onet[, (est_name) := (1 - cum.inc)]
 
   # ------------------------------------------------------------------------------------------------
   # RUN ITERATIVE TMLE (updating all Q's at once):
   # ------------------------------------------------------------------------------------------------
   if (iterTMLE){
-    # iter.time <- system.time(
-      res <- iterTMLE_onet(OData, Qlearn.fit, Qreg_idx, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps)
-    # )
-    # if (gvars$verbose) {print("Time to run iterative TMLE: "); print(iter.time)}
-
+    res <- iterTMLE_onet(OData, Qlearn.fit, Qreg_idx, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps)
     ## 1a. Grab the mean prediction from the very last regression (over all n observations);
     lastQ_inx <- Qreg_idx[1]
     res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()
@@ -745,12 +740,6 @@ fit_GCOMP_onet <- function(OData,
     if (gvars$verbose) print("Iterative TMLE surv estimate: " %+% (1 - mean_est_t))
 
     ## 1b. Grab it directly from the data, using the appropriate strata-subsetting expression
-    # lastQ.fit <- Qlearn.fit$getPsAsW.models()[[Qreg_idx[1]]]$getPsAsW.models()[[1]]
-    # subset_idx <- OData$evalsubst(subset_vars = lastQ.fit$subset_vars, subset_exprs = lastQ.fit$subset_exprs)
-    # res_lastPredQ <- OData$dat.sVar[subset_idx, ][["Qkplus1"]]
-    # mean_est_t  <- mean(res_lastPredQ)
-    # print("TMLE surv estimate 2: " %+% (1 - mean_est_t))
-
     resDF_onet[, ("St.TMLE") := (1 - mean_est_t)]
   }
 
@@ -764,9 +753,7 @@ fit_GCOMP_onet <- function(OData,
 
   if (TMLE || iterTMLE) {
     resDF_onet[, ("IC.St") := NULL]
-
     IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(nodes$IDnode, "rule.name")]
-    # IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
 
     IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(nodes$IDnode, "res_lastPredQ", "rule.name"), with = FALSE][,
       "mean_Q" := mean(res_lastPredQ), by = c("rule.name")][,
@@ -778,8 +765,6 @@ fit_GCOMP_onet <- function(OData,
     OData$dat.sVar[, "res_lastPredQ" := NULL]
 
     IC_dt <- IC_dt[IC_dt_t0, on = c(nodes$IDnode, "rule.name")]
-    # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
-    # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
     IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
     IC_dt[, c("EIC_i_t0", "EIC_i_tplus") :=  list(NULL, NULL)]
 
@@ -791,28 +776,17 @@ fit_GCOMP_onet <- function(OData,
       "SE.TMLE" := sqrt(TMLE_Var)]
     IC_Var[, "IC_Var" := NULL][, "TMLE_Var" := NULL]
 
-    # IC_i_onet <- IC_dt[["EIC_i"]]
-    ## asymptotic variance (var of the EIC):
-    # IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
-    ## variance of the TMLE estimate (scaled by n):
-    # TMLE_Var <- IC_Var / OData$nuniqueIDs
-    # ## SE of the TMLE
-    # TMLE_SE <- sqrt(TMLE_Var)
-
     if (gvars$verbose) {
       print("...empirical mean of the estimated EIC: ")
       print(IC_dt[, list("mean_EIC" = mean(EIC_i)), by = "rule.name"])
-      print("...estimated TMLE variance: ")
-      print(IC_Var)
+      print("...estimated TMLE variance: "); print(IC_Var)
     }
-    # resDF_onet[, ("SE.TMLE") := TMLE_SE]
+
     resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
-    setkeyv(IC_dt, c("rule.name", nodes$IDnode))
+    data.table::setkeyv(IC_dt, c("rule.name", nodes$IDnode))
     IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
                         tidyr::nest(EIC_i, .key = "IC.St")
-                        #  %>%
-                        # mutate(IC.St = map(IC.St, ~ .x[[1]]))
-    setDT(IC_i_onet_byrule)
+    data.table::setDT(IC_i_onet_byrule)
     IC_i_onet_byrule[, "IC.St" := list(list(as.numeric(IC.St[[1]][[1]]))), by = "rule.name"]
     resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
   }
