@@ -288,7 +288,10 @@ fit_GCOMP <- function(OData,
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  if (!is.null(models)) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  }
+
   assert_that(is.logical(adapt_stop))
 
   if (TMLE & iterTMLE) stop("Either 'TMLE' or 'iterTMLE' must be set to FALSE. Cannot estimate both within a single algorithm run.")
@@ -786,6 +789,7 @@ fit_GCOMP_onet <- function(OData,
            "TMLE_Var" = (1 / (.N)) * sum(EIC_i^2) / .N
             ), by = "rule.name"][,
       "SE.TMLE" := sqrt(TMLE_Var)]
+    IC_Var[, "IC_Var" := NULL][, "TMLE_Var" := NULL]
 
     # IC_i_onet <- IC_dt[["EIC_i"]]
     ## asymptotic variance (var of the EIC):
@@ -803,12 +807,13 @@ fit_GCOMP_onet <- function(OData,
     }
     # resDF_onet[, ("SE.TMLE") := TMLE_SE]
     resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
-
     setkeyv(IC_dt, c("rule.name", nodes$IDnode))
     IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
-                        nest(EIC_i, .key = "IC.St") %>%
-                        mutate(IC.St = map(IC.St, ~ .x[[1]]))
+                        tidyr::nest(EIC_i, .key = "IC.St")
+                        #  %>%
+                        # mutate(IC.St = map(IC.St, ~ .x[[1]]))
     setDT(IC_i_onet_byrule)
+    IC_i_onet_byrule[, "IC.St" := list(list(as.numeric(IC.St[[1]][[1]]))), by = "rule.name"]
     resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
   }
 

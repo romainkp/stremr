@@ -190,13 +190,13 @@ test.tidy.speedglm.10Kdata <- function() {
         mutate(TMLE = map(TMLE, "estimates")) %>%
         rename(trunc_TMLE = trunc_weight)
 
-  CVTMLE <- CVTMLE %>%
-        mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
-                           tvals = tvals,
-                           OData = OData,
-                           Qforms = Qforms)) %>%
-        mutate(CVTMLE = map(CVTMLE, "estimates")) %>%
-        rename(trunc_TMLE = trunc_weight)
+  # CVTMLE <- CVTMLE %>%
+  #       mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
+  #                          tvals = tvals,
+  #                          OData = OData,
+  #                          Qforms = Qforms)) %>%
+  #       mutate(CVTMLE = map(CVTMLE, "estimates")) %>%
+  #       rename(trunc_TMLE = trunc_weight)
 
   ## ------------------------------------------------------------
   ## COMBINE ALL ANALYSES INTO A SINGLE DATASET
@@ -204,12 +204,14 @@ test.tidy.speedglm.10Kdata <- function() {
   results <-  analysis %>%
               left_join(IPW) %>%
               left_join(GCOMP) %>%
-              left_join(TMLE) %>%
-              left_join(CVTMLE)
+              left_join(TMLE)
+              #  %>%
+              # left_join(CVTMLE)
 
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
   results <- results %>%
-             nest(intervened_TRT, NPMSM, MSM.crude, MSM, directIPW, GCOMP, TMLE, CVTMLE, .key = "estimates")
+              # , CVTMLE
+             nest(intervened_TRT, NPMSM, MSM.crude, MSM, directIPW, GCOMP, TMLE, .key = "estimates")
 
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
   ## The RDs data no longer needs the intervened_TRT column
