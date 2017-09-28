@@ -1238,6 +1238,54 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
   } else if (glm_package %in% "speedglm") {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
     Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
+    # head(Xdesign.mat)
+#      Periods.0to0_TI0 Periods.1to1_TI0 Periods.2to2_TI0 Periods.3to3_TI0 Periods.4to4_TI0 Periods.5to5_TI0
+# [1,]                0                0                0                0                0                0
+# [2,]                1                0                0                0                0                0
+# [3,]                0                0                0                0                0                0
+# [4,]                0                1                0                0                0                0
+# [5,]                0                0                0                0                0                0
+# [6,]                0                0                1                0                0                0
+#      Periods.6to6_TI0 Periods.7to7_TI0 Periods.8to8_TI0 Periods.9to9_TI0 Periods.10to10_TI0 Periods.11to11_TI0
+# [1,]                0                0                0                0                  0                  0
+# [2,]                0                0                0                0                  0                  0
+# [3,]                0                0                0                0                  0                  0
+# [4,]                0                0                0                0                  0                  0
+# [5,]                0                0                0                0                  0                  0
+# [6,]                0                0                0                0                  0                  0
+#      Periods.12to12_TI0 Periods.13to13_TI0 Periods.14to14_TI0 Periods.15to15_TI0 Periods.0to0_TI1 Periods.1to1_TI1
+# [1,]                  0                  0                  0                  0                1                0
+# [2,]                  0                  0                  0                  0                0                0
+# [3,]                  0                  0                  0                  0                0                1
+# [4,]                  0                  0                  0                  0                0                0
+# [5,]                  0                  0                  0                  0                0                0
+# [6,]                  0                  0                  0                  0                0                0
+#      Periods.2to2_TI1 Periods.3to3_TI1 Periods.4to4_TI1 Periods.5to5_TI1 Periods.6to6_TI1 Periods.7to7_TI1
+# [1,]                0                0                0                0                0                0
+# [2,]                0                0                0                0                0                0
+# [3,]                0                0                0                0                0                0
+# [4,]                0                0                0                0                0                0
+# [5,]                1                0                0                0                0                0
+# [6,]                0                0                0                0                0                0
+#      Periods.8to8_TI1 Periods.9to9_TI1 Periods.10to10_TI1 Periods.11to11_TI1 Periods.12to12_TI1 Periods.13to13_TI1
+# [1,]                0                0                  0                  0                  0                  0
+# [2,]                0                0                  0                  0                  0                  0
+# [3,]                0                0                  0                  0                  0                  0
+# [4,]                0                0                  0                  0                  0                  0
+# [5,]                0                0                  0                  0                  0                  0
+# [6,]                0                0                  0                  0                  0                  0
+#      Periods.14to14_TI1 Periods.15to15_TI1
+# [1,]                  0                  0
+# [2,]                  0                  0
+# [3,]                  0                  0
+# [4,]                  0                  0
+# [5,]                  0                  0
+# [6,]                  0                  0
+    # nrow(Xdesign.mat)
+    # [1] 26626
+    # ncol(Xdesign.mat)
+    # [1] 32
+
     m.fit <- try(speedglm::speedglm.wfit(
                                        X = Xdesign.mat,
                                        y = as.numeric(wts_data[[Ynode]]),
@@ -1253,7 +1301,8 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
         m.fit <- stats::glm.fit(x = Xdesign.mat,
                                 y = as.numeric(wts_data[[Ynode]]),
                                 family = quasibinomial(),
-                                intercept = FALSE, control = ctrl)
+                                intercept = FALSE,
+                                control = ctrl)
       }, GetWarningsToSuppress())
     }
     m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
