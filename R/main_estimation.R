@@ -1146,6 +1146,7 @@ survMSM <- function(wts_data,
       d.idx <- which(names(S2.IPAW) %in% d.j)
       set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
       design.d.t[[d.j]][,set_cols] <- design.t
+
       IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
                                    S.d.t.predict = S2.IPAW[[d.j]],
                                    h.d.t.predict = hazard.IPAW[[d.j]],
@@ -1170,8 +1171,9 @@ survMSM <- function(wts_data,
       estimates <- cbind(est_name = est_name, estimates)
 
       n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
-      for (i in 1:n_ts)
+      for (i in 1:n_ts) {
         estimates[i, ("IC.St") := list(list(IC.Var.S.d[[rule_name]][["IC.S"]][i, ]))]
+      }
 
       attr(estimates, "estimator_short") <- est_name
       attr(estimates, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
