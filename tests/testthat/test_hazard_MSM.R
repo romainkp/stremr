@@ -1,6 +1,6 @@
   require("data.table")
   require("stremr")
-  options(stremr.verbose = FALSE)
+  options(stremr.verbose = TRUE)
   options(gridisl.verbose = FALSE)
 
 
@@ -41,13 +41,13 @@
   survMSM_res_old <- survMSM(list(wts.DT.1, wts.DT.0), OData, glm_package = "speedglm", return_wts = TRUE)
 
   survMSM_res_old[["TI1"]]
+  survMSM_res_old[["TI0"]]
 
   ## new MSM that allows arbitrary pooling over time intervals, theta defined above can be used in the formula:
-  survMSM_res <- survMSM2(list(wts.DT.1, wts.DT.0), form = "Y.tplus1 ~ t + theta + t:theta", OData)
   survMSM_res <- survMSM2(list(wts.DT.1, wts.DT.0), form = "Y.tplus1 ~ -1 + as.factor(t):as.factor(rule.name)", OData)
-  survMSM_res[[1]]
-  as.formula("Y.tplus1 ~ -1 + as.factor(t):as.factor(rule.name)")
-  # survMSM_res$St
+
+
+  survMSM_res <- survMSM2(list(wts.DT.1, wts.DT.0), form = "Y.tplus1 ~ t + theta + t:theta", OData)
 
   str(terms(form))
 

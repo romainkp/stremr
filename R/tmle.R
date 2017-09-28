@@ -776,7 +776,7 @@ fit_GCOMP_onet <- function(OData,
     resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
     data.table::setkeyv(IC_dt, c("rule.name", nodes$IDnode))
     IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
-                        tibble::as_tibble %>%
+                        tibble::as_tibble() %>%
                         tidyr::nest(EIC_i, .key = "IC.St") %>%
                         dplyr::mutate(IC.St = map(IC.St, ~ .x[[1]]))
     data.table::setDT(IC_i_onet_byrule)

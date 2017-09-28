@@ -170,17 +170,11 @@ survMSM2 <- function(wts_data,
 
   ## direct GLM MSM approach
   ctrl <- stats::glm.control(trace = FALSE)
-  msm.fit <- glm(form, family = quasibinomial(), data = wts_data_used, weights = cum.IPAW, control = ctrl)
+  msm.fit <- glm(form, family = quasibinomial(), data = wts_data_used, control = ctrl, weights = cum.IPAW)
   # msm.fit <- speedglm::speedglm(form, family = quasibinomial(), data = wts_data_used, weights = wts_data_used[["cum.IPAW"]])
 
   msm.fit$data <- NULL
-  # str(msm.fit)
-  # msm.fit$terms
-  # head(msm.fit$model)
   design_mat <- model.matrix(as.formula(form_woutY), data = wts_data_used)
-
-  head(design_mat)
-  browser()
 
   ## Fit the hazard MSM
   # resglmMSM <- runglmMSM(wts_data_used, all_dummies, Ynode, glm_package, verbose)
@@ -211,40 +205,40 @@ survMSM2 <- function(wts_data,
   ## obtain hazard predictions for each observation O_i:
   wts_data_used[, "glm.IPAW.predictP1" := predict(msm.fit, newdata = wts_data_used, type = "response")]
 
+  ## create the output data.table with estimates (by time / regimen)
   dt_names <- list(periods, rules_TRT)
   names(dt_names) <- c(t_name, rule.var)
-  new_dat <- data.table(purrr::cross_d(dt_names))
-  setkeyv(new_dat, c(rule.var, t_name))
-
+  estimates <- data.table(purrr::cross_d(dt_names))
+  setkeyv(estimates, c(rule.var, t_name))
   ## obtain hazard predictions for all (d,t) combos:
-  new_dat[, "haz" := predict(msm.fit, newdata = new_dat, type = "response")]
-  ## evaluate survival from hazard for each regimen in d:
-  new_dat[, "St" := cumprod(1-haz), by = eval(as.name(rule.var))]
+  estimates[, "ht.MSM" := predict(msm.fit, newdata = estimates, type = "response")]
+  ## evaluate survival from hz(d,t) for each regimen in d:
+  estimates[, "St.MSM" := cumprod(1-ht.MSM), by = eval(as.name(rule.var))]
 
   if (verbose) message("...evaluating SEs based on MSM hazard fit and the estimated IC...")
 
   #### For variance (SEs), GET IC and SE FOR BETA's
   #### GET IC and SE FOR Sd(t)
-  # S.d.t.predict - MSM survival estimates for one regimen
-  # h.d.t.predict - MSM hazard estimates for one regimen
-  # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
-  # IC.O - observation-specific IC estimates for MSM coefs
-  # IC.S - observation-specific IC estimates for S(t) (by time-point)
-
+  ## S.d.t.predict - MSM survival estimates for one regimen
+  ## h.d.t.predict - MSM hazard estimates for one regimen
+  ## design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
+  ## IC.O - observation-specific IC estimates for MSM coefs
+  ## IC.S - observation-specific IC estimates for S(t) (by time-point)
 
   ## this is a matrix of partial derivatives of the regression formula (wrt each beta_j)
   ## needed for IC of survival (St)
   ## each row is indexing some time-point (t) and regimen (d)
-  new_design_mat <- model.matrix(as.formula(form_woutY), data = new_dat)
+  new_design_mat <- model.matrix(as.formula(form_woutY), data = estimates)
 
   if (getSEs) {
     # design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:tmax))), length(rules_TRT))
     IC.Var.S.d <- vector(mode = "list", length(rules_TRT))
+    names(IC.Var.S.d) <- rules_TRT
     # names(design.d.t) <- names(IC.Var.S.d) <- rules_TRT
 
-    # # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
-    # # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
-    # # p.coef - number of time-specific coefficients in the MSM
+    ## the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
+    ## the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
+    ## p.coef - number of time-specific coefficients in the MSM
     # p.coef <- nrow(MSM.intervals) # p.coef <- length(tjmin)
     # design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
     # for (period.idx in seq_along(periods)) {
@@ -261,25 +255,39 @@ survMSM2 <- function(wts_data,
                               IPW_MSMestimator = use_weights)
 
     for(d.j in rules_TRT) {
-      rule.idx <- new_dat[[rule.var]] %in% d.j
+      rule.idx <- estimates[[rule.var]] %in% d.j
       # d.idx <- which(names(S2.IPAW) %in% d.j)
       # set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
       # design.d.t[[d.j]][,set_cols] <- design.t
 
       IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
-                                   S.d.t.predict = new_dat[rule.idx, St],
-                                   h.d.t.predict = new_dat[rule.idx, haz],
+                                   S.d.t.predict = estimates[rule.idx, St.MSM],
+                                   h.d.t.predict = estimates[rule.idx, ht.MSM],
                                    design.d.t = new_design_mat[rule.idx,],
                                    IC.O = beta.IC.O.SEs[["IC.O"]])
+
+      estimates[estimates[[rule.var]]==d.j, ("SE.MSM") := IC.Var.S.d[[d.j]][["se.S"]]]
+      n_ts <- nrow(IC.Var.S.d[[d.j]][["IC.S"]])
+      for (i in 1:n_ts) {
+        estimates[estimates[[rule.var]]==d.j,][i, ("IC.St") := list(list(IC.Var.S.d[[d.j]][["IC.S"]][i, ]))]
+      }
     }
   } else {
     IC.Var.S.d <- NULL
   }
 
-  return(list(new_dat, IC.Var.S.d))
+  browser()
+  # [1] "Should all be very small: "
+  #  [1] 4.346166e-16 4.276801e-16 1.804261e-17 7.152611e-02 2.336492e-01 7.115682e-01 7.107212e-01 7.095592e-01
+  #  [9] 7.095592e-01 7.095592e-01 7.095592e-01 7.095592e-01 7.095592e-01 7.095592e-01 7.095592e-01 7.095592e-01
+  # [1] "Should all be very small: "
+  #  [1] 1.481621e-08 2.490406e-08 2.465034e-08 2.465339e-08 2.465502e-08 2.428063e-08 2.421617e-08 2.374594e-08
+  #  [9] 2.349485e-08 2.325437e-08 2.325491e-08 2.298547e-08 2.198909e-08 2.151650e-08 2.151665e-08 4.121949e-02
+  IC.Var.S.d[[d.j]]
 
+  return(list(estimates, IC.Var.S.d))
 
-  # # Default tbreaks, error checks for tbreaks, plus padding w/ mint & tmax:
+  ## Default tbreaks, error checks for tbreaks, plus padding w/ mint & tmax:
   # if (missing(tbreaks)) {
   #   # default tbreaks is to use a saturated (non-parametric) MSM
   #   tbreaks <- sort(periods)
@@ -297,14 +305,14 @@ survMSM2 <- function(wts_data,
 
   # if (max(tbreaks) < tmax) tbreaks <- sort(c(tbreaks, tmax)) # pad on the right (if needed with tmax):
 
-  # # Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
+  ## Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
   # all.d.dummies <- NULL
   # for( dummy.j in rules_TRT ){
   #   wts_data_used[, (dummy.j) := as.integer(rule.name %in% dummy.j)]
   #   all.d.dummies <- c(all.d.dummies, dummy.j)
   # }
 
-  # # Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
+  ## Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
   # all.t.dummies <- NULL
   # tbreaks.mint <- c(mint, tbreaks) # pad tbreaks on the left (with mint)
   # MSM.intervals <- matrix(NA, ncol = 2, nrow = length(tbreaks)) # save the actual intervals
@@ -330,7 +338,7 @@ survMSM2 <- function(wts_data,
   #   all.t.dummies <- c(all.t.dummies, dummy.j)
   # }
 
-  # # Create interaction dummies I(t in interval.j & d == intervened_TRT)
+  ## Create interaction dummies I(t in interval.j & d == intervened_TRT)
   # for (d.dummy in all.d.dummies) {
   #   for (t.dummy in all.t.dummies) {
   #     if (verbose) print(t.dummy %+% "_" %+% d.dummy)
@@ -343,7 +351,7 @@ survMSM2 <- function(wts_data,
   #                       }))
 
   ## The output MSM object.
-  ## "estimates" is a data.table with surv estimates (column "St.MSM");
+  ##  "estimates" is a data.table with surv estimates (column "St.MSM");
   ##  Separate row for each time-point t;
   ##  "estimates" contains IC.St (observation-specific IC estimates for S(t)) saved in a column
   MSM_out <- lapply(rules_TRT, function(rule_name) {
