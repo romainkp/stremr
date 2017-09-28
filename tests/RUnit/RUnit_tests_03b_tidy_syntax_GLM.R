@@ -190,6 +190,12 @@ test.tidy.speedglm.10Kdata <- function() {
         mutate(TMLE = map(TMLE, "estimates")) %>%
         rename(trunc_TMLE = trunc_weight)
 
+  TMLE_reorder <- TMLE %>%
+    dplyr::distinct(intervened_TRT, trunc_TMLE, stratifyQ_by_rule, TMLE) %>%
+    unnest(TMLE) %>%
+    nest(est_name:rule.name, .key = "TMLE")
+  TMLE_reorder <- TMLE_reorder %>% mutate(TMLE = map(TMLE, ~as.data.table(.x)))
+
   # CVTMLE <- CVTMLE %>%
   #       mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
   #                          tvals = tvals,

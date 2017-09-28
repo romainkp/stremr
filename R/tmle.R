@@ -684,25 +684,19 @@ fit_GCOMP_onet <- function(OData,
   # get the individual TMLE updates and evaluate if any updates have failed
   allQmodels <- Qlearn.fit$getPsAsW.models()
 
-  # allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getTMLEfit)
-  # TMLEfits <- unlist(allTMLEfits)
-  # successTMLEupdates <- !is.na(TMLEfits) & !is.nan(TMLEfits)
-  # ALLsuccessTMLE <- all(successTMLEupdates)
-  # nFailedUpdates <- sum(!successTMLEupdates)
-
   lastQ_inx <- Qreg_idx[1] # The index for the last Q-fit (first time-point)
   lastQ.fit <- allQmodels[[lastQ_inx]]
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
-  subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
+  subset_idx <- OData$evalsubst(subset_exprs = subset_exprs) ## subset_vars = subset_vars,
 
   ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- lastQ.fit$predictAeqa()
 
-  ## Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression
+  ## Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression:
   mean_est_t_2 <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(Qk_hat)), by = "rule.name"]
 
-  ## evaluate the last predictions by rule (which rule each prediction belongs to)
+  ## Evaluate the last predictions by rule (which rule each prediction belongs to):
   OData$dat.sVar[subset_idx, "res_lastPredQ" := res_lastPredQ]
   mean_est_t <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(res_lastPredQ)), by = "rule.name"]
 
@@ -715,9 +709,6 @@ fit_GCOMP_onet <- function(OData,
   resDF_onet <- data.table(time = t_period,
                            St.GCOMP = NA,
                            St.TMLE = NA,
-                           # St.iterTMLE = NA,
-                           # ALLsuccessTMLE = ALLsuccessTMLE,
-                           # nFailedUpdates = nFailedUpdates,
                            type = ifelse(stratifyQ_by_rule, "stratified", "pooled"),
                            rule.name = unique(OData$dat.sVar[["rule.name"]])
                           )
@@ -785,14 +776,17 @@ fit_GCOMP_onet <- function(OData,
     resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
     data.table::setkeyv(IC_dt, c("rule.name", nodes$IDnode))
     IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
-                        tidyr::nest(EIC_i, .key = "IC.St")
+                        tidyr::nest(EIC_i, .key = "IC.St") %>%
+                        dplyr::mutate(IC.St = map(IC.St, ~ .x[[1]]))
     data.table::setDT(IC_i_onet_byrule)
-    IC_i_onet_byrule[, "IC.St" := list(list(as.numeric(IC.St[[1]][[1]]))), by = "rule.name"]
+    # IC_i_onet_byrule[, "IC.St" := list(list(as.numeric(IC.St[[1]][[1]]))), by = "rule.name"]
     resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
   }
 
   fW_fit <- lastQ.fit$getfit
   resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
 
+  ## re-order the columns so that "rule.name" col is always last
+  data.table::setcolorder(resDF_onet, c(setdiff(names(resDF_onet), "rule.name"), "rule.name"))
   return(resDF_onet)
 }
