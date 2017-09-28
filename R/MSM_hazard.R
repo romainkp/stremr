@@ -178,7 +178,9 @@ survMSM2 <- function(wts_data,
   # msm.fit$terms
   # head(msm.fit$model)
   design_mat <- model.matrix(as.formula(form_woutY), data = wts_data_used)
-  # head(design_mat)
+
+  head(design_mat)
+  browser()
 
   ## Fit the hazard MSM
   # resglmMSM <- runglmMSM(wts_data_used, all_dummies, Ynode, glm_package, verbose)
@@ -275,7 +277,7 @@ survMSM2 <- function(wts_data,
   }
 
   return(list(new_dat, IC.Var.S.d))
-  browser()
+
 
   # # Default tbreaks, error checks for tbreaks, plus padding w/ mint & tmax:
   # if (missing(tbreaks)) {
