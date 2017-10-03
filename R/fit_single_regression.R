@@ -43,6 +43,9 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                               id = data$nodes$IDnode,
                               folds = folds)
     model.fit <- try({models$train(task)})
+    ## clean-up a bit and invoke garbage collection
+    rm(task)
+    gc()
 
   } else {
 
@@ -64,6 +67,9 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar)
     lrn_model <- sl3::Lrnr_glm_fast$new()
     model.fit <- try(lrn_model$train(task))
+    ## clean-up a bit and invoke garbage collection
+    rm(task)
+    gc()
 
     # message("...trying to run SL.mean (mean prediction learner) as a backup...")
     # lrn_model <- sl3::Lrnr_pkg_SuperLearner$new("SL.mean")
