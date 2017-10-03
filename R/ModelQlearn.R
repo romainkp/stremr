@@ -55,13 +55,14 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
     CVTMLE = FALSE,
     byfold_Q = FALSE,
     nIDs = integer(),
-    stratifyQ_by_rule = FALSE,  ## train only among those who are following the rule of interest?
+    stratifyQ_by_rule = FALSE,   ## train only among those who are following the rule of interest?
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
     Qreg_counter = integer(),    ## Counter for the current sequential Q-regression (min is at 1)
     all_Qregs_indx = integer(),
     t_period = integer(),
     keep_idx = FALSE,            ## keep current indices (do not remove them right after fitting)
+    keep_model_fit = TRUE,       ## keep the model fit object for current Q_k
     idx_used_to_fit_initQ = NULL,
     fold_y_names = NULL,
     lwr = 0.0,                   ## lower bound for Q predictions
@@ -150,10 +151,8 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## Fit model using (re-scaled) Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
       if (gvars$verbose) {
-        print("Q.init model fit:")
-        print(private$model.fit)
-        # private$model.fit$get_best_models()
-        # str(private$model.fit$get_best_models())
+        # print("Q.init model fit:")
+        # print(private$model.fit)
       }
 
       ## Convert the outcome column back to its original scale (multpily by delta)
@@ -260,9 +259,6 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       self$wipe.alldat
-      ## If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
-      if (!self$keep_idx) self$wipe.all.indices
-
       # **********************************************************************
       invisible(self)
     },
@@ -456,7 +452,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         ## This will still keep the best re-trained model object if method=="cv"/"holdout"
         ## Don't need to store these models, since we already made the prediction
         ## However, we will need these models if we want to report the model fit stats
-        if (!(self$model_contrl[["fit_method"]] %in% "none")) private$model.fit$wipe.allmodels
+        # if (!(self$model_contrl[["fit_method"]] %in% "none")) private$model.fit$wipe.allmodels
 
         return(private$probA1)
 
@@ -556,7 +552,13 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
     wipe.alldat = function() {
       private$probA1 <- NULL
       private$probA1_byfold <- NULL
-      # private$model.fit <- NULL
+      ## If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
+      if (!self$keep_idx) {
+        self$wipe.all.indices
+      }
+      if (!self$keep_model_fit) {
+        private$model.fit <- NULL
+      }
       # private$probAeqa <- NULL
       # self$binomialModelObj$emptydata
       # self$binomialModelObj$emptyY
