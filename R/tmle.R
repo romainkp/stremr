@@ -414,10 +414,12 @@ fit_GCOMP <- function(OData,
     }
   )
 
-  # ------------------------------------------------------------------------------------------------
-  # Restore backed up nodes, even in the event of failure (otherwise the input data is corrupted for good)
-  # ------------------------------------------------------------------------------------------------
+  ## Restore backed up nodes, even in the event of failure (otherwise the input data is corrupted for good)
   OData$restoreNodes(c(intervened_TRT,intervened_MONITOR))
+  ## remove the newly added rule name column from observed data
+  if (added_rule_col) {
+    OData$dat.sVar[, "rule.name" := NULL]
+  }
 
   if (inherits(tmle.run.res, "try-error")) {
     stop(
@@ -425,11 +427,6 @@ fit_GCOMP <- function(OData,
 If this error cannot be fixed, consider creating a replicable example and filing a bug report at:
   https://github.com/osofr/stremr/issues
 ", call. = TRUE)
-  }
-
-  ## remove the newly added rule name column from observed data
-  if (added_rule_col) {
-    OData$dat.sVar[, "rule.name" := NULL]
   }
 
   resultDT <- rbindlist(res_byt)
