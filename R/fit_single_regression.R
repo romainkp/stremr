@@ -47,10 +47,10 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
       cat("\nsl3 error debugging info:\n");
       print(model.fit)
     }
-    try({
-      internal_ref <- model.fit$training_task$data
-      data.table::set(internal_ref, j=names(internal_ref), value=NULL)
-    }, silent = TRUE)
+    # try({
+    #   internal_ref <- model.fit$training_task$data
+    #   data.table::set(internal_ref, j=names(internal_ref), value=NULL)
+    # }, silent = TRUE)
 
   } else {
 
@@ -76,10 +76,10 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
       cat("\nsl3 error debugging info:\n");
       print(model.fit)
     }
-    try({
-      internal_ref <- model.fit$training_task$data
-      data.table::set(internal_ref, j=names(internal_ref), value=NULL)
-    }, silent = TRUE)
+    # try({
+    #   internal_ref <- model.fit$training_task$data
+    #   data.table::set(internal_ref, j=names(internal_ref), value=NULL)
+    # }, silent = TRUE)
   }
 
   return(model.fit)

@@ -95,6 +95,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       self$byfold_Q <- reg$byfold_Q
 
       self$keep_idx <- reg$keep_idx
+      self$keep_model_fit <- reg$keep_model_fit
 
       if (gvars$verbose == 2) {print("initialized Q class"); reg$show()}
 
@@ -536,7 +537,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       if (missing(newdata) && !is.null(private$probAeqa)) {
         return(private$probAeqa)
       } else {
-        stop("$predictAeqa should never be called for making predictions for GCOMP")
+        stop("ModelQlearn$predictAeqa has nothing to return, previous predictions have been deleted")
       }
     },
 
@@ -557,16 +558,24 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         self$wipe.all.indices
       }
       if (!self$keep_model_fit) {
-        private$model.fit <- NULL
+        self$wipe.model.fit
       }
-      # private$probAeqa <- NULL
-      # self$binomialModelObj$emptydata
-      # self$binomialModelObj$emptyY
-      return(self)
+      return(invisible(self))
     },
     wipe.all.indices = function() {
       self$idx_used_to_fit_initQ <- NULL
       self$subset_idx <- NULL
+      return(invisible(self))
+    },
+    wipe.model.fit = function() {
+      private$model.fit <- NULL
+      return(invisible(self))
+    },
+    wipe.probs = function() {
+      private$probA1 <- NULL
+      private$probAeqa <- NULL
+      private$probA1_byfold <- NULL
+      return(invisible(self))
     },
     getprobA1_byfold = function() { private$probA1_byfold },
     getfit = function() { private$model.fit },

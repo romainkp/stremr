@@ -107,7 +107,7 @@ ModelUnivariate  <- R6Class(classname = "ModelUnivariate",
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
 
       self$is.fitted <- TRUE
-      if (predict) self$predictAeqa(..., indA = data$get.outvar(self$subset_idx, self$getoutvarnm))
+      if (predict) try(self$predictAeqa(..., indA = data$get.outvar(self$subset_idx, self$getoutvarnm)), silent = TRUE)
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
@@ -130,7 +130,6 @@ ModelUnivariate  <- R6Class(classname = "ModelUnivariate",
         } else {
           stop("model fit object is of unrecognized class (private$model.fit)")
         }
-
       } else {
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
@@ -208,10 +207,8 @@ ModelUnivariate  <- R6Class(classname = "ModelUnivariate",
     },
 
     predict.gstar = function(newdata, ...) { # P(A^*[i]=A^*|W=w) - calculating the likelihood for g^*(A)
-      browser()
-
+      stop("not implemented")
     },
-
 
     define.subset.idx = function(data) {
       if (is.logical(self$subset_vars)) {

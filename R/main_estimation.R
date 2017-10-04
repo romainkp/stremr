@@ -412,8 +412,7 @@ fitPropensity <- function(OData,
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
-
-  h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs), silent = TRUE)
+  h_gN <- try({modelfits.g0$predictAeqa(n = OData$nobs)}, silent = TRUE)
 
   if (inherits(h_gN, "try-error")) { # if failed, it means that prediction cannot be done without newdata
     h_gN <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs)

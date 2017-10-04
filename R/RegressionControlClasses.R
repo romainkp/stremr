@@ -297,6 +297,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
     CVTMLE = FALSE,
     byfold_Q = FALSE,
     keep_idx = FALSE,           ## should ModelQlearn remove internally stored subset of indices used for training?
+    keep_model_fit = TRUE,      ## keep the model fit object for current Q_k
     stratifyQ_by_rule = FALSE,  ## train only among those who are following the rule of interest?
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
@@ -314,6 +315,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
                           regimen_names,
                           pool_regimes,
                           keep_idx,
+                          keep_model_fit,
                           lower_bound_zero_Q = stremrOptions("lower_bound_zero_Q"),
                           skip_update_zero_Q = stremrOptions("skip_update_zero_Q"),
                           maxpY,
@@ -330,6 +332,7 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
       if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
       if (!missing(keep_idx)) self$keep_idx <- keep_idx
+      if (!missing(keep_model_fit)) self$keep_model_fit <- keep_model_fit
       if (!missing(maxpY)) self$maxpY <- maxpY
       if (!missing(TMLE_updater)) self$TMLE_updater <- TMLE_updater
 
@@ -356,6 +359,8 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
            lower_bound_zero_Q = self$lower_bound_zero_Q,
            regimen_names = self$regimen_names,
            pool_regimes = self$pool_regimes,
+           keep_idx = self$keep_idx,
+           keep_model_fit = self$keep_model_fit,
            model_contrl = self$model_contrl,
            censoring = self$censoring,
            maxpY = self$maxpY,

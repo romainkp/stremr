@@ -641,6 +641,7 @@ fit_GCOMP_onet <- function(OData,
     if (!is.null(models[["reg_Q"]])) {
       models[["models"]] <- models[["reg_Q"]][[Qreg_idx[i]]]
     }
+    last.reg <- Qreg_idx[i] == 1L
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i],
                                      all_Qregs_indx = Qreg_idx,
                                      t_period = Qperiods[i],
@@ -648,6 +649,8 @@ fit_GCOMP_onet <- function(OData,
                                      CVTMLE = CVTMLE,
                                      byfold_Q = byfold_Q,
                                      keep_idx = ifelse(iterTMLE, TRUE, FALSE),
+                                     # keep_model_fit = ifelse(iterTMLE, TRUE, last.reg),
+                                     keep_model_fit = ifelse(iterTMLE, TRUE, FALSE),
                                      stratifyQ_by_rule = stratifyQ_by_rule,
                                      outvar = "Qkplus1",
                                      predvars = regform$predvars,
@@ -689,6 +692,8 @@ fit_GCOMP_onet <- function(OData,
 
   ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- lastQ.fit$predictAeqa()
+  ## remove vector of predictions from the modeling class (to free up memory):
+  lastQ.fit$wipe.probs
 
   ## Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression:
   mean_est_t_2 <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(Qk_hat)), by = "rule.name"]
