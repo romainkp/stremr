@@ -43,11 +43,11 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                               id = data$nodes$IDnode,
                               folds = folds)
     model.fit <- try({models$train(task)})
-    internal_ref <- model.fit$training_task$data
-    data.table::set(internal_ref, j=names(internal_ref), value=NULL)
-    ## clean-up a bit and invoke garbage collection
-    # rm(task)
-    # gc()
+    try({print("model.fit"); print(model.fit)})
+    try({
+      internal_ref <- model.fit$training_task$data
+      data.table::set(internal_ref, j=names(internal_ref), value=NULL)
+    })
 
   } else {
 
@@ -69,35 +69,10 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar)
     lrn_model <- sl3::Lrnr_glm_fast$new()
     model.fit <- try(lrn_model$train(task))
-    internal_ref <- model.fit$training_task$data
-    data.table::set(internal_ref, j=names(internal_ref), value=NULL)
-    ## clean-up a bit and invoke garbage collection
-    # rm(task)
-    # gc()
-
-    # message("...trying to run SL.mean (mean prediction learner) as a backup...")
-    # lrn_model <- sl3::Lrnr_pkg_SuperLearner$new("SL.mean")
-
-    # method <- "none"
-    # # model_contrl[["fit.package"]] <- "speedglm"
-    # # model_contrl[["fit.algorithm"]] <- "glm"
-    # glm_model <- models[1]
-    # glm_model[[1]][["fit.package"]] <- "speedglm"
-    # glm_model[[1]][["fit.algorithm"]] <- "glm"
-    # class(glm_model) <- c(class(glm_model), "ModelStack")
-    # # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
-
-    # model.fit <- gridisl::fit(glm_model,
-    #                          method = method,
-    #                          ID = nodes$IDnode,
-    #                          t_name = nodes$tnode,
-    #                          x = predvars,
-    #                          y = outvar,
-    #                          data = data,
-    #                          verbose = gvars$verbose,
-    #                          fold_column = fold_column,
-    #                          subset_idx = subset_idx)
-
+    try({
+      internal_ref <- model.fit$training_task$data
+      data.table::set(internal_ref, j=names(internal_ref), value=NULL)
+    })
   }
 
   return(model.fit)
