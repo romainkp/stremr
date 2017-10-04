@@ -43,11 +43,14 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                               id = data$nodes$IDnode,
                               folds = folds)
     model.fit <- try({models$train(task)})
-    try({print("model.fit"); print(model.fit)})
+    if (inherits(model.fit, "try-error")) {
+      cat("\nsl3 error debugging info:\n");
+      print(model.fit)
+    }
     try({
       internal_ref <- model.fit$training_task$data
       data.table::set(internal_ref, j=names(internal_ref), value=NULL)
-    })
+    }, silent = TRUE)
 
   } else {
 
@@ -69,10 +72,14 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar)
     lrn_model <- sl3::Lrnr_glm_fast$new()
     model.fit <- try(lrn_model$train(task))
+    if (inherits(model.fit, "try-error")) {
+      cat("\nsl3 error debugging info:\n");
+      print(model.fit)
+    }
     try({
       internal_ref <- model.fit$training_task$data
       data.table::set(internal_ref, j=names(internal_ref), value=NULL)
-    })
+    }, silent = TRUE)
   }
 
   return(model.fit)
