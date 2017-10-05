@@ -42,7 +42,12 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                               outcome = outvar,
                               id = data$nodes$IDnode,
                               folds = folds)
-    model.fit <- try({models$train(task)})
+
+    reg_t <- system.time(
+      model.fit <- try({models$train(task)})
+      )
+    print("reg_t"); print(reg_t)
+
     if (inherits(model.fit, "try-error")) {
       cat("\nsl3 error debugging info:\n");
       print(model.fit)

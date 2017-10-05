@@ -151,8 +151,9 @@ context("sl3 with delayed future")
                             fit_method = fit_method_g
                             )
     )
+  print("t_run_seq: "); print(t_run_seq)
 
-  plan(multisession)
+  plan(multisession, workers = 10)
   t_run_multisession <- system.time(
     OData <- fitPropensity(OData,
                             gform_TRT = gform_TRT,
@@ -161,8 +162,9 @@ context("sl3 with delayed future")
                             fit_method = fit_method_g
                             )
     )
+  print("t_run_multisession: "); print(t_run_multisession)
 
-  plan(multicore)
+  plan(multicore, workers = 10)
   t_run_multicore <- system.time(
     OData <- fitPropensity(OData,
                             gform_TRT = gform_TRT,
@@ -171,13 +173,15 @@ context("sl3 with delayed future")
                             fit_method = fit_method_g
                             )
     )
+  print("t_run_multicore"); print(t_run_multicore)
 ## ERROR:
 # Assertion failure at kmp_runtime.cpp(6480): __kmp_thread_pool == __null.
 # OMP: Error #13: Assertion failure at kmp_runtime.cpp(6480).
 # OMP: Hint: Please submit a bug report with this message, compile and run commands used, and machine configuration info including native compiler and operating system versions. Faster response will be obtained by including all program sources. For information on submitting this issue, please see http://www.intel.com/software/products/support/.
 
-  print("t_run_seq: "); print(t_run_seq)
-  print("t_run_multisession: "); print(t_run_multisession)
+
+
+
 
   ## Get the dataset with weights:
   wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)

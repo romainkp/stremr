@@ -36,7 +36,6 @@ Imports:
     magrittr,
     methods,
     origami,
-    pander,
     purrr,
     R6,
     Rcpp,
@@ -55,6 +54,7 @@ Suggests:
     foreach,
     ggiraph,
     knitr,
+    pander,
     RUnit,
     testthat,
     mockery
