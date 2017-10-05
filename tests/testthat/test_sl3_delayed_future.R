@@ -116,8 +116,8 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
-  # models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 200)
-  models_Q <<- lrn_glm
+  models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 200)
+  # models_Q <<- lrn_glm
   # models_Q <<- sl
   # models_Q <<- sl
 
