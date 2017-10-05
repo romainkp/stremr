@@ -1,9 +1,4 @@
 context("Fitting with no Monitoring and / or no Censoring indicators")
-  library(future)
-  # plan(multicore, workers = 4)
-  # plan(multisession)
-  # plan(sequential)
-  # library(delayed)
 
   # delayed_object_7 <- delayed(rnorm(1000000))
   # delayed_object_3 <- delayed(rnorm(1000000))
@@ -23,6 +18,11 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## **** makes it easier to read the individual analyses ****
   ## -----------------------------------------------------------------------
   # devtools::install_github("jeremyrcoyle/sl3")
+  library("future")
+  # plan(multicore, workers = 4)
+  # plan(multisession)
+  # plan(sequential)
+  # library(delayed)
 
   `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
@@ -94,10 +94,31 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   lrn_glm_sm <<- Lrnr_glm_fast$new(family = "binomial", covariates = c("CVD"))
   lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "binomial")
   lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
+  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
                     metalearner = Lrnr_nnls$new())
   models_g <<- sl
 
+  plan(multicore)
+  task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+                            covariates = c("highA1c", "lastNat1"),
+                            outcome = "TI",
+                            id = "ID")
+  tmc <- system.time(model.fit <- models_g$train(task))
+
+  plan(sequential)
+  task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+                            covariates = c("highA1c", "lastNat1"),
+                            outcome = "TI",
+                            id = "ID")
+  tseq <- system.time(model.fit <- models_g$train(task))
+
+  plan(multisession)
+  task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+                            covariates = c("highA1c", "lastNat1"),
+                            outcome = "TI",
+                            id = "ID")
+  tmsesh <- system.time(model.fit <- models_g$train(task))
+  print(tmsesh)
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
