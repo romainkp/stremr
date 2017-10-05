@@ -22,7 +22,7 @@ fit_GCOMP_onet <- function(OData,
 
   # ------------------------------------------------------------------------------------------------
   # Defining the t periods to loop over FOR A SINGLE RUN OF THE iterative G-COMP/TMLE (one survival point)
-  # **** TO DO: The stratification by follow-up has to be based only on 't' values that were observed in the data****
+  # **** TO DO ****: The stratification by follow-up has to be based only on 't' values that were observed in the data****
   # ------------------------------------------------------------------------------------------------
   Qperiods <- rev(OData$min.t:t_period)
   Qreg_idx <- rev(seq_along(Qperiods))

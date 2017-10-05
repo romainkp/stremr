@@ -38,10 +38,10 @@ context("sl3 with delayed future")
   library("purrr")
   library("dplyr")
 
-  # options(stremr.verbose = TRUE)
-  # options(gridisl.verbose = TRUE)
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
+  options(stremr.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
+  # options(stremr.verbose = FALSE)
+  # options(gridisl.verbose = FALSE)
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
@@ -162,17 +162,6 @@ context("sl3 with delayed future")
                             )
     )
 
-  print("t_run_seq: "); print(t_run_seq)
-  ## 10 CV-folds, 16 time-points, 10K IID observations, 3 GLM learners
-  # [1] "t_run_seq: "
-  #    user  system elapsed
-  #  21.983   4.921  25.284
-  print("t_run_multisession: "); print(t_run_multisession)
-  ## 10 CV-folds, 16 time-points, 10K IID observations, 3 GLM learners
-  # [1] "t_run_multisession: "
-  #    user  system elapsed
-  #  37.557   7.603  80.332
-
   plan(multicore)
   t_run_multicore <- system.time(
     OData <- fitPropensity(OData,
@@ -186,6 +175,9 @@ context("sl3 with delayed future")
 # Assertion failure at kmp_runtime.cpp(6480): __kmp_thread_pool == __null.
 # OMP: Error #13: Assertion failure at kmp_runtime.cpp(6480).
 # OMP: Hint: Please submit a bug report with this message, compile and run commands used, and machine configuration info including native compiler and operating system versions. Faster response will be obtained by including all program sources. For information on submitting this issue, please see http://www.intel.com/software/products/support/.
+
+  print("t_run_seq: "); print(t_run_seq)
+  print("t_run_multisession: "); print(t_run_multisession)
 
   ## Get the dataset with weights:
   wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)

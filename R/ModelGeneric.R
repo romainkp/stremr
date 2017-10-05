@@ -139,6 +139,16 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
     getPsAsW.models = function() { private$PsAsW.models },  # get all summary model objects (one model object per outcome var sA[j])
     getcumprodAeqa = function() { private$cumprodAeqa },  # get joint prob as a vector of the cumulative prod over j for P(sA[j]=a[j]|sW)
 
+    prefit = function(data, ...) {
+      assert_that(is.DataStorageClass(data))
+      # delayed evaluation promise over all regressions in PsAsW.models:
+      lapply()
+      for (k_i in seq_along(private$PsAsW.models)) {
+        private$PsAsW.models[[k_i]]$fit(data = data, ...)
+      }
+      invisible(self)
+    },
+
     fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       # serial loop over all regressions in PsAsW.models:
@@ -147,6 +157,7 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
       }
       invisible(self)
     },
+
     # P(A=1|W=w): uses private$m.fit to generate predictions
     predict = function(newdata) {
       # if (missing(newdata)) stop("must provide newdata")
@@ -157,6 +168,7 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
       }
       invisible(self)
     },
+
     # WARNING: This method cannot be chained together with other methods (s.a, class$predictAeqa()$fun())
     # Uses daughter objects (stored from prev call to fit()) to get predictions for P(A=obsdat.A|W=w)
     # Invisibly returns the joint probability P(A=a|W=w), also aves it as a private field "cumprodAeqa"
@@ -192,6 +204,7 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
       }
       return(res_models)
     },
+
     # call itself until reaches a terminal model fit with coefficients + regression returned with show()
     get.model.summaries = function() {
       res_models <- NULL
