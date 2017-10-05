@@ -1,4 +1,4 @@
-context("Fitting with no Monitoring and / or no Censoring indicators")
+context("sl3 with delayed future")
 
   # delayed_object_7 <- delayed(rnorm(1000000))
   # delayed_object_3 <- delayed(rnorm(1000000))
@@ -15,23 +15,21 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
 
   ## -----------------------------------------------------------------------
   ## Analyses by intervention
-  ## **** makes it easier to read the individual analyses ****
   ## -----------------------------------------------------------------------
+  # devtools::install_github("osofr/stremr", ref = "delayed_future")
   # devtools::install_github("jeremyrcoyle/sl3")
-  library("future")
+  # devtools::install_github("jeremyrcoyle/delayed")
+  # devtools::install_github("jeremyrcoyle/origami")
   # plan(multicore, workers = 4)
   # plan(multisession)
   # plan(sequential)
   # library(delayed)
 
-  `%+%` <- function(a, b) paste0(a, b)
-  library("stremr")
-  library("sl3")
   library("SuperLearner")
-  # options(stremr.verbose = TRUE)
-  # options(gridisl.verbose = TRUE)
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
+  library("future")
+  library("delayed")
+  library("sl3")
+  library("stremr")
   library("data.table")
   library("magrittr")
   library("ggplot2")
@@ -39,6 +37,11 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   library("tidyr")
   library("purrr")
   library("dplyr")
+
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
@@ -51,15 +54,11 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## -----------------------------------------------------------------------
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
-  newVarnames <- lagnodes %+% ".tminus1"
+  newVarnames <- paste0(lagnodes, ".tminus1")
   Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
   # indicator that the person has never been on treatment up to current t
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
   Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
-
-  ## remove indicators of censoring and monitoring events:
-  Odat_DT[, "N" := NULL]
-  # Odat_DT[, "C" := NULL]
 
   ## ------------------------------------------------------------------
   ## Propensity score models for Treatment, Censoring & Monitoring
@@ -98,36 +97,31 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                     metalearner = Lrnr_nnls$new())
   models_g <<- sl
 
-  plan(multicore)
-  task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
-                            covariates = c("highA1c", "lastNat1"),
-                            outcome = "TI",
-                            id = "ID")
-  tmc <- system.time(model.fit <- models_g$train(task))
+  # plan(multicore)
+  # task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+  #                           covariates = c("highA1c", "lastNat1"),
+  #                           outcome = "TI",
+  #                           id = "ID")
+  # tmc <- system.time(model.fit <- models_g$train(task))
 
-  plan(sequential)
-  task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
-                            covariates = c("highA1c", "lastNat1"),
-                            outcome = "TI",
-                            id = "ID")
-  tseq <- system.time(model.fit <- models_g$train(task))
+  # plan(sequential)
+  # task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+  #                           covariates = c("highA1c", "lastNat1"),
+  #                           outcome = "TI",
+  #                           id = "ID")
+  # tseq <- system.time(model.fit <- models_g$train(task))
 
-  plan(multisession)
-  task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
-                            covariates = c("highA1c", "lastNat1"),
-                            outcome = "TI",
-                            id = "ID")
-  tmsesh <- system.time(model.fit <- models_g$train(task))
-  print(tmsesh)
+  # plan(multisession)
+  # task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+  #                           covariates = c("highA1c", "lastNat1"),
+  #                           outcome = "TI",
+  #                           id = "ID")
+  # tmsesh <- system.time(model.fit <- models_g$train(task))
+  # print(tmsesh)
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
-  # sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_gaus),
-  #                   metalearner = Lrnr_nnls$new())
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm_sm),
-                    metalearner = Lrnr_nnls$new())
-
   ## regression formulas for Q's:
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
   ## no cross-validation model selection, just fit a single model specified below
@@ -139,7 +133,6 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
   models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 200)
   # models_Q <<- lrn_glm
-  # models_Q <<- sl
   # models_Q <<- sl
 
   ## ----------------------------------------------------------------
@@ -190,9 +183,9 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                             )
     )
 ## ERROR:
+# Assertion failure at kmp_runtime.cpp(6480): __kmp_thread_pool == __null.
 # OMP: Error #13: Assertion failure at kmp_runtime.cpp(6480).
-# OMP: Hint: Please submit a bug report with this message, compile and run commands used, and machine configuration info including native c
-  # print("t_run_multicore: "); print(t_run_multicore)
+# OMP: Hint: Please submit a bug report with this message, compile and run commands used, and machine configuration info including native compiler and operating system versions. Faster response will be obtained by including all program sources. For information on submitting this issue, please see http://www.intel.com/software/products/support/.
 
   ## Get the dataset with weights:
   wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)
