@@ -1,4 +1,22 @@
 context("Fitting with no Monitoring and / or no Censoring indicators")
+  library(future)
+  # plan(multicore, workers = 4)
+  # plan(multisession)
+  # plan(sequential)
+  # library(delayed)
+
+  # delayed_object_7 <- delayed(rnorm(1000000))
+  # delayed_object_3 <- delayed(rnorm(1000000))
+  # delayed_object_6 <- delayed(rnorm(1000000))
+  # delayed_object_7 <- delayed(rnorm(1000000))
+  # bundle <- bundle_delayed(list(delayed_object_7, delayed_object_3, delayed_object_6, delayed_object_7))
+  # adder <- function(x, y){x + y}
+  # delayed_adder <- delayed_fun(adder)
+  # chained_delayed_10 <- delayed_adder(delayed_object_7, delayed_object_3)
+  # # compute it using the future plan (two multicore workers), verbose mode lets us
+  # # see the computation order
+  # res <- bundle$compute(nworkers = 2)
+  # res <- chained_delayed_10$compute(nworkers = 2)
 
   ## -----------------------------------------------------------------------
   ## Analyses by intervention
@@ -10,10 +28,10 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   library("stremr")
   library("sl3")
   library("SuperLearner")
-  options(stremr.verbose = TRUE)
-  options(gridisl.verbose = TRUE)
-  # options(stremr.verbose = FALSE)
-  # options(gridisl.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
   library("data.table")
   library("magrittr")
   library("ggplot2")
@@ -58,8 +76,8 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## **** As a first step define a grid of all possible parameter combinations (for all estimators)
   ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
-  # tvals <- 0:10
-  tvals <- 2
+  tvals <- 0:10
+  # tvals <- 2
   ## This dataset defines all parameters that we like to vary in this analysis (including different interventions)
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
@@ -76,18 +94,19 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   lrn_glm_sm <<- Lrnr_glm_fast$new(family = "binomial", covariates = c("CVD"))
   lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "binomial")
   lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
+  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
                     metalearner = Lrnr_nnls$new())
   models_g <<- sl
 
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_gaus),
-                    metalearner = Lrnr_nnls$new())
-  # models_Q <<- lrn_glm
-  models_Q <<- sl
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
+  # sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_gaus),
+  #                   metalearner = Lrnr_nnls$new())
+  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm_sm),
+                    metalearner = Lrnr_nnls$new())
+
   ## regression formulas for Q's:
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
   ## no cross-validation model selection, just fit a single model specified below
@@ -97,7 +116,9 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
-  # models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 50)
+  # models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 200)
+  models_Q <<- lrn_glm
+  # models_Q <<- sl
   # models_Q <<- sl
 
   ## ----------------------------------------------------------------
@@ -105,20 +126,58 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
-           stremr::define_CVfolds(nfolds = 5, fold_column = "fold_ID")
+           stremr::define_CVfolds(nfolds = 10, fold_column = "fold_ID")
 
-  OData <- fitPropensity(OData,
-                          gform_TRT = gform_TRT,
-                          stratify_TRT = stratify_TRT,
-                          models_TRT = models_g,
-                          fit_method = fit_method_g
-                          )
+  plan(sequential)
+  t_run_seq <- system.time(
+    OData <- fitPropensity(OData,
+                            gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT,
+                            models_TRT = models_g,
+                            fit_method = fit_method_g
+                            )
+    )
+
+  plan(multisession)
+  t_run_multisession <- system.time(
+    OData <- fitPropensity(OData,
+                            gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT,
+                            models_TRT = models_g,
+                            fit_method = fit_method_g
+                            )
+    )
+
+  print("t_run_seq: "); print(t_run_seq)
+  ## 10 CV-folds, 16 time-points, 10K IID observations, 3 GLM learners
+  # [1] "t_run_seq: "
+  #    user  system elapsed
+  #  21.983   4.921  25.284
+  print("t_run_multisession: "); print(t_run_multisession)
+  ## 10 CV-folds, 16 time-points, 10K IID observations, 3 GLM learners
+  # [1] "t_run_multisession: "
+  #    user  system elapsed
+  #  37.557   7.603  80.332
+
+  plan(multicore)
+  t_run_multicore <- system.time(
+    OData <- fitPropensity(OData,
+                            gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT,
+                            models_TRT = models_g,
+                            fit_method = fit_method_g
+                            )
+    )
+## ERROR:
+# OMP: Error #13: Assertion failure at kmp_runtime.cpp(6480).
+# OMP: Hint: Please submit a bug report with this message, compile and run commands used, and machine configuration info including native c
+  # print("t_run_multicore: "); print(t_run_multicore)
 
   ## Get the dataset with weights:
   wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)
 
   ## ------------------------------------------------------------
-  ## GCOMP ANALYSIS
+  ## Parallel GCOMP ANALYSIS
   ## ------------------------------------------------------------
   GCOMP <-analysis %>%
         distinct(intervened_TRT, stratifyQ_by_rule) %>%

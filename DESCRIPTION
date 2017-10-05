@@ -1,6 +1,6 @@
 Package: stremr
 Title: Streamlined Estimation for Static, Dynamic and Stochastic Treatment Regimes in Longitudinal Data
-Version: 0.7.99
+Version: 0.10.99
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
@@ -31,6 +31,7 @@ Imports:
     dplyr,
     ggplot2,
     gridisl,
+    delayed,
     h2o,
     magrittr,
     methods,
@@ -59,6 +60,7 @@ Suggests:
     mockery
 Remotes: 
     github::jeremyrcoyle/sl3,
+    github::jeremyrcoyle/delayed,
     github::jeremyrcoyle/origami@old-stable,
     github::osofr/gridisl
 License: MIT + file LICENSE

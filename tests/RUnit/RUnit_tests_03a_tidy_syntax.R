@@ -16,7 +16,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## **** makes it easier to read the individual analyses ****
   ## -----------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
-  library("stremr")
+  # library("stremr")
   # options(stremr.verbose = TRUE)
   # options(gridisl.verbose = TRUE)
   options(stremr.verbose = FALSE)
@@ -34,7 +34,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
   # select only the first 1,000 IDs
-  Odat_DT <- Odat_DT[ID %in% (1:100), ]
+  # Odat_DT <- Odat_DT[ID %in% (1:100), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   ## -----------------------------------------------------------------------

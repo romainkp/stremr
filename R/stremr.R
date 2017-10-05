@@ -1,6 +1,7 @@
 #' @useDynLib stremr
 #' @import R6
 #' @import data.table
+#' @import delayed
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is

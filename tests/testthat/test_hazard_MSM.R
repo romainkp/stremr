@@ -96,4 +96,3 @@
   survMSM_res3[["estimates"]]
   survMSM_res3[["msm.fit"]]
 
-
