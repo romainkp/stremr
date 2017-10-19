@@ -193,10 +193,7 @@ test_that("Stochastic g^*: GCOMP and TMLE are unbiased for correct g & correct Q
 })
 
 ## -------------------------------------------------
-## WRONG g and CORRECT Q ***** CORRECT LTMLE VERSION WITH STOCHASTIC BUG FIXED *****
-## install stremr version with the bug fix:
-# library(devtools)
-# install_github("osofr/stremr", ref = "fix_stochastic_TMLE_bug", dependencies = FALSE)
+## WRONG g and CORRECT Q
 ## -------------------------------------------------
 gform_TRT = "A ~ A.tminus1"
 OData <- fitPropensity(OData, gform_TRT = gform_TRT)
