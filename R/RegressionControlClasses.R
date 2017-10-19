@@ -1,3 +1,40 @@
+args_to_list <- function(parent = sys.parent()){
+   call <- sys.call(parent)
+   fn <- sys.function(parent)
+
+   # get specified args
+   expanded <- match.call(fn, call)
+   args <- as.list(expanded[-1])
+
+   # get default args
+   all_args <- formals(fn)
+
+   # drop dots from formals if it exists
+   all_args$`...` <- NULL
+
+   # add in specified args
+   all_args[names(args)] <- args
+
+   # evaluate args
+   evaled <- lapply(all_args, eval, envir=parent.frame())
+
+   return(evaled)
+ }
+my_function <- function(arg1="default_1", arg2="default_2", ...){
+  return(args_to_list())
+}
+
+my_function2 <- function(arg1="default_1", arg2="default_2"){
+  return(args_to_list())
+}
+
+# a <- 15
+# my_function(arg2="specified_2", dot_arg="test")
+# my_function2(arg2="specified_2")
+# my_function(arg2="specified_2", ARG3 = c("specified_3", "specified_4"))
+# res <- my_function(arg2="specified_2", ARG3 = list(c(a, 10)))
+# res[["ARG3"]]
+
 ## ---------------------------------------------------------------------------------
 ## SPECIFYING regressions
 ## ---------------------------------------------------------------------------------
