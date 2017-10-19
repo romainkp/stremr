@@ -15,21 +15,20 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Analyses by intervention
   ## **** makes it easier to read the individual analyses ****
   ## -----------------------------------------------------------------------
-  `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
-  # options(stremr.verbose = TRUE)
-  # options(gridisl.verbose = TRUE)
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
-
-  library("data.table")
   library("magrittr")
+  library("data.table")
+  library("testthat")
   library("ggplot2")
   library("tibble")
   library("tidyr")
   library("purrr")
   library("dplyr")
+
+  data.table::setDTthreads(1)
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  set_all_stremr_options(estimator = "speedglm__glm")
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
@@ -42,7 +41,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## -----------------------------------------------------------------------
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
-  newVarnames <- lagnodes %+% ".tminus1"
+  newVarnames <- paste0(lagnodes, ".tminus1")
   Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
   # indicator that the person has never been on treatment up to current t
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
@@ -79,7 +78,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                   trunc_wt = c(FALSE, TRUE),
                   stratifyQ_by_rule = c(TRUE, FALSE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule) %>%
                   mutate(nfolds = as.integer(nfolds)) %>%
                   mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, trunc_IPW, Inf))) %>%

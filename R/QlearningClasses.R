@@ -170,6 +170,13 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       return(subset_idx)
     },
 
+    ## **********************************************************************
+    ## Iteration step for G-COMP
+    ## (*) Update are performed only among obs who were involved in fitting the initial Q
+    ## (*) Predicted outcome from the previous Seq-GCOMP iteration (t+1) was previously saved in current t row under "Qkplus1".
+    ## (*) If person failed at t, he/she could not have participated in model fit at t+1.
+    ## (*) Thus the outcome at row t for new failures ("Qkplus1") is always deterministically assigned to 1.
+    ## **********************************************************************
     fit = function(overwrite = FALSE, data, Qlearn.fit, ...) { # Move overwrite to a field? ... self$overwrite
 
       prevQ_indx <- which(self$all_Qregs_indx %in% (self$Qreg_counter+1))
@@ -184,110 +191,85 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
-      # **********************************************************************
-      # FITTING STEP OF Q-LEARNING
-      # Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
-      # **********************************************************************
+      ## **********************************************************************
+      ## TRAINING STEP TMLE/GCOMP: Fit the initial Q regression
+      ## Select all obs at t who were uncensored & possibly were following the rule & had no missing outcomes (!is.na(self$subset_vars))
+      ## Fit model using Q.kplus as the outcome to obtain the inital model fit for Q_k
+      ## **********************************************************************
       self$subset_idx <- self$define_idx_to_fit_initQ(data)
-      # Save the subset used for fitting of the current initial Q[t] -> will be used for targeting
-      self$idx_used_to_fit_initQ <- self$subset_idx
-
+      self$idx_used_to_fit_initQ <- self$subset_idx ## Save the subset used for fitting of the current initial Q[t] -> will be used for targeting
       nodes <- data$nodes
       self$n_obs_fit <- length(self$subset_idx)
-
-      # Fit model using Q.kplus as the outcome to obtain the inital model fit for Q[t]:
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
       self$is.fitted <- TRUE
 
-      # **********************************************************************
-      # PREDICTION STEP OF Q-LEARNING
-      # Q prediction for everyone (including those who just got censored and those who just stopped following the rule)
-      # **********************************************************************
-      interventionNodes.g0 <- data$interventionNodes.g0
-      interventionNodes.gstar <- data$interventionNodes.gstar
-
-      # Determine which nodes are actually stochastic and need to be summed out:
-      stoch_indicator <- data$define.stoch.nodes(interventionNodes.gstar)
-      any_stoch <- sum(stoch_indicator) > 0
-
-      # For prediction need to add all obs that were also censored at t and (possibly) those who just stopped following the rule
-      self$subset_idx <- self$define_idx_to_predictQ(data)
-
       ## **********************************************************************
-      ## Below prediction step will:
+      ## FIRST PREDICTION STEP OF TMLE/GCOMP (Qk_hat = initial Q)
+      ## Predict for subjects that were used for training initial Q
+      ## E(Q_{k+1}|O(t)): Predict from conditional mean fit using the observed data (O) (no counterfactuals)
+      ## TMLE: Qk_hat will be modified into Q^* with TMLE update
+      ## GCOMP: Qk_hat serves no purpose and will be discarded
       ## **********************************************************************
-      ## 1. reset current exposures at t to their counterfactual values (e.g., by renaming the columns)
-      ## note: this step is unnecessary when doing fitting only among rule-followers
-      ## self$binomialModelObj$replaceCols(data, self$subset_idx, data$nodes$, , ...)
-      ## 2. predict for all obs who were used for fitting t (re-using the same design mat used for fitting)
-      ## probAeqa <- self$predictAeqa(...)
-      ## self$predict(...)
-      ## 3. add observations that were censored at current t to the subset and do predictions for them
-      ## ------------------------------------------------------------------------------------------------------------------------
-      ## 4. possibly intergrate out over the support of the stochastic intervention (weighted sum of P(A(t)=a(t)))
-      ## ------------------------------------------------------------------------------------------------------------------------
-      ## *** NEED TO ADD: do MC sampling to perform the same integration for stochastic g^*
-      ## ------------------------------------------------------------------------------------------------------------------------
+      Qk_hat <- self$predict(data, subset_idx = self$idx_used_to_fit_initQ)
 
-      ## predict under observed
-      probA1_obs <- self$predict(data, subset_idx = self$subset_idx)
-
-      ## print("initial mean(Qkplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
-      ## **********************************************************************
-      ## Iteration step for G-COMP
-      ## (*) Update are performed only among obs who were involved in fitting the initial Q (self$idx_used_to_fit_initQ)
-      ## (*) Predicted outcome from the previous Seq-GCOMP iteration (t+1) was previously saved in current t row under "Qkplus1".
-      ## (*) If person failed at t, he/she could not have participated in model fit at t+1.
-      ## (*) Thus the outcome at row t for new failures ("Qkplus1") is always deterministically assigned to 1.
-      ## **********************************************************************
-
-      ## The outcome that was used for fitting the initial Q at current time-point k:
-      Qkplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1", with = FALSE][[1]]
-      # data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1" := eval(as.name("Qkplus1"))]
-
+      Qkplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1", with = FALSE][[1]] ## The outcome used for training initial Q_k
       update.Qstar.coef <- 0
 
       if (self$TMLE) {
         ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
-        ## Thus, need to find which elements in predicted Q vector (probA1) where actually used for fitting the init Q
-        idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
 
-        # Qk_hat <- probA1[idx_for_fits_among_preds]
-        Qk_hat <- probA1_obs[idx_for_fits_among_preds]
-        # off_TMLE <- qlogis(Qk_hat)
-        # print("initial mean(Qkplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
+        ## no longer needed:
+        # idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
+        # Qk_hat <- probA1_obs[idx_for_fits_among_preds]
 
         ## Cumulative IPWeights for current t=k (from t=0 to k):
         wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
 
         ## TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
-        ## tmle update will error out if some predictions are exactly 0
+        ## TMLE update will error out if some predictions are exactly 0
         private$TMLE.fit <- tmle.update(Qkplus1 = Qkplus1,
                                         Qk_hat = Qk_hat,
                                         IPWts = wts_TMLE,
                                         lower_bound_zero_Q = self$lower_bound_zero_Q,
                                         skip_update_zero_Q = self$skip_update_zero_Q)
-
         TMLE_intercept <- private$TMLE.fit$TMLE_intercept
 
         if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
           update.Qstar.coef <- TMLE_intercept
         }
-        #  else {
-        #   update.Qstar.coef <- 0
-        # }
 
-        # EIC_i_t_calc_unadjusted <- wts_TMLE * (Qkplus1 - Qk_hat)
-        # print("EIC_i_t_calc_unadjusted"); print(mean(EIC_i_t_calc_unadjusted))
-
-        ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
+        ## Updated predictions (Q.star) under observed data (O(t))
         Qk_hat <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
-        # iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
-
         EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
-        # print("EIC_i_t_calc_adjusted"); print(mean(EIC_i_t_calc))
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
       }
+
+      ## **********************************************************************
+      ## SECOND PREDICTION STEP OF TMLE/GCOMP
+      ## 1. Predict for subjects that were used for training initial Q
+      ## 2. Predict for subjects who were newly censored and just stopped following the rule
+      ## E(Q_{k+1}|O^*(t)): Predict from conditional mean fit using the counterfactual (intervened) data (O^*)
+      ## Set the intervention nodes (A(t),N(t)) to counterfactual values (A^*(t),N^*(t)), then predict
+      ## TMLE: Qk_hat will be modified into Q^* with TMLE update
+      ## GCOMP: Qk_hat serves no purpose and will be discarded
+      ## **********************************************************************
+      ## **********************************************************************
+      ## ALGORITHM OUTLINE
+      ## 1. Reset current exposures at t to their counterfactual values (by renaming and swapping the columns in input data)
+      ##    note: this step is unnecessary when doing fitting only among rule-followers
+      ## 3. Add observations that were censored at current t (+possibly stopped following the rule)
+      ## 2. Predict for all subjects, under counterfactual regimen A(t)=A^*(t)
+      ## 4. For stochastic g^*_t: Perform integration over the support of the stochastic intervention (as a weighted sum over g^*(a)=P(A^*(t)=a(t)))
+      ## TO DO: add option for performing MC sampling to perform the same integration for stochastic g^*
+      ## **********************************************************************
+
+      interventionNodes.g0 <- data$interventionNodes.g0
+      interventionNodes.gstar <- data$interventionNodes.gstar
+      ## Determine which nodes are actually stochastic and need to be summed out:
+      stoch_indicator <- data$define.stoch.nodes(interventionNodes.gstar)
+      any_stoch <- sum(stoch_indicator) > 0
+      ## For prediction need to add all obs that were also censored at t and (possibly) those who just stopped following the rule
+      self$subset_idx <- self$define_idx_to_predictQ(data)
 
       if (!any_stoch) {
         iQ_all <- self$predictStatic(data,
@@ -296,7 +278,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                     subset_idx = self$subset_idx,
                                     update.Qstar.coef = update.Qstar.coef)
       } else {
-        # For all stochastic nodes, need to integrate out w.r.t. the support of each node
+        ## For all stochastic nodes, need to integrate out w.r.t. the support of each node
         iQ_all <- self$predictStochastic(data,
                                         g0 = interventionNodes.g0,
                                         gstar = interventionNodes.gstar,
@@ -304,7 +286,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
                                         stoch_indicator = stoch_indicator,
                                         update.Qstar.coef = update.Qstar.coef)
       }
-      # iQ_all <- probA1
 
       ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
       ## This is either the initial G-COMP Q or the TMLE targeted version of the initial Q
@@ -312,12 +293,10 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## When stratifying Q fits, these predictions will also include all observations who just stopped following the treatment rule at time point k.
       data$dat.sVar[self$subset_idx, ("Qk_hat") := iQ_all]
 
-      # Set the outcome for the next Q-regression: put Q[t] in (t-1).
-      # only set the Qkplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
+      ## Set the outcome for the next Q-regression: put Q[t] in (t-1).
+      ## only set the Qkplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
       if (self$Qreg_counter > 1) {
-        ## using data.table:
         newsubset_idx <- (self$subset_idx - 1)
-
         ## The outcomes of these IDs (row numbers) need to be replaced with fold-specific outcomes for each training set
         ## Next training fold model can check if some of its indices overlap with 'train_idx_to_replace'
         ## How do we pass these predictions and store them?
@@ -339,19 +318,24 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         private$probA1 <- NULL
 
       } else {
-        ## save prediction P(Q.kplus=1):
-        private$probAeqa <- iQ_all
+        private$probAeqa <- iQ_all ## save last predicted P(Q.kplus=1|W)
         private$probA1 <- NULL
       }
 
-
       # **********************************************************************
-      # to save RAM space when doing many stacked regressions wipe out all internal data:
+      # Wipe out all internal data -- DOES NOT REMOVE THE Q MODEL FIT OBJECTS
       self$wipe.alldat
-      ## If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
-      if (!self$keep_idx) self$wipe.all.indices
-
       # **********************************************************************
+      ## If we are planning on running iterative TMLE we will need the subsets used for fitting and predicting this Q
+      if (!self$keep_idx) self$wipe.all.indices
+      # **********************************************************************
+      ## For CV, remove all grid & fold-specific model fits from gridisl
+      ## Will still keep the best model fit that was re-trained on all data method=="cv"/"holdout"
+      ## Don't need to store fold-specific models, since we already made the predictions.
+      ## However, we may need them if we want to report the model fit stats
+      if (!(self$model_contrl[["fit_method"]] %in% "none")) private$model.fit$wipe.allmodels
+      # **********************************************************************
+
       invisible(self)
     },
 
@@ -402,6 +386,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## These are also referred to as predictions from all validation splits, or holdouts or out-of-sample predictions
       # holdout <- self$CVTMLE
       assert_that(self$is.fitted)
+
       if (missing(newdata) && !is.null(private$probA1)) {
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         return(private$probA1)
@@ -480,15 +465,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # if (any(is.na(private$probA1) )) { # & !is.nan(private$probA1)
           stop("some of the predicted probabilities during seq g-comp resulted in NAs, which indicates an error of a prediction routine")
         }
-
-        ## Remove all modeling grid obj for xgboost (all the CV / training set models)
-        ## This will still keep the best re-trained model object if method=="cv"/"holdout"
-        ## Don't need to store these models, since we already made the prediction
-        ## However, we will need these models if we want to report the model fit stats
-        if (!(self$model_contrl[["fit_method"]] %in% "none")) private$model.fit$wipe.allmodels
-
         return(private$probA1)
-
       }
     },
 

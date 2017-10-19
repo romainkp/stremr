@@ -6,10 +6,6 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## -----------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
-  # options(stremr.verbose = TRUE)
-  # options(gridisl.verbose = TRUE)
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
   library("data.table")
   library("magrittr")
   library("ggplot2")
@@ -17,6 +13,10 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   library("tidyr")
   library("purrr")
   library("dplyr")
+
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  data.table::setDTthreads(1)
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
@@ -62,7 +62,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                   stratifyQ_by_rule = c(TRUE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule)
 
   ## ------------------------------------------------------------------------

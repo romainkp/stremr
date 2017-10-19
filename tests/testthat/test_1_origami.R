@@ -10,10 +10,6 @@ context("origami Super Learner")
   ## -----------------------------------------------------------------------
   `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
-  # options(stremr.verbose = TRUE)
-  # options(gridisl.verbose = TRUE)
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
   library("data.table")
   library("magrittr")
   library("ggplot2")
@@ -21,6 +17,10 @@ context("origami Super Learner")
   library("tidyr")
   library("purrr")
   library("dplyr")
+
+  options(stremr.verbose = FALSE)
+  options(gridisl.verbose = FALSE)
+  data.table::setDTthreads(1)
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
@@ -71,7 +71,7 @@ context("origami Super Learner")
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                   trunc_wt = c(FALSE, TRUE),
                   stratifyQ_by_rule = c(TRUE, FALSE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule) %>%
                   mutate(nfolds = as.integer(nfolds)) %>%
                   mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, trunc_IPW, Inf))) %>%

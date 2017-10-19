@@ -1,15 +1,15 @@
 context("NDE assumption")
 
-## ---------------------------------------------------------------------------------
-## COMMENTS ON TESTS
-## ---------------------------------------------------------------------------------
-  require("stremr")
+  library("stremr")
+  library("magrittr")
+  library("data.table")
+  library("testthat")
+
+  data.table::setDTthreads(1)
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
-
   options(width = 100)
-  `%+%` <- function(a, b) paste0(a, b)
-  require("data.table")
+
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
   Odat_DT <- Odat_DT[ID %in% (1:100), ]
@@ -22,7 +22,7 @@ context("NDE assumption")
   ## ---------------------------------------------------------------------------
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
-  newVarnames <- lagnodes %+% ".tminus1"
+  newVarnames <- paste0(lagnodes, ".tminus1")
   Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
   # indicator that the person has never been on treatment up to current t
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
@@ -90,7 +90,6 @@ test_that("IPW-KM with static intervention on MONITOR", {
   )
 })
 
-
 test_that("IPW-KM with static intervention on MONITOR under NDE assumption", {
   ## ---------------------------------------------------------------------------------------------------------
   ## IPW-KM with static intervention on MONITOR under NDE assumption
@@ -113,7 +112,6 @@ test_that("IPW-KM with static intervention on MONITOR under NDE assumption", {
   )
 
 })
-
 
 test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
   t.surv <- c(0:3)
@@ -152,7 +150,6 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
 
 })
 
-
 test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumption", {
   t.surv <- c(0:3)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
@@ -185,7 +182,6 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
   )
 
 })
-
 
 test_that("TMLE / GCOMP with a stochastic intervention on MONITOR under NDE assumption", {
   t.surv <- c(0:3)
