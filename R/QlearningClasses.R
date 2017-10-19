@@ -228,21 +228,9 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## ------------------------------------------------------------------------------------------------------------------------
       ## *** NEED TO ADD: do MC sampling to perform the same integration for stochastic g^*
       ## ------------------------------------------------------------------------------------------------------------------------
-      if (!any_stoch) {
-        probA1 <- self$predictStatic(data,
-                                    g0 = interventionNodes.g0,
-                                    gstar = interventionNodes.gstar,
-                                    subset_idx = self$subset_idx)
-      } else {
-        # For all stochastic nodes, need to integrate out w.r.t. the support of each node
-        probA1 <- self$predictStochastic(data,
-                                        g0 = interventionNodes.g0,
-                                        gstar = interventionNodes.gstar,
-                                        subset_idx = self$subset_idx,
-                                        stoch_indicator = stoch_indicator)
-      }
 
-      iQ_all <- probA1
+      ## predict under observed
+      probA1_obs <- self$predict(data, subset_idx = self$subset_idx)
 
       ## print("initial mean(Qkplus1) for ALL obs at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
       ## **********************************************************************
@@ -257,11 +245,15 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       Qkplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1", with = FALSE][[1]]
       # data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1" := eval(as.name("Qkplus1"))]
 
+      update.Qstar.coef <- 0
+
       if (self$TMLE) {
         ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
         ## Thus, need to find which elements in predicted Q vector (probA1) where actually used for fitting the init Q
         idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
-        Qk_hat <- probA1[idx_for_fits_among_preds]
+
+        # Qk_hat <- probA1[idx_for_fits_among_preds]
+        Qk_hat <- probA1_obs[idx_for_fits_among_preds]
         # off_TMLE <- qlogis(Qk_hat)
         # print("initial mean(Qkplus1) among fitted obs only at t=" %+% self$t_period %+% ": " %+% round(mean(iQ_all), 4))
 
@@ -280,21 +272,39 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
         if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
           update.Qstar.coef <- TMLE_intercept
-        } else {
-          update.Qstar.coef <- 0
         }
+        #  else {
+        #   update.Qstar.coef <- 0
+        # }
 
         # EIC_i_t_calc_unadjusted <- wts_TMLE * (Qkplus1 - Qk_hat)
         # print("EIC_i_t_calc_unadjusted"); print(mean(EIC_i_t_calc_unadjusted))
 
         ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
         Qk_hat <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
-        iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
+        # iQ_all <- plogis(qlogis(iQ_all) + update.Qstar.coef)
 
         EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
         # print("EIC_i_t_calc_adjusted"); print(mean(EIC_i_t_calc))
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
       }
+
+      if (!any_stoch) {
+        iQ_all <- self$predictStatic(data,
+                                    g0 = interventionNodes.g0,
+                                    gstar = interventionNodes.gstar,
+                                    subset_idx = self$subset_idx,
+                                    update.Qstar.coef = update.Qstar.coef)
+      } else {
+        # For all stochastic nodes, need to integrate out w.r.t. the support of each node
+        iQ_all <- self$predictStochastic(data,
+                                        g0 = interventionNodes.g0,
+                                        gstar = interventionNodes.gstar,
+                                        subset_idx = self$subset_idx,
+                                        stoch_indicator = stoch_indicator,
+                                        update.Qstar.coef = update.Qstar.coef)
+      }
+      # iQ_all <- probA1
 
       ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
       ## This is either the initial G-COMP Q or the TMLE targeted version of the initial Q
@@ -482,7 +492,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       }
     },
 
-    predictStatic = function(data, g0, gstar, subset_idx) {
+    predictStatic = function(data, g0, gstar, subset_idx, update.Qstar.coef = 0) {
       # ------------------------------------------------------------------------------------------------------------------------
       # Set current A's and N's to the counterfactual exposures in the data (for predicting Q):
       # ------------------------------------------------------------------------------------------------------------------------
@@ -502,10 +512,17 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       if (inherits(gcomp.pred.res, "try-error"))
         stop("error during prediction step of GCOMP/TMLE")
 
+      # ------------------------------------------------------------------------------------------------------------------------
+      # Perform qlogit-linear TMLE update for predicted Q, if available
+      # ------------------------------------------------------------------------------------------------------------------------
+      if (abs(update.Qstar.coef)  > 10^-10) {
+        private$probA1 <- plogis(qlogis(private$probA1) + update.Qstar.coef)
+      }
+
       invisible(return(private$probA1))
     },
 
-    predictStochastic = function(data, g0, gstar, subset_idx, stoch_indicator) {
+    predictStochastic = function(data, g0, gstar, subset_idx, stoch_indicator, update.Qstar.coef = 0) {
       # Dimensionality across all stochastic nodes:
       stoch_nodes_idx <- which(stoch_indicator)
       stoch_nodes_names <- names(stoch_indicator[stoch_nodes_idx])
@@ -529,8 +546,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Predict using newdata, obtain probAeqa_stoch
         # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
         # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
-        probA1 <- self$predictStatic(data, g0 = g0, gstar = gstar, subset_idx = subset_idx)
-
+        probA1 <- self$predictStatic(data, g0 = g0, gstar = gstar, subset_idx = subset_idx, update.Qstar.coef = update.Qstar.coef)
         # Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cumulative product) based on the probabilities from original column
         jointProb <- rep.int(1L, nrow(stoch.probs))
         for (stoch.node.nm in stoch_nodes_names) {
