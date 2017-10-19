@@ -136,6 +136,11 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
     c(0.9900000, 0.9815155, 0.9900000, 0.9492275, 0.9465099, 0.9465099, 0.8165468, 0.6305506, 0.6305506, 0.5363613, 0.5363540),
     tolerance = .0001
   )
+  expect_equal(
+    tmle_est3[["estimates"]][["SE.TMLE"]],
+    c(0.009949874, 0.014289238, 0.013203304, 0.049681300, 0.053829874, 0.097355823, 0.109072012, 0.053244979, 0.053244974, 0.098164546, 0.098165078),
+    tolerance = .0001
+  )
 
   # pooling all observations (no stratification):
   tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
@@ -149,6 +154,11 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
   expect_equal(
     tmle_est4[["estimates"]][["St.TMLE"]],
     c(0.9900000, 0.9817518, 0.9744054, 0.9402445, 0.9385821, 0.8250578, 0.8179511, 0.6204416, 0.7057676, 0.6130236, 0.6130236),
+    tolerance = .0001
+  )
+  expect_equal(
+    tmle_est4[["estimates"]][["SE.TMLE"]],
+    c(0.009949874, 0.014172146, 0.018310629, 0.042300721, 0.046925772, 0.076093885, 0.076334074, 0.101056422, 0.150975762, 0.152185581, 0.152185581),
     tolerance = .0001
   )
 })
@@ -166,57 +176,28 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
   ## stratified modeling by rule followers only:
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  # expect_true(
-  # all.equal(
-  #   paste0(round(tmle_est3[["estimates"]][["St.TMLE"]],4), collapse = ","),
-  #   "0.99,0.9647,0.9439,0.9331")
-  # )
+
   expect_equal(
     tmle_est3[["estimates"]][["St.TMLE"]],
     c(0.9900000, 0.9646507, 0.9439017, 0.9331322, 0.8400121, 0.8828130, 0.8736917, 0.6038734, 0.6038734, 0.5360617, 0.5360617),
     tolerance = .0001
   )
+  expect_equal(
+    tmle_est3[["estimates"]][["SE.TMLE"]],
+    c(0.009949874, 0.023290794, 0.025426711, 0.049717703, 0.070761799, 0.057952652, 0.056653507, 0.190193465, 0.190193465, 0.197448696, 0.197448696),
+    tolerance = .0001
+  )
   # pooling all observations (no stratification):
   tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  # expect_true(
-  # all.equal(
-  #   paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
-  #   "0.99,0.9652,0.9505,0.8693")
-  # )
   expect_equal(
     tmle_est4[["estimates"]][["St.TMLE"]],
     c(0.9900000, 0.9651558, 0.9504652, 0.8693270, 0.8209692, 0.8604199, 0.8519255, 0.5933615, 0.5262126, 0.5286196, 0.5286196),
     tolerance = .0001
   )
-})
-
-test_that("TMLE / GCOMP with a stochastic intervention on MONITOR under NDE assumption", {
-  t.surv <- c(0:3)
-  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-  gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly",
-                            useonly_t_MONITOR = "gPois3.yrly == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  expect_true(
-  all.equal(
-    paste0(round(gcomp_est3[["estimates"]][["St.GCOMP"]],4), collapse = ","),
-    "0.99,0.9776,0.9664,0.9005")
-  )
-
-  # stratified modeling by rule followers only:
-  tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly",
-                        useonly_t_MONITOR = "gPois3.yrly == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  expect_true(
-  all.equal(
-    paste0(round(tmle_est3[["estimates"]][["St.TMLE"]],4), collapse = ","),
-    "0.99,0.9757,0.9647,0.8848")
-  )
-
-  # pooling all observations (no stratification):
-  tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly",
-                        useonly_t_MONITOR = "gPois3.yrly == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  expect_true(
-  all.equal(
-    paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
-    "0.99,0.9756,0.9675,0.8872")
+  expect_equal(
+    tmle_est4[["estimates"]][["SE.TMLE"]],
+    c(0.009949874, 0.023247797, 0.025311490, 0.054319016, 0.067307607, 0.053147718, 0.053000678, 0.173370912, 0.222022409, 0.191511407, 0.191511407),
+    tolerance = .0001
   )
 })
