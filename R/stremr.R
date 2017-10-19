@@ -9,9 +9,9 @@
 NULL
 
 #' @importFrom gridisl defModel
-#' @name defModel
-#' @rdname defModel
-#' @export
+# @name defModel
+# @rdname defModel
+# @export
 NULL
 
 #' Fast C++ version of the inverse logit link function (expit)

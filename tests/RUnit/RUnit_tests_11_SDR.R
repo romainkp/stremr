@@ -1,21 +1,25 @@
 test.iTMLE.10Kdata <- function() {
     reqxgb <- requireNamespace("xgboost", quietly = TRUE)
     reqh2o <- requireNamespace("h2o", quietly = TRUE)
-    if (!reqxgb || !reqh2o) return(NULL)
+    origami <- requireNamespace("origami", quietly = TRUE)
+    if (!reqxgb || !reqh2o || !origami) return(NULL)
 
     `%+%` <- function(a, b) paste0(a, b)
+    library("origami")
     library("h2o")
     library("xgboost")
     library("data.table")
-    setDTthreads(1)
     library("foreach")
     library("doParallel")
     library("stremr")
 
-    # options(stremr.verbose = TRUE)
-    options(gridisl.verbose = TRUE)
+    if (length(find("origami_SuperLearner"))==0) {
+      return(NULL)
+    }
+
+    data.table::setDTthreads(1)
+    options(gridisl.verbose = FALSE)
     options(stremr.verbose = FALSE)
-    # options(gridisl.verbose = FALSE)
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K

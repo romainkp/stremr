@@ -49,8 +49,7 @@ context("NDE assumption")
   gform_CENS <- c("C ~ highA1c + t")
   gform_MONITOR <- "N ~ 1"
 
-  OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                          stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
+  OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
 test_that("IPW-KM with stochastic intervention on MONITOR", {
   wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly")
@@ -70,7 +69,6 @@ test_that("IPW-KM with stochastic intervention on MONITOR", {
     "0.9807,0.9745,0.9745,0.9303,0.9267,0.8486,0.8465,0.7349,0.7349,0.5948,0.5948,0.5818,0.5818,0.5818,0.5818,0.5818,NaN")
   )
 })
-
 
 test_that("IPW-KM with static intervention on MONITOR", {
   wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "N.star.0101")
@@ -110,7 +108,6 @@ test_that("IPW-KM with static intervention on MONITOR under NDE assumption", {
     paste0(round(surv2.statNDE[["estimates"]][["St.NPMSM"]],4), collapse = ","),
     "0.9896,0.97,0.97,0.9366,0.9366,0.9366,0.9366,0.6187,0.6187,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN")
   )
-
 })
 
 test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
@@ -147,7 +144,6 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
     paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
     "0.99,0.9805,0.9735,0.9551")
   )
-
 })
 
 test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumption", {
@@ -180,7 +176,6 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
     paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
     "0.99,0.9652,0.9505,0.8693")
   )
-
 })
 
 test_that("TMLE / GCOMP with a stochastic intervention on MONITOR under NDE assumption", {
@@ -211,5 +206,4 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR under NDE assu
     paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
     "0.99,0.9756,0.9675,0.8872")
   )
-
 })
