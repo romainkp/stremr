@@ -154,30 +154,40 @@ test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
 })
 
 test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumption", {
-  t.surv <- c(0:3)
+  t.surv <- c(0:10)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                             useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  expect_true(
-  all.equal(
-    paste0(round(gcomp_est3[["estimates"]][["St.GCOMP"]],4), collapse = ","),
-    "0.99,0.9679,0.9616,0.8839")
+  expect_equal(
+    gcomp_est3[["estimates"]][["St.GCOMP"]],
+    c(0.9900000, 0.9679396, 0.9616093, 0.8839193, 0.8246476, 0.8006976, 0.7883042, 0.5805688, 0.4600393, 0.5749507, 0.5749507),
+    tolerance = .0001
   )
   ## stratified modeling by rule followers only:
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-  expect_true(
-  all.equal(
-    paste0(round(tmle_est3[["estimates"]][["St.TMLE"]],4), collapse = ","),
-    "0.99,0.9647,0.9439,0.9331")
+  # expect_true(
+  # all.equal(
+  #   paste0(round(tmle_est3[["estimates"]][["St.TMLE"]],4), collapse = ","),
+  #   "0.99,0.9647,0.9439,0.9331")
+  # )
+  expect_equal(
+    tmle_est3[["estimates"]][["St.TMLE"]],
+    c(0.9900000, 0.9646507, 0.9439017, 0.9331322, 0.8400121, 0.8828130, 0.8736917, 0.6038734, 0.6038734, 0.5360617, 0.5360617),
+    tolerance = .0001
   )
   # pooling all observations (no stratification):
   tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-  expect_true(
-  all.equal(
-    paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
-    "0.99,0.9652,0.9505,0.8693")
+  # expect_true(
+  # all.equal(
+  #   paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
+  #   "0.99,0.9652,0.9505,0.8693")
+  # )
+  expect_equal(
+    tmle_est4[["estimates"]][["St.TMLE"]],
+    c(0.9900000, 0.9651558, 0.9504652, 0.8693270, 0.8209692, 0.8604199, 0.8519255, 0.5933615, 0.5262126, 0.5286196, 0.5286196),
+    tolerance = .0001
   )
 })
 
