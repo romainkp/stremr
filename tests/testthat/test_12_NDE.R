@@ -1,4 +1,5 @@
 context("NDE assumption")
+  run_test <- TRUE
 
   library("stremr")
   library("magrittr")
@@ -36,6 +37,7 @@ context("NDE assumption")
                       covars = c("highA1c", "lastNat1", "lastNat1.factor"),
                       CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome,
                       remove_extra_rows = FALSE)
+
   ## ------------------------------------------------------------------
   ## Fit propensity scores for Treatment, Censoring & Monitoring
   ## ------------------------------------------------------------------
@@ -54,19 +56,18 @@ context("NDE assumption")
 test_that("IPW-KM with stochastic intervention on MONITOR", {
   wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow", intervened_MONITOR = "gPois3.yrly")
   surv1.stoch <- survNPMSM(wts.St.dlow, OData)
-  expect_true(
-  all.equal(
-    paste0(round(surv1.stoch[["estimates"]][["St.NPMSM"]],4), collapse = ","),
-    "0.9859,0.9859,0.9859,0.9859,0.9859,0.978,0.978,0.4114,0.4114,0.4114,0.4114,0.4114,0.41,0.41,0.41,0.41,NaN")
+  expect_equal(
+    surv1.stoch[["estimates"]][["St.NPMSM"]],
+    c(0.9858531, 0.9858531, 0.9858531, 0.9858531, 0.9858531, 0.9780113, 0.9780113, 0.4113799, 0.4113799, 0.4113799, 0.4113799, 0.4113799, 0.4099890, 0.4099890, 0.4099890, 0.4099890, NaN),
+    tolerance = .0001
   )
 
   wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly")
   surv2.stoch <- survNPMSM(wts.St.dhigh, OData)
-  # surv2.stoch[["estimates"]][["St.NPMSM"]]
-  expect_true(
-  all.equal(
-    paste0(round(surv2.stoch[["estimates"]][["St.NPMSM"]],4), collapse = ","),
-    "0.9807,0.9745,0.9745,0.9303,0.9267,0.8486,0.8465,0.7349,0.7349,0.5948,0.5948,0.5818,0.5818,0.5818,0.5818,0.5818,NaN")
+  expect_equal(
+    surv2.stoch[["estimates"]][["St.NPMSM"]],
+    c(0.9807156, 0.9745476, 0.9745476, 0.9302550, 0.9267152, 0.8485541, 0.8464508, 0.7349141, 0.7349141, 0.5948393, 0.5948393, 0.5817720, 0.5817720, 0.5817720, 0.5817720, 0.5817720, NaN),
+    tolerance = .0001
   )
 })
 
@@ -111,45 +112,50 @@ test_that("IPW-KM with static intervention on MONITOR under NDE assumption", {
 })
 
 test_that("TMLE / GCOMP with a stochastic intervention on MONITOR", {
-  t.surv <- c(0:3)
+  t.surv <- c(0:10)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
   gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-
-  print(paste0(gcomp_est3[["estimates"]][["St.GCOMP"]], collapse = ","))
-
-  expect_true(
-  all.equal(
-    paste0(round(gcomp_est3[["estimates"]][["St.GCOMP"]],4), collapse = ","),
-    "0.99,0.9835,0.9643,0.9011")
+  # print(paste0(gcomp_est3[["estimates"]][["St.GCOMP"]], collapse = ","))
+  expect_equal(
+    gcomp_est3[["estimates"]][["St.GCOMP"]],
+    c(0.9900000, 0.9835187, 0.9643009, 0.9011248, 0.8622261, 0.7791177, 0.7377508, 0.5964215, 0.5882335, 0.5921651, 0.5921651),
+    tolerance = .0001
   )
 
-  # stratified modeling by rule followers only:
+  ## stratified modeling by rule followers only:
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = TRUE)
-
-  print(paste0(tmle_est3[["estimates"]][["St.TMLE"]], collapse = ","))
-
-  expect_true(
-  all.equal(
-    paste0(round(tmle_est3[["estimates"]][["St.TMLE"]],4), collapse = ","),
-    "0.99,0.9805,0.9719,0.9526")
+  # print(paste0(tmle_est3[["estimates"]][["St.TMLE"]], collapse = ","))
+  ## was failing on bug fixed stremr version:
+  # expect_true(
+  # all.equal(
+  #   paste0(round(tmle_est3[["estimates"]][["St.TMLE"]],4), collapse = ","),
+  #   "0.99,0.9805,0.9719,0.9526")
+  # )
+  expect_equal(
+    tmle_est3[["estimates"]][["St.TMLE"]],
+    c(0.9900000, 0.9815155, 0.9900000, 0.9492275, 0.9465099, 0.9465099, 0.8165468, 0.6305506, 0.6305506, 0.5363613, 0.5363540),
+    tolerance = .0001
   )
 
   # pooling all observations (no stratification):
   tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "gPois3.yrly", Qforms = Qforms, stratifyQ_by_rule = FALSE)
-
-  print(paste0(tmle_est4[["estimates"]][["St.TMLE"]], collapse = ","))
-
-  expect_true(
-  all.equal(
-    paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
-    "0.99,0.9805,0.9735,0.9551")
+  # print(paste0(tmle_est4[["estimates"]][["St.TMLE"]], collapse = ","))
+  ## was failing on bug fixed vs of stremr
+  # expect_true(
+  # all.equal(
+  #   paste0(round(tmle_est4[["estimates"]][["St.TMLE"]],4), collapse = ","),
+  #   "0.99,0.9805,0.9735,0.9551")
+  # )
+  expect_equal(
+    tmle_est4[["estimates"]][["St.TMLE"]],
+    c(0.9900000, 0.9817518, 0.9744054, 0.9402445, 0.9385821, 0.8250578, 0.8179511, 0.6204416, 0.7057676, 0.6130236, 0.6130236),
+    tolerance = .0001
   )
 })
 
 test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumption", {
   t.surv <- c(0:3)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-
   gcomp_est3 <- fit_GCOMP(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                             useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)
   expect_true(
@@ -157,9 +163,7 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
     paste0(round(gcomp_est3[["estimates"]][["St.GCOMP"]],4), collapse = ","),
     "0.99,0.9679,0.9616,0.8839")
   )
-
   ## stratified modeling by rule followers only:
-
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
   expect_true(
@@ -167,7 +171,6 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
     paste0(round(tmle_est3[["estimates"]][["St.TMLE"]],4), collapse = ","),
     "0.99,0.9647,0.9439,0.9331")
   )
-
   # pooling all observations (no stratification):
   tmle_est4 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
                         useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = FALSE)

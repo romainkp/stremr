@@ -1,3 +1,5 @@
+run_test <- TRUE
+
 ## --------------------------------------------------------------------------------------------
 ## Install stremr (LTMLE with stochastic interventions):
 # library(devtools)

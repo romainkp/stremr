@@ -7,8 +7,8 @@ if(FALSE) {
   # library("testthat")
   # library("roxygen2")
   setwd(".."); setwd(".."); getwd()
-
   library("devtools")
+
   document()
   load_all("./") # load all R files in /R and datasets in /data. Ignores NAMESPACE:
   # stremr:::debug_set() # SET TO DEBUG MODE

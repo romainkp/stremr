@@ -8,12 +8,6 @@
 #' @importFrom stats as.formula glm na.exclude rbinom terms.formula pnorm quasibinomial
 NULL
 
-#' @importFrom gridisl defModel
-# @name defModel
-# @rdname defModel
-# @export
-NULL
-
 #' Fast C++ version of the inverse logit link function (expit)
 #'
 #' The conversion performed is given by 1/(1+exp(-eta))
