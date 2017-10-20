@@ -7,7 +7,7 @@
 \usage{
 iTMLE.updater.glm(Y, X, newX, family, obsWeights, ...)
 
-\method{predict}{iTMLE.updater.glm}(object, newdata, ...)
+\method{predict}{iTMLE.updater.glm}(object, newdata, offset, ...)
 }
 \arguments{
 \item{Y}{Input outcomes}

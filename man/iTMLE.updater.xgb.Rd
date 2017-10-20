@@ -19,7 +19,7 @@ iTMLE.updater.xgb.delta4(Y, X, newX, family, obsWeights, params, ...)
 
 iTMLE.updater.xgb(Y, X, newX, family, obsWeights, params, ...)
 
-\method{predict}{iTMLE.updater.xgb}(object, newdata, ...)
+\method{predict}{iTMLE.updater.xgb}(object, newdata, offset, ...)
 }
 \arguments{
 \item{Y}{Input outcomes}

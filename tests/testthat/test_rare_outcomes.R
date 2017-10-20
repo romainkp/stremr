@@ -4,7 +4,6 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## Analyses by intervention
   ## **** makes it easier to read the individual analyses ****
   ## -----------------------------------------------------------------------
-  `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
   options(stremr.verbose = TRUE)
   options(gridisl.verbose = TRUE)

@@ -13,7 +13,7 @@ TMLE.updater.speedglm(Y, X, newX, family, obsWeights, ...)
 
 linear.TMLE.updater.speedglm(Y, X, newX, family, obsWeights, ...)
 
-\method{predict}{TMLE.updater}(object, newdata, ...)
+\method{predict}{TMLE.updater}(object, newdata, offset, ...)
 }
 \arguments{
 \item{Y}{Input outcomes}

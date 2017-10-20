@@ -265,9 +265,12 @@ iTMLE.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
 #' Must contain a column named "offset".
 #' @rdname TMLE.updater.glm
 #' @export
-predict.TMLE.updater <- function(object, newdata, ...) {
+predict.TMLE.updater <- function(object, newdata, offset, ...) {
   mfit <- object$object
-  offset <- truncate_offset(newdata[, "offset"])
+  if (missing(offset)) {
+    offset <- newdata[, "offset"]
+  }
+  offset <- truncate_offset(offset)
   pred <- logit_linkinv(offset + mfit$coef)
   pred
 }
@@ -277,9 +280,12 @@ predict.TMLE.updater <- function(object, newdata, ...) {
 #' Must contain a column named "offset".
 #' @rdname linear.TMLE.updater.speedglm
 #' @export
-predict.linear.TMLE.updater <- function(object, newdata, ...) {
+predict.linear.TMLE.updater <- function(object, newdata, offset, ...) {
   mfit <- object$object
-  offset <- truncate_offset(plogis(newdata[, "offset"]))
+  if (missing(offset)) {
+    offset <- newdata[, "offset"]
+  }
+  offset <- truncate_offset(offset)
   pred <- offset + mfit$coef
   pred
 }
@@ -289,10 +295,12 @@ predict.linear.TMLE.updater <- function(object, newdata, ...) {
 #' Must contain a column named "offset".
 #' @rdname iTMLE.updater.glm
 #' @export
-predict.iTMLE.updater.glm <- function(object, newdata, ...) {
+predict.iTMLE.updater.glm <- function(object, newdata, offset, ...) {
   mfit <- object$object
-  offset <- truncate_offset(newdata[, "offset"])
-
+  if (missing(offset)) {
+    offset <- newdata[, "offset"]
+  }
+  offset <- truncate_offset(offset)
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
   Xmat <- cbind(Intercept = 1L, as.matrix(newdata))
   eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
@@ -305,10 +313,12 @@ predict.iTMLE.updater.glm <- function(object, newdata, ...) {
 #' Must contain a column named "offset".
 #' @rdname iTMLE.updater.xgb
 #' @export
-predict.iTMLE.updater.xgb <- function (object, newdata, ...)  {
+predict.iTMLE.updater.xgb <- function (object, newdata, offset, ...)  {
   mfit <- object$object
-  offset <- truncate_offset(newdata[, "offset"])
-
+  if (missing(offset)) {
+    offset <- newdata[, "offset"]
+  }
+  offset <- truncate_offset(offset)
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
   xgb_dat <- xgboost::xgb.DMatrix(as.matrix(newdata))
   xgboost::setinfo(xgb_dat, "base_margin", offset)
