@@ -116,7 +116,7 @@ test.xgboost.parallel.10Kdata <- function() {
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh", "gTI.dlow"),
                   trunc_wt = c(FALSE, TRUE),
                   stratifyQ_by_rule = c(TRUE, FALSE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule) %>%
                   mutate(nfolds = as.integer(nfolds)) %>%
                   mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, trunc_IPW, Inf))) %>%

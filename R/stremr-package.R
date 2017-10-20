@@ -106,6 +106,29 @@ NULL
 #' @usage data(OdatDT_10K)
 NULL
 
+#' An example of a dataset in long format with two time-points and no censoring.
+#'
+#' Simulated dataset containing 500,000 i.i.d. observations organized in long format as person-time rows.
+#' The binary time-varying exposure is \code{A} and binary time-invariant outcome is \code{Y}. See /tests/
+#' for R code that generated this data as well as R code that uses stremr to analyze this data.
+#'
+#' @format A data frame with 10,000 observations and variables:
+#' \describe{
+#'   \item{ID}{Unique subject identifier}
+#'   \item{t}{Interger for current time period, range 0-1}
+#'   \item{L1}{Binary time-varying confounder}
+#'   \item{L2}{Binary time-varying confounder}
+#'   \item{L3}{Binary time-varying confounder}
+#'   \item{A}{Binary time-varying exposure}
+#'   \item{Y}{Indicator of the binary outcome at the end of the study (t=1). Constant set to 0 at first time point (t=0)}
+#' }
+#' @docType data
+#' @keywords datasets
+#' @name dt_2t
+#' @usage data(dt_2t)
+NULL
+
+
 
 
 

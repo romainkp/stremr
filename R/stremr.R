@@ -9,12 +9,6 @@
 #' @importFrom stats as.formula glm na.exclude rbinom terms.formula pnorm quasibinomial
 NULL
 
-#' @importFrom gridisl defModel
-#' @name defModel
-#' @rdname defModel
-#' @export
-NULL
-
 #' Fast C++ version of the inverse logit link function (expit)
 #'
 #' The conversion performed is given by 1/(1+exp(-eta))
@@ -275,7 +269,7 @@ stremr <- function(data, ID = "Subj_ID", t_name = "time_period",
   analysis <- list(intervened_TRT = intervened_TRT,
                    # intervened_MONITOR = intervened_MONITOR,
                   stratifyQ_by_rule = stratifyQ_by_rule) %>%
-                  purrr::cross_d() %>%
+                  purrr::cross_df() %>%
                   dplyr::arrange(stratifyQ_by_rule) %>%
                   dplyr::mutate(trunc_MSM = trunc_IPW_MSM[1L]) %>%
                   dplyr::mutate(trunc_TMLE = trunc_IPW_TMLE[1L])

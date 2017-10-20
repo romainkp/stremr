@@ -89,7 +89,7 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
   gs <- list(dx1 = tx_idx,
              dx2 = tx_idx,
              time_idx = time_idx) %>%
-        purrr::cross_d() %>%
+        purrr::cross_df() %>%
         dplyr::mutate(rank1 = order[dx1]) %>%
         dplyr::mutate(rank2 = order[dx2]) %>%
         dplyr::filter(rank1 < rank2) %>%
@@ -123,6 +123,7 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
 
   return(list(gs))
 }
+
 
 
 #' Follow-up times by regimen

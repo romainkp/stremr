@@ -71,7 +71,7 @@ test.tidy.speedglm.10Kdata <- function() {
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                   trunc_wt = c(FALSE, TRUE),
                   stratifyQ_by_rule = c(TRUE, FALSE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule) %>%
                   mutate(trunc_MSM = map_dbl(trunc_wt, ~ ifelse(.x, trunc_IPW, Inf))) %>%
                   mutate(trunc_TMLE = trunc_MSM*10)
