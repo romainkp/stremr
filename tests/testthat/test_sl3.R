@@ -1,4 +1,4 @@
-context("Fitting with no Monitoring and / or no Censoring indicators")
+context("Testing sl3 cross-validation and continuous super learner")
 
   ## -----------------------------------------------------------------------
   ## Analyses by intervention
@@ -10,6 +10,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   library("SuperLearner")
   options(stremr.verbose = TRUE)
   options(gridisl.verbose = TRUE)
+  options(sl3.verbose = TRUE)
   # options(stremr.verbose = FALSE)
   # options(gridisl.verbose = FALSE)
   library("data.table")
@@ -23,7 +24,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
   # select only the first 100 IDs
-  Odat_DT <- Odat_DT[ID %in% (1:500), ]
+  # Odat_DT <- Odat_DT[ID %in% (1:500), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   ## -----------------------------------------------------------------------
@@ -68,12 +69,14 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## ------------------------------------------------------------------------
   ## Define models for fitting propensity scores (g) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
-  fit_method_g <- "none"
+  fit_method_g <- "cv"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   lrn_glm <<- Lrnr_glm_fast$new(family = "binomial")
   lrn_glm_sm <<- Lrnr_glm_fast$new(family = "binomial", covariates = c("CVD"))
-  lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "binomial")
-  lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
+  # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "binomial")
+  lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
+  # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
+  lrn_glmnet_gaus <- Lrnr_glmnet$new(family = "gaussian", nlambda = 5)
   sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
                     metalearner = Lrnr_nnls$new())
   models_g <<- sl
