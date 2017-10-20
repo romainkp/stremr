@@ -96,9 +96,9 @@ cat("\nIPW bias A1: ", true_EYA1-IPW_EYA1, "\n")
 
 test_that("Stochastic g^*: IPW unbiased for correct g", {
   if (run_test) {
-    # expect_equal(true_EYgstar - IPW_EYgstar, -0.0006032359)
-    # expect_equal(true_EYA0 - IPW_EYA0, 0.001484633)
-    # expect_equal(true_EYA1 - IPW_EYA1, -0.0007333567)
+    expect_equal(true_EYgstar - IPW_EYgstar, -0.000604054)
+    expect_equal(true_EYA0 - IPW_EYA0, 0.00148446)
+    expect_equal(true_EYA1 - IPW_EYA1, -0.000733655)
   }
 })
 
@@ -138,8 +138,8 @@ cat("\nTMLE bias g^* Astoch: ", true_EYgstar-TMLE_EYgstar, "\n")
 
 test_that("Stochastic g^*: GCOMP and TMLE are unbiased for correct g & correct Q", {
   if (run_test) {
-    # expect_equal(true_EYgstar - GCOMP_EYgstar, 0.00130783)
-    # expect_equal(true_EYgstar - TMLE_EYgstar,  -0.0005873876)
-    # expect_equal(tmle_est$estimates[["SE.TMLE"]], 0.0009434391)
+    expect_equal(true_EYgstar - GCOMP_EYgstar, 0.001988167)
+    expect_equal(true_EYgstar - TMLE_EYgstar,  -0.0005547971)
+    expect_equal(tmle_est$estimates[["SE.TMLE"]], 0.0009420197)
   }
 })
