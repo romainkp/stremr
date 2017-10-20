@@ -197,7 +197,6 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## 4. For stochastic g^*_t: Perform integration over the support of the stochastic intervention (as a weighted sum over g^*(a)=P(A^*(t)=a(t)))
       ## TO DO: add option for performing MC sampling to perform the same integration for stochastic g^*
       ## **********************************************************************
-
       interventionNodes.g0 <- data$interventionNodes.g0
       interventionNodes.gstar <- data$interventionNodes.gstar
       ## Determine which nodes are actually stochastic and need to be summed out:
@@ -228,50 +227,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## rescale the prediction in (0,1) range to its pre-specified bounded range (maximum probability constraint)
       pred_Qk <- pred_Qk*self$maxpY
 
-      ## **********************************************************************
-      ## SECOND PREDICTION STEP OF TMLE/GCOMP
-      ## 1. Predict for subjects that were used for training initial Q
-      ## 2. Predict for subjects who were newly censored and just stopped following the rule
-      ## E(Q_{k+1}|O^*(t)): Predict from conditional mean fit using the counterfactual (intervened) data (O^*)
-      ## Set the intervention nodes (A(t),N(t)) to counterfactual values (A^*(t),N^*(t)), then predict
-      ## TMLE: Qk_hat will be modified into Q^* with TMLE update
-      ## GCOMP: Qk_hat serves no purpose and will be discarded
-      ## **********************************************************************
-      ## **********************************************************************
-      ## ALGORITHM OUTLINE
-      ## 1. Reset current exposures at t to their counterfactual values (by renaming and swapping the columns in input data)
-      ##    note: this step is unnecessary when doing fitting only among rule-followers
-      ## 3. Add observations that were censored at current t (+possibly stopped following the rule)
-      ## 2. Predict for all subjects, under counterfactual regimen A(t)=A^*(t)
-      ## 4. For stochastic g^*_t: Perform integration over the support of the stochastic intervention (as a weighted sum over g^*(a)=P(A^*(t)=a(t)))
-      ## TO DO: add option for performing MC sampling to perform the same integration for stochastic g^*
-      ## **********************************************************************
-
-      interventionNodes.g0 <- data$interventionNodes.g0
-      interventionNodes.gstar <- data$interventionNodes.gstar
-      ## Determine which nodes are actually stochastic and need to be summed out:
-      stoch_indicator <- data$define.stoch.nodes(interventionNodes.gstar)
-      any_stoch <- sum(stoch_indicator) > 0
-      ## For prediction need to add all obs that were also censored at t and (possibly) those who just stopped following the rule
-      self$subset_idx <- self$define_idx_to_predictQ(data)
-
-      if (!any_stoch) {
-        iQ_all <- self$predictStatic(data,
-                                    g0 = interventionNodes.g0,
-                                    gstar = interventionNodes.gstar,
-                                    subset_idx = self$subset_idx,
-                                    update.Qstar.coef = update.Qstar.coef)
-      } else {
-        ## For all stochastic nodes, need to integrate out w.r.t. the support of each node
-        iQ_all <- self$predictStochastic(data,
-                                        g0 = interventionNodes.g0,
-                                        gstar = interventionNodes.gstar,
-                                        subset_idx = self$subset_idx,
-                                        stoch_indicator = stoch_indicator,
-                                        update.Qstar.coef = update.Qstar.coef)
-      }
-
-      ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
+      ## pred_Qk is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
       ## This is either the initial G-COMP Q or the TMLE targeted version of the initial Q
       ## This prediction includes all newly censored observations.
       ## When stratifying Q fits, these predictions will also include all observations who just stopped following the treatment rule at time point k.
@@ -569,7 +525,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         # Predict using newdata, obtain probAeqa_stoch
         # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
         # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
-        probA1 <- self$predictStatic(data, g0 = g0, gstar = gstar, subset_idx = subset_idx, update.Qstar.coef = update.Qstar.coef)
+        probA1 <- self$predictStatic(data, g0 = g0, gstar = gstar, subset_idx = subset_idx, TMLE.fit = TMLE.fit)
         # Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cumulative product) based on the probabilities from original column
         jointProb <- rep.int(1L, nrow(stoch.probs))
         for (stoch.node.nm in stoch_nodes_names) {

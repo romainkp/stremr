@@ -780,7 +780,7 @@ fit_GCOMP_onet <- function(OData,
     IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
                         tibble::as_tibble() %>%
                         tidyr::nest(EIC_i, .key = "IC.St") %>%
-                        dplyr::mutate(IC.St = map(IC.St, ~ .x[[1]]))
+                        dplyr::mutate(IC.St = purrr::map(IC.St, ~ .x[[1]]))
     data.table::setDT(IC_i_onet_byrule)
     # IC_i_onet_byrule[, "IC.St" := list(list(as.numeric(IC.St[[1]][[1]]))), by = "rule.name"]
     resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]

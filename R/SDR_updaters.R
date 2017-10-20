@@ -90,12 +90,24 @@ TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
 
   # cat("...running speedglm TMLE update with intercept-only GLM...\n")
   offset <- truncate_offset(X[, "offset"])
-  fit.glm <- speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
-                                     y = Y, weights = obsWeights, offset = offset,
-                                     # method=c('eigen','Cholesky','qr'),
-                                     family = quasibinomial(), trace = FALSE, maxit = 1000)
+  fit.glm <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
+                                       y = Y, weights = obsWeights, offset = offset,
+                                       # method=c('eigen','Cholesky','qr'),
+                                       family = quasibinomial(), trace = FALSE, maxit = 1000),
+              silent = TRUE)
 
-  fit <- list(object = list(est.fun = "speedglm::speedglm.wfit", family = "quasibinomial", coef = fit.glm$coef))
+  if (inherits(fit.glm, "try-error")) { # TMLE update failed
+    # if (gvars$verbose)
+    message("GLM TMLE update has failed, setting epsilon = 0")
+    warning("GLM TMLE update has failed, setting epsilon = 0")
+    epsilon <- 0
+  } else {
+    epsilon <- fit.glm$coef
+  }
+
+  cat("\ncoef: ", epsilon,"\n")
+
+  fit <- list(object = list(est.fun = "speedglm::speedglm.wfit", family = "quasibinomial", coef = epsilon))
   class(fit) <- "TMLE.updater"
 
   pred <- predict(fit, newX)

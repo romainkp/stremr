@@ -5,8 +5,6 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## **** makes it easier to read the individual analyses ****
   ## -----------------------------------------------------------------------
   # devtools::install_github("jeremyrcoyle/sl3")
-
-  `%+%` <- function(a, b) paste0(a, b)
   library("stremr")
   library("sl3")
   library("SuperLearner")
@@ -33,7 +31,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## -----------------------------------------------------------------------
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
-  newVarnames <- lagnodes %+% ".tminus1"
+  newVarnames <- paste0(lagnodes, ".tminus1")
   Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
   # indicator that the person has never been on treatment up to current t
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
@@ -115,7 +113,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                           )
 
   ## Get the dataset with weights:
-  wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)
+  wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData)
 
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
