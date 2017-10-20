@@ -85,24 +85,33 @@ TMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
 TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
   eps_tol = stremrOptions("eps_tol")
   if (any(Y < 0) | any(Y > 1)) stop("TMLE update with speedglm cannot be performed for outcomes outside of 0-1.")
-  Y[Y < eps_tol] <- eps_tol
-  Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
 
-  # cat("...running speedglm TMLE update with intercept-only GLM...\n")
-  offset <- truncate_offset(X[, "offset"])
-  fit.glm <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
-                                       y = Y, weights = obsWeights, offset = offset,
-                                       # method=c('eigen','Cholesky','qr'),
-                                       family = quasibinomial(), trace = FALSE, maxit = 1000),
-              silent = TRUE)
-
-  if (inherits(fit.glm, "try-error")) { # TMLE update failed
-    # if (gvars$verbose)
-    message("GLM TMLE update has failed, setting epsilon = 0")
-    warning("GLM TMLE update has failed, setting epsilon = 0")
+  if (sum(abs(obsWeights)) < 10^-9) {
+    message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon to 0")
+    epsilon <- 0
+  } else if (all(Y[obsWeights > 0] < eps_tol) || all(Y[obsWeights > 0] > (1 - eps_tol))) {
+    message("GLM TMLE update cannot be performed since the outcomes (Y) are either all 0 or all 1, setting epsilon to 0")
     epsilon <- 0
   } else {
-    epsilon <- fit.glm$coef
+    Y[Y < eps_tol] <- eps_tol
+    Y[Y > (1 - eps_tol)] <- (1 - eps_tol)
+
+    # cat("...running speedglm TMLE update with intercept-only GLM...\n")
+    offset <- truncate_offset(X[, "offset"])
+    fit.glm <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Y)),
+                                         y = Y, weights = obsWeights, offset = offset,
+                                         # method=c('eigen','Cholesky','qr'),
+                                         family = quasibinomial(), trace = FALSE, maxit = 1000),
+                silent = TRUE)
+
+    if (inherits(fit.glm, "try-error")) { # TMLE update failed
+      # if (gvars$verbose)
+      message("GLM TMLE update has failed, setting epsilon = 0")
+      # warning("GLM TMLE update has failed, setting epsilon = 0")
+      epsilon <- 0
+    } else {
+      epsilon <- fit.glm$coef
+    }
   }
 
   cat("\ncoef: ", epsilon,"\n")
