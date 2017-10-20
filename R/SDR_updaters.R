@@ -61,7 +61,6 @@ TMLE.updater.glm <- function(Y, X, newX, family, obsWeights, ...) {
 
   if (inherits(fit.glm, "try-error")) { # TMLE update w/ glm failed
     message("GLM TMLE update has failed during SDR, setting epsilon update to 0")
-    warning("GLM TMLE update has failed during SDR, setting epsilon update to 0")
     epsilon_coef <- 0.0
   } else {
     epsilon_coef <- fit.glm$coef
@@ -114,7 +113,7 @@ TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
     }
   }
 
-  cat("\ncoef: ", epsilon,"\n")
+  if (gvars$verbose) { cat("\ncoef: ", epsilon,"\n") }
 
   fit <- list(object = list(est.fun = "speedglm::speedglm.wfit", family = "quasibinomial", coef = epsilon))
   class(fit) <- "TMLE.updater"
@@ -291,7 +290,7 @@ predict.TMLE.updater <- function(object, newdata, offset, ...) {
   if (missing(offset)) {
     offset <- newdata[, "offset"]
   }
-  offset <- truncate_offset(offset)
+  # offset <- truncate_offset(offset)
   pred <- logit_linkinv(offset + mfit$coef)
   pred
 }
@@ -306,7 +305,7 @@ predict.linear.TMLE.updater <- function(object, newdata, offset, ...) {
   if (missing(offset)) {
     offset <- newdata[, "offset"]
   }
-  offset <- truncate_offset(offset)
+  # offset <- truncate_offset(offset)
   pred <- offset + mfit$coef
   pred
 }
@@ -321,7 +320,7 @@ predict.iTMLE.updater.glm <- function(object, newdata, offset, ...) {
   if (missing(offset)) {
     offset <- newdata[, "offset"]
   }
-  offset <- truncate_offset(offset)
+  # offset <- truncate_offset(offset)
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
   Xmat <- cbind(Intercept = 1L, as.matrix(newdata))
   eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
@@ -339,7 +338,7 @@ predict.iTMLE.updater.xgb <- function (object, newdata, offset, ...)  {
   if (missing(offset)) {
     offset <- newdata[, "offset"]
   }
-  offset <- truncate_offset(offset)
+  # offset <- truncate_offset(offset)
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
   xgb_dat <- xgboost::xgb.DMatrix(as.matrix(newdata))
   xgboost::setinfo(xgb_dat, "base_margin", offset)

@@ -103,19 +103,19 @@ OData <- importData(dt_2t, ID = "ID", t = "t", covars = c("L1", "L2", "L3", "A.t
 gform_TRT = "A ~ L1 + L2 + L3 + A.tminus1"
 stratify_TRT <- list(A=c("t == 0", "t == 1"))
 
-sl3_t <- system.time({
+# sl3_t <- system.time({
   OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT)
-})
+# })
 
-gridisl_t <- system.time({
+# gridisl_t <- system.time({
   models_TRT <- defModel(estimator = "speedglm__glm")
   OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT, models_TRT = models_TRT)
-})
+# })
 
-print("sl3_t"); print(sl3_t)
+# print("sl3_t"); print(sl3_t)
  #   user  system elapsed
  # 30.464   1.346  31.749
-print("gridisl_t"); print(gridisl_t)
+# print("gridisl_t"); print(gridisl_t)
 # [1] "gridisl_t"
 #    user  system elapsed
 #   2.639   0.906   3.549
