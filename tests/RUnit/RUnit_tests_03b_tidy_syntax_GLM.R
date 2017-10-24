@@ -101,6 +101,15 @@ test.tidy.speedglm.10Kdata <- function() {
                          gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                          stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
+  ## Crude MSM for hazard (w/out IPW):
+  wts <- map(c("gTI.dlow", "gTI.dhigh"), getIPWeights, OData = OData, tmax = tmax)
+  crude.est <- survMSM(wts_data = wts,
+                      OData = OData,
+                      tbreaks = tbreaks,
+                      use_weights = FALSE,
+                      glm_package = "speedglm",
+                      getSEs = FALSE)
+
   ## ------------------------------------------------------------
   ## RUN IPW ANALYSES
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
@@ -132,7 +141,8 @@ test.tidy.speedglm.10Kdata <- function() {
                     OData = OData,
                     tbreaks = tbreaks,
                     use_weights = FALSE,
-                    glm_package = "speedglm"))) %>%
+                    glm_package = "speedglm",
+                    getSEs = FALSE))) %>%
         mutate(MSM.crude = map(MSM.crude, "estimates")) %>%
 
         ## IPW-MSM for hazard (smoothing over time-intervals in tbreaks):
