@@ -52,7 +52,7 @@ test.model.fits.stratify <- function() {
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataNoCENS.DT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
 
-  OdataNoCENS.DT[, "TI_0" := 0L]
+  OdataNoCENS.DT[, "TI_1" := 1L]
 
   # --------------------------------
   # EXAMPLE 1:
@@ -63,7 +63,7 @@ test.model.fits.stratify <- function() {
   res <- stremr(OdataNoCENS.DT, ID = "ID", t_name = "t", tvals = c(0:2),
           covars = c("highA1c", "lastNat1"),
           CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = "Y.tplus1",
-          intervened_TRT = "TI_0",
+          intervened_TRT = "TI_1",
           gform_CENS = gform_CENS, gform_TRT = gform_TRT, gform_MONITOR = gform_MONITOR,
           start_h2o_cluster = FALSE)
   # res$estimates
@@ -113,7 +113,7 @@ test.model.fits.stratify <- function() {
                 gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
                 gform_TRT = gform_TRT,
                 gform_MONITOR = gform_MONITOR,
-                intervened_TRT = "TI_0",
+                intervened_TRT = "TI_1",
                 # MSMGLMpkg = "h2o",
                 tbreaks = c(4,6),
                 start_h2o_cluster = FALSE)
@@ -141,7 +141,7 @@ test.model.fits.stratify <- function() {
                 stratify_CENS = stratify_CENS,
                 gform_TRT = gform_TRT,
                 gform_MONITOR = gform_MONITOR,
-                intervened_TRT = "TI_0",
+                intervened_TRT = "TI_1",
                 tbreaks = c(4,6),
                 start_h2o_cluster = FALSE)
   # res$estimates
@@ -170,7 +170,7 @@ test.model.fits.stratify <- function() {
                 gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
                 gform_TRT = gform_TRT, stratify_TRT = stratify_TRT,
                 gform_MONITOR = gform_MONITOR,
-                intervened_TRT = "TI_0",
+                intervened_TRT = "TI_1",
                 tbreaks = c(4,6),
                 start_h2o_cluster = FALSE)
 
@@ -208,7 +208,7 @@ test.error.fits.stratify <- function() {
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS,
             gform_TRT = gform_TRT,
             gform_MONITOR = gform_MONITOR,
-            intervened_TRT = "TI_0",
+            intervened_TRT = "TI_1",
             tbreaks = c(4,6),
             start_h2o_cluster = FALSE)
       )
