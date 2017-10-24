@@ -101,6 +101,22 @@ test.tidy.speedglm.10Kdata <- function() {
                          gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                          stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
 
+  ## Crude MSM for hazard (w/out IPW):
+  wts <- map(c("gTI.dlow", "gTI.dhigh"), getIPWeights, OData = OData, tmax = tmax)
+  crude.est <- survMSM(wts_data = wts,
+                      OData = OData,
+                      tbreaks = tbreaks,
+                      use_weights = FALSE,
+                      glm_package = "speedglm",
+                      getSEs = TRUE)
+
+  crude.est <- survMSM(wts_data = wts,
+                      OData = OData,
+                      tbreaks = tbreaks,
+                      use_weights = FALSE,
+                      glm_package = "speedglm",
+                      getSEs = FALSE)
+
   ## ------------------------------------------------------------
   ## RUN IPW ANALYSES
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
@@ -132,7 +148,8 @@ test.tidy.speedglm.10Kdata <- function() {
                     OData = OData,
                     tbreaks = tbreaks,
                     use_weights = FALSE,
-                    glm_package = "speedglm"))) %>%
+                    glm_package = "speedglm",
+                    getSEs = FALSE))) %>%
         mutate(MSM.crude = map(MSM.crude, "estimates")) %>%
 
         ## IPW-MSM for hazard (smoothing over time-intervals in tbreaks):
@@ -190,13 +207,19 @@ test.tidy.speedglm.10Kdata <- function() {
         mutate(TMLE = map(TMLE, "estimates")) %>%
         rename(trunc_TMLE = trunc_weight)
 
-  CVTMLE <- CVTMLE %>%
-        mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
-                           tvals = tvals,
-                           OData = OData,
-                           Qforms = Qforms)) %>%
-        mutate(CVTMLE = map(CVTMLE, "estimates")) %>%
-        rename(trunc_TMLE = trunc_weight)
+  TMLE_reorder <- TMLE %>%
+    dplyr::distinct(intervened_TRT, trunc_TMLE, stratifyQ_by_rule, TMLE) %>%
+    unnest(TMLE) %>%
+    nest(est_name:rule.name, .key = "TMLE")
+  TMLE_reorder <- TMLE_reorder %>% mutate(TMLE = map(TMLE, ~as.data.table(.x)))
+
+  # CVTMLE <- CVTMLE %>%
+  #       mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
+  #                          tvals = tvals,
+  #                          OData = OData,
+  #                          Qforms = Qforms)) %>%
+  #       mutate(CVTMLE = map(CVTMLE, "estimates")) %>%
+  #       rename(trunc_TMLE = trunc_weight)
 
   ## ------------------------------------------------------------
   ## COMBINE ALL ANALYSES INTO A SINGLE DATASET
@@ -204,12 +227,14 @@ test.tidy.speedglm.10Kdata <- function() {
   results <-  analysis %>%
               left_join(IPW) %>%
               left_join(GCOMP) %>%
-              left_join(TMLE) %>%
-              left_join(CVTMLE)
+              left_join(TMLE)
+              #  %>%
+              # left_join(CVTMLE)
 
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
   results <- results %>%
-             nest(intervened_TRT, NPMSM, MSM.crude, MSM, directIPW, GCOMP, TMLE, CVTMLE, .key = "estimates")
+              # , CVTMLE
+             nest(intervened_TRT, NPMSM, MSM.crude, MSM, directIPW, GCOMP, TMLE, .key = "estimates")
 
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
   ## The RDs data no longer needs the intervened_TRT column

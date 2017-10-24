@@ -1106,38 +1106,44 @@ survMSM <- function(wts_data,
   # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
   # IC.O - observation-specific IC estimates for MSM coefs
   # IC.S - observation-specific IC estimates for S(t) (by time-point)
+  design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:tmax))), length(rules_TRT))
+  IC.Var.S.d <- vector(mode = "list", length(rules_TRT))
+  names(design.d.t) <- names(IC.Var.S.d) <- rules_TRT
 
+  for(d.j in names(S2.IPAW)) {
+    IC.Var.S.d[[d.j]][["se.S"]] <- rep(NA_real_, length(S2.IPAW[[d.j]]))
+    IC.Var.S.d[[d.j]][["IC.S"]] <- matrix(NA_real_, nrow = length(periods), ncol = nID)
+  }
+
+  ## wrapping the whole thing in try({}), if it fails, use empty se/IC above
   if (getSEs) {
-    design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:tmax))), length(rules_TRT))
-    IC.Var.S.d <- vector(mode = "list", length(rules_TRT))
-    names(design.d.t) <- names(IC.Var.S.d) <- rules_TRT
+    try({
+      # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
+      # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
+      # p.coef - number of time-specific coefficients in the MSM
+      p.coef <- nrow(MSM.intervals) # p.coef <- length(tjmin)
+      design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
+      for (period.idx in seq_along(periods)) {
+        period.j <- periods[period.idx]
+        col.idx <- which(period.j <= MSM.intervals[,2] & period.j >= MSM.intervals[,1])
+        design.t[period.idx, col.idx] <- 1
+      }
+      beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
+                                MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
+                                MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use_weights)
 
-    # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
-    # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
-    # p.coef - number of time-specific coefficients in the MSM
-    p.coef <- nrow(MSM.intervals) # p.coef <- length(tjmin)
-    design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
-    for (period.idx in seq_along(periods)) {
-      period.j <- periods[period.idx]
-      col.idx <- which(period.j <= MSM.intervals[,2] & period.j >= MSM.intervals[,1])
-      design.t[period.idx, col.idx] <- 1
-    }
-    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
-                              MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
-                              MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use_weights)
+      for(d.j in names(S2.IPAW)) {
+        d.idx <- which(names(S2.IPAW) %in% d.j)
+        set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
+        design.d.t[[d.j]][,set_cols] <- design.t
 
-    for(d.j in names(S2.IPAW)) {
-      d.idx <- which(names(S2.IPAW) %in% d.j)
-      set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
-      design.d.t[[d.j]][,set_cols] <- design.t
-      IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
-                                   S.d.t.predict = S2.IPAW[[d.j]],
-                                   h.d.t.predict = hazard.IPAW[[d.j]],
-                                   design.d.t = design.d.t[[d.j]],
-                                   IC.O = beta.IC.O.SEs[["IC.O"]])
-    }
-  } else {
-    IC.Var.S.d <- NULL
+        IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
+                                     S.d.t.predict = S2.IPAW[[d.j]],
+                                     h.d.t.predict = hazard.IPAW[[d.j]],
+                                     design.d.t = design.d.t[[d.j]],
+                                     IC.O = beta.IC.O.SEs[["IC.O"]])
+      }      
+    })
   }
 
   ## The output MSM object.
@@ -1154,8 +1160,9 @@ survMSM <- function(wts_data,
       estimates <- cbind(est_name = est_name, estimates)
 
       n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
-      for (i in 1:n_ts)
+      for (i in 1:n_ts) {
         estimates[i, ("IC.St") := list(list(IC.Var.S.d[[rule_name]][["IC.S"]][i, ]))]
+      }
 
       attr(estimates, "estimator_short") <- est_name
       attr(estimates, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
@@ -1180,9 +1187,7 @@ survMSM <- function(wts_data,
                   ))
     }
   )
-
   names(MSM_out) <- rules_TRT
-
   if (length(MSM_out) == 1L) return(MSM_out[[1L]]) else  return(MSM_out)
 }
 
@@ -1222,6 +1227,7 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
   } else if (glm_package %in% "speedglm") {
     if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
     Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
+
     m.fit <- try(speedglm::speedglm.wfit(
                                        X = Xdesign.mat,
                                        y = as.numeric(wts_data[[Ynode]]),
@@ -1237,7 +1243,9 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
         m.fit <- stats::glm.fit(x = Xdesign.mat,
                                 y = as.numeric(wts_data[[Ynode]]),
                                 family = quasibinomial(),
-                                intercept = FALSE, control = ctrl)
+                                intercept = FALSE,
+                                weights = wts_data[["cum.IPAW"]],
+                                control = ctrl)
       }, GetWarningsToSuppress())
     }
     m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
