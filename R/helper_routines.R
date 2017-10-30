@@ -79,11 +79,15 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
   eval_SEs_two_tx <- function(dx1, dx2, time_idx, ...) {
     nIDs_1 <- length(St_data[[dx1]][["IC.St"]][[time_idx]])
     nIDs_2 <- length(St_data[[dx2]][["IC.St"]][[time_idx]])
-    if (nIDs_1 != nIDs_2)
-      stop("Cannot evaluate RDs from two ICs for dx1 and dx2, since their lengths differ: " %+% nIDs_1 %+% " vs. " %+% nIDs_2)
-    nIDs <- nIDs_1
-    SE.diff <- sqrt(sum(( St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] )^2) / nIDs^2)
-    return(SE.diff)
+    if (nIDs_1 != nIDs_2) {
+      warning("Cannot evaluate SEs for RDs from two ICs for dx1='" %+% dx1 %+% "' and dx2='" %+% dx2 %+%"', since their lengths differ: " %+% nIDs_1 %+% " vs. " %+% nIDs_2 %+% ". 
+  Evaluating only the point RD estimates.")
+      return(NA_real_)
+    } else {
+      nIDs <- nIDs_1
+      SE.diff <- sqrt(sum(( St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] )^2) / nIDs^2)
+      return(SE.diff)
+    }
   }
 
   gs <- list(dx1 = tx_idx,
