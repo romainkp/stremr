@@ -112,7 +112,7 @@ NULL
 #' The binary time-varying exposure is \code{A} and binary time-invariant outcome is \code{Y}. See /tests/
 #' for R code that generated this data as well as R code that uses stremr to analyze this data.
 #'
-#' @format A data frame with 10,000 observations and variables:
+#' @format A data frame with 500,000 observations and variables:
 #' \describe{
 #'   \item{ID}{Unique subject identifier}
 #'   \item{t}{Interger for current time period, range 0-1}
@@ -128,6 +128,30 @@ NULL
 #' @usage data(dt_2t)
 NULL
 
+
+#' An example of a dataset in long format with one time-point and no censoring.
+#'
+#' Simulated dataset containing 50,000 i.i.d. observations with single time-point exposure.
+#' The binary exposure is \code{A} and binary outcome is \code{Y}. See /tests/
+#' for R code that generated this data as well as R code that uses stremr to analyze this data.
+#'
+#' @format A data frame with 50,000 observations and variables:
+#' \describe{
+#'   \item{ID}{Unique subject identifier}
+#'   \item{L1}{Binary baseline confounder}
+#'   \item{L2}{Binary baseline confounder}
+#'   \item{L3}{Binary baseline confounder}
+#'   \item{L4}{Binary baseline confounder}
+#'   \item{L5}{Binary baseline confounder}
+#'   \item{L6}{Binary baseline confounder}
+#'   \item{A}{Binary exposure}
+#'   \item{Y}{Indicator of the binary outcome at the end of the study.}
+#' }
+#' @docType data
+#' @keywords datasets
+#' @name dt_1t
+#' @usage data(dt_1t)
+NULL
 
 
 

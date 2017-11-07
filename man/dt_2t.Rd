@@ -4,7 +4,7 @@
 \name{dt_2t}
 \alias{dt_2t}
 \title{An example of a dataset in long format with two time-points and no censoring.}
-\format{A data frame with 10,000 observations and variables:
+\format{A data frame with 500,000 observations and variables:
 \describe{
   \item{ID}{Unique subject identifier}
   \item{t}{Interger for current time period, range 0-1}
