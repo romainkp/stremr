@@ -246,11 +246,25 @@ test.tidy.speedglm.10Kdata <- function() {
                   as_tibble()
                   ))
 
-
   ## produce latex table for MSM RDs for one scenario:
   knitr::kable(results[["RDs"]][[1]][["MSM"]][[1]], format = "latex", caption = "Title of the table")
 
   ## produce markdown table for MSM RDs for one scenario:
   knitr::kable(results[["RDs"]][[1]][["MSM"]][[1]], caption = "Title of the table")
+
+  tmp <- results %>%
+         select(RDs)
+
+  RD_tabs_mkdown <- map(tmp[["RDs"]], 
+    ~ map(.x, 
+      ~ print_RDs(.x[[1]], dx1 = 1, dx2 = 2, time = c(0,5,10))
+    )
+  )
+
+  RD_tabs_latex <- map(tmp[["RDs"]], 
+    ~ map(.x, 
+      ~ print_RDs(.x[[1]], dx1 = 1, dx2 = 2, time = c(0,5,10), format = "latex", caption = "Title of the table")
+    )
+  )
 
 }

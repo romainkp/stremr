@@ -128,6 +128,44 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
   return(list(gs))
 }
 
+#' Print RD table
+#'
+#' Print and return RD table in various formats using \code{knitr::kable}
+#' @param RD_tab Risk difference table returned by \code{get_RDs}.
+#' @param dx1 Subset \code{RD_tab} by these \code{dx1} values.
+#' @param dx2 Subset \code{RD_tab} by these \code{dx2} values.
+#' @param time Subset \code{RD_tab} by these \code{time} values.
+#' @param ... Additional parameters to be passed directly to \code{knitr::kable}.
+#' @return A table returned by calling \code{knitr::kable()}.
+#' @export
+print_RDs <- function(RD_tab, dx1, dx2, time, ...) {
+  if (missing(dx1)) {
+    dx1_sel <- unique(RD_tab[["dx1"]])
+  } else {
+    dx1_sel <- dx1
+  }
+
+  if (missing(dx2)) {
+    dx2_sel <- unique(RD_tab[["dx2"]])
+  } else {
+    dx2_sel <- dx2
+  }
+
+  if (missing(time)) {
+    time_sel <- unique(RD_tab[["time"]])
+  } else {
+    time_sel <- time
+  }
+
+  RD_tab_sel <- 
+    RD_tab %>% 
+    filter((dx1 %in% dx1_sel) & (dx2 %in% dx2_sel) & (time %in% time_sel)) %>%
+    select(estimator, dx1_name, dx2_name, time, RD, RD.SE, CI, pval)
+
+  var <- knitr::kable(RD_tab_sel, ...)
+  print(var)
+  return(var)
+}
 
 
 #' Follow-up times by regimen
