@@ -352,15 +352,32 @@ fitPropensity <- function(OData,
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  if (!is.null(models_CENS) && suppressWarnings(!is.na(models_CENS))) assert_that(is.ModelStack(models_CENS) || is(models_CENS, "Lrnr_base"))
-  if (!is.null(models_TRT)  && suppressWarnings(!is.na(models_TRT))) assert_that(is.ModelStack(models_TRT) || is(models_TRT, "Lrnr_base"))
-  if (!is.null(models_MONITOR)  && suppressWarnings(!is.na(models_MONITOR))) assert_that(is.ModelStack(models_MONITOR) || is(models_MONITOR, "Lrnr_base"))
+  opt_params <- list(capture.exprs(...))
+  if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
 
-  sVar.exprs <- capture.exprs(...)
+  define_model <- function(models, opt_params, type = "univariate") {
+    ## verify the learners are of acceptible type, otherwise define default learner as sl3 glm
+    if (!is.null(models) && suppressWarnings(!is.na(models))) {
+      assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+    } else {
+      models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+    }
+    ## if any of the outcomes is categorical, need to do something like this (for sl3 models object)
+    if (type %in% "categorical") {
+      models <- Lrnr_condensier$new(bin_estimator = models)
+    }
+    models_control <- c(list(models     = models),
+                             opt_params = opt_params)
+    return(models_control)
+  }
 
-  models_CENS_control <- c(list(   models = models_CENS),    opt_params = list(sVar.exprs))
-  models_TRT_control <- c(list(    models = models_TRT),     opt_params = list(sVar.exprs))
-  models_MONITOR_control <- c(list(models = models_MONITOR), opt_params = list(sVar.exprs))
+  # models_CENS_control <- c(list(   models = models_CENS),    opt_params = opt_params)
+  # models_TRT_control <- c(list(    models = models_TRT),     opt_params = opt_params)
+  # models_MONITOR_control <- c(list(models = models_MONITOR), opt_params = opt_params)
+
+  models_CENS_control <-    define_model(models_CENS,    opt_params, type_CENS)
+  models_TRT_control <-     define_model(models_TRT,     opt_params, type_TRT)
+  models_MONITOR_control <- define_model(models_MONITOR, opt_params, type_MONITOR)
 
   models_CENS_control[["estimator"]] <- models_TRT_control[["estimator"]] <- models_MONITOR_control[["estimator"]] <- estimator[1L]
   models_CENS_control[["fit_method"]] <- models_TRT_control[["fit_method"]] <- models_MONITOR_control[["fit_method"]] <- fit_method[1L]
@@ -446,8 +463,8 @@ fitPropensity <- function(OData,
   ## warning: side-effect function call, the predicted probabilities are updated inside each class and are saved
   h_gN_holdout <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs, holdout = TRUE)
   g_holdout_preds <- data.table::data.table(g0.C = OData$modelfit.gC$getcumprodAeqa(),
-                                           g0.A = OData$modelfit.gA$getcumprodAeqa(),
-                                           g0.N = OData$modelfit.gN$getcumprodAeqa())
+                                            g0.A = OData$modelfit.gA$getcumprodAeqa(),
+                                            g0.N = OData$modelfit.gN$getcumprodAeqa())
   OData$g_holdout_preds <- g_holdout_preds
 
   return(OData)

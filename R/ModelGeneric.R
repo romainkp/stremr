@@ -10,7 +10,7 @@ NULL
 ## ---------------------------------------------------------------------------------
 newsummarymodel <- function(regClass, reg, DataStorageClass.g0, ...) { UseMethod("newsummarymodel") }
 # Summary model constructor for categorical outcome sA[j]:
-newsummarymodel.categorical <- function(regClass, reg, DataStorageClass.g0, ...) ModelCategorical$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+# newsummarymodel.categorical <- function(regClass, reg, DataStorageClass.g0, ...) ModelCategorical$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 ## Summary model constructor for generic regression with multivariate outcome, but one set of predictors
 newsummarymodel.generic <- function(regClass, reg, DataStorageClass.g0, ...) ModelGeneric$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 ## Summary model constructor for stratification (by reg$subset_exprs):

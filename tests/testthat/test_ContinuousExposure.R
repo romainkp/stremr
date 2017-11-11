@@ -65,10 +65,10 @@ test_that("IPW works with continuous exposure and cond. dens. SuperLearner", {
   stratify_TRT <- list(continA=c("t == 0L", "t > 0L"))
 
   OData <- fitPropensity(OData = OData,
-                        gform_CENS = gform_CENS,
-                        gform_TRT = gform_TRT,
-                        stratify_TRT = stratify_TRT,
-                        models_TRT = sl)
+                         gform_CENS = gform_CENS,
+                         gform_TRT = gform_TRT,
+                         stratify_TRT = stratify_TRT,
+                         models_TRT = sl)
   # OData$g_preds
 
   ## todo: now we need to somehow call sl$predict() on the counterfactual exposure as the outcome (evalute another likelihood)
