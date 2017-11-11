@@ -41,7 +41,9 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
                               covariates = predvars,
                               outcome = outvar,
                               id = data$nodes$IDnode,
-                              folds = folds)
+                              folds = folds
+                              )
+
     model.fit <- try({models$train(task)})
     if (inherits(model.fit, "try-error")) {
       cat("\nsl3 error debugging info:\n");
@@ -71,6 +73,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     message("...trying to run Lrnr_glm_fast as a backup...")
     task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar)
     lrn_model <- sl3::Lrnr_glm_fast$new()
+
     model.fit <- try(lrn_model$train(task))
     if (inherits(model.fit, "try-error")) {
       cat("\nsl3 error debugging info:\n");

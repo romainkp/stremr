@@ -1,18 +1,35 @@
-context("Testing sl3 cross-validation and continuous super learner")
+context("sl3 with delayed future")
+
+  # delayed_object_7 <- delayed(rnorm(1000000))
+  # delayed_object_3 <- delayed(rnorm(1000000))
+  # delayed_object_6 <- delayed(rnorm(1000000))
+  # delayed_object_7 <- delayed(rnorm(1000000))
+  # bundle <- bundle_delayed(list(delayed_object_7, delayed_object_3, delayed_object_6, delayed_object_7))
+  # adder <- function(x, y){x + y}
+  # delayed_adder <- delayed_fun(adder)
+  # chained_delayed_10 <- delayed_adder(delayed_object_7, delayed_object_3)
+  # # compute it using the future plan (two multicore workers), verbose mode lets us
+  # # see the computation order
+  # res <- bundle$compute(nworkers = 2)
+  # res <- chained_delayed_10$compute(nworkers = 2)
 
   ## -----------------------------------------------------------------------
   ## Analyses by intervention
-  ## **** makes it easier to read the individual analyses ****
   ## -----------------------------------------------------------------------
+  # devtools::install_github("osofr/stremr", ref = "delayed_future", dependencies = FALSE)
   # devtools::install_github("jeremyrcoyle/sl3")
-  library("stremr")
-  library("sl3")
+  # devtools::install_github("jeremyrcoyle/delayed")
+  # devtools::install_github("jeremyrcoyle/origami")
+  # plan(multicore, workers = 4)
+  # plan(multisession)
+  # plan(sequential)
+  # library(delayed)
+
   library("SuperLearner")
-  options(stremr.verbose = TRUE)
-  options(gridisl.verbose = TRUE)
-  options(sl3.verbose = TRUE)
-  # options(stremr.verbose = FALSE)
-  # options(gridisl.verbose = FALSE)
+  library("future")
+  library("delayed")
+  library("sl3")
+  library("stremr")
   library("data.table")
   library("magrittr")
   library("ggplot2")
@@ -20,6 +37,11 @@ context("Testing sl3 cross-validation and continuous super learner")
   library("tidyr")
   library("purrr")
   library("dplyr")
+
+  options(stremr.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
+  # options(stremr.verbose = FALSE)
+  # options(gridisl.verbose = FALSE)
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
@@ -38,10 +60,6 @@ context("Testing sl3 cross-validation and continuous super learner")
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
   Odat_DT[, ("lastNat1.factor") := as.factor(lastNat1)]
 
-  ## remove indicators of censoring and monitoring events:
-  Odat_DT[, "N" := NULL]
-  # Odat_DT[, "C" := NULL]
-
   ## ------------------------------------------------------------------
   ## Propensity score models for Treatment, Censoring & Monitoring
   ## ------------------------------------------------------------------
@@ -57,8 +75,8 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## **** As a first step define a grid of all possible parameter combinations (for all estimators)
   ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
-  # tvals <- 0:2
-  tvals <- 2
+  tvals <- 0:10
+  # tvals <- 2
   ## This dataset defines all parameters that we like to vary in this analysis (including different interventions)
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
@@ -69,33 +87,57 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## ------------------------------------------------------------------------
   ## Define models for fitting propensity scores (g) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
-  fit_method_g <- "cv"
+  fit_method_g <- "none"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   lrn_glm <<- Lrnr_glm_fast$new(family = quasibinomial())
   lrn_glm_sm <<- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
-  # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = quasibinomial())
-  lrn_glmnet_binom <- Lrnr_glmnet$new(family = binomial(), nlambda = 5)
-  # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
-  lrn_glmnet_gaus <- Lrnr_glmnet$new(family = gaussian(), nlambda = 5)
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
+  lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = quasibinomial())
+  lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = gaussian())
+  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
                     metalearner = Lrnr_nnls$new())
-  
-  # models_g <<- lrn_glm
   models_g <<- sl
-  
 
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_gaus),
-                    metalearner = Lrnr_nnls$new())
-  # models_Q <<- lrn_glm
-  models_Q <<- sl
+  OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
+           stremr::define_CVfolds(nfolds = 10, fold_column = "fold_ID")
 
-  # lrn_glm <<- Lrnr_glm$new(outcome_type = binomial())
-  # task <- sl3::sl3_Task$new(Odat_DT,
-  #                           covariates = "highA1c",
+  subset_idx <- which(!is.na(OData$dat.sVar[["TI"]]) & !is.na(OData$dat.sVar[["highA1c"]]) & !is.na(OData$dat.sVar[["lastNat1"]]))
+
+  # fit <- stremr:::test_sl3_fit_single_regression(OData,
+  #         OData$nodes,
+  #         models = models_g,
+  #         predvars = c("highA1c", "lastNat1"),
+  #         outvar = "TI",
+  #         subset_idx = subset_idx)
+
+  # plan(multicore)
+  # fit <- stremr:::test_sl3_fit_single_regression(OData,
+  #         OData$nodes,
+  #         models = models_g,
+  #         predvars = c("highA1c", "lastNat1"),
+  #         outvar = "TI",
+  #         subset_idx = subset_idx)
+
+  # task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+  #                           covariates = c("highA1c", "lastNat1"),
   #                           outcome = "TI",
-  #                           id = "ID"
-  #                         )
-  # lrn_glm$train(task)
+  #                           id = "ID")
+  # tmc <- system.time(model.fit <- models_g$train(task))
+
+
+  # plan(sequential)
+  # task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+  #                           covariates = c("highA1c", "lastNat1"),
+  #                           outcome = "TI",
+  #                           id = "ID")
+  # tseq <- system.time(model.fit <- models_g$train(task))
+
+  # plan(multisession)
+  # task <- sl3::sl3_Task$new(Odat_DT[!is.na(TI) & !is.na(highA1c) & !is.na(lastNat1),],
+  #                           covariates = c("highA1c", "lastNat1"),
+  #                           outcome = "TI",
+  #                           id = "ID")
+  # tmsesh <- system.time(model.fit <- models_g$train(task))
+  # print(tmsesh)
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
@@ -109,41 +151,73 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
-  # models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 50)
+  models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 200, nthread = 5)
+  # models_Q <<- lrn_glm
   # models_Q <<- sl
 
   ## ----------------------------------------------------------------
   ## Fit propensity score models.
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
-  OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
-           stremr::define_CVfolds(nfolds = 5, fold_column = "fold_ID")
 
-  OData <- fitPropensity(OData,
-                          gform_TRT = gform_TRT,
-                          stratify_TRT = stratify_TRT,
-                          models_TRT = models_g,
-                          fit_method = fit_method_g
-                          )
+  plan(sequential)
+  t_run_seq <- system.time(
+    OData <- fitPropensity(OData,
+                            gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT,
+                            models_TRT = models_g,
+                            fit_method = fit_method_g
+                            )
+    )
+  print("t_run_seq: "); print(t_run_seq)
+
+  plan(multisession, workers = 5)
+  t_run_multisession <- system.time(
+    OData <- fitPropensity(OData,
+                            gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT,
+                            models_TRT = models_g,
+                            fit_method = fit_method_g
+                            )
+    )
+  print("t_run_multisession: "); print(t_run_multisession)
+
+  plan(multicore, workers = 5)
+  t_run_multicore <- system.time(
+    OData <- fitPropensity(OData,
+                            gform_TRT = gform_TRT,
+                            stratify_TRT = stratify_TRT,
+                            models_TRT = models_g,
+                            fit_method = fit_method_g
+                            )
+    )
+  print("t_run_multicore"); print(t_run_multicore)
+## ERROR:
+# Assertion failure at kmp_runtime.cpp(6480): __kmp_thread_pool == __null.
+# OMP: Error #13: Assertion failure at kmp_runtime.cpp(6480).
+# OMP: Hint: Please submit a bug report with this message, compile and run commands used, and machine configuration info including native compiler and operating system versions. Faster response will be obtained by including all program sources. For information on submitting this issue, please see http://www.intel.com/software/products/support/.
+
 
   ## Get the dataset with weights:
-  wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData)
+  wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)
 
   ## ------------------------------------------------------------
-  ## GCOMP ANALYSIS
+  ## Parallel GCOMP ANALYSIS
   ## ------------------------------------------------------------
-  # GCOMP <-analysis %>%
-  #       distinct(intervened_TRT, stratifyQ_by_rule) %>%
-  #       mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-  #         ~ fit_GCOMP(intervened_TRT = .x,
-  #                       stratifyQ_by_rule = .y,
-  #                       tvals = tvals,
-  #                       OData = OData,
-  #                       models = models_Q,
-  #                       Qforms = Qforms,
-  #                       fit_method = fit_method_Q
-  #                       ))) %>%
-  #       mutate(GCOMP = map(GCOMP, "estimates"))
+  # plan(multicore, workers = 10)
+  plan(multisession, workers = 10)
+  GCOMP <-analysis %>%
+        distinct(intervened_TRT, stratifyQ_by_rule) %>%
+        mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
+          ~ fit_GCOMP(intervened_TRT = .x,
+                        stratifyQ_by_rule = .y,
+                        tvals = tvals,
+                        OData = OData,
+                        models = models_Q,
+                        Qforms = Qforms,
+                        fit_method = fit_method_Q
+                        ))) %>%
+        mutate(GCOMP = map(GCOMP, "estimates"))
 
 
   # test_that("GCOMP results w/out Monitoring match", {
