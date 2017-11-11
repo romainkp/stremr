@@ -38,6 +38,8 @@ context("sl3 with delayed future")
   library("purrr")
   library("dplyr")
 
+  setDT(1)
+  
   options(stremr.verbose = TRUE)
   options(gridisl.verbose = TRUE)
   # options(stremr.verbose = FALSE)
