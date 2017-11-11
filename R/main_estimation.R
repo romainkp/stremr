@@ -26,7 +26,7 @@ process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
   return(wts_data)
 }
 
-internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPRS, model_contrl, OData, sVar.map, factor.map, censoring) {
+internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPRS, model_contrl, OData, sVar.map, factor.map, censoring, outvar.class) {
   if (!missing(reg_object)) {
     assert_that(is.list(reg_object))
     if (!"ListOfRegressionForms" %in% class(reg_object)) {
@@ -47,7 +47,8 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
                                    OData = OData,
                                    sVar.map = sVar.map,
                                    factor.map = factor.map,
-                                   censoring = censoring)
+                                   censoring = censoring,
+                                   outvar.class = outvar.class)
   }
   return(reg_object)
 }
@@ -92,6 +93,7 @@ define_single_regression <- function(OData,
                                      estimator = stremrOptions("estimator"),
                                      fit_method = stremrOptions("fit_method"),
                                      fold_column = stremrOptions("fold_column"),
+                                     type = "univariate",
                                      ...) {
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
@@ -107,7 +109,8 @@ define_single_regression <- function(OData,
                           model_contrl = models_control,
                           OData = OData,
                           sVar.map = nodes,
-                          factor.map = new.factor.names))
+                          factor.map = new.factor.names,
+                          outvar.class = type))
 }
 
 
@@ -339,6 +342,9 @@ fitPropensity <- function(OData,
                           reg_CENS,
                           reg_TRT,
                           reg_MONITOR,
+                          type_CENS = "univariate",
+                          type_TRT = "univariate",
+                          type_MONITOR = "univariate",
                           verbose = getOption("stremr.verbose"),
                           ...) {
 
@@ -381,7 +387,8 @@ fitPropensity <- function(OData,
                                                  OData = OData,
                                                  sVar.map = nodes,
                                                  factor.map = new.factor.names,
-                                                 censoring = TRUE)
+                                                 censoring = TRUE,
+                                                 outvar.class = type_CENS)
 
   g_CAN_regs_list[["gA"]] <- internal_define_reg(reg_TRT, gform_TRT,
                                                  default.reg = gform_TRT.default,
@@ -390,7 +397,8 @@ fitPropensity <- function(OData,
                                                  OData = OData,
                                                  sVar.map = nodes,
                                                  factor.map = new.factor.names,
-                                                 censoring = FALSE)
+                                                 censoring = FALSE,
+                                                 outvar.class = type_TRT)
 
   g_CAN_regs_list[["gN"]] <- internal_define_reg(reg_MONITOR, gform_MONITOR,
                                                  default.reg = gform_MONITOR.default,
@@ -399,7 +407,8 @@ fitPropensity <- function(OData,
                                                  OData = OData,
                                                  sVar.map = nodes,
                                                  factor.map = new.factor.names,
-                                                 censoring = FALSE)
+                                                 censoring = FALSE,
+                                                 outvar.class = type_MONITOR)
 
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
