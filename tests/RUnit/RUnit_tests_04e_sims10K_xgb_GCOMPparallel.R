@@ -7,6 +7,7 @@
 #     library("doParallel")
 
 #     `%+%` <- function(a, b) paste0(a, b)
+#     library("gridisl")
 #     library("stremr")
 #     library("xgboost")
 #     library("data.table")
@@ -92,7 +93,7 @@
 #     # stopImplicitCluster()
 
 #     tmle.model <- "xgb.glm"
-#     params <- defModel(estimator = "xgboost__gbm",
+#     params <- gridisl::defModel(estimator = "xgboost__gbm",
 #                                 family = "quasibinomial",
 #                                 nthread = 1,
 #                                 nrounds = 100,

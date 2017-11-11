@@ -414,6 +414,40 @@ fit_GCOMP <- function(OData,
     }
   )
 
+  ## using delayed (works with multisession, errors with multcore)
+  # subtasks <- lapply(rev(seq_along(tvals)), function(t_idx) {
+  #   t_period <- tvals[t_idx]
+  #   delayed_Q <- delayed_fun(fit_GCOMP_onet)(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+  #                  TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
+  #                  models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
+  #                  adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
+  #                  return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
+  #   delayed_Q$expect_error <- TRUE
+  #   return(delayed_Q)
+  # })
+  # bundle_Q <- bundle_delayed(subtasks)
+
+  # tmle.run.res <- try(
+  #   res_byt <- bundle_Q$compute(verbose = TRUE)
+  #   # res_byt <- bundle_Q$compute(nworkers = 2, verbose = TRUE)
+  # )
+
+  ## using native future interface (error: result is too long a vector):
+  # f <- list()
+  # for (ii in seq_along(tvals)) {
+  #   t_period <- tvals[ii]
+  #   f[[ii]] <- future({
+  #     fit_GCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+  #                    TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
+  #                    models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
+  #                    adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
+  #                    return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
+  #   })
+  # }
+  # #
+  # res <- f
+  # res <- lapply(f, FUN = value)
+
   ## Restore backed up nodes, even in the event of failure (otherwise the input data is corrupted for good)
   OData$restoreNodes(c(intervened_TRT,intervened_MONITOR))
   ## remove the newly added rule name column from observed data
