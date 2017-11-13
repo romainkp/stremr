@@ -104,20 +104,20 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
   # delta <- mean(Odat_DT[, Y.tplus1], na.rm = TRUE)*5
-  delta <- 0.35
-  GCOMP_maxpYdelta <-analysis %>%
-        distinct(intervened_TRT, stratifyQ_by_rule) %>%
-        mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fit_GCOMP(intervened_TRT = .x,
-                        stratifyQ_by_rule = .y,
-                        tvals = tvals,
-                        OData = OData,
-                        models = models_Q,
-                        Qforms = Qforms,
-                        fit_method = fit_method_Q,
-                        maxpY = delta
-                        ))) %>%
-        mutate(GCOMP = map(GCOMP, "estimates"))
+  # delta <- 0.35
+  # GCOMP_maxpYdelta <-analysis %>%
+  #       distinct(intervened_TRT, stratifyQ_by_rule) %>%
+  #       mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
+  #         ~ fit_GCOMP(intervened_TRT = .x,
+  #                       stratifyQ_by_rule = .y,
+  #                       tvals = tvals,
+  #                       OData = OData,
+  #                       models = models_Q,
+  #                       Qforms = Qforms,
+  #                       fit_method = fit_method_Q,
+  #                       maxpY = delta
+  #                       ))) %>%
+  #       mutate(GCOMP = map(GCOMP, "estimates"))
 
   delta <- 1
   GCOMP <-analysis %>%
@@ -135,10 +135,10 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
         mutate(GCOMP = map(GCOMP, "estimates"))
 
   test_that("GCOMP with contraint gives similar results", {
-    GCOMP_maxpYdelta[["GCOMP"]][[1]][["St.GCOMP"]]
+    # GCOMP_maxpYdelta[["GCOMP"]][[1]][["St.GCOMP"]]
     GCOMP[["GCOMP"]][[1]][["St.GCOMP"]]
 
-    GCOMP_maxpYdelta[["GCOMP"]][[2]][["St.GCOMP"]]
+    # GCOMP_maxpYdelta[["GCOMP"]][[2]][["St.GCOMP"]]
     GCOMP[["GCOMP"]][[2]][["St.GCOMP"]]
   })
 
@@ -160,23 +160,22 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   )
 })
 
- delta <- 0.25
- TMLE_maxpYdelta <-analysis %>%
-        distinct(intervened_TRT, stratifyQ_by_rule) %>%
-        mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
-          ~ fit_TMLE(intervened_TRT = .x,
-                        stratifyQ_by_rule = .y,
-                        tvals = tvals,
-                        OData = OData,
-                        models = models_Q,
-                        Qforms = Qforms,
-                        fit_method = fit_method_Q,
-                        maxpY = delta,
-                        TMLE_updater = "iTMLE.updater.xgb"
-                        ))) %>%
-        mutate(TMLE = map(TMLE, "estimates"))
-
-  TMLE_maxpYdelta[["TMLE"]]
+ # delta <- 0.25
+ # TMLE_maxpYdelta <-analysis %>%
+ #        distinct(intervened_TRT, stratifyQ_by_rule) %>%
+ #        mutate(TMLE = map2(intervened_TRT, stratifyQ_by_rule,
+ #          ~ fit_TMLE(intervened_TRT = .x,
+ #                        stratifyQ_by_rule = .y,
+ #                        tvals = tvals,
+ #                        OData = OData,
+ #                        models = models_Q,
+ #                        Qforms = Qforms,
+ #                        fit_method = fit_method_Q,
+ #                        maxpY = delta,
+ #                        TMLE_updater = "iTMLE.updater.xgb"
+ #                        ))) %>%
+ #        mutate(TMLE = map(TMLE, "estimates"))
+ #  TMLE_maxpYdelta[["TMLE"]]
 
  delta <- 1
  TMLE <-analysis %>%
@@ -194,9 +193,9 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
         mutate(TMLE = map(TMLE, "estimates"))
 
   test_that("TMLE with contraint gives similar results", {
-    TMLE_maxpYdelta[["TMLE"]][[1]][["St.TMLE"]]
+    # TMLE_maxpYdelta[["TMLE"]][[1]][["St.TMLE"]]
     TMLE[["TMLE"]][[1]][["St.TMLE"]]
 
-    TMLE_maxpYdelta[["TMLE"]][[2]][["St.TMLE"]]
+    # TMLE_maxpYdelta[["TMLE"]][[2]][["St.TMLE"]]
     TMLE[["TMLE"]][[2]][["St.TMLE"]]
   })

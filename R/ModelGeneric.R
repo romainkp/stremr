@@ -13,6 +13,8 @@ newsummarymodel <- function(regClass, reg, DataStorageClass.g0, ...) { UseMethod
 newsummarymodel.generic <- function(regClass, reg, DataStorageClass.g0, ...) ModelGeneric$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 ## Summary model constructor for stratification (by reg$subset_exprs):
 newsummarymodel.stratify <- function(regClass, reg, DataStorageClass.g0, ...) ModelStratified$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+## Summary model constructor for constant outcome A (for now define the usual binomial model, in the future might return the outcome instead):
+newsummarymodel.constant <- function(regClass, reg, ...) ModelBinomial$new(reg = reg, ...)
 ## Summary model constructor for binary outcome A:
 newsummarymodel.binomial <- function(regClass, reg, ...) ModelBinomial$new(reg = reg, ...)
 ## Summary model constructor for categorical outcome A:

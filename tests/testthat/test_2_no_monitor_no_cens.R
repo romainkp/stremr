@@ -69,7 +69,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## Define models for fitting propensity scores (g) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
   fit_method_g <- "none"
-  models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
@@ -81,7 +81,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## Use speedglm to fit all Q.
   ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
-  models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
   ## ----------------------------------------------------------------
   ## Fit propensity score models.
@@ -92,7 +92,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   OData <- fitPropensity(OData,
                           gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT,
-                          models_TRT = models_g,
+                          # models_TRT = models_g,
                           fit_method = fit_method_g
                           )
 
@@ -181,7 +181,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                           stratifyQ_by_rule = .y,
                           tvals = tvals,
                           OData = OData,
-                          models = models_Q,
+                          # models = models_Q,
                           Qforms = Qforms,
                           fit_method = fit_method_Q
                           ))) %>%
@@ -209,7 +209,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
           mutate(TMLE = pmap(TMLE, fit_TMLE,
                              tvals = tvals,
                              OData = OData,
-                             models = models_Q,
+                             # models = models_Q,
                              Qforms = Qforms,
                              fit_method = fit_method_Q
                              )) %>%

@@ -1,6 +1,7 @@
 require("stremr")
 require("sl3")
 options(stremr.verbose = FALSE)
+options(condensier.verbose = FALSE)
 require("data.table")
 data(OdataNoCENS)
 Odat_DT <- as.data.table(OdataNoCENS, key=c(ID, t))

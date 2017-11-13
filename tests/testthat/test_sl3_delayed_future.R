@@ -77,8 +77,8 @@ context("sl3 with delayed future")
   ## **** As a first step define a grid of all possible parameter combinations (for all estimators)
   ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
-  tvals <- 0:10
-  # tvals <- 2
+  # tvals <- 0:10
+  tvals <- 2
   ## This dataset defines all parameters that we like to vary in this analysis (including different interventions)
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
@@ -95,14 +95,14 @@ context("sl3 with delayed future")
   lrn_glm_sm <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
   lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = quasibinomial())
   lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = gaussian())
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
+  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
                     metalearner = Lrnr_nnls$new())
   models_g <- sl
 
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
            stremr::define_CVfolds(nfolds = 10, fold_column = "fold_ID")
 
-  subset_idx <- which(!is.na(OData$dat.sVar[["TI"]]) & !is.na(OData$dat.sVar[["highA1c"]]) & !is.na(OData$dat.sVar[["lastNat1"]]))
+  # subset_idx <- which(!is.na(OData$dat.sVar[["TI"]]) & !is.na(OData$dat.sVar[["highA1c"]]) & !is.na(OData$dat.sVar[["lastNat1"]]))
 
   # fit <- stremr:::test_sl3_fit_single_regression(OData,
   #         OData$nodes,
@@ -153,7 +153,7 @@ context("sl3 with delayed future")
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
-  models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 200, nthread = 5)
+  models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 5, nthread = 5)
   # models_Q <- lrn_glm
   # models_Q <- sl
 
@@ -162,38 +162,38 @@ context("sl3 with delayed future")
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
 
-  plan(sequential)
-  t_run_seq <- system.time(
+  # plan(sequential)
+  # t_run_seq <- system.time(
     OData <- fitPropensity(OData,
                             gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT,
                             models_TRT = models_g,
                             fit_method = fit_method_g
                             )
-    )
-  print("t_run_seq: "); print(t_run_seq)
+    # )
+  # print("t_run_seq: "); print(t_run_seq)
 
-  plan(multisession, workers = 5)
-  t_run_multisession <- system.time(
-    OData <- fitPropensity(OData,
-                            gform_TRT = gform_TRT,
-                            stratify_TRT = stratify_TRT,
-                            models_TRT = models_g,
-                            fit_method = fit_method_g
-                            )
-    )
-  print("t_run_multisession: "); print(t_run_multisession)
+  # plan(multisession, workers = 5)
+  # t_run_multisession <- system.time(
+  #   OData <- fitPropensity(OData,
+  #                           gform_TRT = gform_TRT,
+  #                           stratify_TRT = stratify_TRT,
+  #                           models_TRT = models_g,
+  #                           fit_method = fit_method_g
+  #                           )
+  #   )
+  # print("t_run_multisession: "); print(t_run_multisession)
 
-  plan(multicore, workers = 5)
-  t_run_multicore <- system.time(
-    OData <- fitPropensity(OData,
-                            gform_TRT = gform_TRT,
-                            stratify_TRT = stratify_TRT,
-                            models_TRT = models_g,
-                            fit_method = fit_method_g
-                            )
-    )
-  print("t_run_multicore"); print(t_run_multicore)
+  # plan(multicore, workers = 5)
+  # t_run_multicore <- system.time(
+  #   OData <- fitPropensity(OData,
+  #                           gform_TRT = gform_TRT,
+  #                           stratify_TRT = stratify_TRT,
+  #                           models_TRT = models_g,
+  #                           fit_method = fit_method_g
+  #                           )
+  #   )
+  # print("t_run_multicore"); print(t_run_multicore)
 ## ERROR:
 # Assertion failure at kmp_runtime.cpp(6480): __kmp_thread_pool == __null.
 # OMP: Error #13: Assertion failure at kmp_runtime.cpp(6480).
@@ -207,7 +207,7 @@ context("sl3 with delayed future")
   ## Parallel GCOMP ANALYSIS
   ## ------------------------------------------------------------
   # plan(multicore, workers = 10)
-  plan(multisession, workers = 10)
+  # plan(multisession, workers = 10)
   GCOMP <-analysis %>%
         distinct(intervened_TRT, stratifyQ_by_rule) %>%
         mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,

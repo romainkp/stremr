@@ -96,8 +96,8 @@ OData <- define_CVfolds(OData, nfolds = 5, fold_column = "fold_ID")
 gform_TRT = "A ~ L1 + L2 + L3 + A.tminus1"
 stratify_TRT <- list(A=c("t == 0", "t == 1"))
 
-models_TRT <- defModel(estimator = "speedglm__glm")
-OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT, models_TRT = models_TRT)
+# models_TRT <- defModel(estimator = "speedglm__glm")
+OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT)
 
 IPW.St <- getIPWeights(OData, intervened_TRT = "Astoch") %>%
           directIPW(OData) %$%
@@ -138,14 +138,14 @@ test_that("Stochastic g^*: IPW unbiased for correct g", {
 ## -------------------------------------------------
 Qforms <- rep.int("Qkplus1 ~ L1 + L2 + L2.tminus1 + L3.tminus1", 2)
 
-params <- gridisl::defModel(estimator = "speedglm__glm")
-gcomp_est <- fit_GCOMP(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms, models = params)
+# params <- gridisl::defModel(estimator = "speedglm__glm")
+gcomp_est <- fit_GCOMP(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms)
 (GCOMP_EYgstar <- 1 - gcomp_est$estimates[, St.GCOMP])
 # cat("\nGCOMP bias g^* Astoch: ", true_EYgstar-GCOMP_EYgstar, "\n")
 ## [1] 0.614744 -- very biased
 ## GCOMP bias g^* Astoch:  -0.054786
 
-tmle_est <- fit_TMLE(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms, models = params)
+tmle_est <- fit_TMLE(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms)
 (TMLE_EYgstar <- 1 - tmle_est$estimates[, St.TMLE])
 # cat("\nTMLE bias g^* Astoch: ", true_EYgstar-TMLE_EYgstar, "\n")
 ## 0.5605559 -- unbiased, same as IPW
@@ -165,14 +165,14 @@ test_that("Stochastic g^*: GCOMP is biased and TMLE is unbiased for correct g & 
 ## 2. TMLE
 ## -------------------------------------------------
 Qforms <- rep.int("Qkplus1 ~ L1 + L2 + L3 + A + A.tminus1 + L1.tminus1 + L2.tminus1 + L3.tminus1", 2)
-Qmodels <- gridisl::defModel(estimator = "speedglm__glm", interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
-gcomp_est <- fit_GCOMP(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms, models = Qmodels)
+# Qmodels <- gridisl::defModel(estimator = "speedglm__glm", interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
+gcomp_est <- fit_GCOMP(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms)
 (GCOMP_EYgstar <- 1 - gcomp_est$estimates[, St.GCOMP])
 cat("\nGCOMP bias g^* Astoch: ", true_EYgstar-GCOMP_EYgstar, "\n")
 ## (glm) [1] 0.5586502 -- unbiased
 ## GCOMP bias g^* Astoch:  0.00130783
 
-tmle_est <- fit_TMLE(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms, models = params)
+tmle_est <- fit_TMLE(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms)
 (TMLE_EYgstar <- 1 - tmle_est$estimates[, St.TMLE])
 # cat("\nTMLE bias g^* Astoch: ", true_EYgstar-TMLE_EYgstar, "\n")
 ## [1] 0.5605454 -- unbiased
@@ -202,7 +202,7 @@ cat("\nIPW bias g^* Astoch: ", true_EYgstar-IPW_EYgstar, "\n")
 
 Qforms <- rep.int("Qkplus1 ~ L1 + L2 + L3 + A + A.tminus1 + L1.tminus1 + L2.tminus1 + L3.tminus1", 2)
 params <- gridisl::defModel(estimator = "speedglm__glm", interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
-tmle_est <- fit_TMLE(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms, models = params)
+tmle_est <- fit_TMLE(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms)
 (TMLE_EYgstar <- 1 - tmle_est$estimates[, St.TMLE])
 cat("\nTMLE bias g^* Astoch: ", true_EYgstar-TMLE_EYgstar, "\n")
 ## [1] 0.5607463 -- TMLE is no longer biased, DR now holds

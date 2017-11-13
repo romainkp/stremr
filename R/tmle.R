@@ -288,9 +288,6 @@ fit_GCOMP <- function(OData,
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  if (!is.null(models)) {
-    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
-  }
 
   assert_that(is.logical(adapt_stop))
 
@@ -316,8 +313,18 @@ fit_GCOMP <- function(OData,
   OData$uncensored <- OData$eval_uncensored()
   OData$follow_rule <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
-  sVar.exprs <- capture.exprs(...)
-  models_control <- c(list(models = models), list(reg_Q = reg_Q), opt_params = list(sVar.exprs))
+  opt_params <- capture.exprs(...)
+  if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
+
+  if (!is.null(models)) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  } else {
+    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+  }
+
+  models_control <- c(list(models = models), 
+                      list(reg_Q = reg_Q), 
+                      opt_params = list(opt_params))
   models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column

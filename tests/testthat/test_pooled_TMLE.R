@@ -70,7 +70,8 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## Define models for fitting propensity scores (g) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
   fit_method_g <- "none"
-  models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  models_g <- Lrnr_glm_fast$new(family = quasibinomial())
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
@@ -85,8 +86,8 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial", nrounds = 50, objective = "reg:logistic")
-  models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 50, objective = "reg:logistic")
-
+  # models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 50, objective = "reg:logistic")
+  models_Q <- Lrnr_xgboost$new(nrounds = 10, objective = "reg:logistic")
   ## ----------------------------------------------------------------
   ## Fit propensity score models.
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
@@ -99,55 +100,48 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                           fit_method = fit_method_g
                           )
 
-  delta <- 0.35
-  pooledGCOMP <- fit_pooled_GCOMP(OData = OData,
-                                       intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
-                                       stratifyQ_by_rule = TRUE,
-                                       tvals = tvals,
-                                       models = models_Q,
-                                       Qforms = Qforms,
-                                       fit_method = fit_method_Q,
-                                       maxpY = delta)
-
-
-  delta <- 1
-  pooledGCOMP_2 <- fit_pooled_GCOMP(OData = OData,
-                                       intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
-                                       stratifyQ_by_rule = TRUE,
-                                       tvals = tvals,
-                                       models = models_Q,
-                                       Qforms = Qforms,
-                                       fit_method = fit_method_Q,
-                                       maxpY = delta)
-
-
   test_that("GCOMP pooling works", {
-    pooledGCOMP
-    pooledGCOMP_2
+    # delta <- 0.35
+    # pooledGCOMP <- fit_pooled_GCOMP(OData = OData,
+    #                                      intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
+    #                                      stratifyQ_by_rule = TRUE,
+    #                                      tvals = tvals,
+    #                                      models = models_Q,
+    #                                      Qforms = Qforms,
+    #                                      fit_method = fit_method_Q,
+    #                                      maxpY = delta)
+
+
+    delta <- 1
+    pooledGCOMP_2 <- fit_pooled_GCOMP(OData = OData,
+                                         intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
+                                         stratifyQ_by_rule = TRUE,
+                                         tvals = tvals,
+                                         models = models_Q,
+                                         Qforms = Qforms,
+                                         fit_method = fit_method_Q,
+                                         maxpY = delta)
   })
 
-  delta <- 0.35
-  pooledTMLE <- fit_pooled_TMLE(OData = OData,
-                                intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
-                                stratifyQ_by_rule = TRUE,
-                                tvals = tvals,
-                                models = models_Q,
-                                Qforms = Qforms,
-                                fit_method = fit_method_Q,
-                                maxpY = delta,
-                                TMLE_updater = "iTMLE.updater.xgb")
-
-  delta <- 1
-  pooledTMLE_2 <- fit_pooled_TMLE(OData = OData,
-                                intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
-                                stratifyQ_by_rule = TRUE,
-                                tvals = tvals,
-                                models = models_Q,
-                                Qforms = Qforms,
-                                fit_method = fit_method_Q,
-                                maxpY = delta)
-
   test_that("TMLE pooling works", {
-    pooledTMLE
-    pooledTMLE_2
+    # delta <- 0.35
+    # pooledTMLE <- fit_pooled_TMLE(OData = OData,
+    #                               intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
+    #                               stratifyQ_by_rule = TRUE,
+    #                               tvals = tvals,
+    #                               models = models_Q,
+    #                               Qforms = Qforms,
+    #                               fit_method = fit_method_Q,
+    #                               maxpY = delta,
+    #                               TMLE_updater = "iTMLE.updater.xgb")
+
+    delta <- 1
+    pooledTMLE_2 <- fit_pooled_TMLE(OData = OData,
+                                  intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
+                                  stratifyQ_by_rule = TRUE,
+                                  tvals = tvals,
+                                  models = models_Q,
+                                  Qforms = Qforms,
+                                  fit_method = fit_method_Q,
+                                  maxpY = delta)
   })

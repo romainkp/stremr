@@ -35,7 +35,6 @@ test_that("readme examples run as expected without errors", {
                survNPMSM(OData) %$%
                estimates
 
-
   AKME.St.1[]
 
   IPW.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%

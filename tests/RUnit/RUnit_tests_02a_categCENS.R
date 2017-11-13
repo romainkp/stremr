@@ -1,8 +1,8 @@
 test.model.fits.categorCENSOR <- function() {
   require("data.table")
   require("stremr")
-  options(stremr.verbose = FALSE)
-  options(sl3.verbose = FALSE)
+  options(stremr.verbose = TRUE)
+  options(sl3.verbose = TRUE)
   options(gridisl.verbose = FALSE)
   set_all_stremr_options(estimator = "speedglm__glm")
 
@@ -14,7 +14,11 @@ test.model.fits.categorCENSOR <- function() {
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataCatCENS[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
   OdataCatCENS[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]
-
+  OdataCatCENS[is.na(C), "C" := 0]
+  OdataCatCENS[is.na(N), "N" := 0]
+  OdataCatCENS[is.na(TI), "TI" := 0]
+  OdataCatCENS[is.na(highA1c), "highA1c" := 0]
+  OdataCatCENS[is.na(lastNat1), "lastNat1" := 0]
   OdataCatCENS[, "TI_0" := 0L]
 
   # head(OdataCatCENS)
