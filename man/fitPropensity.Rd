@@ -10,8 +10,7 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
   estimator = stremrOptions("estimator"),
   fit_method = stremrOptions("fit_method"),
   fold_column = stremrOptions("fold_column"), reg_CENS, reg_TRT, reg_MONITOR,
-  type_CENS = "univariate", type_TRT = "univariate",
-  type_MONITOR = "univariate", verbose = getOption("stremr.verbose"), ...)
+  verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}

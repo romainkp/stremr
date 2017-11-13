@@ -26,7 +26,7 @@ process_opt_wts <- function(wts_data, weights, nodes, adjust_outcome = TRUE) {
   return(wts_data)
 }
 
-internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPRS, model_contrl, OData, sVar.map, factor.map, censoring, outvar.class) {
+internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPRS, model_contrl, OData, sVar.map, factor.map, censoring) {
   if (!missing(reg_object)) {
     assert_that(is.list(reg_object))
     if (!"ListOfRegressionForms" %in% class(reg_object)) {
@@ -47,8 +47,7 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
                                    OData = OData,
                                    sVar.map = sVar.map,
                                    factor.map = factor.map,
-                                   censoring = censoring,
-                                   outvar.class = outvar.class)
+                                   censoring = censoring)
   }
   return(reg_object)
 }
@@ -93,13 +92,14 @@ define_single_regression <- function(OData,
                                      estimator = stremrOptions("estimator"),
                                      fit_method = stremrOptions("fit_method"),
                                      fold_column = stremrOptions("fold_column"),
-                                     type = "univariate",
                                      ...) {
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
   sVar.exprs <- capture.exprs(...)
-  models_control <- c(list(   models = models), opt_params = list(sVar.exprs))
+  models_control <- c(list(models = models), 
+                           opt_params = list(sVar.exprs)
+                      )
   models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
@@ -109,10 +109,8 @@ define_single_regression <- function(OData,
                           model_contrl = models_control,
                           OData = OData,
                           sVar.map = nodes,
-                          factor.map = new.factor.names,
-                          outvar.class = type))
+                          factor.map = new.factor.names))
 }
-
 
 # ---------------------------------------------------------------------------------------
 #' Import data, define various nodes, define dummies for factor columns and define OData R6 object
@@ -251,6 +249,22 @@ importData <- function(data,
   return(OData)
 }
 
+define_propensity_model <- function(models, opt_params) {
+  ## verify the learners are of acceptible type, otherwise define default learner as sl3 glm
+  if (!is.null(models) && suppressWarnings(!is.na(models))) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  } else {
+    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+  }
+  ## if any of the outcomes is categorical, need to do something like this (for sl3 models object)
+  # if (type %in% "categorical") {
+  #   models <- Lrnr_condensier$new(bin_estimator = models)
+  # }
+  models_control <- c(list(models     = models),
+                           opt_params = list(opt_params))
+  return(models_control)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Define and fit propensity score models.
 #'
@@ -342,42 +356,25 @@ fitPropensity <- function(OData,
                           reg_CENS,
                           reg_TRT,
                           reg_MONITOR,
-                          type_CENS = "univariate",
-                          type_TRT = "univariate",
-                          type_MONITOR = "univariate",
+                          # type_CENS = "univariate",
+                          # type_TRT = "univariate",
+                          # type_MONITOR = "univariate",
                           verbose = getOption("stremr.verbose"),
                           ...) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-
-  opt_params <- list(capture.exprs(...))
+  opt_params <- capture.exprs(...)
   if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
-
-  define_model <- function(models, opt_params, type = "univariate") {
-    ## verify the learners are of acceptible type, otherwise define default learner as sl3 glm
-    if (!is.null(models) && suppressWarnings(!is.na(models))) {
-      assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
-    } else {
-      models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
-    }
-    ## if any of the outcomes is categorical, need to do something like this (for sl3 models object)
-    if (type %in% "categorical") {
-      models <- Lrnr_condensier$new(bin_estimator = models)
-    }
-    models_control <- c(list(models     = models),
-                             opt_params = opt_params)
-    return(models_control)
-  }
 
   # models_CENS_control <- c(list(   models = models_CENS),    opt_params = opt_params)
   # models_TRT_control <- c(list(    models = models_TRT),     opt_params = opt_params)
   # models_MONITOR_control <- c(list(models = models_MONITOR), opt_params = opt_params)
 
-  models_CENS_control <-    define_model(models_CENS,    opt_params, type_CENS)
-  models_TRT_control <-     define_model(models_TRT,     opt_params, type_TRT)
-  models_MONITOR_control <- define_model(models_MONITOR, opt_params, type_MONITOR)
+  models_CENS_control <-    define_propensity_model(models_CENS,    opt_params)
+  models_TRT_control <-     define_propensity_model(models_TRT,     opt_params)
+  models_MONITOR_control <- define_propensity_model(models_MONITOR, opt_params)
 
   models_CENS_control[["estimator"]] <- models_TRT_control[["estimator"]] <- models_MONITOR_control[["estimator"]] <- estimator[1L]
   models_CENS_control[["fit_method"]] <- models_TRT_control[["fit_method"]] <- models_MONITOR_control[["fit_method"]] <- fit_method[1L]
@@ -404,8 +401,7 @@ fitPropensity <- function(OData,
                                                  OData = OData,
                                                  sVar.map = nodes,
                                                  factor.map = new.factor.names,
-                                                 censoring = TRUE,
-                                                 outvar.class = type_CENS)
+                                                 censoring = TRUE)
 
   g_CAN_regs_list[["gA"]] <- internal_define_reg(reg_TRT, gform_TRT,
                                                  default.reg = gform_TRT.default,
@@ -414,8 +410,7 @@ fitPropensity <- function(OData,
                                                  OData = OData,
                                                  sVar.map = nodes,
                                                  factor.map = new.factor.names,
-                                                 censoring = FALSE,
-                                                 outvar.class = type_TRT)
+                                                 censoring = FALSE)
 
   g_CAN_regs_list[["gN"]] <- internal_define_reg(reg_MONITOR, gform_MONITOR,
                                                  default.reg = gform_MONITOR.default,
@@ -424,8 +419,7 @@ fitPropensity <- function(OData,
                                                  OData = OData,
                                                  sVar.map = nodes,
                                                  factor.map = new.factor.names,
-                                                 censoring = FALSE,
-                                                 outvar.class = type_MONITOR)
+                                                 censoring = FALSE)
 
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class

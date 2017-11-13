@@ -9,14 +9,16 @@ NULL
 ## S3 constructors for the summary model classes:
 ## ---------------------------------------------------------------------------------
 newsummarymodel <- function(regClass, reg, DataStorageClass.g0, ...) { UseMethod("newsummarymodel") }
-# Summary model constructor for categorical outcome sA[j]:
-# newsummarymodel.categorical <- function(regClass, reg, DataStorageClass.g0, ...) ModelCategorical$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 ## Summary model constructor for generic regression with multivariate outcome, but one set of predictors
 newsummarymodel.generic <- function(regClass, reg, DataStorageClass.g0, ...) ModelGeneric$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 ## Summary model constructor for stratification (by reg$subset_exprs):
 newsummarymodel.stratify <- function(regClass, reg, DataStorageClass.g0, ...) ModelStratified$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
-## Summary model constructor for binary outcome sA[j]:
-newsummarymodel.univariate <- function(regClass, reg, ...) ModelUnivariate$new(reg = reg, ...)
+## Summary model constructor for binary outcome A:
+newsummarymodel.binomial <- function(regClass, reg, ...) ModelBinomial$new(reg = reg, ...)
+## Summary model constructor for categorical outcome A:
+newsummarymodel.categorical <- function(regClass, reg, DataStorageClass.g0, ...) ModelCategorical$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
+## Summary model constructor for continuous outcome A:
+newsummarymodel.continuous <-  function(regClass, reg, DataStorageClass.g0, ...) ModelContinuous$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 
 ## Summary model constructor for Q-learning (sequential regression):
 newsummarymodel.Qlearn <- function(regClass, reg, ...) ModelQlearn$new(reg = reg, ...)
@@ -28,10 +30,6 @@ newsummarymodel.SDRtransformQModel <- function(regClass, reg, ...) SDRtransformQ
 newsummarymodel.deterministic <- function(regClass, reg, ...) ModelDeterministic$new(reg = reg, ...)
 newsummarymodel.NULL <- function(regClass, reg, ...) ModelNULLOutcome$new(reg = reg, ...)
 
-# ## Summary model constructor for continuous outcome sA[j]:
-# newsummarymodel.contin <- function(regClass, reg, DataStorageClass.g0, ...) ContinModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
-# ## Summary model constructor for categorical outcome sA[j]:
-# newsummarymodel.categor <- function(regClass, reg, DataStorageClass.g0, ...) CategorModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
 
 
 prettyprint_ModelGeneric <- function(self, reg, all.outvar.bin) {
@@ -65,7 +63,7 @@ prettyprint_ModelGeneric <- function(self, reg, all.outvar.bin) {
 #'  figures out the correct joint probability factorization into univariate conditional
 #'  probabilities based on name ordering provided by (\code{A_nms}, \code{W_nms}).
 #'  When the outcome variable \code{A[j]} is binary, this class will automatically call
-#'  a new instance of \code{ModelUnivariate} class.
+#'  a new instance of \code{ModelBinomial} class.
 #'  Provide \code{self$fit()} function argument \code{data} as a \code{\link{DataStorageClass}} class object.
 #'  This data will be used for fitting the model \code{P(A|W)}.
 #'  Provide \code{self$fit()} function argument \code{newdata} (also as \code{DataStorageClass} class) for predictions of the type

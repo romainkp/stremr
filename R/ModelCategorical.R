@@ -1,7 +1,7 @@
 # ## ---------------------------------------------------------------------
-# #' R6 class for fitting and predicting joint probability for a univariate categorical summary A[j]
+# #' R6 class for fitting and predicting joint probability for categorical outcome
 # #'
-# #' This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for a univariate
+# #' This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for 
 # #'  categorical summary measure \code{A[j]}. This class inherits from \code{\link{ModelGeneric}} class.
 # #'  Defines the fitting algorithm for a regression model \code{A[j] ~ W + ...}.
 # #'  Reconstructs the likelihood \code{P(A[j]=a[j]|W,...)} afterwards.
@@ -35,88 +35,85 @@
 # #'   \item{\code{cats}}{...}
 # #' }
 # #' @export
-# ModelCategorical <- R6Class(classname = "ModelCategorical",
-#   inherit = ModelGeneric,
-#   portable = TRUE,
-#   class = TRUE,
-#   public = list(
-#     reg = NULL,
-#     outvar = character(),     # the name of the categorical outcome var (sA[j])
-#     levels = numeric(),       # all unique values for sA[j] sorted in increasing order
-#     nbins = integer(),
-#     bin_nms = character(),
-#     # Define settings for fitting cat sA and then call $new for super class (ModelGeneric)
-#     initialize = function(reg, DataStorageClass.g0, ...) {
-#       self$reg <- reg
-#       self$outvar <- reg$outvar
-#       # Define the number of bins (no. of binary regressions to run) based on number of unique levels for categorical sVar:
-#       if (self$reg$get.reg$censoring & gvars$verbose) {
-#         message("...fitting a model for categorical censoring...")
-#       }
-#       if (gvars$verbose == 2) print("ModelCategorical outcome: "%+%self$outvar)
+ModelCategorical  <- R6Class(classname = "ModelCategorical",
+  inherit = ModelBinomial,
+  cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
+  portable = TRUE,
+  class = TRUE,
+  public = list(
+    model_contrl = list(),
+    models = list(),
 
-#       assert_that(is.DataStorageClass(DataStorageClass.g0))
-#       self$levels <- DataStorageClass.g0$detect.cat.sVar.levels(reg$outvar)
-#       self$nbins <- length(self$levels)
-#       self$bin_nms <- DataStorageClass.g0$bin.nms.sVar(reg$outvar, self$nbins)
+    initialize = function(reg, ...) {
+      model_contrl <- reg$model_contrl
 
-#       # Instead of defining new RegressionClass, just clone the parent reg object and adjust the outcomes
-#       bin_regs <- self$reg$clone()
-#       bin_regs$outvar.class <- as.list(rep_len(gvars$sVartypes$bin, self$nbins))
-#       names(bin_regs$outvar.class) <- self$bin_nms
-#       bin_regs$outvar <- self$bin_nms
-#       bin_regs$predvars <- self$reg$predvars
-#       # subsetting variable names (always subset by non-missing values for the current bin column)
-#       bin_regs$subset_vars <- lapply(self$bin_nms, function(var) { c(var, self$reg$subset_vars)})
-#       names(bin_regs$subset_vars) <- self$bin_nms
-#       bin_regs$reg_hazard <- TRUE   # Don`t add degenerate bins as predictors in each binary regression
+      if (!is.null(model_contrl[["models"]])) {
+        self$models <- model_contrl[["models"]]
+        model_contrl[["models"]] <- NULL
+        if (!is(self$models, "Lrnr_base")) {
+          stop("for categorical exposures, have to use sl3 package for defining learners / estimators")
+        }
 
-#       super$initialize(reg = bin_regs, no_set_outvar = TRUE, ...)
-#     },
+        ## For categorical exposure we always wrap the sl3 learner into condensier learner.
+        ## This will factorize the likelihood appropriately, 
+        ## then fit a separate logistic regression problem to each level of the categorical exposure, 
+        ## and will perform the final predictions in the rigth way (as likelihood).
+        self$models <- sl3::Lrnr_condensier$new(bin_estimator = self$models)
 
-#     # Transforms data for categorical outcome to bin indicators A[j] -> BinA[1], ..., BinA[M] and calls $super$fit on that transformed data
-#     # Gets passed redefined subsets that exclude degenerate Bins (prev subset is defined for names in A - names have changed though)
-#     fit = function(data, ...) {
-#       assert_that(is.DataStorageClass(data))
-#       # Binirizes & saves binned matrix inside DataStorageClass for categorical sVar
-#       data$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
-#       if (gvars$verbose == 2) {
-#         print("performing fitting for categorical outcome: " %+% self$outvar)
-#         print("freq counts by bin for categorical outcome: "); print(table(data$get.sVar(self$outvar)))
-#         print("binned dataset: "); print(head(cbind(sA = data$get.sVar(self$outvar), data$dat.bin.sVar), 5))
-#       }
-#       super$fit(data, ...) # call the parent class fit method
-#       if (gvars$verbose) message("fit for " %+% self$outvar %+% " var succeeded...")
-#       data$emptydat.bin.sVar # wiping out binirized mat in data object DataStorageClass...
-#       # self$wipe.alldat # wiping out all data traces in ContinModel...
-#       invisible(self)
-#     },
+      } else {
+        stop("for categorical exposures 'model' must be always always specified and it must be an sl3 learner object")
+      }
 
-#     # P(A=1|W=w): uses private$m.fit to generate predictions
-#     predict = function(newdata, ...) {
-#       # if (missing(newdata)) stop("must provide newdata")
-#       if (gvars$verbose == 2) print("performing prediction for categorical outcome: " %+% self$outvar)
-#       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
-#       if (!missing(newdata)) newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
-#       super$predict(newdata, ...)
-#       if (!missing(newdata)) newdata$emptydat.bin.sVar # wiping out binirized mat in newdata DataStorageClass object...
-#       invisible(self)
-#     },
+      self$model_contrl <- model_contrl
 
-#     # Invisibly return cumm. prob P(A=a|W=w)
-#     # P(A=a|W=w) - calculating the likelihood for obsdat.sA[i] (n vector of a's):
-#     predictAeqa = function(newdata, ...) {
-#       if (gvars$verbose == 2) print("performing prediction for categorical outcome: " %+% self$outvar)
-#       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
-#       if (!missing(newdata)) newdata$binirize.sVar(name.sVar = self$outvar, levels = self$levels)
-#       cumprodAeqa <- super$predictAeqa(newdata, ...)
-#       if (!missing(newdata)) newdata$emptydat.bin.sVar # wiping out binirized mat in newdata object...
-#       # self$wipe.alldat # wiping out all data traces in ModelCategorical
-#       private$cumprodAeqa <- cumprodAeqa
-#       return(cumprodAeqa)
-#     }
-#   ),
-#   active = list(
-#     cats = function() {seq_len(self$reg$nbins)}
-#   )
-# )
+      assert_that(is.string(reg$outvar))
+      self$outvar <- reg$outvar
+      self$outvar.class <- reg$outvar.class
+
+      assert_that(is.character(reg$predvars))
+      self$predvars <- reg$predvars
+
+      self$subset_vars <- reg$subset_vars
+      self$subset_exprs <- reg$subset_exprs
+      assert_that(length(self$subset_exprs) <= 1)
+
+      self$ReplMisVal0 <- reg$ReplMisVal0
+      self$nbins <- reg$nbins
+
+      if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
+      assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
+
+      if (gvars$verbose) {
+        print("New 'ModelCategorical' regression defined:"); print(self$show())
+      }
+
+      invisible(self)
+    },
+
+    # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
+    # Needs to know the values of b for prediction
+    # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
+    predictAeqa = function(newdata, indA, holdout = FALSE, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+      if (missing(newdata) && !is.null(private$probAeqa)) {
+        return(private$probAeqa)
+      }
+      self$predict(newdata, holdout)
+      probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+      probA1 <- private$probA1 # [self$getsubset]
+      # check that predictions P(A=1 | dmat) exist for all obs (not NA)
+      if (any(is.na(probA1))) stop("some of the modeling predictions resulted in NAs, which indicates an error in a prediction routine")
+      ## Predictions for categorical / continuous are already reported as likelihood P(A=a|W) when using condensier
+      if (is.list(probA1) || is.data.table(probA1) || is.data.frame(probA1)) {
+        probA1 <- probA1[[1]]
+      }
+      likelihood <- probA1
+      probAeqa[self$getsubset] <- likelihood
+      private$probAeqa <- probAeqa
+      # **********************************************************************
+      # to save RAM space when doing many stacked regressions wipe out all internal data:
+      self$wipe.alldat
+      # **********************************************************************
+      return(probAeqa)
+    }
+  )
+)

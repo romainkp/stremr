@@ -71,25 +71,24 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## ------------------------------------------------------------------------
   fit_method_g <- "cv"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  lrn_glm <<- Lrnr_glm_fast$new(family = quasibinomial())
-  lrn_glm_sm <<- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
-  # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = quasibinomial())
-  lrn_glmnet_binom <- Lrnr_glmnet$new(family = binomial(), nlambda = 5)
+  lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
+  lrn_glm_sm <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
+  # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = binomial())
+  lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
   # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
-  lrn_glmnet_gaus <- Lrnr_glmnet$new(family = gaussian(), nlambda = 5)
+  lrn_glmnet_gaus <- Lrnr_glmnet$new(family = "gaussian", nlambda = 5)
   sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
                     metalearner = Lrnr_nnls$new())
-  
-  # models_g <<- lrn_glm
-  models_g <<- sl
-  
+
+  # models_g <- lrn_glm
+  models_g <- sl
 
   sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_gaus),
                     metalearner = Lrnr_nnls$new())
-  # models_Q <<- lrn_glm
-  models_Q <<- sl
+  # models_Q <- lrn_glm
+  models_Q <- sl
 
-  # lrn_glm <<- Lrnr_glm$new(outcome_type = binomial())
+  # lrn_glm <- Lrnr_glm$new(outcome_type = binomial())
   # task <- sl3::sl3_Task$new(Odat_DT,
   #                           covariates = "highA1c",
   #                           outcome = "TI",
@@ -110,21 +109,21 @@ context("Testing sl3 cross-validation and continuous super learner")
   # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 50)
-  # models_Q <<- sl
+  # models_Q <- sl
 
   ## ----------------------------------------------------------------
   ## Fit propensity score models.
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
-  OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
+  OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
            stremr::define_CVfolds(nfolds = 5, fold_column = "fold_ID")
 
   OData <- fitPropensity(OData,
-                          gform_TRT = gform_TRT,
-                          stratify_TRT = stratify_TRT,
-                          models_TRT = models_g,
-                          fit_method = fit_method_g
-                          )
+                         gform_TRT = gform_TRT,
+                         stratify_TRT = stratify_TRT,
+                         models_TRT = models_g,
+                         fit_method = fit_method_g
+                        )
 
   ## Get the dataset with weights:
   wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData)

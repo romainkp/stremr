@@ -91,13 +91,13 @@ context("sl3 with delayed future")
   ## ------------------------------------------------------------------------
   fit_method_g <- "none"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  lrn_glm <<- Lrnr_glm_fast$new(family = quasibinomial())
-  lrn_glm_sm <<- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
+  lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
+  lrn_glm_sm <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
   lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = quasibinomial())
   lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = gaussian())
   sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm, lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
                     metalearner = Lrnr_nnls$new())
-  models_g <<- sl
+  models_g <- sl
 
   OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
            stremr::define_CVfolds(nfolds = 10, fold_column = "fold_ID")
@@ -154,8 +154,8 @@ context("sl3 with delayed future")
   # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
   models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 200, nthread = 5)
-  # models_Q <<- lrn_glm
-  # models_Q <<- sl
+  # models_Q <- lrn_glm
+  # models_Q <- sl
 
   ## ----------------------------------------------------------------
   ## Fit propensity score models.

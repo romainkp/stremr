@@ -8,7 +8,7 @@ gvars$opts <- list()        # named list of package options that is controllable
 gvars$misval <- NA_integer_ # the default missing value for observations (# gvars$misval <- -.Machine$integer.max)
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
 gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$tolerr => a = b
-gvars$sVartypes <- list(bin = "univariate")
+gvars$sVartypes <- list(bin = "binomial")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
 gvars$opts.allowedVals <- list(sl3_learner = "_R6_learner_object",

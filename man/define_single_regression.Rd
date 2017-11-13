@@ -7,7 +7,7 @@
 define_single_regression(OData, regforms, stratify = NULL, models = NULL,
   estimator = stremrOptions("estimator"),
   fit_method = stremrOptions("fit_method"),
-  fold_column = stremrOptions("fold_column"), type = "univariate", ...)
+  fold_column = stremrOptions("fold_column"), ...)
 }
 \arguments{
 \item{OData}{OData Input data object created by \code{importData} function.}

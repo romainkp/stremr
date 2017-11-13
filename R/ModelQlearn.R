@@ -3,7 +3,7 @@
 ## ---------------------------------------------------------------------
 ##  R6 class for controlling the internal implementation of Q-learning functionality.
 ##  Supports sequential (recursive) G-computation and longitudinal TMLE.
-##  Inherits from \code{ModelUnivariate} R6 Class.
+##  Inherits from \code{ModelBinomial} R6 Class.
 ##
 ## @docType class
 ## @format An \code{\link{R6Class}} generator object
@@ -43,7 +43,7 @@
 ## }
 ## @export
 ModelQlearn  <- R6Class(classname = "ModelQlearn",
-  inherit = ModelUnivariate,
+  inherit = ModelBinomial,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
@@ -451,18 +451,21 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
           probA1[, ("idx") := NULL]
         }
 
-        ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
+        ## if probA1 will be a one column data.table, we extract and return the actual vector of predictions:
+        if (is.list(probA1) || is.data.table(probA1) || is.data.frame(probA1)) {
+          probA1 <- probA1[[1]]
+        }
+
+        ## if one col matrix, extract the first column that is assumed to contain predictions
         if (is.matrix(probA1)) {
-          private$probA1 <- probA1[,1]
-        } else {
-          private$probA1 <- probA1[[1]]
+          probA1 <- probA1[,1]
         }
 
         ## check that predictions P(A=1 | dmat) exist for all obs
-        if (any(is.na(private$probA1) & !is.nan(private$probA1))) {
-        # if (any(is.na(private$probA1) )) { # & !is.nan(private$probA1)
+        if (any(is.na(probA1) & !is.nan(probA1))) {
           stop("some of the predicted probabilities during seq g-comp resulted in NAs, which indicates an error of a prediction routine")
         }
+        private$probA1 <- probA1
         return(private$probA1)
       }
     },

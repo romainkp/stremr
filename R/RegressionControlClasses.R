@@ -92,8 +92,8 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
         outvar.class <- as.list(rep.int(outvar.class, length(res$outvars)))
         names(outvar.class) <- res$outvars
       } else {
-        outvar.class <- rep.int(list("univariate"), length(res$outvars))
-        ## outvar.class <- OData$type.sVar[res$outvars] ## waz before when we automatically detected the outcome variable type
+        # outvar.class <- rep.int(list("univariate"), length(res$outvars)) ## waz before now we automatically detect the outcome variable type
+        outvar.class <- OData$type.sVar(res$outvars) 
         names(outvar.class) <- res$outvars
       }
       subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)

@@ -2,6 +2,7 @@ test.model.fits.categorCENSOR <- function() {
   require("data.table")
   require("stremr")
   options(stremr.verbose = FALSE)
+  options(sl3.verbose = FALSE)
   options(gridisl.verbose = FALSE)
   set_all_stremr_options(estimator = "speedglm__glm")
 
@@ -113,8 +114,12 @@ test.model.fits.categorCENSOR <- function() {
 test.model.fits.categorCENSOR2 <- function() {
   require("data.table")
   require("stremr")
-  options(stremr.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
+  options(stremr.verbose = TRUE)
+  options(sl3.verbose = TRUE)
+  options(condensier.verbose = TRUE)
+  # options(gridisl.verbose = FALSE)
+  # options(stremr.verbose = FALSE)
+  # options(gridisl.verbose = FALSE)
   set_all_stremr_options(estimator = "speedglm__glm")
 
   #-------------------------------------------------------------------
@@ -169,6 +174,26 @@ test.model.fits.categorCENSOR2 <- function() {
   OdataDT <- defineIntervedTRT(OdataDT, theta = c(0,1), ID = "ID", t = "t", I = "highA1c",
                             CENS = "C", TRT = "TI", MONITOR = "N", tsinceNis1 = "lastNat1",
                             new.TRT.names = c("dlow", "dhigh"), return.allcolumns = TRUE)
+  OdataDT[is.na(N), "N" := 0]
+  OdataDT[is.na(TI), "TI" := 0]
+
+  OData <- stremr::importData(OdataDT, ID = "ID", t_name = "t", 
+                              covars =  c("highA1c", "lastNat1"), 
+                              TRT = "TI", 
+                              CENS = "CatC", 
+                              MONITOR = "N", 
+                              OUTCOME = "Y.tplus1") %>%
+
+           stremr::define_CVfolds(nfolds = 5, fold_column = "fold_ID")
+
+  OData <- fitPropensity(OData,
+                         gform_TRT = gform_TRT,
+                         gform_CENS = gform_CENS,
+                         stratify_TRT = stratify_TRT,
+                         gform_MONITOR = gform_MONITOR
+                         # models_TRT = models_g,
+                         # fit_method = fit_method_g
+                        )
 
   # Estimate IPW-based hazard and survival (KM) for a rule "dhigh":
   res <- stremr(OdataDT, intervened_TRT = "dhigh", tvals = c(0:2),
@@ -179,6 +204,6 @@ test.model.fits.categorCENSOR2 <- function() {
                 MONITOR = "N", gform_MONITOR = gform_MONITOR, OUTCOME = "Y.tplus1",
                 start_h2o_cluster = FALSE)
 
-  # res$estimates
-  res$dataDT
+  res$estimates
+  # res$dataDT
 }

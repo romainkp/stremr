@@ -2,7 +2,7 @@
 ## A trivial class for dealing with deterministic outcome modeling
 ## ----------------------------------------------------------------------------------
 ModelDeterministic  <- R6Class(classname = "ModelDeterministic",
-  inherit = ModelUnivariate,
+  inherit = ModelBinomial,
   cloneable = TRUE,
   portable = TRUE,
   class = TRUE,
