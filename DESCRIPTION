@@ -41,7 +41,9 @@ Imports:
     Rcpp,
     rmarkdown,
     speedglm,
+    sl3,
     stats,
+    SuperLearner,
     tibble,
     tidyr,
     zoo,
@@ -56,6 +58,7 @@ Suggests:
     testthat,
     mockery
 Remotes: 
+    github::jeremyrcoyle/sl3,
     github::jeremyrcoyle/origami@old-stable,
     github::osofr/gridisl
 License: MIT + file LICENSE

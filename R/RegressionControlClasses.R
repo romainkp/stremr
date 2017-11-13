@@ -92,7 +92,8 @@ process_regforms <- function(regforms, default.reg, stratify.EXPRS = NULL, model
         outvar.class <- as.list(rep.int(outvar.class, length(res$outvars)))
         names(outvar.class) <- res$outvars
       } else {
-        outvar.class <- OData$type.sVar[res$outvars]
+        # outvar.class <- rep.int(list("univariate"), length(res$outvars)) ## waz before now we automatically detect the outcome variable type
+        outvar.class <- OData$type.sVar(res$outvars) 
         names(outvar.class) <- res$outvars
       }
       subset_exprs <- create_subset_expr(outvars = res$outvars, stratify.EXPRS = stratify.EXPRS)
@@ -137,7 +138,7 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
   public = list(
     outvar = character(),          # vector of regression outcome variable names
     predvars = character(),        # vector of predictor names
-    outvar.class = list(),         # Named LIST of outcome class names: binary / continuous / categorical
+    outvar.class = list(),         # Named LIST of outcome class names: binary
     subset_vars = list(),          # Named LIST for subset vars, one list item per outcome in outvar, each list item can be a character vector.
                                    # Later these are tested for missing values, which forms the basis of the logical subset vector)
     subset_exprs = list(),         # Named LIST of subset expressions (as strings), one list item per outcome in outvar.
@@ -219,7 +220,7 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
 
 ## --------------------------------------------------------
 ## GENERAL RegressionClass THAT INHERITS FROM SingleRegressionFormClass
-## THIS CLASS IS used (and subsetted, if needed) BY all classes that inherit from GenericModel class
+## THIS CLASS IS used (and subsetted, if needed) BY all classes that inherit from ModelGeneric class
 ## --------------------------------------------------------
 RegressionClass <- R6Class("RegressionClass",
   inherit = SingleRegressionFormClass,
@@ -296,12 +297,15 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
     TMLE = FALSE,
     CVTMLE = FALSE,
     byfold_Q = FALSE,
-    keep_idx = FALSE,
-    stratifyQ_by_rule = FALSE,
+    keep_idx = FALSE,           ## should ModelQlearn remove internally stored subset of indices used for training?
+    keep_model_fit = TRUE,      ## keep the model fit object for current Q_k
+    stratifyQ_by_rule = FALSE,  ## train only among those who are following the rule of interest?
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
     regimen_names = NA,
     pool_regimes = FALSE,
+    maxpY = 1.0,                ## max incidence P(Y=1|...) for rare-outcomes TMLE, only works with learners that can handle logistic-link with outcomes > 1
+    TMLE_updater = "TMLE.updater.speedglm",
     initialize = function(Qreg_counter,
                           all_Qregs_indx,
                           t_period,
@@ -312,8 +316,11 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
                           regimen_names,
                           pool_regimes,
                           keep_idx,
+                          keep_model_fit,
                           lower_bound_zero_Q = stremrOptions("lower_bound_zero_Q"),
                           skip_update_zero_Q = stremrOptions("skip_update_zero_Q"),
+                          maxpY,
+                          TMLE_updater,
                           ...) {
       self$Qreg_counter <- Qreg_counter
       self$all_Qregs_indx <- all_Qregs_indx
@@ -326,6 +333,9 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
       if (!missing(regimen_names)) self$regimen_names <- regimen_names
       if (!missing(pool_regimes)) self$pool_regimes <- pool_regimes
       if (!missing(keep_idx)) self$keep_idx <- keep_idx
+      if (!missing(keep_model_fit)) self$keep_model_fit <- keep_model_fit
+      if (!missing(maxpY)) self$maxpY <- maxpY
+      if (!missing(TMLE_updater)) self$TMLE_updater <- TMLE_updater
 
       self$lower_bound_zero_Q <- lower_bound_zero_Q
       self$skip_update_zero_Q <- skip_update_zero_Q
@@ -350,8 +360,12 @@ RegressionClassQlearn <- R6Class("RegressionClassQlearn",
            lower_bound_zero_Q = self$lower_bound_zero_Q,
            regimen_names = self$regimen_names,
            pool_regimes = self$pool_regimes,
+           keep_idx = self$keep_idx,
+           keep_model_fit = self$keep_model_fit,
            model_contrl = self$model_contrl,
-           censoring = self$censoring
+           censoring = self$censoring,
+           maxpY = self$maxpY,
+           TMLE_updater = self$TMLE_updater
            )
     }
   )

@@ -174,8 +174,10 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
     tolerance = .0001
   )
   ## stratified modeling by rule followers only:
+  models_Q <- defModel(estimator = "speedglm__glm")
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
-                        useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+                        useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE,
+                        models = models_Q)
 
   expect_equal(
     tmle_est3[["estimates"]][["St.TMLE"]],

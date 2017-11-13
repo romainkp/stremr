@@ -27,10 +27,13 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   data.table::setDTthreads(1)
   options(stremr.verbose = FALSE)
+  options(sl3.verbose = FALSE)
   options(gridisl.verbose = FALSE)
   set_all_stremr_options(estimator = "speedglm__glm")
 
   data(OdatDT_10K)
+  # OdatDT_10K[is.na(N), "N" := 0][is.na(CVD), "CVD" := 0][is.na(highA1c), "highA1c" := 0][is.na(TI), "TI" := 0]
+
   Odat_DT <- OdatDT_10K
   # select only the first 1,000 IDs
   Odat_DT <- Odat_DT[ID %in% (1:100), ]
@@ -90,7 +93,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   # library("h2o")
   # h2o::h2o.init(nthreads = 2)
 
-  OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
+  OData <- stremr::importData(Odat_DT, ID = "ID", t = "t", covars = c("highA1c", "CVD", "lastNat1", "lastNat1.factor"), CENS = "C", TRT = "TI", MONITOR = "N", OUTCOME = outcome)
   OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
   OData$dat.sVar[]
   OData$fold_column <- NULL
@@ -107,7 +110,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
 
   ## Note that 'interactions' CANNOT be used with h2o (for now).
   ## The only learners that allow interactions are: "glm" ,"speedglm", "xgboost".
-  models_g <-
+  # models_g <-
      # defModel(estimator = "h2o__glm", family = "binomial",
      #                   # lambda_search = FALSE,
      #                   # nlambdas = 5,
@@ -115,13 +118,23 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
      #                    alpha = 0
      #                    # alpha = c(0.5)
      #                   ))
-    defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1)
+    # defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1)
                       # nrounds = 100,
                       # early_stopping_rounds = 2,
                       # interactions = list(c("CVD", "highA1c")))
      #                   +
      # defModel(estimator = "speedglm__glm", family = "quasibinomial")
+    lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
+    lrn_glm_sm <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
+    # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = binomial())
+    lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
+    # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
+    lrn_glmnet_gaus <- Lrnr_glmnet$new(family = "gaussian", nlambda = 5)
+    sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
+                      metalearner = Lrnr_nnls$new())
 
+    # models_g <- lrn_glm
+    models_g <- sl
     ## ----------------------------------------------------------------
     ## AN EXAMPLE OF A GIANT GRID OF MODELS.
     ## This will perform an extensive search of model hyper-parameters for fitting;
@@ -250,8 +263,8 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Use speedglm to fit all Q.
   ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
-  models_Q <-  defModel(estimator = "speedglm__glm", family = "quasibinomial")
-
+  # models_Q <-  defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  models_Q <-  Lrnr_glm_fast$new(family = quasibinomial())
   ## ------------------------------------------------------------------------
   ## Alternative specifications of Q models for iterative G-COMP (Q) -- NONPARAMETRIC REGRESSION (GBM) + REGULARIZED GLM
   ## ------------------------------------------------------------------------
@@ -289,7 +302,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   OData <- fitPropensity(OData,
                           gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                          models_CENS = models_g, models_TRT = models_g, models_MONITOR = models_g,
+                          models_CENS = models_g, models_TRT = models_g, models_MONITOR = Lrnr_glm_fast$new(family = quasibinomial()),
                           fit_method = fit_method_g,
                           fold_column = fold_column)
 
@@ -297,48 +310,45 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## RUN IPW ANALYSES
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
-  IPW_time <- system.time({
-    IPW <-  analysis %>%
-          rename(trunc_weight = trunc_MSM) %>%
-          distinct(intervened_TRT, trunc_weight) %>%
+  IPW <-  analysis %>%
+        rename(trunc_weight = trunc_MSM) %>%
+        distinct(intervened_TRT, trunc_weight) %>%
 
-          group_by(intervened_TRT) %>%
-          mutate(wts_data = map(first(intervened_TRT), getIPWeights, OData = OData, tmax = tmax)) %>%
-          ## save the tables of weights summaries (sep for each regimen)
-          mutate(wts_tabs = map(wts_data,
-              ~ get_wtsummary(.x, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE))) %>%
-          ## save the tables with number at risk / following each rule (sep for each regimen)
-          mutate(FUPtimes_tabs = map(wts_data,
-                ~ get_FUPtimes(.x, IDnode = ID, tnode = t))) %>%
-          ungroup() %>%
+        group_by(intervened_TRT) %>%
+        mutate(wts_data = map(first(intervened_TRT), getIPWeights, OData = OData, tmax = tmax)) %>%
+        ## save the tables of weights summaries (sep for each regimen)
+        mutate(wts_tabs = map(wts_data,
+            ~ get_wtsummary(.x, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), by.rule = TRUE))) %>%
+        ## save the tables with number at risk / following each rule (sep for each regimen)
+        mutate(FUPtimes_tabs = map(wts_data,
+              ~ get_FUPtimes(.x, IDnode = ID, tnode = t))) %>%
+        ungroup() %>%
 
-          ## IPW-Adjusted KM (Non-Parametric or Saturated MSM):
-          mutate(NPMSM = map2(wts_data, trunc_weight,
-            ~ survNPMSM(wts_data = .x,
-                        trunc_weights = .y,
-                        OData = OData))) %>%
-          mutate(NPMSM = map(NPMSM, "estimates")) %>%
-
-          ## Crude MSM for hazard (w/out IPW):
-          mutate(MSM.crude = map(wts_data,
-            ~ survMSM(wts_data = .x,
-                      OData = OData,
-                      tbreaks = tbreaks,
-                      use_weights = FALSE,
-                      glm_package = "speedglm"))) %>%
-          mutate(MSM.crude = map(MSM.crude, "estimates")) %>%
-
-          ## IPW-MSM for hazard (smoothing over time-intervals in tbreaks):
-          mutate(MSM = map2(wts_data, trunc_weight,
-            ~ survMSM(wts_data = .x,
+        ## IPW-Adjusted KM (Non-Parametric or Saturated MSM):
+        mutate(NPMSM = map2(wts_data, trunc_weight,
+          ~ survNPMSM(wts_data = .x,
                       trunc_weights = .y,
-                      OData = OData,
-                      tbreaks = tbreaks,
-                      glm_package = "speedglm"))) %>%
-          mutate(MSM = map(MSM, "estimates")) %>%
-          rename(trunc_MSM = trunc_weight)
-  })
-  IPW_time_hrs <- IPW_time[3]/60/60
+                      OData = OData))) %>%
+        mutate(NPMSM = map(NPMSM, "estimates")) %>%
+
+        ## Crude MSM for hazard (w/out IPW):
+        mutate(MSM.crude = map(wts_data,
+          ~ survMSM(wts_data = .x,
+                    OData = OData,
+                    tbreaks = tbreaks,
+                    use_weights = FALSE,
+                    glm_package = "speedglm"))) %>%
+        mutate(MSM.crude = map(MSM.crude, "estimates")) %>%
+
+        ## IPW-MSM for hazard (smoothing over time-intervals in tbreaks):
+        mutate(MSM = map2(wts_data, trunc_weight,
+          ~ survMSM(wts_data = .x,
+                    trunc_weights = .y,
+                    OData = OData,
+                    tbreaks = tbreaks,
+                    glm_package = "speedglm"))) %>%
+        mutate(MSM = map(MSM, "estimates")) %>%
+        rename(trunc_MSM = trunc_weight)
 
   ## save IPW tables (will be later merged with main results dataset)
   IPWtabs <-  analysis %>%
@@ -351,21 +361,18 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
-  GCOMP_time <- system.time({
-    GCOMP <-analysis %>%
-          distinct(intervened_TRT, stratifyQ_by_rule) %>%
-          mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-            ~ fit_GCOMP(intervened_TRT = .x,
-                          stratifyQ_by_rule = .y,
-                          tvals = tvals,
-                          OData = OData,
-                          models = models_Q,
-                          Qforms = Qforms,
-                          fit_method = fit_method_Q,
-                          fold_column = fold_column))) %>%
-          mutate(GCOMP = map(GCOMP, "estimates"))
-  })
-  GCOMP_time_hrs <- GCOMP_time[3]/60/60
+  GCOMP <-analysis %>%
+        distinct(intervened_TRT, stratifyQ_by_rule) %>%
+        mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
+          ~ fit_GCOMP(intervened_TRT = .x,
+                        stratifyQ_by_rule = .y,
+                        tvals = tvals,
+                        OData = OData,
+                        models = models_Q,
+                        Qforms = Qforms,
+                        fit_method = fit_method_Q,
+                        fold_column = fold_column))) %>%
+        mutate(GCOMP = map(GCOMP, "estimates"))
 
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
@@ -374,33 +381,27 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
           rename(trunc_weight = trunc_TMLE) %>%
           distinct(intervened_TRT, stratifyQ_by_rule, trunc_weight)
 
-  TMLE_time <- system.time({
-    TMLE <- TMLE %>%
-          mutate(TMLE = pmap(TMLE, fit_TMLE,
-                             tvals = tvals,
-                             OData = OData,
-                             models = models_Q,
-                             Qforms = Qforms,
-                             fit_method = fit_method_Q,
-                             fold_column = fold_column)) %>%
-          mutate(TMLE = map(TMLE, "estimates")) %>%
-          rename(trunc_TMLE = trunc_weight)
-  })
-  TMLE_time_hrs <- TMLE_time[3]/60/60
+  TMLE <- TMLE %>%
+        mutate(TMLE = pmap(TMLE, fit_TMLE,
+                           tvals = tvals,
+                           OData = OData,
+                           models = models_Q,
+                           Qforms = Qforms,
+                           fit_method = fit_method_Q,
+                           fold_column = fold_column)) %>%
+        mutate(TMLE = map(TMLE, "estimates")) %>%
+        rename(trunc_TMLE = trunc_weight)
 
-  CVTMLE_time <- system.time({
-    CVTMLE <- CVTMLE %>%
-          mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
-                             tvals = tvals,
-                             OData = OData,
-                             models = models_Q,
-                             Qforms = Qforms,
-                             fit_method = fit_method_Q,
-                             fold_column = fold_column)) %>%
-          mutate(CVTMLE = map(CVTMLE, "estimates")) %>%
-          rename(trunc_TMLE = trunc_weight)
-  })
-  CVTMLE_time_hrs <- TMLE_time[3]/60/60
+  # CVTMLE <- CVTMLE %>%
+  #       mutate(CVTMLE = pmap(CVTMLE, fit_CVTMLE,
+  #                          tvals = tvals,
+  #                          OData = OData,
+  #                          models = models_Q,
+  #                          Qforms = Qforms,
+  #                          fit_method = fit_method_Q,
+  #                          fold_column = fold_column)) %>%
+  #       mutate(CVTMLE = map(CVTMLE, "estimates")) %>%
+  #       rename(trunc_TMLE = trunc_weight)
 
 
   ## ------------------------------------------------------------
@@ -409,13 +410,14 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   results <-  analysis %>%
               left_join(IPW) %>%
               left_join(GCOMP) %>%
-              left_join(TMLE) %>%
-              left_join(CVTMLE)
+              left_join(TMLE)
+              #  %>%
+              # left_join(CVTMLE)
 
   ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
   results <- results %>%
               # nest(intervened_TRT, NPMSM, MSM.crude, MSM, .key = "estimates")
-              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE, .key = "estimates")
+              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
 
   ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
   ## The RDs data no longer needs the intervened_TRT column
@@ -447,19 +449,12 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## Add models used for g and Q. Create the final analysis file.
   ## Add IPWtabs
   ## ------------------------------------------------------------
-  cat("IPW time, hrs: ", IPW_time_hrs, "\n")
-  cat("GCOMP time, hrs: ", GCOMP_time_hrs, "\n")
-  cat("TMLE time, hrs: ", TMLE_time_hrs, "\n")
-  cat("CVTMLE time, hrs: ", CVTMLE_time_hrs, "\n")
-
   results <- results %>%
              left_join(IPWtabs) %>%
              mutate(fit_method_g = fit_method_g) %>%
              mutate(fit_method_Q = fit_method_Q) %>%
              mutate(models_g = map(fit_method_g, ~ models_g)) %>%
-             mutate(models_Q = map(fit_method_Q, ~ models_Q)) %>%
-             mutate(run_time = map(trunc_wt,
-              ~ tibble(IPW_time_hrs = IPW_time_hrs, GCOMP_time_hrs = GCOMP_time_hrs, TMLE_time_hrs = TMLE_time_hrs)))
+             mutate(models_Q = map(fit_method_Q, ~ models_Q))
 
   ## ------------------------------------------------------------
   ## VARIOUS WAYS OF PLOTTING SURVIVAL CURVES
@@ -480,7 +475,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   longSURV <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, estimates) %>%
               unnest(estimates) %>%
-              gather(key = est, value = estimates, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE) %>%
+              gather(key = est, value = estimates, NPMSM, MSM.crude, MSM, GCOMP, TMLE) %>%
               filter(est %in% ests) %>%
               select(-intervened_TRT) %>%
               nest(estimates, .key = "estimates") %>%
@@ -512,7 +507,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   longRDs <- results %>%
               select(trunc_wt, stratifyQ_by_rule, trunc_MSM, trunc_TMLE, RDs) %>%
               unnest(RDs) %>%
-              gather(key = est, value = RDs, NPMSM, MSM.crude, MSM, GCOMP, TMLE, CVTMLE) %>%
+              gather(key = est, value = RDs, NPMSM, MSM.crude, MSM, GCOMP, TMLE) %>%
               filter(est %in% ests) %>%
               mutate(RDplot = map(RDs, ~ ggRD(.x)))
 

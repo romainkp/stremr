@@ -16,6 +16,8 @@ fit_GCOMP(OData, tvals, Qforms, intervened_TRT = NULL,
   trunc_weights = 10^6, weights = NULL, max_iter = 15,
   adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
   parallel = FALSE, return_wts = FALSE, return_fW = FALSE, reg_Q = NULL,
+  type_intervened_TRT = NULL, type_intervened_MONITOR = NULL, maxpY = 1,
+  TMLE_updater = "TMLE.updater.speedglm",
   verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
@@ -120,6 +122,16 @@ Note: for large datasets setting this to \code{TRUE} may lead to extremely large
 Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).}
 
 \item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}
+
+\item{type_intervened_TRT}{(ADVANCED FEATURE) TBD}
+
+\item{type_intervened_MONITOR}{(ADVANCED FEATURE) TBD}
+
+\item{maxpY}{Maximum probability that the cumulative incidence of the outcome Y(t) is equal to 1.
+Useful for upper-bounding the rare-outcomes.}
+
+\item{TMLE_updater}{Function for performing the TMLE update. Default is the TMLE updater based on speedglm (called \code{"TMLE.updater.speedglm"}).
+Other possible options include \code{"TMLE.updater.glm"}, \code{"linear.TMLE.updater.speedglm"} and \code{"iTMLE.updater.xgb"}.}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 

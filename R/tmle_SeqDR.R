@@ -97,7 +97,7 @@ fit_iTMLE <- function(OData,
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  if (!is.null(models)) assert_that(is.ModelStack(models))
+  assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
 
   # ------------------------------------------------------------------------------------------------
@@ -309,7 +309,7 @@ fit_iTMLE_onet <- function(OData,
 
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
-    ## The following two lines allow for a slightly simplified (shallower) tree representation of GenericModel-type classes.
+    ## The following two lines allow for a slightly simplified (shallower) tree representation of ModelGeneric-type classes.
     ## This also means that stratifying Q fits by some covariate value will not possible with this approach
     ## (i.e., such stratifications would have to be implemented locally by the actual model fitting functions).
     reg_i <- reg$clone()

@@ -1,30 +1,25 @@
 ## ----------------------------------------------------------------------------------
-## Class for defining, fitting and predicting for a single regression model E(Y|X) (univariate outcome).
+## Class for defining, fitting and predicting for a single regression model E(Y|X) (Binomial outcome).
 ## R6 class for fitting and making predictions for a single outcome regression model.
 ## This R6 class can request, store and manage the design matrix Xmat, as well as the outcome Y.
 ## ----------------------------------------------------------------------------------
-BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
+ModelBinomial  <- R6Class(classname = "ModelBinomial",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
   public = list(
-    classify = TRUE,
     outvar = character(),   # outcome name(s)
+    outvar.class = character(),
     predvars = character(), # names of predictor vars
-    cont.sVar.flag = logical(),
-    bw.j = numeric(),
     is.fitted = FALSE,
-
     model_contrl = list(),
     models = list(),
-
     n = NA_integer_,         # total number of rows in the input data
     n_obs_fit = NA_integer_, # total number of observations used for fitting the model
     nbins = integer(),
     subset_vars = NULL,      # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
     subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
     subset_idx = NULL,       # Logical vector of length n (TRUE = include the obs)
-
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
@@ -37,21 +32,33 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
 
       } else {
 
-        opt_params <- model_contrl[["opt_params"]]
-        model_contrl[["opt_params"]] <- NULL
+        stop("for binomial exposures 'model' must be always always specified and it must be an sl3 learner object")
 
-        if (!("estimator" %in% names(opt_params))) opt_params[["estimator"]] <- model_contrl[["estimator"]]
-        if (!("family" %in% names(opt_params))) opt_params[["family"]] <- "quasibinomial"
-        if (!("distribution" %in% names(opt_params))) opt_params[["distribution"]] <- "bernoulli"
+        # opt_params <- model_contrl[["opt_params"]]
+        # model_contrl[["opt_params"]] <- NULL
 
-        self$models <- do.call(gridisl::defModel, opt_params)
-
+        # if (("sl3_learner" %in% names(model_contrl))) {
+        #   sl3_learner <- model_contrl[["sl3_learner"]]
+        #   model_contrl[["sl3_learner"]] <- NULL
+        # } else if (("sl3_learner" %in% names(opt_params))) {
+        #   sl3_learner <- opt_params[["sl3_learner"]]
+        #   opt_params[["sl3_learner"]] <- NULL
+        # } else {
+        #   # message("'sl3_learner' argument for sl3 learner object not found, using default GLM learner 'sl3::Lrnr_glm_fast'")
+        #   if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
+        #   sl3_learner <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+        # }
+        # ## todo: need to decide if the learner object should be already instantiated prior to calling stremr
+        # # assert_that(is(sl3_learner, "R6ClassGenerator"))
+        # assert_that(is(sl3_learner, "Lrnr_base"))
+        # self$models <- sl3_learner
       }
 
       self$model_contrl <- model_contrl
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
+      self$outvar.class <- reg$outvar.class
 
       assert_that(is.character(reg$predvars))
       self$predvars <- reg$predvars
@@ -66,19 +73,10 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
       assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
 
-      # if (gvars$verbose) {
-      #   print("New instance of " %+% class(self)[1] %+% " :"); print(self$show())
-      # }
-
-      # Get the bin width (interval length) for the current bin name self$getoutvarnm (for discretized continuous sA only):
-      self$cont.sVar.flag <- self$getoutvarnm %in% names(reg$intrvls.width)
-      if (self$cont.sVar.flag) {
-        intrvl.idx <- which(names(reg$intrvls.width) %in% self$getoutvarnm)
-        if (length(intrvl.idx) > 1) stop("non-unique names for intrvls.width in RegressionClass")
-        self$bw.j <- reg$intrvls.width[intrvl.idx]
-      } else {
-        self$bw.j <- 1L
+      if (gvars$verbose) {
+        print("New 'ModelBinomial' regression defined:"); print(self$show())
       }
+
       invisible(self)
     },
 
@@ -96,7 +94,7 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
 
       self$is.fitted <- TRUE
-      if (predict) self$predictAeqa(..., indA = data$get.outvar(self$subset_idx, self$getoutvarnm))
+      if (predict) try(self$predictAeqa(..., indA = data$get.outvar(self$subset_idx, self$getoutvarnm)), silent = TRUE)
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
@@ -109,26 +107,28 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     # uses private$model.fit to generate predictions for data:
     predict = function(newdata, holdout = FALSE, ...) {
       assert_that(self$is.fitted)
+      model.fit <- private$model.fit
 
       if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                              add_subject_data = FALSE,
-                                              subset_idx = self$subset_idx,
-                                              # use_best_retrained_model = TRUE,
-                                              holdout = holdout,
-                                              verbose = gvars$verbose)
-
+        if (is(model.fit, "PredictionStack")) {
+          private$probA1 <- gridisl::predict_SL(modelfit = model.fit, add_subject_data = FALSE, subset_idx = self$subset_idx, holdout = holdout, verbose = gvars$verbose)
+        } else if (is(model.fit, "Lrnr_base")) {
+          private$probA1 <- model.fit$predict()
+        } else {
+          stop("model fit object is of unrecognized class (private$model.fit)")
+        }
       } else {
-
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
-        private$probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                              newdata = newdata,
-                                              add_subject_data = FALSE,
-                                              subset_idx = self$subset_idx,
-                                              # use_best_retrained_model = TRUE,
-                                              holdout = holdout,
-                                              verbose = gvars$verbose)
+        if (is(model.fit, "PredictionStack")) {
+          private$probA1 <- gridisl::predict_SL(modelfit = model.fit, newdata = newdata, add_subject_data = FALSE, subset_idx = self$subset_idx, holdout = holdout, verbose = gvars$verbose)
+        } else if (is(model.fit, "Lrnr_base")) {
+          ## todo: allow passing the DataStorage object directly to task, seamlessly
+          new_task <- sl3::sl3_Task$new(newdata$dat.sVar[self$subset_idx, ], covariates = self$predvars, outcome = self$outvar)
+          private$probA1 <- model.fit$predict(new_task)
+        } else {
+          stop("model fit object is of unrecognized class (private$model.fit)")
+        }
 
       }
       return(invisible(self))
@@ -137,46 +137,44 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     # Predict the response P(Bin = b|sW = sw), which is returned invisibly;
     # Needs to know the values of b for prediction
     # WARNING: This method cannot be chained together with methods that follow (s.a, class$predictAeqa()$fun())
-    predictAeqa = function(newdata, bw.j.sA_diff, indA, holdout = FALSE, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+    predictAeqa = function(newdata, indA, holdout = FALSE, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
       if (missing(newdata) && !is.null(private$probAeqa)) {
         return(private$probAeqa)
       }
-
       self$predict(newdata, holdout)
 
-      if (missing(newdata) & missing(indA)) {
-        indA <- self$getoutvarval
-      } else if (missing(indA)) {
-        indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
-      }
-
-      assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
       probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
       probA1 <- private$probA1 # [self$getsubset]
-
       # check that predictions P(A=1 | dmat) exist for all obs (not NA)
-      if (any(is.na(probA1))) {
-        stop("some of the modeling predictions resulted in NAs, which indicates an error in a prediction routine")
-      }
+      if (any(is.na(probA1))) stop("some of the modeling predictions resulted in NAs, which indicates an error in a prediction routine")
 
-      # Discrete version for joint density:
-      # likelihood_1 <- as.vector(probA1^(indA) * (1 - probA1)^(1L - indA))
-      likelihood_2 <- probA1[[1]]^(indA) * (1 - probA1[[1]])^(1L - indA)
-      # likelihood_3 <- probA1[, (names(probA1)) := .SD^(indA) * (1 - .SD)^(1L - indA)]
+      ## todo: make it more robust (non-dependent on the name of prediction column, but rather
+      ## based on the learner / outcome type (contin / cat / binary))
+      ## Predictions can be of two types:
+      ## 1) Likelihood P(A=a|W) -- nothing else needs to be done; or
+      ## 2) Probability P(A=1|W) (i.e., logistic regression) -- turn this into likelihood P(A=a|W)
 
-      # probAeqa[self$getsubset] <- probA1^(indA) * (1 - probA1)^(1L - indA)
-      probAeqa[self$getsubset] <- likelihood_2
+      # if ("likelihood" %in% names(probA1)) {
+      #   ## 1) using condensier, already returns the likelihood predictions:
+      #   likelihood <- probA1[["likelihood"]]
+      # } else {
+        ## 2) regular classification / binary regression problem, turn into likelihood:
+        if (missing(newdata) & missing(indA)) {
+          indA <- self$getoutvarval
+        } else if (missing(indA)) {
+          indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
+        }
+        assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
+        if (is.list(probA1) || is.data.table(probA1) || is.data.frame(probA1)) {
+          probA1 <- probA1[[1]]
+        }
+        likelihood <- probA1^(indA) * (1 - probA1)^(1L - indA)
+        ## alternative versions of above:
+        # likelihood_1 <- as.vector(probA1^(indA) * (1 - probA1)^(1L - indA))
+        # likelihood_3 <- probA1[, (names(probA1)) := .SD^(indA) * (1 - .SD)^(1L - indA)]
+      # }
 
-      # Continuous version for the joint density:
-      # probAeqa[self$getsubset] <- (probA1^indA) * exp(-probA1)^(1 - indA)
-      # Alternative intergrating the last hazard chunk up to x:
-      # difference of sA value and its left most bin cutoff: x - b_{j-1}
-      if (!missing(bw.j.sA_diff)) {
-        # + integrating the constant hazard all the way up to value of each sa:
-        # probAeqa[self$getsubset] <- probAeqa[self$getsubset] * (1 - bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1)^(indA)
-        # cont. version of above:
-        probAeqa[self$getsubset] <- probAeqa[self$getsubset] * exp(-bw.j.sA_diff[self$getsubset]*(1/self$bw.j)*probA1[[1]])^(indA)
-      }
+      probAeqa[self$getsubset] <- likelihood
       private$probAeqa <- probAeqa
 
       # **********************************************************************
@@ -184,6 +182,10 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       self$wipe.alldat
       # **********************************************************************
       return(probAeqa)
+    },
+
+    predict.gstar = function(newdata, ...) { # P(A^*[i]=A^*|W=w) - calculating the likelihood for g^*(A)
+      stop("not implemented")
     },
 
     define.subset.idx = function(data) {
@@ -198,17 +200,17 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
       return(invisible(self))
     },
 
-    # take fitted BinaryOutcomeModel class object as an input and save the fits to itself
+    # take fitted ModelBinomial class object as an input and save the fits to itself
     copy.fit = function(bin.out.model) {
-      assert_that("BinaryOutcomeModel" %in% class(bin.out.model))
+      assert_that("ModelBinomial" %in% class(bin.out.model))
       private$model.fit <- bin.out.model$getfit
       self$is.fitted <- TRUE
       invisible(self)
     },
 
-    # take BinaryOutcomeModel class object that contains the predictions for P(A=1|sW) and save these predictions to self$
+    # take ModelBinomial class object that contains the predictions for P(A=1|sW) and save these predictions to self$
     copy.predict = function(bin.out.model) {
-      assert_that("BinaryOutcomeModel" %in% class(bin.out.model))
+      assert_that("ModelBinomial" %in% class(bin.out.model))
       assert_that(self$is.fitted)
       private$probA1 <- bin.out.model$getprobA1
     },
@@ -226,9 +228,12 @@ BinaryOutcomeModel  <- R6Class(classname = "BinaryOutcomeModel",
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE) {
       if (print_format) {
-        return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% ";\\ Stratify: " %+% self$subset_exprs %+% ";\\ N: " %+% self$n_obs_fit)
+        return("P(" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% ")" %+% 
+              ";\\ outvar.class: " %+% self$outvar.class %+% 
+              ";\\ Stratify: " %+% self$subset_exprs %+% 
+              ";\\ N: " %+% self$n_obs_fit)
       } else {
-        return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs, N = self$n_obs_fit))
+        return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs, N = self$n_obs_fit, outvar.class = self$outvar.class))
       }
     }
   ),
