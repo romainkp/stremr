@@ -27,7 +27,7 @@ Depends:
     R (>= 3.2.1)
 Imports:
     assertthat,
-    condenser,
+    condensier,
     data.table,
     dplyr,
     gridisl,
