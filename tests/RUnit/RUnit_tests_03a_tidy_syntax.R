@@ -24,6 +24,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   library("tidyr")
   library("purrr")
   library("dplyr")
+  library("sl3")
 
   data.table::setDTthreads(1)
   options(stremr.verbose = FALSE)

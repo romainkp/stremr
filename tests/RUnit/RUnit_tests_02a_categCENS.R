@@ -4,7 +4,7 @@ test.model.fits.categorCENSOR <- function() {
   options(stremr.verbose = TRUE)
   options(sl3.verbose = TRUE)
   options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
 
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
@@ -124,7 +124,7 @@ test.model.fits.categorCENSOR2 <- function() {
   # options(gridisl.verbose = FALSE)
   # options(stremr.verbose = FALSE)
   # options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
 
   #-------------------------------------------------------------------
   # EXAMPLE WITH CATEGORICAL CENSORING (3 levels)
