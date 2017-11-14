@@ -43,7 +43,6 @@ context("IPW-MSM for hazard")
                               ID = "ID", t = "t",
                               covars = c("highA1c", "lastNat1", "lastNat1.factor"),
                               CENS = "C", TRT = "TI",
-                              # , MONITOR = "N",
                               OUTCOME = outcome,
                               remove_extra_rows = FALSE)
 
@@ -59,26 +58,33 @@ context("IPW-MSM for hazard")
   ## Note that time variable and "rule.name" will be always available by default.
   # ----------------------------------------------------------------------
   wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "gTI.dlow") # , rule_name = "TI1"
+  wts.DT.0 <- copy(wts.DT.0)
   ## this is your \bar{a} identifier of the static regimen 1, i.e., f(\bar{a}) create your own variable
   wts.DT.0[, "theta" := 0]
   wts.DT.0[, "sumtheta" := cumsum(theta), by = ID]
 
   wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "gTI.dhigh") # , rule_name = "TI0"
+  wts.DT.1 <- copy(wts.DT.1)
   ## this is your \bar{a} identifier of the static regimen 2, i.e., f(\bar{a}) create your own variable
   wts.DT.1[, "theta" := 1]
   wts.DT.1[, "sumtheta" := cumsum(theta), by = ID]
 
+
   # ----------------------------------------------------------------------
   # old IPW-MSM for hazard, only allows smoothing over time-intervals (fit constant hazard on some range of t values)
   # ----------------------------------------------------------------------
-  ## old MSM that allows pooling over time intervals, summaries f(t,d)=(theta, sumtheta) aren't allowed
-  survMSM_res_old <- survMSM(list(wts.DT.1, wts.DT.0), OData, glm_package = "speedglm", return_wts = TRUE)
-  survMSM_res_old[["gTI.dlow"]][["estimates"]]
-  survMSM_res_old[["gTI.dhigh"]][["estimates"]]
+  test_that(" old MSM that only allows pooling over time intervals", {
+    ## old MSM that allows pooling over time intervals, summaries f(t,d)=(theta, sumtheta) aren't allowed
+    survMSM_res_old <- survMSM(list(wts.DT.1, wts.DT.0), OData, glm_package = "speedglm", return_wts = TRUE)
+    survMSM_res_old[["gTI.dlow"]][["estimates"]]
+    survMSM_res_old[["gTI.dhigh"]][["estimates"]]
+  })
+
 
   # ----------------------------------------------------------------------
   ## new IPW-MSM for the hazard allows using arbitrary GLM formulas
   # ----------------------------------------------------------------------
+  test_that("EXAMPLE 1. Saturated MSM, must match the MSM above (define a separate indicator for each (t x rule) combo)", {
   ## EXAMPLE 1.
   ## Saturated MSM, must match the MSM above (define a separate indicator for each (t x rule) combo)
   survMSM_res <- fit_hMSM(list(wts.DT.1, wts.DT.0),
@@ -86,21 +92,29 @@ context("IPW-MSM for hazard")
                            OData)
   survMSM_res[["estimates"]]
   survMSM_res[["msm.fit"]]
+  })
 
-  ## EXAMPLE 2.
-  ## MSM with user-defined covariate f(t,d)='theta' that is contant in t (only varies by d)
-  ## This MSM will smooth over time (time used as a continuous covariate) and adds interaction of (t,theta)
-  survMSM_res2 <- fit_hMSM(list(wts.DT.1, wts.DT.0), form = "Y.tplus1 ~ -1 + t + theta + t:theta",
-                            OData,
-                            tmax = 10)
-  survMSM_res2[["estimates"]]
-  survMSM_res2[["msm.fit"]]
 
-  ## EXAMPLE 3.
-  ## MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)
-  ## add an arbitrary covariate that var
-  survMSM_res3 <- fit_hMSM(list(wts.DT.1, wts.DT.0), form = "Y.tplus1 ~ -1 + t + theta + sumtheta", OData)
-  survMSM_res3[["estimates"]]
-  survMSM_res3[["msm.fit"]]
 
+  test_that("EXAMPLE 2. MSM with user-defined covariate f(t,d)='theta' that is contant in t (only varies by d)", {
+    ## EXAMPLE 2.
+    ## MSM with user-defined covariate f(t,d)='theta' that is contant in t (only varies by d)
+    ## This MSM will smooth over time (time used as a continuous covariate) and adds interaction of (t,theta)
+    survMSM_res2 <- fit_hMSM(list(wts.DT.1, wts.DT.0), form = "Y.tplus1 ~ -1 + t + theta + t:theta",
+                              OData,
+                              tmax = 10)
+    survMSM_res2[["estimates"]]
+    survMSM_res2[["msm.fit"]]
+  })
+
+
+
+  test_that("EXAMPLE 3. MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)", {
+    ## EXAMPLE 3.
+    ## MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)
+    ## add an arbitrary covariate that var
+    survMSM_res3 <- fit_hMSM(list(wts.DT.1, wts.DT.0), form = "Y.tplus1 ~ -1 + t + theta + sumtheta", OData)
+    survMSM_res3[["estimates"]]
+    survMSM_res3[["msm.fit"]]
+  })
 

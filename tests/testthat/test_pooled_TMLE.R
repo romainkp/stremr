@@ -21,7 +21,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   library("dplyr")
 
   data(OdatDT_10K)
-  # Odat_DT <- OdatDT_10K
+  Odat_DT <- OdatDT_10K
   # select only the first 100 IDs
   Odat_DT <- Odat_DT[ID %in% (1:500), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
