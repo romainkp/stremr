@@ -278,11 +278,6 @@ fit_GCOMP <- function(OData,
                         TMLE_updater = "TMLE.updater.speedglm",
                         verbose = getOption("stremr.verbose"), ...) {
 
-  # cat("Calling fit_GCOMP:\n")
-  # cat("intervened_TRT: ", intervened_TRT, "\n")
-  # cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n")
-  # cat("stratify_by_last: ", stratify_by_last, "\n")
-  # cat("trunc_weights: ", trunc_weights, "\n")
   if (!is.null(weights)) stop("optional argument 'weights' is not implemented yet for TMLE or GCOMP")
 
   gvars$verbose <- verbose

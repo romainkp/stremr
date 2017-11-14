@@ -141,6 +141,7 @@ define_single_regression <- function(OData,
 #' @param MONITOR A column name in \code{data} for the indicator(s) of monitoring events.
 #' Leave as missing if not intervening on monitoring.
 #' @param OUTCOME A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.
+#' @param weights Optional column name in \code{data} that contains subject- and time-specific weights.
 #' @param noCENScat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 #' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 #' for variables specifed in \code{CENS}.
@@ -160,6 +161,7 @@ importData <- function(data,
                        TRT = "A",
                        MONITOR = NULL, # MONITOR = "N",
                        OUTCOME = "Y",
+                       weights = NULL,
                        noCENScat = 0L,
                        remove_extra_rows = TRUE,
                        verbose = getOption("stremr.verbose")) {
@@ -186,7 +188,8 @@ importData <- function(data,
                 Nnodes = MONITOR,
                 Ynode = OUTCOME,
                 IDnode = ID,
-                tnode = t_name)
+                tnode = t_name,
+                weights = weights)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENScat = noCENScat)
 
   # --------------------------------------------------------------------------------------------------------
@@ -202,15 +205,6 @@ importData <- function(data,
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0 && verbose)
     message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
-  # for (factor.varnm in factor.Ls) {
-  #   factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
-  #   factor.levs <- factor.levs[-1] # remove the first level (reference class)
-  #   # use levels to define cat indicators:
-  #   OData$dat.sVar[,(factor.varnm %+% "_" %+% factor.levs) := lapply(factor.levs, function(x) levels(get(factor.varnm))[get(factor.varnm)] %in% x)]
-  #   # to remove the origional factor var: # OData$dat.sVar[,(factor.varnm):=NULL]
-  #   new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
-  #   # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
-  # }
   for (factor.varnm in factor.Ls) {
     factor.levs <- levels(OData$dat.sVar[[factor.varnm]])
     ## only define new dummies for factors with > 2 levels
@@ -239,11 +233,13 @@ importData <- function(data,
     OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   }
 
-  for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
-  for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
-  for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
-  for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
-  for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
+  for (Cnode  in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
+  for (Anode  in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
+  for (Nnode  in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
+  for (Ynode  in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
+  for (Lnode  in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
+  for (IDnode in nodes$IDnode) CheckVarNameExists(OData$dat.sVar, IDnode)
+  for (weights in nodes$weights) CheckVarNameExists(OData$dat.sVar, weights)
 
   return(OData)
 }
@@ -319,6 +315,9 @@ define_propensity_model <- function(models, opt_params) {
 #' using the function \code{\link{define_single_regression}}.
 #' @param reg_MONITOR (ADVANCED FEATURE). Manually define and input the regression specification for each strata of monitoring model,
 #' using the function \code{\link{define_single_regression}}.
+#' @param use_weights (NOT IMPLEMENTED) Set to \code{TRUE} to pass the previously specified weights column to all 
+#' learners for all of the propensity score models. This will result in a weights regression models being fit for P(A(t)|L(t)), P(C(t)|L(t)), P(N(t)|L(t)).
+#' (NOTE: This will only work when using sl3 learners, such as the default sl3 learner \code{sl3::Lrnr_glm_fast}).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional
@@ -345,6 +344,7 @@ fitPropensity <- function(OData,
                           reg_CENS,
                           reg_TRT,
                           reg_MONITOR,
+                          use_weights = FALSE,
                           # type_CENS = "univariate",
                           # type_TRT = "univariate",
                           # type_MONITOR = "univariate",
@@ -357,20 +357,14 @@ fitPropensity <- function(OData,
   opt_params <- capture.exprs(...)
   if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
 
-  # models_CENS_control <- c(list(   models = models_CENS),    opt_params = opt_params)
-  # models_TRT_control <- c(list(    models = models_TRT),     opt_params = opt_params)
-  # models_MONITOR_control <- c(list(models = models_MONITOR), opt_params = opt_params)
-
   models_CENS_control <-    define_propensity_model(models_CENS,    opt_params)
   models_TRT_control <-     define_propensity_model(models_TRT,     opt_params)
   models_MONITOR_control <- define_propensity_model(models_MONITOR, opt_params)
 
-  # models_CENS_control[["estimator"]] <- models_TRT_control[["estimator"]] <- models_MONITOR_control[["estimator"]] <- estimator[1L]
   models_CENS_control[["fit_method"]] <- models_TRT_control[["fit_method"]] <- models_MONITOR_control[["fit_method"]] <- fit_method[1L]
   models_CENS_control[["fold_column"]] <- models_TRT_control[["fold_column"]] <- models_MONITOR_control[["fold_column"]] <- fold_column
-  # if (!missing(nfolds)) {
-  #   models_CENS[["nfolds"]] <- models_TRT[["nfolds"]] <- models_MONITOR[["nfolds"]] <- nfolds
-  # }
+
+  if (use_weights) stop("...use_weights feature is not implemented yet...")
 
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
@@ -552,7 +546,7 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' \code{trunc_weights} will be truncated.
 #' @param type_intervened_TRT (ADVANCED FEATURE) TBD
 #' @param type_intervened_MONITOR (ADVANCED FEATURE) TBD
-#' @return ...
+#' @return A \code{data.table} with cumulative weights for each subject and each time-point saved under column "cum.IPAW".
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
