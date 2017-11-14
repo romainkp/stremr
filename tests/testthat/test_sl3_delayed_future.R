@@ -201,7 +201,7 @@ context("sl3 with delayed future")
 
 
   ## Get the dataset with weights:
-  wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData, tmax = tmax)
+  wts_data <- getIPWeights(intervened_TRT = "gTI.dlow", OData = OData)
 
   ## ------------------------------------------------------------
   ## Parallel GCOMP ANALYSIS

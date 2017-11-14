@@ -109,9 +109,15 @@ context("origami Super Learner")
      #                    alpha = 0
      #                    # alpha = c(0.5)
      #                   ))
-    defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1) +
+    # defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1) +
     # defModel(estimator = "speedglm__glm", family = "quasibinomial") +
-    defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 20)
+    # defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 20)
+    Lrnr_sl$new(learners = Stack$new(
+                Lrnr_xgboost$new(objective = "reg:logistic", nthread = 1, nrounds = 20),
+                Lrnr_glm_fast$new(family = quasibinomial())
+                ),
+                metalearner = Lrnr_solnp$new()
+            )
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
@@ -120,16 +126,19 @@ context("origami Super Learner")
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
 
   ## no cross-validation model selection, just fit a single model specified below
-  fit_method_Q <- "origamiSL"
-  # fit_method_Q <- "cv"
+  # fit_method_Q <- "origamiSL"
+  fit_method_Q <- "cv"
 
   ## Use speedglm to fit all Q.
   ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   models_Q <-
-    defModel(estimator = "xgboost__glm", family = "binomial", nthread = 1) +
-    defModel(estimator = "speedglm__glm", family = "quasibinomial") +
-    defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 20)
+    Lrnr_sl$new(learners = Stack$new(
+                Lrnr_xgboost$new(objective = "reg:logistic", nthread = 1, nrounds = 20),
+                Lrnr_glm_fast$new(family = quasibinomial())
+                ),
+                metalearner = Lrnr_solnp$new()
+            )
 
   ## ------------------------------------------------------------------------
   ## Alternative specifications of Q models for iterative G-COMP (Q) -- NONPARAMETRIC REGRESSION (GBM) + REGULARIZED GLM
@@ -165,16 +174,14 @@ context("origami Super Learner")
   ## Fit propensity score models.
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
-# test_that("fitting g w/ Super Learner", {
-
+  # test_that("fitting g w/ Super Learner", {
   OData <- fitPropensity(OData,
                           gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                          stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                          models_CENS = models_g, models_TRT = models_g, models_MONITOR = models_g,
+                          stratify_TRT = stratify_TRT,
+                          models_CENS = models_g, models_TRT = models_g,
                           fit_method = fit_method_g,
                           fold_column = fold_column)
-
-# })
+  # })
 
   ## ------------------------------------------------------------
   ## RUN IPW ANALYSES
@@ -236,24 +243,21 @@ context("origami Super Learner")
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
-# test_that("fitting Q w/ origami Super Learner, with byfold = TRUE", {
-  GCOMP_time <- system.time({
-    GCOMP <-analysis %>%
-          distinct(intervened_TRT, stratifyQ_by_rule) %>%
-          mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
-            ~ fit_GCOMP(intervened_TRT = .x,
-                          stratifyQ_by_rule = .y,
-                          tvals = tvals,
-                          OData = OData,
-                          models = models_Q,
-                          Qforms = Qforms,
-                          fit_method = fit_method_Q,
-                          fold_column = fold_column,
-                          byfold = TRUE))) %>%
-          mutate(GCOMP = map(GCOMP, "estimates"))
-  })
-  GCOMP_time_hrs <- GCOMP_time[3]/60/60
-# })
+  # test_that("fitting Q w/ origami Super Learner, with byfold = TRUE", {
+  GCOMP <-analysis %>%
+        distinct(intervened_TRT, stratifyQ_by_rule) %>%
+        mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
+          ~ fit_GCOMP(intervened_TRT = .x,
+                        stratifyQ_by_rule = .y,
+                        tvals = tvals,
+                        OData = OData,
+                        models = models_Q,
+                        Qforms = Qforms,
+                        fit_method = fit_method_Q,
+                        fold_column = fold_column,
+                        byfold = FALSE))) %>%
+        mutate(GCOMP = map(GCOMP, "estimates"))
+  # })
 
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
@@ -334,10 +338,6 @@ context("origami Super Learner")
   ## Add models used for g and Q. Create the final analysis file.
   ## Add IPWtabs
   ## ------------------------------------------------------------
-  cat("IPW time, hrs: ", IPW_time_hrs, "\n")
-  cat("GCOMP time, hrs: ", GCOMP_time_hrs, "\n")
-  # cat("TMLE time, hrs: ", TMLE_time_hrs, "\n")
-  # cat("CVTMLE time, hrs: ", CVTMLE_time_hrs, "\n")
 
   # results <- results %>%
   #            left_join(IPWtabs) %>%

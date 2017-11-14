@@ -1,3 +1,4 @@
+context("IPW-MSM for hazard")
   require("data.table")
   require("stremr")
   options(stremr.verbose = TRUE)

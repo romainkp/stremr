@@ -1,3 +1,5 @@
+context("continuous exposure")
+
 require("stremr")
 require("sl3")
 options(stremr.verbose = FALSE)
@@ -21,7 +23,8 @@ gform_TRT = "continA ~ CVD + highA1c + N.tminus1"
 test_that("Propensity score fitting with continuous exposure will fail by default", {
   # gform_MONITOR <- "N ~ 1"
   # gform_MONITOR = gform_MONITOR
-  expect_error(OData <- fitPropensity(OData = OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT))
+  # expect_error()
+  OData <- fitPropensity(OData = OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT)
   OData$dat.sVar[]
 
   OData$modelfit.gA$predict(OData)
@@ -53,7 +56,7 @@ test_that("Propensity score fitting with continuous exposure will work with Supe
                         models_TRT = sl)
 })
 
-test_that("IPW works with continuous exposure and cond. dens. SuperLearner", {
+test_that("IPW and TMLE run with continuous exposure and cond. dens. SuperLearner", {
   options(sl3.verbose = TRUE)
   options(stremr.verbose = TRUE)
   OData <- importData(Odat_DT[1:2000, ], ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "continA", MONITOR = "N", OUTCOME = "Y.tplus1")

@@ -63,10 +63,11 @@ OData$nfolds <- NULL
 ## FIT PROPENSITY SCORES WITH xgboost gbm and V fold CV
 ## ----------------------------------------------------------------
 ## xgboost gbm
+params_g <- gridisl::defModel(estimator = "xgboost__gbm", family = "quasibinomial", rounds = 5, nthread = 1)
 OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                         stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                        estimator = "xgboost__gbm", fit_method = "cv", fold_column = "fold_ID",
-                        family = "quasibinomial", rounds = 5, nthread = 1)
+                        models_CENS = params_g, models_TRT = params_g, models_MONITOR = params_g,
+                        fit_method = "cv", fold_column = "fold_ID")
 ## h2o gbm
 # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
 #                        stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,

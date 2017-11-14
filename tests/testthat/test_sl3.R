@@ -83,7 +83,7 @@ context("Testing sl3 cross-validation and continuous super learner")
   # models_g <- lrn_glm
   models_g <- sl
 
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_gaus),
+  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm),
                     metalearner = Lrnr_nnls$new())
   # models_Q <- lrn_glm
   models_Q <- sl
