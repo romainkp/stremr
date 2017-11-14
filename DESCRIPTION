@@ -30,9 +30,7 @@ Imports:
     condenser,
     data.table,
     dplyr,
-    ggplot2,
     gridisl,
-    h2o,
     magrittr,
     methods,
     origami,
@@ -44,20 +42,23 @@ Imports:
     speedglm,
     sl3,
     stats,
-    SuperLearner,
     tibble,
     tidyr,
-    zoo,
-    xgboost
+    zoo
 LinkingTo: Rcpp
 Suggests:
     doParallel,
     foreach,
     ggiraph,
+    ggplot2,
+    glmnet,
+    h2o,
     knitr,
     RUnit,
+    SuperLearner,
     testthat,
-    mockery
+    mockery,
+    xgboost
 Remotes:
     github::jeremyrcoyle/sl3,
     github::jeremyrcoyle/origami@old-stable,
