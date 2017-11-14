@@ -29,7 +29,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   options(stremr.verbose = FALSE)
   options(sl3.verbose = FALSE)
   options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
 
   data(OdatDT_10K)
   # OdatDT_10K[is.na(N), "N" := 0][is.na(CVD), "CVD" := 0][is.na(highA1c), "highA1c" := 0][is.na(TI), "TI" := 0]

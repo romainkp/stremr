@@ -40,8 +40,8 @@ fast.load.to.H2O <- function(dat.sVar, destination_frame = "H2O.dat.sVar", use_D
   var$get.dat.sVar(indx)
 }
 
-print.DataStorageClass <- function(object){
-  object$print()
+print.DataStorageClass <- function(x, ...){
+  print(x$dat.sVar)
 }
 
 #' Extract input data from DataStorageClass

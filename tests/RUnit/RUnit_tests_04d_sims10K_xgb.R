@@ -308,6 +308,8 @@ test.xgboost.10Kdata <- function() {
     # TMLE w/ xgboost glm and CV
     # ---------------------------------------------------------------------------------------------------------
     # params = list(fit.package = "xgboost", fit.algorithm = "glm", family = "quasibinomial") # , objective = "reg:logistic"
+    t.surv <- c(0:2)
+    Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
     params <- Lrnr_xgboost$new(objective = "reg:logistic", rounds = 5, nthread = 1)
     tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
 
