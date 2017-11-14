@@ -138,11 +138,9 @@ test.GenericModelPredict <- function() {
 
 test.options <- function() {
   stremrOptions()
-  stremrOptions("estimator")
   checkException(stremrOptions("blahblah"))
   checkException(stremrOptions("blahblah", 5))
   checkException(stremrOptions("estimator", NULL))
-  stremrOptions("estimator", "xgboost__gbm")
   checkException(stremrOptions("estimator", "blahblah"))
   checkException(stremrOptions("bin_method", "blah"))
 
