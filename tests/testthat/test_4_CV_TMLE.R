@@ -15,6 +15,7 @@ library("stremr")
 library("magrittr")
 library("data.table")
 library("testthat")
+library("sl3")
 
 data.table::setDTthreads(1)
 options(stremr.verbose = FALSE)

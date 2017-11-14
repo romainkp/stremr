@@ -20,6 +20,7 @@ true_EYgstar <- attributes(dt_2t)[["true_EYgstar"]]
 true_EYA0 <- attributes(dt_2t)[["true_EYA0"]]
 true_EYA1 <- attributes(dt_2t)[["true_EYA1"]]
 
+dt_2t <- dt_2t[ID %in% c(1:1000), ]
 ## define the counterfactual A^*
 dt_2t[, ("Astoch") := 0.3][, ("A0") := 0][, ("A1") := 1]
 ## add some lags
@@ -47,7 +48,6 @@ sl3_cv_t <- system.time({
   OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT, models_TRT = sl)
 })
 
-# models_TRT <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
 OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT)
 
 # sl3_cv_h2o_t <- system.time({
@@ -84,7 +84,7 @@ lrn_xgb <- Lrnr_xgboost$new(objective = "reg:logistic", nrounds = 5)
 lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
 lrn_glm2 <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("A", "L1", "L2", "L3"))
 lrn_glmnet <- Lrnr_glmnet$new(family = family, nlambda = 5)
-lrn_stack <- Stack$new(lrn_xgb, lrn_glm, lrn_glm2, lrn_glmnet) ## Stack candidates:
+lrn_stack <- Stack$new(lrn_xgb, lrn_glm, lrn_glm2) ## Stack candidates: , lrn_glmnet
 lrn_pipe <- Pipeline$new(lnr_inter, lrn_stack) ## Pipeline interaction terms into stack of learners
 lrn_sl <- Lrnr_sl$new(learners = lrn_stack, metalearner = Lrnr_solnp$new()) ## Define the super-learner on the entire thing with metalearner
 # Qmodels <- Lrnr_sl$new(learners = list(lrn_pipe), metalearner = Lrnr_solnp$new()) ## Define the super-learner on the entire thing with metalearner

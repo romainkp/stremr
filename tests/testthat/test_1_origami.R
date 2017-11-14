@@ -17,6 +17,7 @@ context("origami Super Learner")
   library("tidyr")
   library("purrr")
   library("dplyr")
+  library("sl3")
 
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)

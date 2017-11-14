@@ -1,6 +1,7 @@
 context("IPW-MSM for hazard")
   require("data.table")
   require("stremr")
+  library("sl3")
   options(stremr.verbose = TRUE)
   options(gridisl.verbose = FALSE)
 

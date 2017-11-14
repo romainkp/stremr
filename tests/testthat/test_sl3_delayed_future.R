@@ -38,7 +38,7 @@ context("sl3 with delayed future")
   library("purrr")
   library("dplyr")
 
-  setDT(1)
+  data.table::setDTthreads(1)
   
   options(stremr.verbose = TRUE)
   options(gridisl.verbose = TRUE)
@@ -47,8 +47,8 @@ context("sl3 with delayed future")
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
-  # select only the first 100 IDs
-  # Odat_DT <- Odat_DT[ID %in% (1:500), ]
+  # select only the first 1000 IDs
+  Odat_DT <- Odat_DT[ID %in% (1:1000), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   ## -----------------------------------------------------------------------
