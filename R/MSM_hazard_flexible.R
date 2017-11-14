@@ -1,3 +1,10 @@
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("ht.MSM", "St.MSM"))
+}
+
+#' @importFrom stats formula gaussian model.matrix
+NULL
+
 getCovariateFormula <- function(object) {
   form <- formula(object)
   if (!(inherits(form, "formula"))) {
@@ -50,8 +57,6 @@ return(wts_data)
 #' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
 #' @param getSEs A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the
 #' estimated survival by using the MSM influence curve.
-#' @param est_name A string naming the current MSM estimator. Ignored by the current routine but is
-#' used when generating reports with \code{make_report_rmd}.
 #' @param glm_package Which R package should be used for fitting the weighted logistic regression
 #' model (MSM) for the survival hazard?
 #' Currently available options are \code{"glm"} only.

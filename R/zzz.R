@@ -11,10 +11,10 @@ gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$toler
 gvars$sVartypes <- list(bin = "binomial")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
-gvars$opts.allowedVals <- list(sl3_learner = "_R6_learner_object",
-                               estimator = c("speedglm__glm", "glm__glm",
-                                             "xgboost__glm", "xgboost__gbm", "xgboost__randomForest",
-                                             "h2o__glm", "h2o__gbm", "h2o__randomForest", "h2o__deeplearning"),
+gvars$opts.allowedVals <- list(#sl3_learner = "_R6_learner_object",
+                               # estimator = c("speedglm__glm", "glm__glm",
+                               #               "xgboost__glm", "xgboost__gbm", "xgboost__randomForest",
+                               #               "h2o__glm", "h2o__gbm", "h2o__randomForest", "h2o__deeplearning"),
                                fit_method = c("none", "cv"), # holdout
                                fold_column = "_character_",
                                lower_bound_zero_Q = c(TRUE, FALSE),
@@ -87,11 +87,7 @@ print_stremr_opts <- function() {
 #' \strong{Calling this function will reset all unspecified options (omitted arguments) to their default values}!
 #' The preferred way to set options for \code{stremr} is to use \code{\link{stremrOptions}}, which allows specifying individual options without having to reset all other options.
 #' To reset all options to their defaults simply run \code{set_all_stremr_options()} without any parameters/arguments.
-#' @param sl3_learner Instantiated sl3 learner object (R6).
-#' @param estimator Specify default estimator for model fitting.
-#' To see the range of possible choices run \code{stremrOptions("estimator", showvals = TRUE)}.
-# @param fit_package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o", "xgboost").
-# @param fit_algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "deeplearning")
+# @param sl3_learner Instantiated sl3 learner object (R6).
 #' @param fit_method Specify the default method for model selection.
 #' Possible options are \code{"none"} - no model selection and no cross-validation (when using only a single model, e.g., \code{speedglm__glm})
 #' or \code{"cv"} - perform V-fold cross-validation to select the best model based on lowest MSE.
@@ -114,10 +110,6 @@ print_stremr_opts <- function() {
 # poolContinVar = FALSE,
 # , "holdout"
 set_all_stremr_options <- function(
-                            sl3_learner = sl3::Lrnr_glm_fast$new(family = "quasibinomial"),
-                            estimator = c("speedglm__glm", "glm__glm",
-                                          "xgboost__glm", "xgboost__gbm", "xgboost__randomForest",
-                                          "h2o__glm", "h2o__gbm", "h2o__randomForest", "h2o__deeplearning"),
                             fit_method = c("none", "cv"),
                             fold_column = NULL,
                             lower_bound_zero_Q = TRUE,
@@ -129,16 +121,13 @@ set_all_stremr_options <- function(
 
   old.opts <- gvars$opts
 
-  assert_that(is(sl3_learner, "Lrnr_base"))
-  estimator <- estimator[1L]
+  # assert_that(is(sl3_learner, "Lrnr_base"))
   fit_method <- fit_method[1L]
 
-  if (!(estimator %in% gvars$opts.allowedVals[["estimator"]])) stop("estimator must be one of: " %+% paste0(gvars$opts.allowedVals[["estimator"]], collapse=", "))
   if (!(fit_method %in% gvars$opts.allowedVals[["fit_method"]])) stop("fit_method must be one of: " %+% paste0(gvars$opts.allowedVals[["fit_method"]], collapse=", "))
 
   opts <- list(
-    sl3_learner = sl3_learner,
-    estimator = estimator,
+    # sl3_learner = sl3_learner,
     fit_method = fit_method,
     fold_column = fold_column,
     lower_bound_zero_Q = lower_bound_zero_Q,

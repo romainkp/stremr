@@ -2,7 +2,7 @@
 NULL
 
 if(getRversion() >= "2.15.1") {
-  utils::globalVariables(c(".", "dx1", "dx2"))
+  utils::globalVariables(c(".", "dx1", "dx2", "pval", "CI", "estimator"))
 }
 
 #' Evaluate the long format dataset of risk differences over estimated survival time-points
@@ -159,8 +159,8 @@ print_RDs <- function(RD_tab, dx1, dx2, time, ...) {
 
   RD_tab_sel <- 
     RD_tab %>% 
-    filter((dx1 %in% dx1_sel) & (dx2 %in% dx2_sel) & (time %in% time_sel)) %>%
-    select(estimator, dx1_name, dx2_name, time, RD, RD.SE, CI, pval)
+    dplyr::filter((dx1 %in% dx1_sel) & (dx2 %in% dx2_sel) & (time %in% time_sel)) %>%
+    dplyr::select(estimator, dx1_name, dx2_name, time, RD, RD.SE, CI, pval)
 
   var <- knitr::kable(RD_tab_sel, ...)
   print(var)

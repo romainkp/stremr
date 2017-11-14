@@ -4,20 +4,11 @@
 \alias{set_all_stremr_options}
 \title{Setting all possible \code{stremr} options at once.}
 \usage{
-set_all_stremr_options(sl3_learner = sl3::Lrnr_glm_fast$new(family =
-  "quasibinomial"), estimator = c("speedglm__glm", "glm__glm", "xgboost__glm",
-  "xgboost__gbm", "xgboost__randomForest", "h2o__glm", "h2o__gbm",
-  "h2o__randomForest", "h2o__deeplearning"), fit_method = c("none", "cv"),
-  fold_column = NULL, lower_bound_zero_Q = TRUE,
-  skip_update_zero_Q = TRUE, up_trunc_offset = 20, low_trunc_offset = -10,
-  eps_tol = 10^-5)
+set_all_stremr_options(fit_method = c("none", "cv"), fold_column = NULL,
+  lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE,
+  up_trunc_offset = 20, low_trunc_offset = -10, eps_tol = 10^-5)
 }
 \arguments{
-\item{sl3_learner}{Instantiated sl3 learner object (R6).}
-
-\item{estimator}{Specify default estimator for model fitting.
-To see the range of possible choices run \code{stremrOptions("estimator", showvals = TRUE)}.}
-
 \item{fit_method}{Specify the default method for model selection.
 Possible options are \code{"none"} - no model selection and no cross-validation (when using only a single model, e.g., \code{speedglm__glm})
 or \code{"cv"} - perform V-fold cross-validation to select the best model based on lowest MSE.

@@ -31,7 +31,7 @@ context("NDE assumption")
   ## ----------------------------------------------------------------
   ## IMPORT DATA
   ## ----------------------------------------------------------------
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
   OData <- importData(Odat_DT,
                       ID = "ID", t = "t",
                       covars = c("highA1c", "lastNat1", "lastNat1.factor"),

@@ -332,17 +332,29 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitly asked
-      TMLE_intercept <- new.TMLE.fit$TMLE_intercept
-      if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
-        update.Qstar.coef <- TMLE_intercept
-      } else {
-        update.Qstar.coef <- 0
-      }
+      # TMLE_intercept <- new.TMLE.fit$TMLE_intercept
+      # if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
+      #   update.Qstar.coef <- TMLE_intercept
+      # } else {
+      #   update.Qstar.coef <- 0
+      # }
 
       ## Update the model predictions (Qk_hat) for initial Q[k] from GCOMP at time-point k.
       ## Based on TMLE update, the predictions now include ALL obs that are newly censored and just stopped following the rule at k:
       Qk_hat <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
-      Qk_hat_updated <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
+
+      if (!is.null(new.TMLE.fit)) {
+        save <- private$probA1
+        newdata <- data.frame(intercept = rep(1L, length(Qk_hat)))
+        Qk_hat_updated <- predict(new.TMLE.fit, newdata = newdata, offset = qlogis(Qk_hat))
+        # private$probA1 <- plogis(qlogis(private$probA1) + update.Qstar.coef)
+        # head(cbind(private$probA1, save))
+      } else {
+        Qk_hat_updated <- Qk_hat
+      }
+
+      # Qk_hat_updated <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
+
       # Save all predicted vals as Qk_hat[k] in row k or first target and then save targeted values:
       data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_updated]
 

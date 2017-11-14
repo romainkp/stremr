@@ -64,15 +64,6 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param stratify Expression(s) for creating strata(s) (model will be fit separately on each strata)
 #' @param models Optional parameter specifying the models with \code{gridisl} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param estimator Specify the default estimator to use for fitting propensity scores.
-#' Should be a character string in the format 'Package__Algorithm'.
-#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-#' This argument will only have an effect when some of the propensity score models were not explicitly defined
-#' with their corresponding arguments:
-#' \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
-#' To put it another way:
-#' this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
-#' are specified.
 #' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 #' (must specify the column name that contains the fold IDs).
@@ -89,18 +80,26 @@ define_single_regression <- function(OData,
                                      regforms,
                                      stratify = NULL,
                                      models = NULL,
-                                     estimator = stremrOptions("estimator"),
+                                     # estimator = stremrOptions("estimator"),
                                      fit_method = stremrOptions("fit_method"),
                                      fold_column = stremrOptions("fold_column"),
                                      ...) {
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  sVar.exprs <- capture.exprs(...)
+  opt_params <- capture.exprs(...)
+
+  if (!is.null(models) && suppressWarnings(!is.na(models))) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  } else {
+    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+  }
+
   models_control <- c(list(models = models), 
-                           opt_params = list(sVar.exprs)
+                           opt_params = list(opt_params)
                       )
-  models_control[["estimator"]] <- estimator[1L]
+
+  # models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
 
@@ -305,15 +304,6 @@ define_propensity_model <- function(models, opt_params) {
 #' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with
 #' \code{gridisl} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param estimator Specify the default estimator to use for fitting propensity scores.
-#' Should be a character string in the format 'Package__Algorithm'.
-#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-#' This argument will only have an effect when some of the propensity score models were not explicitly defined
-#' with their corresponding arguments:
-#' \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
-#' To put it another way:
-#' this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
-#' are specified.
 #' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 #' (must specify the column name that contains the fold IDs).
@@ -350,7 +340,6 @@ fitPropensity <- function(OData,
                           models_CENS = NULL,
                           models_TRT = NULL,
                           models_MONITOR = NULL,
-                          estimator = stremrOptions("estimator"),
                           fit_method = stremrOptions("fit_method"),
                           fold_column = stremrOptions("fold_column"),
                           reg_CENS,
@@ -376,7 +365,7 @@ fitPropensity <- function(OData,
   models_TRT_control <-     define_propensity_model(models_TRT,     opt_params)
   models_MONITOR_control <- define_propensity_model(models_MONITOR, opt_params)
 
-  models_CENS_control[["estimator"]] <- models_TRT_control[["estimator"]] <- models_MONITOR_control[["estimator"]] <- estimator[1L]
+  # models_CENS_control[["estimator"]] <- models_TRT_control[["estimator"]] <- models_MONITOR_control[["estimator"]] <- estimator[1L]
   models_CENS_control[["fit_method"]] <- models_TRT_control[["fit_method"]] <- models_MONITOR_control[["fit_method"]] <- fit_method[1L]
   models_CENS_control[["fold_column"]] <- models_TRT_control[["fold_column"]] <- models_MONITOR_control[["fold_column"]] <- fold_column
   # if (!missing(nfolds)) {

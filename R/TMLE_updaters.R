@@ -282,7 +282,8 @@ iTMLE.updater.xgb <- function(Y, X, newX, family, obsWeights, params, ...) {
 
 #' @param object Results of calling \code{TMLE.updater.speedglm} or \code{TMLE.updater.glm}.
 #' @param newdata Design matrix with test data for which predictions should be obtained.
-#' Must contain a column named "offset".
+#' May contain a column named "offset", instead of it being passed as a separate argument.
+#' @param offset Offset (on logit scale if using logistic regression update).
 #' @rdname TMLE.updater.glm
 #' @export
 predict.TMLE.updater <- function(object, newdata, offset, ...) {
@@ -297,7 +298,8 @@ predict.TMLE.updater <- function(object, newdata, offset, ...) {
 
 #' @param object Results of calling \code{linear.TMLE.updater.speedglm}.
 #' @param newdata Design matrix with test data for which predictions should be obtained.
-#' Must contain a column named "offset".
+#' May contain a column named "offset", instead of it being passed as a separate argument.
+#' @param offset Offset (on logit scale if using logistic regression update).
 #' @rdname linear.TMLE.updater.speedglm
 #' @export
 predict.linear.TMLE.updater <- function(object, newdata, offset, ...) {
@@ -312,7 +314,8 @@ predict.linear.TMLE.updater <- function(object, newdata, offset, ...) {
 
 #' @param object Results of calling \code{iTMLE.updater.glm}.
 #' @param newdata Design matrix with test data for which predictions should be obtained.
-#' Must contain a column named "offset".
+#' May contain a column named "offset", instead of it being passed as a separate argument.
+#' @param offset Offset (on logit scale if using logistic regression update).
 #' @rdname iTMLE.updater.glm
 #' @export
 predict.iTMLE.updater.glm <- function(object, newdata, offset, ...) {
@@ -330,7 +333,8 @@ predict.iTMLE.updater.glm <- function(object, newdata, offset, ...) {
 
 #' @param object Results of calling \code{iTMLE.updater.xgb} functions.
 #' @param newdata Design matrix with test data for which predictions should be obtained.
-#' Must contain a column named "offset".
+#' May contain a column named "offset", instead of it being passed as a separate argument.
+#' @param offset Offset (on logit scale if using logistic regression update).
 #' @rdname iTMLE.updater.xgb
 #' @export
 predict.iTMLE.updater.xgb <- function (object, newdata, offset, ...)  {

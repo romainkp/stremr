@@ -24,7 +24,7 @@ test.tidy.speedglm.10Kdata <- function() {
   # options(gridisl.verbose = TRUE)
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
 
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K

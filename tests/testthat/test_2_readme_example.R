@@ -79,7 +79,7 @@ test_that("readme examples run as expected without errors", {
   # install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))
 
   require("h2o")
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
   h2o::h2o.init(nthreads = -1)
   OData <- fitPropensity(OData,
                          gform_CENS = gform_CENS,

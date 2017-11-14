@@ -3,6 +3,9 @@
 #' Fit sequential (iterative means) GCOMP by pooling across more than one regimen
 #'
 #' Calls \code{fit_GCOMP} with argument \code{TMLE = FALSE}.
+#' @param OData Input data object created by \code{importData} function.
+#' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
 #' @param ... Arguments that will be passed down to the underlying function \code{fit_GCOMP}
 #' @return \code{data.table} with TMLE survival by time
 #' @seealso \code{\link{fit_GCOMP}}
@@ -41,7 +44,11 @@ fit_pooled_GCOMP <- function(OData, intervened_TRT, ...) {
 # ---------------------------------------------------------------------------------------
 #' Fit TMLE by pooling across more than one regimen
 #'
-#' Calls \code{fit_GCOMP} with argument \code{TMLE = TRUE}.
+#' Calls \code{fit_GCOMP} with argument \code{TMLE = FALSE}.
+#' @param OData Input data object created by \code{importData} function.
+#' @param intervened_TRT Column name in the input data with the probabilities (or indicators) of counterfactual treatment nodes being equal to 1 at each time point.
+#' Leave the argument unspecified (\code{NULL}) when not intervening on treatment node(s).
+#' @param IPWeights (Optional) result of calling function \code{getIPWeights} for running TMLE (evaluated automatically when missing)
 #' @param ... Arguments that will be passed down to the underlying function \code{fit_GCOMP}
 #' @return \code{data.table} with TMLE survival by time
 #' @seealso \code{\link{fit_GCOMP}}

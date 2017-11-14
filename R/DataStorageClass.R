@@ -1,3 +1,41 @@
+fast.load.to.H2O <- function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
+  tmpf <- tempfile(fileext = ".csv")
+  assertthat::assert_that(is.data.table(dat.sVar))
+
+  # devDTvs <- exists("fwrite", where = "package:data.table")
+
+  if (!use_DTfwrite) {
+    message("For optimal performance please install the most recent version of data.table package.")
+    H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
+  } else {
+    data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
+
+    types <- sapply(dat.sVar, class)
+    types <- gsub("integer64", "numeric", types)
+    types <- gsub("integer", "numeric", types)
+    types <- gsub("double", "numeric", types)
+    types <- gsub("complex", "numeric", types)
+    types <- gsub("logical", "enum", types)
+    types <- gsub("factor", "enum", types)
+    types <- gsub("character", "string", types)
+    types <- gsub("Date", "Time", types)
+
+    # replace all irregular characters to conform with destination_frame regular exprs format:
+    tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
+    tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
+    tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+
+    H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
+                                        header = TRUE,
+                                        col.types = types,
+                                        na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
+                                        destination_frame = destination_frame)
+
+    file.remove(tmpf)
+  }
+  return(invisible(H2O.dat.sVar))
+}
+
 `[.DataStorageClass` <- function(var, indx, ...) {
   var$get.dat.sVar(indx)
 }

@@ -5,7 +5,6 @@
 \title{Directly specify a single regression model}
 \usage{
 define_single_regression(OData, regforms, stratify = NULL, models = NULL,
-  estimator = stremrOptions("estimator"),
   fit_method = stremrOptions("fit_method"),
   fold_column = stremrOptions("fold_column"), ...)
 }
@@ -18,16 +17,6 @@ define_single_regression(OData, regforms, stratify = NULL, models = NULL,
 
 \item{models}{Optional parameter specifying the models with \code{gridisl} R package.
 Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
-
-\item{estimator}{Specify the default estimator to use for fitting propensity scores.
-Should be a character string in the format 'Package__Algorithm'.
-See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-This argument will only have an effect when some of the propensity score models were not explicitly defined
-with their corresponding arguments:
-\code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
-To put it another way:
-this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
-are specified.}
 
 \item{fit_method}{Model selection approach. Can be \code{"none"} - no model selection,
 \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE

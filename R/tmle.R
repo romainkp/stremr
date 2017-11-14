@@ -1,3 +1,7 @@
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("Qk_hat", "cum.inc", "mean_Q", "EIC_i", "TMLE_Var", "IC.St"))
+}
+
 ## ------------------------------------------------------------------------------------------
 ## TO DO:
 ## ------------------------------------------------------------------------------------------
@@ -208,10 +212,6 @@ fit_CVTMLE <- function(...) {
 #' The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}
 #' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
 #' requires a previously defined parallel back-end cluster)
-#' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
-#' Should be a character string in the format 'Package__Algorithm'.
-#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-#' This argument is ignored when the fitting procedures are already defined via the argument \code{models}.
 #' @param fit_method Model selection approach. Can be either \code{"none"} - no model selection or
 #' \code{"cv"} - discrete Super Learner using V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs) or
 #' \code{"origamiSL"} - continuous Super Learner that uses the \code{origami} R package to select the
@@ -250,7 +250,6 @@ fit_GCOMP <- function(OData,
                         intervened_MONITOR = NULL,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
                         models = NULL,
-                        estimator = stremrOptions("estimator"),
                         fit_method = stremrOptions("fit_method"),
                         fold_column = stremrOptions("fold_column"),
                         TMLE = FALSE,
@@ -325,7 +324,6 @@ fit_GCOMP <- function(OData,
   models_control <- c(list(models = models), 
                       list(reg_Q = reg_Q), 
                       opt_params = list(opt_params))
-  models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
 
@@ -509,7 +507,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
 # ITERATIVE (UNIVARIATE) TMLE AGLORITHM for a single time-point.
 # Called as part of the fit_GCOMP_onet()
 # ------------------------------------------------------------------------------------------------
-iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001) {
+iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001, TMLE_updater = "TMLE.updater.speedglm") {
   get_field_Qclass <- function(allQmodels, fieldName) {
     lapply(allQmodels, function(Qclass) Qclass[[fieldName]])
     # lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]][[fieldName]])
@@ -532,6 +530,8 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
       # function(Qclass) Qclass$getPsAsW.models()[[1]]$Propagate_TMLE_fit(data = OData, new.TMLE.fit = TMLE.fit))
     return(invisible(allQmodels))
   }
+
+  TMLE_updater <- get(TMLE_updater)
 
   allQmodels <- Qlearn.fit$getPsAsW.models() # Get the individual Qlearning classes
   # res_all_subset_idx <- as.vector(sort(unlist(get_field_Qclass(allQmodels, "subset_idx"))))
@@ -557,6 +557,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
     # ------------------------------------------------------------------------------------
     # Get t-specific and i-specific components of the EIC for all t > t.init:
     EIC_i_tplus <- wts_TMLE * (Qkplus1 - Qk_hat)
+
     # Get t-specific and i-specific components of the EIC for all t = t.init (mean pred from last reg, all n obs)
     res_lastPredQ <- allQmodels[[Qreg_idx[1]]]$predictAeqa()  # Qreg_idx[1] is the index for the last Q-fit
     # res_lastPredQ <- allQmodels[[length(allQmodels)]]$predictAeqa()
@@ -572,13 +573,18 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
         # if (abs(EIC_est) < (1 / OData$nuniqueIDs)) break
         if (abs(EIC_est) < (1 / (adapt_stop_factor*sqrt(OData$nuniqueIDs)))) break
       } else {
-        if (!is.null(tol_eps) & (abs(TMLE.fit$TMLE_intercept) <= tol_eps)) break
+        if (!is.null(tol_eps) & (abs(TMLE.fit$object$coef) <= tol_eps)) break
       }
     } else if (iter > max_iter) {
       break
     }
 
-    TMLE.fit <- tmle.update(Qkplus1 = Qkplus1, Qk_hat = Qk_hat, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
+    Y <- Qkplus1
+    newX <- X <- data.frame(intercept = rep(1L, length(Qk_hat)), offset = qlogis(Qk_hat))
+    TMLE.fit <- TMLE_updater(Y, X, newX, obsWeights = wts_TMLE)
+    TMLE.fit <- TMLE.fit$fit
+    # TMLE.fit <- tmle.update(Qkplus1 = Qkplus1, Qk_hat = Qk_hat, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
+
     Propagate_TMLE_fits(allQmodels, OData, TMLE.fit)
   }
 
@@ -734,7 +740,9 @@ fit_GCOMP_onet <- function(OData,
   ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- lastQ.fit$predictAeqa()
   ## remove vector of predictions from the modeling class (to free up memory):
-  lastQ.fit$wipe.probs
+  if (!iterTMLE) {
+    lastQ.fit$wipe.probs
+  }
 
   ## Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression:
   mean_est_t_2 <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(Qk_hat)), by = "rule.name"]
@@ -765,7 +773,7 @@ fit_GCOMP_onet <- function(OData,
   # RUN ITERATIVE TMLE (updating all Q's at once):
   # ------------------------------------------------------------------------------------------------
   if (iterTMLE){
-    res <- iterTMLE_onet(OData, Qlearn.fit, Qreg_idx, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps)
+    res <- iterTMLE_onet(OData, Qlearn.fit, Qreg_idx, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, TMLE_updater = TMLE_updater)
     ## 1a. Grab the mean prediction from the very last regression (over all n observations);
     lastQ_inx <- Qreg_idx[1]
     res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()

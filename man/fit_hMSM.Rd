@@ -54,9 +54,6 @@ integer, continuous, character or factor.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
-
-\item{est_name}{A string naming the current MSM estimator. Ignored by the current routine but is
-used when generating reports with \code{make_report_rmd}.}
 }
 \value{
 MSM estimation results composed of a separate list for each treatment regimen.
