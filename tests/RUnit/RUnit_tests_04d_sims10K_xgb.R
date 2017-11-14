@@ -393,8 +393,7 @@ test.xgboost.10Kdata <- function() {
 
 
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                           estimator = "speedglm__glm")
+                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR)
     tmle_est_dlow <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dlow",
                              Qforms = Qforms, stratifyQ_by_rule = FALSE,
                              models = params, fit_method = "cv", fold_column = "fold_ID")
