@@ -54,6 +54,7 @@ Suggests:
     glmnet,
     h2o,
     knitr,
+    Rsolnp,
     RUnit,
     SuperLearner,
     testthat,
