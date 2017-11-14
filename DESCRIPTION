@@ -27,6 +27,7 @@ Depends:
     R (>= 3.2.1)
 Imports:
     assertthat,
+    condenser,
     data.table,
     dplyr,
     ggplot2,
@@ -57,9 +58,10 @@ Suggests:
     RUnit,
     testthat,
     mockery
-Remotes: 
+Remotes:
     github::jeremyrcoyle/sl3,
     github::jeremyrcoyle/origami@old-stable,
+    github::osofr/condensier,
     github::osofr/gridisl
 License: MIT + file LICENSE
 LazyData: true
