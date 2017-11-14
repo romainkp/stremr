@@ -17,6 +17,13 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
 
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
+  options(sl3.verbose = FALSE)
+  options(condensier.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  # options(sl3.verbose = TRUE)
+  # options(condensier.verbose = TRUE)
+
   data.table::setDTthreads(1)
 
   data(OdatDT_10K)

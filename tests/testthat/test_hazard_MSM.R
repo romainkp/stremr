@@ -2,15 +2,19 @@ context("IPW-MSM for hazard")
   require("data.table")
   require("stremr")
   library("sl3")
-  options(stremr.verbose = TRUE)
+  options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
+  options(sl3.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  # options(sl3.verbose = TRUE)
 
   # ------------------------------------------------------------------------------------------------------
   # load simulated data
   # ------------------------------------------------------------------------------------------------------
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
-  # Odat_DT <- Odat_DT[ID %in% (1:100), ]
+  Odat_DT <- Odat_DT[ID %in% (1:500), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";

@@ -86,7 +86,14 @@ true_EYgstar <- attributes(dt_1t)[["true_EYgstar"]]
 true_EYA0 <- attributes(dt_1t)[["true_EYA0"]]
 true_EYA1 <- attributes(dt_1t)[["true_EYA1"]]
 
-options(stremr.verbose = TRUE)
+options(stremr.verbose = FALSE)
+options(gridisl.verbose = FALSE)
+options(sl3.verbose = FALSE)
+options(condensier.verbose = FALSE)
+# options(stremr.verbose = TRUE)
+# options(gridisl.verbose = TRUE)
+# options(sl3.verbose = TRUE)
+# options(condensier.verbose = TRUE)
 
 ## have to create a time variable, even though its a constant for all observations
 dt_1t[, "t" := 0]

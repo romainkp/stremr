@@ -2,9 +2,17 @@ context("continuous exposure")
 
 require("stremr")
 require("sl3")
-options(stremr.verbose = FALSE)
-options(condensier.verbose = FALSE)
 require("data.table")
+
+options(stremr.verbose = FALSE)
+options(gridisl.verbose = FALSE)
+options(sl3.verbose = FALSE)
+options(condensier.verbose = FALSE)
+# options(stremr.verbose = TRUE)
+# options(gridisl.verbose = TRUE)
+# options(sl3.verbose = TRUE)
+# options(condensier.verbose = TRUE)
+
 data(OdataNoCENS)
 Odat_DT <- as.data.table(OdataNoCENS, key=c(ID, t))
 
