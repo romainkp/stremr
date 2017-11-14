@@ -4,7 +4,6 @@ test.iTMLE.10Kdata <- function() {
     origami <- requireNamespace("origami", quietly = TRUE)
     if (!reqxgb || !reqh2o || !origami) return(NULL)
 
-    `%+%` <- function(a, b) paste0(a, b)
     library("origami")
     library("h2o")
     library("xgboost")
@@ -32,7 +31,7 @@ test.iTMLE.10Kdata <- function() {
     # ---------------------------------------------------------------------------
     ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
     lagnodes <- c("C", "TI", "N")
-    newVarnames <- lagnodes %+% ".tminus1"
+    newVarnames <- paste0(lagnodes, ".tminus1")
     Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
     # indicator that the person has never been on treatment up to current t
     Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
@@ -65,12 +64,20 @@ test.iTMLE.10Kdata <- function() {
     # FIT PROPENSITY SCORES WITH xgboost gbm and V fold CV
     # ----------------------------------------------------------------
     ## xgboost gbm
+    params <- defModel(estimator = "xgboost__gbm",
+                                family = "quasibinomial",
+                                nthread = 1,
+                                nrounds = 5,
+                                early_stopping_rounds = 2)
+
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
-                            stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                            estimator = "xgboost__gbm",
+                            stratify_TRT = stratify_TRT, 
+                            models_TRT = params,
+                            models_CENS = params,
+                            # gform_MONITOR = gform_MONITOR,
+                            # estimator = "xgboost__gbm",
                             fit_method = "cv",
-                            fold_column = "fold_ID",
-                            family = "quasibinomial", rounds = 5, early_stopping_rounds = 2, nthread = 1)
+                            fold_column = "fold_ID")
 
     # ## h2o gbm
     # OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
@@ -158,7 +165,7 @@ test.iTMLE.10Kdata <- function() {
                         parallel = FALSE,
                         return_fW = TRUE)
                         # parallel = TRUE)
-    # tmle_est[["estimates"]]
+    tmle_est[["estimates"]]
     # fW_fit <- tmle_est[["estimates"]][["fW_fit"]][[1]]
     # preds_fW <- gridisl::predict_SL(fW_fit, Odat_DT[t==0, ])
     # MSE_err <- mean((Odat_DT[t==0, ][["Y.tplus1"]] - preds_fW)^2)

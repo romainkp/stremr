@@ -24,9 +24,6 @@ The signature of the function \code{\link{set_all_stremr_options}} also lists al
 \examples{
 \dontrun{
 stremrOptions()
-stremrOptions('estimator')
-stremrOptions('estimator', showvals = TRUE)
-stremrOptions('estimator', 'xgboost__gbm')
 stremrOptions('fit_method', 'cv')
 }
 }

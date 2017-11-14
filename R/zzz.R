@@ -41,9 +41,6 @@ getopt <- function(optname) return(stremrOptions(o = optname))
 #' @seealso \code{\link{set_all_stremr_options}}
 #' @examples \dontrun{
 #' stremrOptions()
-#' stremrOptions('estimator')
-#' stremrOptions('estimator', showvals = TRUE)
-#' stremrOptions('estimator', 'xgboost__gbm')
 #' stremrOptions('fit_method', 'cv')
 #' }
 stremrOptions <- function (o, value, showvals = FALSE)  {
@@ -105,10 +102,6 @@ print_stremr_opts <- function() {
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{stremrOptions}}, \code{\link{print_stremr_opts}}
 #' @export
-# fit_package = c("speedglm", "glm", "xgboost", "h2o"),
-# fit_algorithm = c("glm", "gbm", "randomForest", "drf", "deeplearning"),
-# poolContinVar = FALSE,
-# , "holdout"
 set_all_stremr_options <- function(
                             fit_method = c("none", "cv"),
                             fold_column = NULL,

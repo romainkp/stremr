@@ -85,8 +85,8 @@ Only works with \code{fit_method}=\code{"origamiSL"}.}
 
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 
-\item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
-The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
+\item{weights}{Optional \code{data.table} with additional observation- and time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}). Not implemented yet.}
 
 \item{max_iter}{For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.}
 
@@ -112,7 +112,7 @@ requires a previously defined parallel back-end cluster)}
 Return the data.table with subject-specific IP weights as part of the output.
 Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 
-\item{return_fW}{Return the \code{gridisl} model object from the very last Q regression.
+\item{return_fW}{When \code{TRUE}, will return the object fit for the last Q regression as part of the output table.
 Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).}
 
 \item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}

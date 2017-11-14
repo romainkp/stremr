@@ -195,8 +195,8 @@ fit_CVTMLE <- function(...) {
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
-#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
+#' @param weights Optional \code{data.table} with additional observation- and time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}). Not implemented yet.
 #' @param max_iter For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.
 #' @param adapt_stop For iterative TMLE only: Choose between two stopping criteria for iterative TMLE, default is \code{TRUE},
 #' which will stop the iterative TMLE algorithm in an adaptive way. Specifically, the iterations will stop when the mean estimate
@@ -224,7 +224,7 @@ fit_CVTMLE <- function(...) {
 #' @param return_wts Applies only when \code{TMLE = TRUE}.
 #' Return the data.table with subject-specific IP weights as part of the output.
 #' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
-#' @param return_fW Return the \code{gridisl} model object from the very last Q regression.
+#' @param return_fW When \code{TRUE}, will return the object fit for the last Q regression as part of the output table.
 #' Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).
 #' @param reg_Q (ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.
 #' @param type_intervened_TRT (ADVANCED FEATURE) TBD
@@ -283,6 +283,7 @@ fit_GCOMP <- function(OData,
   # cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n")
   # cat("stratify_by_last: ", stratify_by_last, "\n")
   # cat("trunc_weights: ", trunc_weights, "\n")
+  if (!is.null(weights)) stop("optional argument 'weights' is not implemented yet for TMLE or GCOMP")
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -355,7 +356,6 @@ fit_GCOMP <- function(OData,
     assert_that("cum.IPAW" %in% names(IPWeights))
     OData$IPwts_by_regimen <- IPWeights
 
-    if (!is.null(weights)) stop("optional argument 'weights' is not implemented for TMLE or GCOMP")
     ## Add additional observation-specific weights to the cumulative weights:
     # IPWeights <- process_opt_wts(IPWeights, weights, nodes, adjust_outcome = FALSE)
   }
@@ -638,7 +638,7 @@ fit_GCOMP_onet <- function(OData,
   # Adding user-specified stratas to each Q(t) regression:
   all_Q_stratify <- Qstratas_by_t
   if (!is.null(Qstratify)) {
-    stop("...Qstratify is not implemented...")
+    stop("...Qstratify is not implemented yet...")
     assert_that(is.vector(Qstratify))
     assert_that(is.character(Qstratify))
     for (idx in seq_along(all_Q_stratify)) {
