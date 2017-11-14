@@ -16,10 +16,11 @@ context("IPW-MSM for hazard")
   Odat_DT <- OdatDT_10K
   Odat_DT <- Odat_DT[ID %in% (1:500), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
+  Odat_DT <- copy(Odat_DT)
 
   ID <- "ID"; t <- "t"; TRT <- "TI"; I <- "highA1c"; outcome <- "Y.tplus1";
   lagnodes <- c("C", "TI", "N")
-  newVarnames <- lagnodes %+% ".tminus1"
+  newVarnames <- paste0(lagnodes, ".tminus1")
   Odat_DT[, (newVarnames) := shift(.SD, n=1L, fill=0L, type="lag"), by=ID, .SDcols=(lagnodes)]
   # indicator that the person has never been on treatment up to current t
   Odat_DT[, ("barTIm1eq0") := as.integer(c(0, cumsum(get(TRT))[-.N]) %in% 0), by = eval(ID)]
@@ -72,8 +73,8 @@ context("IPW-MSM for hazard")
   # ----------------------------------------------------------------------
   ## old MSM that allows pooling over time intervals, summaries f(t,d)=(theta, sumtheta) aren't allowed
   survMSM_res_old <- survMSM(list(wts.DT.1, wts.DT.0), OData, glm_package = "speedglm", return_wts = TRUE)
-  survMSM_res_old[["gTI.dlow"]]
-  survMSM_res_old[["gTI.dhigh"]]
+  survMSM_res_old[["gTI.dlow"]][["estimates"]]
+  survMSM_res_old[["gTI.dhigh"]][["estimates"]]
 
   # ----------------------------------------------------------------------
   ## new IPW-MSM for the hazard allows using arbitrary GLM formulas

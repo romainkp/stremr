@@ -36,7 +36,6 @@ test_that("Propensity score fitting with continuous exposure will fail by defaul
   OData$dat.sVar[]
 
   OData$modelfit.gA$predict(OData)
-  options(stremr.verbose = FALSE)
 })
 
 test_that("Propensity score fitting with continuous exposure will work with Lrnr_condensier by default", {
@@ -50,8 +49,6 @@ test_that("Propensity score fitting with continuous exposure will work with Lrnr
 })
 
 test_that("Propensity score fitting with continuous exposure will work with SuperLearner for cond. densties", {
-  options(sl3.verbose = TRUE)
-  options(stremr.verbose = TRUE)
   OData <- importData(Odat_DT[1:2000, ], ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "continA", MONITOR = "N", OUTCOME = "Y.tplus1")
   OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
   lrn1 <- Lrnr_condensier$new(nbins = 5, bin_method = "equal.mass", pool = FALSE)
@@ -65,8 +62,6 @@ test_that("Propensity score fitting with continuous exposure will work with Supe
 })
 
 test_that("IPW and TMLE run with continuous exposure and cond. dens. SuperLearner", {
-  options(sl3.verbose = TRUE)
-  options(stremr.verbose = TRUE)
   OData <- importData(Odat_DT[1:2000, ], ID = "ID", t = "t", covars = c("highA1c", "lastNat1"), CENS = "C", TRT = "continA", MONITOR = "N", OUTCOME = "Y.tplus1")
   OData <- define_CVfolds(OData, nfolds = 3, fold_column = "fold_ID", seed = 12345)
   lrn1 <- Lrnr_condensier$new(nbins = 5, bin_method = "equal.mass", pool = FALSE)

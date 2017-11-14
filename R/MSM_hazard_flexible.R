@@ -198,7 +198,7 @@ fit_hMSM <- function(wts_data,
 
   dt_names <- list(periods, rules_TRT)
   names(dt_names) <- c(t_name, rule.var)
-  estimates <- data.table(purrr::cross_d(dt_names))
+  estimates <- data.table(purrr::cross_df(dt_names))
   setkeyv(estimates, c(rule.var, t_name))
 
   ## add additional MSM covariates/summaries to the by-rule prediction matrix:

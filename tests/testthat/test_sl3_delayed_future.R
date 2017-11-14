@@ -85,7 +85,7 @@ context("sl3 with delayed future")
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                   stratifyQ_by_rule = c(FALSE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule)
 
   ## ------------------------------------------------------------------------

@@ -128,7 +128,15 @@ TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
 #' Performs linear TMLE update using main-terms GLM (family=gaussian()), based on \code{speedglm} package.
 #' This function may be passed to fit_GCOMP / fit_TMLE function.
 #' May be also used as a separate learner for iTMLE.
-#' @rdname TMLE.updater.glm
+#' @param Y Input outcomes
+#' @param X Input design matrix with training data.
+#' Must contain a column named "offset", which contains the offsets converted to logit-linear scale.
+#' @param newX Input design matrix with test data.
+#' Same requirement as for \code{X}: must contain a column named "offset",
+#' which contains the offsets converted to logit-linear scale.
+#' @param family Link function (ignored).
+#' @param obsWeights Row-specific weights
+#' @param ... Additional arguments to be passed on to \code{origami} package.
 #' @export
 linear.TMLE.updater.speedglm <- function(Y, X, newX, family, obsWeights, ...) {
   eps_tol = stremrOptions("eps_tol")

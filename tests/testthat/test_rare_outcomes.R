@@ -64,7 +64,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                   stratifyQ_by_rule = c(TRUE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule)
 
   ## ------------------------------------------------------------------------
