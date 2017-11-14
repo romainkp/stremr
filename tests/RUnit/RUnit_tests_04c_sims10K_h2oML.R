@@ -124,7 +124,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     tmle_est_sl3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
     tmle_est_sl3$estimates[]
 
-    expect_equal(tmle_est$estimates[], tmle_est_sl3$estimates[])
+    checkEquals(tmle_est$estimates[], tmle_est_sl3$estimates[])
     
     h2o::h2o.shutdown(prompt = FALSE)
 
