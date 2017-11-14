@@ -21,7 +21,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     require("h2o")
     require("sl3")
     library("stremr")
-    library("gridisl")
+    # library("gridisl")
     # options(stremr.verbose = TRUE)
     # options(sl3.verbose = TRUE)
     # options(gridisl.verbose = TRUE)
