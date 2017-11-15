@@ -547,7 +547,7 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' Here, \code{p(t)} denotes the probability that counterfactual A^*(t) is equal to 1, i.e., P(A^*(t)=1)=\code{p(t)} 
 #' and it can change in time and subject to subject.
 #' For \code{"shift"}, it is assumed that the intervention node \code{A^*(t)} is a shift in the value of the continuous treatment \code{A}, 
-#' i.e., \code{A^*(t)}=\code{A(t)}+\delta(t).
+#' i.e., \code{A^*(t)}=\code{A(t)}+delta(t).
 #' Finally, for "MSM" it is assumed that we simply want the final intervention density \code{g^*(t)} to be set to a constant 1. 
 #' This has use for static MSMs. 
 #' @param type_intervened_MONITOR (ADVANCED FUNCTIONALITY) Same as \code{type_intervened_TRT}, but for monitoring intervention node 
