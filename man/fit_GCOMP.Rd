@@ -117,9 +117,20 @@ Can be used for obtaining subject-specific predictions of the counterfactual fun
 
 \item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}
 
-\item{type_intervened_TRT}{(ADVANCED FEATURE) TBD}
+\item{type_intervened_TRT}{(ADVANCED FUNCTIONALITY) Set to \code{NULL} by default, can be characters that are set to either 
+\code{"bin"}, \code{"shift"} or \code{"MSM"}. 
+Provides support for different types of interventions on \code{TRT} (treatment) node (counterfactual treatment node \code{A^*(t)}).
+The default behavior is the same as \code{"bin"}, which assumes that \code{A^*(t)} is binary and 
+is set equal to either \code{0}, \code{1} or \code{p(t)}, where 0<=\code{p(t)}<=1. 
+Here, \code{p(t)} denotes the probability that counterfactual A^*(t) is equal to 1, i.e., P(A^*(t)=1)=\code{p(t)} 
+and it can change in time and subject to subject.
+For \code{"shift"}, it is assumed that the intervention node \code{A^*(t)} is a shift in the value of the continuous treatment \code{A}, 
+i.e., \code{A^*(t)}=\code{A(t)}+\delta(t).
+Finally, for "MSM" it is assumed that we simply want the final intervention density \code{g^*(t)} to be set to a constant 1. 
+This has use for static MSMs.}
 
-\item{type_intervened_MONITOR}{(ADVANCED FEATURE) TBD}
+\item{type_intervened_MONITOR}{(ADVANCED FUNCTIONALITY) Same as \code{type_intervened_TRT}, but for monitoring intervention node 
+(counterfactual monitoring node \code{N^*(t)}).}
 
 \item{maxpY}{Maximum probability that the cumulative incidence of the outcome Y(t) is equal to 1.
 Useful for upper-bounding the rare-outcomes.}
