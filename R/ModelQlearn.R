@@ -74,6 +74,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       super$initialize(reg, ...)
 
       self$reg <- reg
+      self$outcome_type <- "quasibinomial"
 
       self$Qreg_counter <- reg$Qreg_counter
       self$all_Qregs_indx <- reg$all_Qregs_indx
@@ -154,7 +155,15 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## multiply the outcomes by delta-factor (for rare-outcomes adjustment with known upper bound = self$maxpY)
       data$rescaleNodes(subset_idx = self$subset_idx, nodes_to_rescale = self$outvar, delta = 1/self$maxpY)
       ## Fit model using (re-scaled) Q.kplus as the outcome to obtain the inital model fit for Q[t]:
-      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
+      private$model.fit <- fit_single_regression(data = data, 
+                                                 nodes = nodes, 
+                                                 models = self$models, 
+                                                 model_contrl = self$model_contrl, 
+                                                 predvars = self$predvars, 
+                                                 outvar = self$outvar, 
+                                                 subset_idx = self$subset_idx,
+                                                 outcome_type = self$outcome_type,
+                                                 fold_y_names = fold_y_names)
       if (gvars$verbose) {
         print("Q.init model fit:"); try(print(private$model.fit))
       }

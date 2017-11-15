@@ -62,16 +62,16 @@ test.directRegressionDefn.10Kdata <- function() {
   reg_TRT <- c(
       define_single_regression(OData, "TI ~ CVD + highA1c",
           stratify = list(TI = "t == 0L"),
-          model = Lrnr_glm_fast$new(family = quasibinomial())),
+          model = Lrnr_glm_fast$new()),
       define_single_regression(OData, "TI ~ CVD + highA1c",
           stratify = list(TI = "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)"),
-          model = Lrnr_glm_fast$new(family = quasibinomial())),
+          model = Lrnr_glm_fast$new()),
       define_single_regression(OData, "TI ~ 1",
           stratify = list(TI = "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)"),
-          model = Lrnr_glm_fast$new(family = quasibinomial())),
+          model = Lrnr_glm_fast$new()),
       define_single_regression(OData, "TI ~ 1",
           stratify = list(TI = "(t > 0L) & (barTIm1eq0 == 0L)"),
-          model = Lrnr_glm_fast$new(family = quasibinomial()))
+          model = Lrnr_glm_fast$new())
         )
 
   reg_MONITOR <- define_single_regression(OData, "N ~ 1")

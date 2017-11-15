@@ -66,7 +66,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     OData$nfolds <- NULL
 
     # params_g <- gridisl::defModel(estimator = "xgboost__glm", family = "quasibinomial", nthread = 1)
-    params_g <- Lrnr_glm_fast$new(family = quasibinomial())
+    params_g <- Lrnr_glm_fast$new()
     OData <- fitPropensity(OData,
                             gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
@@ -77,7 +77,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
     ## ----------------------------------------------------------------------------------------------------
     Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.periods.RDs)+1))
     # set_all_stremr_options(estimator = "speedglm__glm")
-    params_Q <- Lrnr_glm_fast$new(family = quasibinomial())
+    params_Q <- Lrnr_glm_fast$new()
     tmle_est_dlow <- fit_TMLE(OData, tvals = t.periods.RDs, intervened_TRT = "gTI.dlow",
                         Qforms = Qforms, stratifyQ_by_rule = FALSE,
                         models = params_Q)

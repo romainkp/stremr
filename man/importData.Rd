@@ -6,7 +6,7 @@
 \usage{
 importData(data, ID = "Subject_ID", t_name = "time_period", covars,
   CENS = NULL, TRT = "A", MONITOR = NULL, OUTCOME = "Y",
-  noCENScat = 0L, remove_extra_rows = TRUE,
+  weights = NULL, noCENScat = 0L, remove_extra_rows = TRUE,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
@@ -44,6 +44,8 @@ Note that factors are not allowed in \code{CENS}.}
 Leave as missing if not intervening on monitoring.}
 
 \item{OUTCOME}{A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.}
+
+\item{weights}{Optional column name in \code{data} that contains subject- and time-specific weights.}
 
 \item{noCENScat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 Use this to modify the default reference category (no CENSoring / continuation of follow-up)
@@ -214,8 +216,8 @@ params_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm",
                               sample_rate = 0.8,
                               col_sample_rate = 0.8,
                               balance_classes = TRUE)
-params_CENS <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
-params_MONITOR <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
+params_CENS <- sl3::Lrnr_glm_fast$new()
+params_MONITOR <- sl3::Lrnr_glm_fast$new()
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,

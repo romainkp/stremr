@@ -121,8 +121,8 @@ context("origami Super Learner")
     # defModel(estimator = "speedglm__glm", family = "quasibinomial") +
     # defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 20)
     Lrnr_sl$new(learners = Stack$new(
-                Lrnr_xgboost$new(objective = "reg:logistic", nthread = 1, nrounds = 20),
-                Lrnr_glm_fast$new(family = quasibinomial())
+                Lrnr_xgboost$new(nthread = 1, nrounds = 20),
+                Lrnr_glm_fast$new()
                 ),
                 metalearner = Lrnr_solnp$new()
             )
@@ -142,8 +142,8 @@ context("origami Super Learner")
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   models_Q <-
     Lrnr_sl$new(learners = Stack$new(
-                Lrnr_xgboost$new(objective = "reg:logistic", nthread = 1, nrounds = 20),
-                Lrnr_glm_fast$new(family = quasibinomial())
+                Lrnr_xgboost$new(nthread = 1, nrounds = 20),
+                Lrnr_glm_fast$new()
                 ),
                 metalearner = Lrnr_solnp$new()
             )

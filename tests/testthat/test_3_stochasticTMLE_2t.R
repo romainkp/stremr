@@ -172,7 +172,7 @@ test_that("Stochastic g^*: GCOMP is biased and TMLE is unbiased for correct g & 
 Qforms <- rep.int("Qkplus1 ~ L1 + L2 + L3 + A + A.tminus1 + L1.tminus1 + L2.tminus1 + L3.tminus1", 2)
 # Qmodels <- gridisl::defModel(estimator = "speedglm__glm", interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
 lnr_inter <- Lrnr_define_interactions$new(interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
-lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
+lrn_glm <- Lrnr_glm_fast$new()
 Qmodels <- Pipeline$new(lnr_inter, lrn_glm)
 gcomp_est <- fit_GCOMP(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms, models = Qmodels)
 (GCOMP_EYgstar <- 1 - gcomp_est$estimates[, St.GCOMP])
@@ -212,7 +212,7 @@ Qforms <- rep.int("Qkplus1 ~ L1 + L2 + L3 + A + A.tminus1 + L1.tminus1 + L2.tmin
 
 # Qmodels <- gridisl::defModel(estimator = "speedglm__glm", interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
 lnr_inter <- Lrnr_define_interactions$new(interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
-lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
+lrn_glm <- Lrnr_glm_fast$new()
 Qmodels <- Pipeline$new(lnr_inter, lrn_glm)
 
 tmle_est <- fit_TMLE(OData, tvals = 1, intervened_TRT = "Astoch", Qforms = Qforms, models = Qmodels)

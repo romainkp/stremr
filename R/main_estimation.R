@@ -80,7 +80,6 @@ define_single_regression <- function(OData,
                                      regforms,
                                      stratify = NULL,
                                      models = NULL,
-                                     # estimator = stremrOptions("estimator"),
                                      fit_method = stremrOptions("fit_method"),
                                      fold_column = stremrOptions("fold_column"),
                                      ...) {
@@ -99,7 +98,6 @@ define_single_regression <- function(OData,
                            opt_params = list(opt_params)
                       )
 
-  # models_control[["estimator"]] <- estimator[1L]
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
 
@@ -251,10 +249,7 @@ define_propensity_model <- function(models, opt_params) {
   } else {
     models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
   }
-  ## if any of the outcomes is categorical, need to do something like this (for sl3 models object)
-  # if (type %in% "categorical") {
-  #   models <- Lrnr_condensier$new(bin_estimator = models)
-  # }
+  
   models_control <- c(list(models     = models),
                            opt_params = list(opt_params))
   return(models_control)

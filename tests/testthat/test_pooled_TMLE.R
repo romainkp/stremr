@@ -73,7 +73,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## ------------------------------------------------------------------------
   fit_method_g <- "none"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  models_g <- Lrnr_glm_fast$new(family = quasibinomial())
+  models_g <- Lrnr_glm_fast$new()
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION

@@ -185,8 +185,8 @@ params_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm",
                               sample_rate = 0.8,
                               col_sample_rate = 0.8,
                               balance_classes = TRUE)
-params_CENS <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
-params_MONITOR <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
+params_CENS <- sl3::Lrnr_glm_fast$new()
+params_MONITOR <- sl3::Lrnr_glm_fast$new()
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,

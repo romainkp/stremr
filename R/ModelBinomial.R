@@ -10,6 +10,7 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
   public = list(
     outvar = character(),   # outcome name(s)
     outvar.class = character(),
+    outcome_type = character(),
     predvars = character(), # names of predictor vars
     is.fitted = FALSE,
     model_contrl = list(),
@@ -59,6 +60,7 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
       self$outvar.class <- reg$outvar.class
+      self$outcome_type <- "quasibinomial"
 
       assert_that(is.character(reg$predvars))
       self$predvars <- reg$predvars
@@ -91,7 +93,15 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       nodes <- data$nodes
 
       self$n_obs_fit <- length(self$subset_idx)
-      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx)
+
+      private$model.fit <- fit_single_regression(data = data, 
+                                                 nodes = nodes, 
+                                                 models = self$models, 
+                                                 model_contrl = self$model_contrl, 
+                                                 predvars = self$predvars, 
+                                                 outvar = self$outvar, 
+                                                 subset_idx = self$subset_idx,
+                                                 outcome_type = self$outcome_type)
 
       self$is.fitted <- TRUE
       if (predict) try(self$predictAeqa(..., indA = data$get.outvar(self$subset_idx, self$getoutvarnm)), silent = TRUE)

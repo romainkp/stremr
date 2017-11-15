@@ -72,8 +72,8 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## ------------------------------------------------------------------------
   fit_method_g <- "cv"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
-  lrn_glm_sm <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
+  lrn_glm <- Lrnr_glm_fast$new()
+  lrn_glm_sm <- Lrnr_glm_fast$new(covariates = c("CVD"))
   # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = binomial())
   lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
   # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")

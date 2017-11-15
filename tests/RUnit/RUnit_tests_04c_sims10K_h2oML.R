@@ -27,7 +27,6 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     # options(gridisl.verbose = TRUE)
     options(stremr.verbose = FALSE)
     options(gridisl.verbose = FALSE)
-    # set_all_stremr_options(estimator = "speedglm__glm")
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
@@ -71,7 +70,7 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     # ----------------------------------------------------------------
     OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR, 
-                            models_TRT = sl3::Lrnr_h2o_grid$new(algorithm = "gbm"))
+                            models_TRT = sl3::Lrnr_h2o_grid$new(algorithm = "gbm", ntrees = 10))
 
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     surv1 <- survNPMSM(wts.St.dlow, OData)

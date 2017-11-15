@@ -69,6 +69,7 @@ ModelCategorical  <- R6Class(classname = "ModelCategorical",
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
       self$outvar.class <- reg$outvar.class
+      self$outcome_type <- "categorical"
 
       assert_that(is.character(reg$predvars))
       self$predvars <- reg$predvars

@@ -72,10 +72,10 @@ To install the development version (requires the `devtools` package):
 devtools::install_github('osofr/stremr')
 ```
 
-For ensemble learning with SuperLearner we recommend installing the latest development version of the `gridisl` R package:
+For ensemble-learning with SuperLearner we recommend installing the latest development version of the `sl3` R package:
 
 ```R
-devtools::install_github('osofr/gridisl')
+devtools::install_github('jeremyrcoyle/sl3')
 ```
 
 For optimal performance, we also recommend installing the latest version of `data.table` package:

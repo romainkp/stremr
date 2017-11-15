@@ -2,7 +2,7 @@
 ## Call \code{gridisl} and fit a single regression model.
 ## All model fitting in stremr is performed via this function.
 ## ----------------------------------------------------------------------------------
-fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx, ...) {
+fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx, outcome_type = "continuous", ...) {
 
   if (is.null(model_contrl[["fit_method"]]))
     stop("'fit_method' must be specified")
@@ -36,17 +36,18 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     } else {
       folds <- NULL
     }
-    # origami::make_folds(V = 5, cluster_ids = dt_subs$ID)
+
     task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ],
                               covariates = predvars,
                               outcome = outvar,
                               id = data$nodes$IDnode,
-                              folds = folds, 
-                              outcome_type = "continuous"
+                              folds = folds,
+                              outcome_type = outcome_type
                               )
-
+    
     model.fit <- try({models$train(task)})
-    if (inherits(model.fit, "try-error")) {
+
+    if (inherits(model.fit, "try-error") || inherits(model.fit$fit_object, "try-error")) {
       cat("\nsl3 error debugging info:\n");
       print(model.fit)
     }
@@ -70,7 +71,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
     })
   }
 
-  if (inherits(model.fit, "try-error")) {
+  if (inherits(model.fit, "try-error") || inherits(model.fit$fit_object, "try-error")) {
     message("...trying to run Lrnr_glm_fast as a backup...")
     task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar, outcome_type = "continuous")
     lrn_model <- sl3::Lrnr_glm_fast$new()

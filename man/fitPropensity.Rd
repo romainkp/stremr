@@ -9,7 +9,7 @@ fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
   models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
   fit_method = stremrOptions("fit_method"),
   fold_column = stremrOptions("fold_column"), reg_CENS, reg_TRT, reg_MONITOR,
-  verbose = getOption("stremr.verbose"), ...)
+  use_weights = FALSE, verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
@@ -72,6 +72,10 @@ using the function \code{\link{define_single_regression}}.}
 
 \item{reg_MONITOR}{(ADVANCED FEATURE). Manually define and input the regression specification for each strata of monitoring model,
 using the function \code{\link{define_single_regression}}.}
+
+\item{use_weights}{(NOT IMPLEMENTED) Set to \code{TRUE} to pass the previously specified weights column to all 
+learners for all of the propensity score models. This will result in a weights regression models being fit for P(A(t)|L(t)), P(C(t)|L(t)), P(N(t)|L(t)).
+(NOTE: This will only work when using sl3 learners, such as the default sl3 learner \code{sl3::Lrnr_glm_fast}).}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(stremr.verbose=TRUE)}.}
@@ -242,8 +246,8 @@ params_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm",
                               sample_rate = 0.8,
                               col_sample_rate = 0.8,
                               balance_classes = TRUE)
-params_CENS <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
-params_MONITOR <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
+params_CENS <- sl3::Lrnr_glm_fast$new()
+params_MONITOR <- sl3::Lrnr_glm_fast$new()
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,

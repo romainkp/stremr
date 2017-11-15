@@ -62,7 +62,7 @@ This is used for MSMs only and is enabled by default.}
 \item{type_intervened_MONITOR}{(ADVANCED FEATURE) TBD}
 }
 \value{
-...
+A \code{data.table} with cumulative weights for each subject and each time-point saved under column "cum.IPAW".
 }
 \description{
 Evaluate the inverse probability weights for up to 3 intervention nodes: \code{CENS}, \code{TRT} and \code{MONITOR}.
@@ -229,8 +229,8 @@ params_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm",
                               sample_rate = 0.8,
                               col_sample_rate = 0.8,
                               balance_classes = TRUE)
-params_CENS <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
-params_MONITOR <- sl3::Lrnr_glm_fast$new(family = quasibinomial())
+params_CENS <- sl3::Lrnr_glm_fast$new()
+params_MONITOR <- sl3::Lrnr_glm_fast$new()
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,

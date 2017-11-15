@@ -1,9 +1,12 @@
 test.model.fits.categorCENSOR <- function() {
   require("data.table")
   require("stremr")
-  options(stremr.verbose = TRUE)
-  options(sl3.verbose = TRUE)
+  options(stremr.verbose = FALSE)
+  options(sl3.verbose = FALSE)
   options(gridisl.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(sl3.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
   # set_all_stremr_options(estimator = "speedglm__glm")
 
   # ------------------------------------------------------------------------------------------------------
@@ -118,13 +121,12 @@ test.model.fits.categorCENSOR <- function() {
 test.model.fits.categorCENSOR2 <- function() {
   require("data.table")
   require("stremr")
-  options(stremr.verbose = TRUE)
-  options(sl3.verbose = TRUE)
-  options(condensier.verbose = TRUE)
-  # options(gridisl.verbose = FALSE)
-  # options(stremr.verbose = FALSE)
-  # options(gridisl.verbose = FALSE)
-  # set_all_stremr_options(estimator = "speedglm__glm")
+  # options(stremr.verbose = TRUE)
+  # options(sl3.verbose = TRUE)
+  # options(condensier.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+  options(stremr.verbose = FALSE)
+  options(condensier.verbose = FALSE)
 
   #-------------------------------------------------------------------
   # EXAMPLE WITH CATEGORICAL CENSORING (3 levels)

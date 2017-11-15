@@ -47,13 +47,11 @@ gridisl_cv_t <- system.time({
 })
 
 sl3_cv_t <- system.time({
-  lrn_xgb <- Lrnr_xgboost$new(nrounds = 5, objective = "reg:logistic")
-  lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
+  lrn_xgb <- Lrnr_xgboost$new(nrounds = 5)
+  lrn_glm <- Lrnr_glm_fast$new()
   sl <- Lrnr_sl$new(learners = Stack$new(lrn_xgb, lrn_glm), metalearner = Lrnr_solnp$new())
   OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT, models_TRT = sl)
 })
-
-OData <- fitPropensity(OData, gform_TRT = gform_TRT, stratify_TRT = stratify_TRT)
 
 # sl3_cv_h2o_t <- system.time({
 #   lrn_h2o <- Lrnr_h2o_grid$new(algorithm = "gbm", ntrees = 20, outcome_type = "binomial", family = "bernoulli")
@@ -85,10 +83,10 @@ Qforms <- rep.int("Qkplus1 ~ L1 + L2 + L3 + A + A.tminus1 + L1.tminus1 + L2.tmin
 ## Define interaction terms as a separate learner:
 lnr_inter <- Lrnr_define_interactions$new(interactions = list(c("A", "L1"), c("A", "L2"), c("A", "L2")))
 ## Define Super-Learner candidate libraries:
-lrn_xgb <- Lrnr_xgboost$new(objective = "reg:logistic", nrounds = 5)
-lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
-lrn_glm2 <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("A", "L1", "L2", "L3"))
-lrn_glmnet <- Lrnr_glmnet$new(family = family, nlambda = 5)
+lrn_xgb <- Lrnr_xgboost$new(nrounds = 5)
+lrn_glm <- Lrnr_glm_fast$new()
+lrn_glm2 <- Lrnr_glm_fast$new(covariates = c("A", "L1", "L2", "L3"))
+lrn_glmnet <- Lrnr_glmnet$new(nlambda = 5)
 lrn_stack <- Stack$new(lrn_xgb, lrn_glm, lrn_glm2) ## Stack candidates: , lrn_glmnet
 lrn_pipe <- Pipeline$new(lnr_inter, lrn_stack) ## Pipeline interaction terms into stack of learners
 lrn_sl <- Lrnr_sl$new(learners = lrn_stack, metalearner = Lrnr_solnp$new()) ## Define the super-learner on the entire thing with metalearner

@@ -125,12 +125,12 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
                       # interactions = list(c("CVD", "highA1c")))
      #                   +
      # defModel(estimator = "speedglm__glm", family = "quasibinomial")
-    lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
-    lrn_glm_sm <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
+    lrn_glm <- Lrnr_glm_fast$new()
+    lrn_glm_sm <- Lrnr_glm_fast$new(covariates = c("CVD"))
     # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = binomial())
-    lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
+    lrn_glmnet_binom <- Lrnr_glmnet$new(nlambda = 5)
     # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
-    lrn_glmnet_gaus <- Lrnr_glmnet$new(family = "gaussian", nlambda = 5)
+    lrn_glmnet_gaus <- Lrnr_glmnet$new(nlambda = 5)
     sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
                       metalearner = Lrnr_nnls$new())
 
@@ -265,7 +265,7 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
   # models_Q <-  defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  models_Q <-  Lrnr_glm_fast$new(family = quasibinomial())
+  models_Q <-  Lrnr_glm_fast$new()
   ## ------------------------------------------------------------------------
   ## Alternative specifications of Q models for iterative G-COMP (Q) -- NONPARAMETRIC REGRESSION (GBM) + REGULARIZED GLM
   ## ------------------------------------------------------------------------
@@ -303,7 +303,9 @@ test.GRID.h2o.xgboost.10Kdata <- function() {
   OData <- fitPropensity(OData,
                           gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
-                          models_CENS = models_g, models_TRT = models_g, models_MONITOR = Lrnr_glm_fast$new(family = quasibinomial()),
+                          models_CENS = models_g, 
+                          models_TRT = models_g, 
+                          models_MONITOR = Lrnr_glm_fast$new(),
                           fit_method = fit_method_g,
                           fold_column = fold_column)
 

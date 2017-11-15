@@ -93,10 +93,10 @@ context("sl3 with delayed future")
   ## ------------------------------------------------------------------------
   fit_method_g <- "none"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  lrn_glm <- Lrnr_glm_fast$new(family = quasibinomial())
-  lrn_glm_sm <- Lrnr_glm_fast$new(family = quasibinomial(), covariates = c("CVD"))
-  lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = quasibinomial())
-  lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = gaussian())
+  lrn_glm <- Lrnr_glm_fast$new()
+  lrn_glm_sm <- Lrnr_glm_fast$new(covariates = c("CVD"))
+  lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet")
+  lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet")
   sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm), # , lrn_glmnet_binom
                     metalearner = Lrnr_nnls$new())
   models_g <- sl
