@@ -3,10 +3,10 @@ test.iterTMLE.10Kdata <- function() {
   options(stremr.verbose = FALSE)
   `%+%` <- function(a, b) paste0(a, b)
   require("data.table")
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
   data(OdatDT_10K)
   Odat_DT <- OdatDT_10K
-  Odat_DT <- Odat_DT[ID %in% (1:100), ]
+  # Odat_DT <- Odat_DT[ID %in% (1:100), ]
   setkeyv(Odat_DT, cols = c("ID", "t"))
 
   # ---------------------------------------------------------------------------

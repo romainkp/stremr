@@ -17,24 +17,28 @@ print_model_info <- function(model_summary, model_stack) {
   pander::pander(model_summary)
   MSEtab <- model_stack$getMSEtab
   try(pander::pander(MSEtab, caption = "Overall Performance by Model"))
-
-  grids <- model_stack$get_modelfits_grid()
-  for (grid in grids) {
-    if (is.data.frame(grid) || is.data.table(grid)) {
-      grid <- grid[ , names(grid)[!(names(grid) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
-      try(pander::pander(grid, caption = "XGB Grid"))
-      # cat(paste(capture.output(print(grid)), collapse = '\n\n'))
-    } else {
-      # cat(paste(capture.output(print(grid))[-2], collapse = '\n\n'))
-      try(pander::pander(grid))
-      # try(pander::pander(paste(capture.output(print(grid))[-2], collapse = '\n')))
-    }
+  
+  if (is(model_stack, "Lrnr_base")) {
+    fit <- model_stack$fit_object
+    pander::pander(fit)
+  } else {
+    grids <- model_stack$get_modelfits_grid()
+    for (grid in grids) {
+      if (is.data.frame(grid) || is.data.table(grid)) {
+        grid <- grid[ , names(grid)[!(names(grid) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
+        try(pander::pander(grid, caption = "XGB Grid"))
+        # cat(paste(capture.output(print(grid)), collapse = '\n\n'))
+      } else {
+        # cat(paste(capture.output(print(grid))[-2], collapse = '\n\n'))
+        try(pander::pander(grid))
+        # try(pander::pander(paste(capture.output(print(grid))[-2], collapse = '\n')))
+      }
+    }    
   }
-
-  cat("\n\n"); cat("###"); cat("Best Model"); cat("\n\n");
-  # best_model <- model_stack$get_best_models(K=1)[[1]]
-  best_model <- model_stack$get_overall_best_model()[[1]]
-  gridisl::print_tables(best_model)
+  # cat("\n\n"); cat("###"); cat("Best Model"); cat("\n\n");
+  # # best_model <- model_stack$get_best_models(K=1)[[1]]
+  # best_model <- model_stack$get_overall_best_model()[[1]]
+  # gridisl::print_tables(best_model)
 }
 
 #'

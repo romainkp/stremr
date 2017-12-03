@@ -39,7 +39,6 @@ test.model.fits.stratify <- function() {
   require("stremr")
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
 
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study
@@ -51,7 +50,11 @@ test.model.fits.stratify <- function() {
   OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c(ID, t))
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataNoCENS.DT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
-
+  OdataNoCENS.DT[is.na(C), "C" := 0]
+  OdataNoCENS.DT[is.na(N), "N" := 0]
+  OdataNoCENS.DT[is.na(TI), "TI" := 0]
+  OdataNoCENS.DT[is.na(highA1c), "highA1c" := 0]
+  OdataNoCENS.DT[is.na(lastNat1), "lastNat1" := 0]
   OdataNoCENS.DT[, "TI_1" := 1L]
 
   # --------------------------------
@@ -185,7 +188,6 @@ test.error.fits.stratify <- function() {
   require("stremr")
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
 
   data(OdataNoCENS)
   OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA

@@ -11,47 +11,20 @@
 #
 # Validate your .travis.yml file at http://lint.travis-ci.org/
 #----------------------------------------------------------------
-# sudo: required
-# before_install:
-#   - sudo apt-get -qq update
-#   - sudo apt-get install -y libicu-dev
-#   - sudo apt-get install -y pandoc
-# r_binary_packages:
-#   - methods
-#   - statmod
-#   - stats
-#   - graphics
-#   - RCurl
-#   - jsonlite
-#   - tools
-#   - utils
-#   - assertthat
-#   - doParallel
-#   - data.table
-#   - dplyr
-#   - foreach
-#   - ggplot2
-#   - magrittr
-#   - knitr
-#   - R6
-#   - Rcpp
-#   - rmarkdown
-#   - RUnit
-#   - speedglm
-#   - tibble
-#   - tidyr
-#   - pander
-#   - purrr
-#   - zoo
 
 language: r
+dist: trusty
 sudo: false
 cache: packages
-warnings_are_errors: false
+warnings_are_errors: true
 # r_build_args: "--compact-vignettes"
 # r_check_args: "--as-cran"
 r_build_args: "--no-build-vignettes --no-manual"
 r_check_args: "--no-build-vignettes --no-manual --as-cran"
+
+r:
+  - release
+  - devel
 
 os:
   - linux
@@ -63,6 +36,7 @@ r_github_packages:
 
 r_packages:
   - covr
+  - drat
 
 # - osofr/gridisl
 # r_packages:
@@ -81,7 +55,7 @@ env:
    - CRAN: http://cran.rstudio.com
 
 after_success:
-  - travis_wait Rscript -e 'library(covr); codecov()'
+  - travis_wait Rscript -e 'covr::codecov()'
 
 # - travis_wait Rscript -e 'library(covr); coveralls()'
 # - Rscript -e "packagedocs::deploy_travis()"
@@ -94,4 +68,9 @@ notifications:
   email:
     on_success: change
     on_failure: change
+
+env:
+  global:
+    - RGL_USE_NULL=TRUE
+    - PKG_CFLAGS="-O3 -Wall -pedantic"
 

@@ -27,11 +27,10 @@ Depends:
     R (>= 3.2.1)
 Imports:
     assertthat,
+    condensier,
     data.table,
     dplyr,
-    ggplot2,
     gridisl,
-    h2o,
     magrittr,
     methods,
     origami,
@@ -41,22 +40,32 @@ Imports:
     Rcpp,
     rmarkdown,
     speedglm,
+    sl3,
     stats,
     tibble,
     tidyr,
-    zoo,
-    xgboost
+    zoo
 LinkingTo: Rcpp
 Suggests:
+    bibtex,
     doParallel,
     foreach,
     ggiraph,
+    ggplot2,
+    glmnet,
+    h2o,
     knitr,
+    RefManageR,
+    Rsolnp,
     RUnit,
+    SuperLearner,
     testthat,
-    mockery
-Remotes: 
+    mockery,
+    xgboost
+Remotes:
+    github::jeremyrcoyle/sl3,
     github::jeremyrcoyle/origami@old-stable,
+    github::osofr/condensier,
     github::osofr/gridisl
 License: MIT + file LICENSE
 LazyData: true

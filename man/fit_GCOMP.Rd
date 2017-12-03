@@ -7,7 +7,6 @@
 fit_GCOMP(OData, tvals, Qforms, intervened_TRT = NULL,
   intervened_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
   intervened_MONITOR), collapse = ""), models = NULL,
-  estimator = stremrOptions("estimator"),
   fit_method = stremrOptions("fit_method"),
   fold_column = stremrOptions("fold_column"), TMLE = FALSE,
   stratifyQ_by_rule = FALSE, stratify_by_last = TRUE, Qstratify = NULL,
@@ -16,6 +15,8 @@ fit_GCOMP(OData, tvals, Qforms, intervened_TRT = NULL,
   trunc_weights = 10^6, weights = NULL, max_iter = 15,
   adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
   parallel = FALSE, return_wts = FALSE, return_fW = FALSE, reg_Q = NULL,
+  type_intervened_TRT = NULL, type_intervened_MONITOR = NULL, maxpY = 1,
+  TMLE_updater = "TMLE.updater.speedglm",
   verbose = getOption("stremr.verbose"), ...)
 }
 \arguments{
@@ -35,11 +36,6 @@ Leave the argument unspecified (\code{NULL}) when not intervening on the monitor
 
 \item{models}{Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.}
-
-\item{estimator}{Specify the default estimator to use for fitting the iterative g-computation formula.
-Should be a character string in the format 'Package__Algorithm'.
-See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-This argument is ignored when the fitting procedures are already defined via the argument \code{models}.}
 
 \item{fit_method}{Model selection approach. Can be either \code{"none"} - no model selection or
 \code{"cv"} - discrete Super Learner using V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs) or
@@ -89,8 +85,8 @@ Only works with \code{fit_method}=\code{"origamiSL"}.}
 
 \item{trunc_weights}{Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.}
 
-\item{weights}{Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
-The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).}
+\item{weights}{Optional \code{data.table} with additional observation- and time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}). Not implemented yet.}
 
 \item{max_iter}{For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.}
 
@@ -116,10 +112,31 @@ requires a previously defined parallel back-end cluster)}
 Return the data.table with subject-specific IP weights as part of the output.
 Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!}
 
-\item{return_fW}{Return the \code{gridisl} model object from the very last Q regression.
+\item{return_fW}{When \code{TRUE}, will return the object fit for the last Q regression as part of the output table.
 Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).}
 
 \item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}
+
+\item{type_intervened_TRT}{(ADVANCED FUNCTIONALITY) Set to \code{NULL} by default, can be characters that are set to either 
+\code{"bin"}, \code{"shift"} or \code{"MSM"}. 
+Provides support for different types of interventions on \code{TRT} (treatment) node (counterfactual treatment node \code{A^*(t)}).
+The default behavior is the same as \code{"bin"}, which assumes that \code{A^*(t)} is binary and 
+is set equal to either \code{0}, \code{1} or \code{p(t)}, where 0<=\code{p(t)}<=1. 
+Here, \code{p(t)} denotes the probability that counterfactual A^*(t) is equal to 1, i.e., P(A^*(t)=1)=\code{p(t)} 
+and it can change in time and subject to subject.
+For \code{"shift"}, it is assumed that the intervention node \code{A^*(t)} is a shift in the value of the continuous treatment \code{A}, 
+i.e., \code{A^*(t)}=\code{A(t)}+delta(t).
+Finally, for "MSM" it is assumed that we simply want the final intervention density \code{g^*(t)} to be set to a constant 1. 
+This has use for static MSMs.}
+
+\item{type_intervened_MONITOR}{(ADVANCED FUNCTIONALITY) Same as \code{type_intervened_TRT}, but for monitoring intervention node 
+(counterfactual monitoring node \code{N^*(t)}).}
+
+\item{maxpY}{Maximum probability that the cumulative incidence of the outcome Y(t) is equal to 1.
+Useful for upper-bounding the rare-outcomes.}
+
+\item{TMLE_updater}{Function for performing the TMLE update. Default is the TMLE updater based on speedglm (called \code{"TMLE.updater.speedglm"}).
+Other possible options include \code{"TMLE.updater.glm"}, \code{"linear.TMLE.updater.speedglm"} and \code{"iTMLE.updater.xgb"}.}
 
 \item{verbose}{Set to \code{TRUE} to print auxiliary messages during model fitting.}
 
@@ -140,7 +157,6 @@ Requires column name(s) that specify the counterfactual node values or the count
 \examples{
 options(stremr.verbose = TRUE)
 require("data.table")
-set_all_stremr_options(estimator = "speedglm__glm")
 
 # ----------------------------------------------------------------------
 # Simulated Data
@@ -250,24 +266,34 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                         gform_MONITOR = gform_MONITOR)
 
 # ----------------------------------------------------------------------
-# Fitting Propensity scores with Random Forests:
+# Fitting treatment model with Gradient Boosting machines:
 # ----------------------------------------------------------------------
 \dontrun{
-set_all_stremr_options(estimator = "h2o__randomForest")
 require("h2o")
 h2o::h2o.init(nthreads = -1)
 gform_CENS <- "C ~ highA1c + lastNat1"
+models_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm")
 OData <- fitPropensity(OData, gform_CENS = gform_CENS,
                         gform_TRT = gform_TRT,
+                        models_TRT = models_TRT,
                         gform_MONITOR = gform_MONITOR,
                         stratify_CENS = stratify_CENS)
 
-# For Gradient Boosting machines:
-set_all_stremr_options(estimator = "h2o__gbm")
-# Use `H2O-3` distributed implementation of GLM
-set_all_stremr_options(estimator = "h2o__glm")
+# Use `H2O-3` distributed implementation of GLM for treatment model estimator:
+models_TRT <- sl3::Lrnr_h2o_glm$new(family = "binomial")
+OData <- fitPropensity(OData, gform_CENS = gform_CENS,
+                        gform_TRT = gform_TRT,
+                        models_TRT = models_TRT,
+                        gform_MONITOR = gform_MONITOR,
+                        stratify_CENS = stratify_CENS)
+
 # Use Deep Neural Nets:
-set_all_stremr_options(estimator = "h2o__deeplearning")
+models_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "deeplearning")
+OData <- fitPropensity(OData, gform_CENS = gform_CENS,
+                        gform_TRT = gform_TRT,
+                        models_TRT = models_TRT,
+                        gform_MONITOR = gform_MONITOR,
+                        stratify_CENS = stratify_CENS)
 }
 
 # ----------------------------------------------------------------------
@@ -275,13 +301,14 @@ set_all_stremr_options(estimator = "h2o__deeplearning")
 # Fine tuning modeling with optional tuning parameters.
 # ----------------------------------------------------------------------
 \dontrun{
-params_TRT = gridisl::defModel(estimator = "h2o__gbm", ntrees = 50,
+params_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm",
+                              ntrees = 50,
                               learn_rate = 0.05,
                               sample_rate = 0.8,
                               col_sample_rate = 0.8,
                               balance_classes = TRUE)
-params_CENS = gridisl::defModel(estimator = "speedglm__glm")
-params_MONITOR = gridisl::defModel(estimator = "speedglm__glm")
+params_CENS <- sl3::Lrnr_glm_fast$new()
+params_MONITOR <- sl3::Lrnr_glm_fast$new()
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,
@@ -295,7 +322,7 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-models = gridisl::defModel(estimator = "h2o__randomForest",
+models <- sl3::Lrnr_h2o_grid$new(algorithm = "randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
@@ -306,7 +333,7 @@ tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-models = gridisl::defModel(estimator = "h2o__randomForest",
+models <- sl3::Lrnr_h2o_grid$new(algorithm = "randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",

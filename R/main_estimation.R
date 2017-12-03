@@ -64,15 +64,6 @@ internal_define_reg <- function(reg_object, regforms, default.reg, stratify.EXPR
 #' @param stratify Expression(s) for creating strata(s) (model will be fit separately on each strata)
 #' @param models Optional parameter specifying the models with \code{gridisl} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param estimator Specify the default estimator to use for fitting propensity scores.
-#' Should be a character string in the format 'Package__Algorithm'.
-#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-#' This argument will only have an effect when some of the propensity score models were not explicitly defined
-#' with their corresponding arguments:
-#' \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
-#' To put it another way:
-#' this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
-#' are specified.
 #' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 #' (must specify the column name that contains the fold IDs).
@@ -89,16 +80,24 @@ define_single_regression <- function(OData,
                                      regforms,
                                      stratify = NULL,
                                      models = NULL,
-                                     estimator = stremrOptions("estimator"),
                                      fit_method = stremrOptions("fit_method"),
                                      fold_column = stremrOptions("fold_column"),
                                      ...) {
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  sVar.exprs <- capture.exprs(...)
-  models_control <- c(list(   models = models), opt_params = list(sVar.exprs))
-  models_control[["estimator"]] <- estimator[1L]
+  opt_params <- capture.exprs(...)
+
+  if (!is.null(models) && suppressWarnings(!is.na(models))) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  } else {
+    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+  }
+
+  models_control <- c(list(models = models), 
+                           opt_params = list(opt_params)
+                      )
+
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
 
@@ -109,7 +108,6 @@ define_single_regression <- function(OData,
                           sVar.map = nodes,
                           factor.map = new.factor.names))
 }
-
 
 # ---------------------------------------------------------------------------------------
 #' Import data, define various nodes, define dummies for factor columns and define OData R6 object
@@ -141,6 +139,7 @@ define_single_regression <- function(OData,
 #' @param MONITOR A column name in \code{data} for the indicator(s) of monitoring events.
 #' Leave as missing if not intervening on monitoring.
 #' @param OUTCOME A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.
+#' @param weights Optional column name in \code{data} that contains subject- and time-specific weights.
 #' @param noCENScat The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 #' Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 #' for variables specifed in \code{CENS}.
@@ -160,6 +159,7 @@ importData <- function(data,
                        TRT = "A",
                        MONITOR = NULL, # MONITOR = "N",
                        OUTCOME = "Y",
+                       weights = NULL,
                        noCENScat = 0L,
                        remove_extra_rows = TRUE,
                        verbose = getOption("stremr.verbose")) {
@@ -186,7 +186,8 @@ importData <- function(data,
                 Nnodes = MONITOR,
                 Ynode = OUTCOME,
                 IDnode = ID,
-                tnode = t_name)
+                tnode = t_name,
+                weights = weights)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENScat = noCENScat)
 
   # --------------------------------------------------------------------------------------------------------
@@ -202,15 +203,6 @@ importData <- function(data,
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0 && verbose)
     message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
-  # for (factor.varnm in factor.Ls) {
-  #   factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
-  #   factor.levs <- factor.levs[-1] # remove the first level (reference class)
-  #   # use levels to define cat indicators:
-  #   OData$dat.sVar[,(factor.varnm %+% "_" %+% factor.levs) := lapply(factor.levs, function(x) levels(get(factor.varnm))[get(factor.varnm)] %in% x)]
-  #   # to remove the origional factor var: # OData$dat.sVar[,(factor.varnm):=NULL]
-  #   new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
-  #   # alternative wth dcast: # out <- dcast(OData$dat.sVar, "StudyID + intnum + race ~ race", fun = length, value.var = "race")
-  # }
   for (factor.varnm in factor.Ls) {
     factor.levs <- levels(OData$dat.sVar[[factor.varnm]])
     ## only define new dummies for factors with > 2 levels
@@ -239,13 +231,28 @@ importData <- function(data,
     OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   }
 
-  for (Cnode in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
-  for (Anode in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
-  for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
-  for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
-  for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
+  for (Cnode  in nodes$Cnodes) CheckVarNameExists(OData$dat.sVar, Cnode)
+  for (Anode  in nodes$Anodes) CheckVarNameExists(OData$dat.sVar, Anode)
+  for (Nnode  in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
+  for (Ynode  in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
+  for (Lnode  in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
+  for (IDnode in nodes$IDnode) CheckVarNameExists(OData$dat.sVar, IDnode)
+  for (weights in nodes$weights) CheckVarNameExists(OData$dat.sVar, weights)
 
   return(OData)
+}
+
+define_propensity_model <- function(models, opt_params) {
+  ## verify the learners are of acceptible type, otherwise define default learner as sl3 glm
+  if (!is.null(models) && suppressWarnings(!is.na(models))) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  } else {
+    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+  }
+  
+  models_control <- c(list(models     = models),
+                           opt_params = list(opt_params))
+  return(models_control)
 }
 
 # ---------------------------------------------------------------------------------------
@@ -288,15 +295,6 @@ importData <- function(data,
 #' @param models_MONITOR Optional parameter specifying the models for fitting the monitoring mechanism with
 #' \code{gridisl} R package.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param estimator Specify the default estimator to use for fitting propensity scores.
-#' Should be a character string in the format 'Package__Algorithm'.
-#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-#' This argument will only have an effect when some of the propensity score models were not explicitly defined
-#' with their corresponding arguments:
-#' \code{models_CENS}, \code{models_TRT}, \code{models_MONITOR}.
-#' To put it another way:
-#' this argument is completely ignored when all three arguments \code{models_CENS}, \code{models_TRT} and \code{models_MONITOR}
-#' are specified.
 #' @param fit_method Model selection approach. Can be \code{"none"} - no model selection,
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE
 #' (must specify the column name that contains the fold IDs).
@@ -312,6 +310,9 @@ importData <- function(data,
 #' using the function \code{\link{define_single_regression}}.
 #' @param reg_MONITOR (ADVANCED FEATURE). Manually define and input the regression specification for each strata of monitoring model,
 #' using the function \code{\link{define_single_regression}}.
+#' @param use_weights (NOT IMPLEMENTED) Set to \code{TRUE} to pass the previously specified weights column to all 
+#' learners for all of the propensity score models. This will result in a weights regression models being fit for P(A(t)|L(t)), P(C(t)|L(t)), P(N(t)|L(t)).
+#' (NOTE: This will only work when using sl3 learners, such as the default sl3 learner \code{sl3::Lrnr_glm_fast}).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
 #' @param ... When all or some of the \code{models_...} arguments are NOT specified, these additional
@@ -333,35 +334,32 @@ fitPropensity <- function(OData,
                           models_CENS = NULL,
                           models_TRT = NULL,
                           models_MONITOR = NULL,
-                          estimator = stremrOptions("estimator"),
                           fit_method = stremrOptions("fit_method"),
                           fold_column = stremrOptions("fold_column"),
                           reg_CENS,
                           reg_TRT,
                           reg_MONITOR,
+                          use_weights = FALSE,
+                          # type_CENS = "univariate",
+                          # type_TRT = "univariate",
+                          # type_MONITOR = "univariate",
                           verbose = getOption("stremr.verbose"),
                           ...) {
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
+  opt_params <- capture.exprs(...)
+  if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
 
-  if (!is.null(models_CENS) && !is.na(models_CENS)) assert_that(is.ModelStack(models_CENS))
-  if (!is.null(models_TRT)  && !is.na(models_TRT)) assert_that(is.ModelStack(models_TRT))
-  if (!is.null(models_MONITOR)  && !is.na(models_MONITOR)) assert_that(is.ModelStack(models_MONITOR))
+  models_CENS_control <-    define_propensity_model(models_CENS,    opt_params)
+  models_TRT_control <-     define_propensity_model(models_TRT,     opt_params)
+  models_MONITOR_control <- define_propensity_model(models_MONITOR, opt_params)
 
-  sVar.exprs <- capture.exprs(...)
-
-  models_CENS_control <- c(list(   models = models_CENS),    opt_params = list(sVar.exprs))
-  models_TRT_control <- c(list(    models = models_TRT),     opt_params = list(sVar.exprs))
-  models_MONITOR_control <- c(list(models = models_MONITOR), opt_params = list(sVar.exprs))
-
-  models_CENS_control[["estimator"]] <- models_TRT_control[["estimator"]] <- models_MONITOR_control[["estimator"]] <- estimator[1L]
   models_CENS_control[["fit_method"]] <- models_TRT_control[["fit_method"]] <- models_MONITOR_control[["fit_method"]] <- fit_method[1L]
   models_CENS_control[["fold_column"]] <- models_TRT_control[["fold_column"]] <- models_MONITOR_control[["fold_column"]] <- fold_column
-  # if (!missing(nfolds)) {
-  #   models_CENS[["nfolds"]] <- models_TRT[["nfolds"]] <- models_MONITOR[["nfolds"]] <- nfolds
-  # }
+
+  if (use_weights) stop("...use_weights feature is not implemented yet...")
 
   # ------------------------------------------------------------------------------------------------
   # Process the input formulas and stratification settings;
@@ -406,14 +404,13 @@ fitPropensity <- function(OData,
   # Perform S3 method dispatch on ALL_g_regs, which will determine the nested tree of SummaryModel objects
   # Perform fit and prediction
   # ------------------------------------------------------------------------------------------
-  modelfits.g0 <- GenericModel$new(reg = g_CAN_regs_list, DataStorageClass.g0 = OData)
+  modelfits.g0 <- ModelGeneric$new(reg = g_CAN_regs_list, DataStorageClass.g0 = OData)
   modelfits.g0$fit(data = OData, predict = TRUE)
 
   # get the joint likelihood at each t for all 3 variables at once (P(C=c|...)P(A=a|...)P(N=n|...)).
   # NOTE: Separate predicted probabilities (e.g., P(A=a|...)) are also stored in individual child classes.
   # They are accessed later from modelfits.g0
-
-  h_gN <- try(modelfits.g0$predictAeqa(n = OData$nobs), silent = TRUE)
+  h_gN <- try({modelfits.g0$predictAeqa(n = OData$nobs)}, silent = TRUE)
 
   if (inherits(h_gN, "try-error")) { # if failed, it means that prediction cannot be done without newdata
     h_gN <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs)
@@ -438,8 +435,8 @@ fitPropensity <- function(OData,
   ## warning: side-effect function call, the predicted probabilities are updated inside each class and are saved
   h_gN_holdout <- modelfits.g0$predictAeqa(newdata = OData, n = OData$nobs, holdout = TRUE)
   g_holdout_preds <- data.table::data.table(g0.C = OData$modelfit.gC$getcumprodAeqa(),
-                                           g0.A = OData$modelfit.gA$getcumprodAeqa(),
-                                           g0.N = OData$modelfit.gN$getcumprodAeqa())
+                                            g0.A = OData$modelfit.gA$getcumprodAeqa(),
+                                            g0.N = OData$modelfit.gN$getcumprodAeqa())
   OData$g_holdout_preds <- g_holdout_preds
 
   return(OData)
@@ -449,34 +446,45 @@ fitPropensity <- function(OData,
 ## for counterfactual A^*(t) / N^*(t) and the observed data values a(t) / n(t).
 ## When intervened_NODE contains more than one rule-column, evaluate g^* for each and
 ## multiply to get a single joint probability (at each time point).
-defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs) {
+## This function simply grabs the counterfactual node values (N^*(t)) and compares them
+## to the observed values (N(t)) by evaluating the indicator (N^*(t)=N(t)).
+## The call to fit below is empty, i.e., does nothing other than call ModelDeterministic$predict()
+defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs, modelfit.g, type_intervened) {
   if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
+    if (!is.null(type_intervened)) {
+      assert_that(length(type_intervened)==length(intervened_NODE))
+      assert_that(is.character(type_intervened))
+      assert_that(all(type_intervened %in% c("bin", "shift", "MSM")))
+    } else {
+      type_intervened <- rep("bin", length(intervened_NODE))
+    }
+
     # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
     regs_list <- vector(mode = "list", length = length(NodeNames))
     names(regs_list) <- c(NodeNames)
     class(regs_list) <- c(class(regs_list), "ListOfRegressionForms")
     for (i in seq_along(NodeNames)) {
+      modelfit.g.node <- modelfit.g$getPsAsW.models()[[i]]
+
       reg <- RegressionClass$new(outvar = NodeNames[i],
                                  predvars = NULL,
                                  outvar.class = list("deterministic"),
                                  subset_vars = list(NodeNames[i]),
-                                 model_contrl = list(gstar.Name = intervened_NODE[i]))
+                                 model_contrl = list(gstar.Name = intervened_NODE[i],
+                                                     type_intervened = type_intervened[i],
+                                                     modelfit.g = modelfit.g.node))
       regs_list[[i]] <- reg
     }
-    gstar.NODE.obj <- GenericModel$new(reg = regs_list, DataStorageClass.g0 = OData)
-    gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
-
+    gstar.NODE.obj <- ModelGeneric$new(reg = regs_list, DataStorageClass.g0 = OData)
+    gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(newdata = OData, n = OData$nobs)
+    # gstar.NODE <- gstar.NODE.obj$fit(data = OData)$predictAeqa(n = OData$nobs)
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
 
     if (any(is.na(subset_idx)))
       stop("the subset index evaluation for the expression '" %+% useonly_t_NODE %+% "' resulted in NAs")
 
-    # gstar.NODE[!subset_idx] <- g.obs[!subset_idx]
-    ## fix above bug, vs. 1:
-    # gstar.NODE[!(1:length(gstar.NODE)) %in% subset_idx] <- g.obs[!(1:length(g.obs)) %in% subset_idx]
-    ## fix above bug, vs. 2:
     idx_set_to_g0 <- setdiff(1:length(gstar.NODE), subset_idx)
     gstar.NODE[idx_set_to_g0] <- g.obs[idx_set_to_g0]
 
@@ -531,7 +539,20 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 #' This is used for MSMs only and is enabled by default.
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in
 #' \code{trunc_weights} will be truncated.
-#' @return ...
+#' @param type_intervened_TRT (ADVANCED FUNCTIONALITY) Set to \code{NULL} by default, can be characters that are set to either 
+#' \code{"bin"}, \code{"shift"} or \code{"MSM"}. 
+#' Provides support for different types of interventions on \code{TRT} (treatment) node (counterfactual treatment node \code{A^*(t)}).
+#' The default behavior is the same as \code{"bin"}, which assumes that \code{A^*(t)} is binary and 
+#' is set equal to either \code{0}, \code{1} or \code{p(t)}, where 0<=\code{p(t)}<=1. 
+#' Here, \code{p(t)} denotes the probability that counterfactual A^*(t) is equal to 1, i.e., P(A^*(t)=1)=\code{p(t)} 
+#' and it can change in time and subject to subject.
+#' For \code{"shift"}, it is assumed that the intervention node \code{A^*(t)} is a shift in the value of the continuous treatment \code{A}, 
+#' i.e., \code{A^*(t)}=\code{A(t)}+delta(t).
+#' Finally, for "MSM" it is assumed that we simply want the final intervention density \code{g^*(t)} to be set to a constant 1. 
+#' This has use for static MSMs. 
+#' @param type_intervened_MONITOR (ADVANCED FUNCTIONALITY) Same as \code{type_intervened_TRT}, but for monitoring intervention node 
+#' (counterfactual monitoring node \code{N^*(t)}).
+#' @return A \code{data.table} with cumulative weights for each subject and each time-point saved under column "cum.IPAW".
 # @seealso \code{\link{stremr-package}} for the general overview of the package,
 #' @example tests/examples/2_building_blocks_example.R
 #' @export
@@ -547,7 +568,9 @@ getIPWeights <- function(OData,
                          reverse_wt_prod = FALSE,
                          holdout = FALSE,
                          eval_stabP = TRUE,
-                         trunc_weights = Inf
+                         trunc_weights = Inf,
+                         type_intervened_TRT = NULL,
+                         type_intervened_MONITOR = NULL
                          ) {
   getIPWeights_fun_call <- match.call()
   nodes <- OData$nodes
@@ -561,7 +584,8 @@ getIPWeights <- function(OData,
   if (!is.null(useonly_t_TRT) && !is.na(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
   if (!is.null(useonly_t_MONITOR) && !is.na(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
-
+  if (!is.null(type_intervened_TRT) && !is.na(type_intervened_TRT)) assert_that(is.character(type_intervened_TRT))
+  if (!is.null(type_intervened_MONITOR) && !is.na(type_intervened_MONITOR)) assert_that(is.character(type_intervened_MONITOR))
   # print("CALLING IP WEIGHTS NOW"); print("intervened_TRT"); print(intervened_TRT)
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
@@ -579,9 +603,9 @@ getIPWeights <- function(OData,
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
   # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
-  gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, g_preds[["g0.A"]])
+  gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, g_preds[["g0.A"]], OData$modelfit.gA, type_intervened_TRT)
   # Likelihood for monitoring P(N^*(t)=N(t)) under counterfactual intervention N^*(t) on N(t):
-  gstar.MONITOR <- defineNodeGstarIPW(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, g_preds[["g0.N"]])
+  gstar.MONITOR <- defineNodeGstarIPW(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, g_preds[["g0.N"]], OData$modelfit.gN, type_intervened_MONITOR)
 
   # Save all likelihoods relating to propensity scores in separate dataset:
   # wts.DT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Ynode, "g0.A", "g0.C", "g0.N", "g0.CAN"), with = FALSE]
@@ -850,412 +874,4 @@ survNPMSM <- function(wts_data,
   if (return_wts) result_object[["wts_data"]] <- wts_data_used
 
   return(result_object)
-}
-
-format_wts_data <- function(wts_data) {
-  # Stack the weighted data sets, if those came in a list:
-  if (is.data.table(wts_data)) {
-    # ...do nothing...
-  } else if (is.list(wts_data)) {
-    assert_that(all(sapply(wts_data, is.data.table)))
-    wts_data <- rbindlist(wts_data)
-  } else {
-    stop("...wts_data arg must be either a list of rule-specific weight data.tables or one combined weight data.table...")
-  }
-return(wts_data)
-}
-
-# ---------------------------------------------------------------------------------------
-#' Estimate Survival with a particular MSM for the survival-hazard function using previously fitted weights.
-#'
-#' Estimate the causal survival curve for a particular stochastic, dynamic or static intervention on the
-#' treatment/exposure and monitoring processes based on
-#' the user-specified Marginal Structural Model (MSM) for the counterfactual survival function.
-#'
-#' @param wts_data A list of \code{data.table}s, each data set is a result of calling the function
-#' \code{getIPWeights}. Must contain the treatment/monitoring rule-specific estimated IPTW weights.
-#' This argument can be also a single \code{data.table} obtained with \code{data.table::rbindlist(wts_data)}.
-#' @param OData The object returned by function \code{fitPropensity}. Contains the input dat and the
-#' previously fitted propensity score models for the exposure, monitoring and
-#' right-censoring.
-#' @param tbreaks The vector of integer (or numeric) breaks that defines the dummy indicators of the
-#' follow-up in the observed data. Used for fitting the parametric (or saturated) MSM for
-#' the survival hazard. See Details.
-#' @param use_weights Logical value. Set to \code{FALSE} to ignore the weights in \code{wts_data} and
-#' fit a "crude" MSM that does not adjust for the possible confounding due to non-random
-#' assignment of the exposure/censoring and monitoring indicators.
-#' @param stabilize Set to \code{TRUE} to stabilize the weights by the empirical conditional probability
-#' of having followed the rule at time-point \code{t}, given the subject has followed the rule all the way up to
-#' time-point \code{t}.
-#' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the
-#' value in \code{trunc_weights} will be truncated.
-#' @param weights Optional \code{data.table} with additional observation-time-specific weights.
-#' Must contain columns \code{ID}, \code{t} and \code{weight}.
-#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
-#' @param getSEs A logical indicator. Set to \code{TRUE} to evaluate the standard errors for the
-#' estimated survival by using the MSM influence curve.
-#' @param est_name A string naming the current MSM estimator. Ignored by the current routine but is
-#' used when generating reports with \code{make_report_rmd}.
-#' @param glm_package Which R package should be used for fitting the weighted logistic regression
-#' model (MSM) for the survival hazard?
-#' Currently available options are \code{"speedglm"} and \code{"h2o"}.
-#' \code{h2o} can provided better performance
-#' when fitting MSM with many observations and large number of time-points.
-#' @param return_wts Return the data.table with subject-specific IP weights as part of the output.
-#' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
-#' @param tmax Maximum value of the follow-up period.
-#' All person-time observations above this value will be excluded from the MSM model.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
-#' Turn this on by default using \code{options(stremr.verbose=TRUE)}.
-#'
-#' @section MSM:
-#' **********************************************************************
-#' This routine will run the weighted logistic regression using the (possibly-weighted) outcomes from
-#' many regimens, with dummy indicators for each treatment/monitoring
-#' regimen available in \code{wts_data} and each follow-up time interval specified in \code{tbreaks}.
-#' When \code{use_weights = TRUE}, the logistic regression for the survival hazard is weighted by the
-#' \strong{IPW} (Inverse Probability-Weighted or Horvitz-Thompson) estimated weights
-#' in \code{wts_data}. These IPW weights are based on the previously fitted propensity scores (function
-#' \code{fitPropensity}), allowing
-#' adjustment for confounding by possibly non-random assignment to exposure and monitoring and possibly
-#' informative right-censoring.
-#'
-#' @section Specifying time-intervals:
-#' **********************************************************************
-#'
-#' \code{tbreaks} is used for defining the time-intervals of the MSM coefficients for estimation of the
-#' survival hazard function.
-#' The first value in \code{tbreaks} defines a dummy variable (indicator) for a fully closed interval,
-#' with each subsequent value in \code{tbreaks} defining a single right-closed time-interval.
-#' For example, \code{tbreaks = c(0,1)} will define the MSM dummy indicators: I(\code{tmin} <= t <= 0 ),
-#' I(0 < t <= 1) and I(1 < t <= \code{tmax}),
-#' where \code{tmin} is the minimum value of the time variable (automatically determined from input weights)
-#' and \code{tmax} is the maximum value of the time variable ( if omitted this will also be automatically
-#' determined from the input weights).
-#'
-#' On the other hand \code{tbreaks = c(1)} will define the following (more parametric) MSM dummy
-#' indicators: I(\code{mint} <= t <=1 ) and I(1 < t <= \code{tmax}).
-#' If omitted, the default is to define a saturated (non-parametric) MSM with a separate dummy variable
-#' for every unique period in the observed data.
-#'
-#' @return MSM estimation results composed of a separate list for each treatment regimen.
-#' Each regimen-specific list contains an item named \code{"estimates"}, which is a data.table
-#' with MSM survival estimates in a column \code{"St.MSM"}. The data.table \code{"estimates"} contains
-#' a separate row for each time-point \code{t}. The \code{"estimates"} also contains the
-#' standard error estimates for MSM survival and the observation-specific influence-curve estimates for
-#' the MSM survival saved in a column named \code{"IC.St"}.
-#' @seealso \code{\link{fitPropensity}}, \code{\link{getIPWeights}}.
-#' @example tests/examples/4_survMSM_example.R
-#' @export
-survMSM <- function(wts_data,
-                    OData,
-                    tbreaks,
-                    use_weights = TRUE,
-                    stabilize = TRUE,
-                    trunc_weights = 10^6,
-                    weights = NULL,
-                    getSEs = TRUE,
-                    est_name = "IPW",
-                    glm_package = c("speedglm", "h2o"),
-                    return_wts = FALSE,
-                    tmax = NULL,
-                    verbose = getOption("stremr.verbose")) {
-
-  gvars$verbose <- verbose
-  nID <- OData$nuniqueIDs
-  nodes <- OData$nodes
-  t_name <- nodes$tnode
-  Ynode <- nodes$Ynode
-
-  wts_data <- format_wts_data(wts_data)
-  rules_TRT <- sort(unique(wts_data[["rule.name"]]))
-
-  glm_package <- glm_package[1L]
-  if (!(glm_package %in% c("speedglm", "h2o"))) stop("glm_package must be either 'speedglm' or 'h2o'")
-
-  if (verbose) print("performing MSM estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
-
-  ## Remove all observations with 0 cumulative weights & copy the weights data.table
-  ## keep all weights, even if they are 0:
-  wts_data_used <- wts_data[!is.na(cum.IPAW) & !is.na(eval(as.name(Ynode))), ]
-  ## remove cumulative weights that are 0:
-  # wts_data_used <- wts_data[!is.na(cum.IPAW) & !is.na(eval(as.name(Ynode))) & (cum.IPAW > 0), ]
-
-  setkeyv(wts_data_used, cols = c(nodes$IDnode, nodes$tnode))
-
-  # Multiply the weight by stabilization factor (numerator) (doesn't do anything for saturated MSMs, since cum.stab.P cancels out):
-  if (stabilize) wts_data_used[, "cum.IPAW" := cum.stab.P * cum.IPAW]
-
-  # If trunc_weights < Inf, do truncation of the weights
-  if (trunc_weights < Inf) wts_data_used[cum.IPAW > trunc_weights, cum.IPAW := trunc_weights]
-
-  # Add additional (user-supplied) observation-specific weights to the cumulative weights:
-  wts_data_used <- process_opt_wts(wts_data_used, weights, nodes, adjust_outcome = FALSE)
-
-  # When !use_weights run a crude estimator by setting all non-zero weights to 1
-  if (!use_weights) wts_data_used[cum.IPAW > 0, cum.IPAW := 1L]
-
-  # Define all observed sequence of periods (t's)
-  mint <- min(wts_data_used[[t_name]], na.rm = TRUE)
-  if (is.null(tmax)) tmax <- max(wts_data_used[[nodes$tnode]], na.rm = TRUE)
-
-  ## subset weights data only by the time-points being considered:
-  wts_data_used <- wts_data_used[eval(as.name(nodes$tnode)) <= tmax, ]
-
-  periods <- (mint:tmax)
-  periods_idx <- seq_along(periods)
-
-  if (verbose) { print("MSM periods: "); print(periods) }
-
-  # Default tbreaks, error checks for tbreaks, plus padding w/ mint & tmax:
-  if (missing(tbreaks)) {
-    # default tbreaks is to use a saturated (non-parametric) MSM
-    tbreaks <- sort(periods)
-    if (verbose)
-      message("running MSM with default 'tbreaks': (" %+%
-        paste0(tbreaks, collapse = ",") %+%
-        "); \nNote: such 'tbreaks' define a separate coefficient for every unique follow-up time period resulting in a saturated (non-parametric) MSM.")
-  }
-
-  if (length(unique(tbreaks)) < length(tbreaks))
-    stop("all tbreaks must be unique")
-
-  if (!all(tbreaks %in% periods))
-    stop("all tbreaks must be contained between minimum and maximum follow-up periods:" %+% tbreaks[!(tbreaks %in% periods)])
-
-  if (max(tbreaks) < tmax) tbreaks <- sort(c(tbreaks, tmax)) # pad on the right (if needed with tmax):
-
-  # Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
-  all.d.dummies <- NULL
-  for( dummy.j in rules_TRT ){
-    wts_data_used[, (dummy.j) := as.integer(rule.name %in% dummy.j)]
-    all.d.dummies <- c(all.d.dummies, dummy.j)
-  }
-
-  # Create the dummies I(t in interval.j), where interval.j defined by intervals of time of increasing length
-  all.t.dummies <- NULL
-  tbreaks.mint <- c(mint, tbreaks) # pad tbreaks on the left (with mint)
-  MSM.intervals <- matrix(NA, ncol = 2, nrow = length(tbreaks)) # save the actual intervals
-  colnames(MSM.intervals) <- c("min.t", "max.t")
-  t.per.inteval <- vector(mode = "list", length = nrow(MSM.intervals)) # save the vector of period vals that belong to each interval
-  for (t.idx in 2:length(tbreaks.mint)) {
-    low.t <- tbreaks.mint[t.idx - 1]
-    high.t <- tbreaks.mint[t.idx]
-    # First interval needs to be closed on both sides (includes the smallest obesrved follow-up, mint)
-    if (t.idx == 2L) {
-      dummy.j <- paste("Periods.", low.t, "to", high.t, sep="")
-      MSM.intervals[t.idx - 1, ] <- c(low.t, high.t); t.per.inteval[[t.idx - 1]] <- unique(low.t:high.t)
-      wts_data_used[, (dummy.j) := as.integer(get(t_name) >= low.t & get(t_name) <= high.t)]
-      # wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= low.t & eval(as.name(t_name)) <= high.t)]
-    } else {
-      dummy.j <- paste("Periods.", (low.t + 1), "to", high.t, sep="")
-      MSM.intervals[t.idx - 1, ] <- c(low.t + 1, high.t)
-      t.per.inteval[[t.idx - 1]] <- unique((low.t+1):high.t)
-      wts_data_used[, (dummy.j) := as.integer(get(t_name) >= (low.t + 1) & get(t_name) <= high.t)]
-      # wts_data_used[, (dummy.j) := as.integer(eval(as.name(t_name)) >= (low.t + 1) & eval(as.name(t_name)) <= high.t)]
-    }
-    if (verbose) print("defined t.dummy: " %+% dummy.j)
-    all.t.dummies <- c(all.t.dummies, dummy.j)
-  }
-
-  # Create interaction dummies I(t in interval.j & d == intervened_TRT)
-  for (d.dummy in all.d.dummies) {
-    for (t.dummy in all.t.dummies) {
-      if (verbose) print(t.dummy %+% "_" %+% d.dummy)
-      wts_data_used[, (t.dummy %+% "_" %+% d.dummy) := as.integer(eval(as.name(t.dummy)) & eval(as.name(d.dummy)))]
-    }
-  }
-
-  all_dummies <-  paste(sapply(all.d.dummies, function(x) {
-                        return(paste(paste(paste(all.t.dummies, x, sep="_"), sep="")))
-                        }))
-
-  # Fit the hazard MSM
-  resglmMSM <- runglmMSM(wts_data_used, all_dummies, Ynode, glm_package, verbose)
-  wts_data_used[, glm.IPAW.predictP1 := resglmMSM$glm.IPAW.predictP1]
-  m.fit <- resglmMSM$m.fit
-
-  # Compute the Survival curves under each d
-  S2.IPAW <- hazard.IPAW <- rep(list(rep(NA,tmax-mint+1)), length(rules_TRT))
-  names(S2.IPAW) <- names(hazard.IPAW) <- rules_TRT
-
-  if (verbose) message("...evaluating MSM-based survival curves...")
-
-  for(d.j in names(S2.IPAW)) {
-    for(period.idx in seq_along(periods)) {
-      period.j <- periods[period.idx] # the period of the follow-up for which we want to evaluate the MSM-based survival:
-      # the dummy coefficient of the MSM that includes this time-point (period)
-      # that is, find the appropriate right-closed interval from MSM.intervals matrix for a given period.j:
-      int_idx <- which(period.j <= MSM.intervals[,2] & period.j >= MSM.intervals[,1])
-      if (!(period.j %in% t.per.inteval[[int_idx]])) stop("error while finding the appropriate MSM coefficient")
-      d.j.idx <- which(all.d.dummies %in% d.j)
-      MSM.term <- all_dummies[length(all.t.dummies)*(d.j.idx - 1) + int_idx]
-      # print("fetching MSM coefficient for period " %+% period.j %+% " and rule " %+% d.j %+% ": " %+% MSM.term)
-      hazard.IPAW[[d.j]][period.idx] <- 1 / (1 + exp(-m.fit$coef[MSM.term]))
-      S2.IPAW[[d.j]][period.idx] <- (1-1/(1 + exp(-m.fit$coef[MSM.term])))
-    }
-    S2.IPAW[[d.j]] <- cumprod(S2.IPAW[[d.j]])
-  }
-
-  if (verbose) message("...evaluating SEs based on MSM hazard fit and the estimated IC...")
-
-  #### For variance (SEs), GET IC and SE FOR BETA's
-  #### GET IC and SE FOR Sd(t)
-  # S.d.t.predict - MSM survival estimates for one regimen
-  # h.d.t.predict - MSM hazard estimates for one regimen
-  # design.d.t - d-specific matrix of dummy indicators for each t, i.e., d(m(t,d))/t
-  # IC.O - observation-specific IC estimates for MSM coefs
-  # IC.S - observation-specific IC estimates for S(t) (by time-point)
-  design.d.t <- rep(list(matrix(0L, ncol = length(all_dummies), nrow = length(mint:tmax))), length(rules_TRT))
-  IC.Var.S.d <- vector(mode = "list", length(rules_TRT))
-  names(design.d.t) <- names(IC.Var.S.d) <- rules_TRT
-
-  for(d.j in names(S2.IPAW)) {
-    IC.Var.S.d[[d.j]][["se.S"]] <- rep(NA_real_, length(S2.IPAW[[d.j]]))
-    IC.Var.S.d[[d.j]][["IC.S"]] <- matrix(NA_real_, nrow = length(periods), ncol = nID)
-  }
-
-  ## wrapping the whole thing in try({}), if it fails, use empty se/IC above
-  if (getSEs) {
-    try({
-      # the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
-      # the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
-      # p.coef - number of time-specific coefficients in the MSM
-      p.coef <- nrow(MSM.intervals) # p.coef <- length(tjmin)
-      design.t <- matrix(0L, ncol = p.coef, nrow = length(periods))
-      for (period.idx in seq_along(periods)) {
-        period.j <- periods[period.idx]
-        col.idx <- which(period.j <= MSM.intervals[,2] & period.j >= MSM.intervals[,1])
-        design.t[period.idx, col.idx] <- 1
-      }
-      beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
-                                MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
-                                MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use_weights)
-
-      for(d.j in names(S2.IPAW)) {
-        d.idx <- which(names(S2.IPAW) %in% d.j)
-        set_cols <- seq((d.idx - 1) * ncol(design.t) + 1, (d.idx) * ncol(design.t))
-        design.d.t[[d.j]][,set_cols] <- design.t
-
-        IC.Var.S.d[[d.j]] <- getSE.S(nID = nID,
-                                     S.d.t.predict = S2.IPAW[[d.j]],
-                                     h.d.t.predict = hazard.IPAW[[d.j]],
-                                     design.d.t = design.d.t[[d.j]],
-                                     IC.O = beta.IC.O.SEs[["IC.O"]])
-      }      
-    })
-  }
-
-  ## The output MSM object.
-  ## "estimates" is a data.table with surv estimates (column "St.MSM");
-  ##  Separate row for each time-point t;
-  ##  "estimates" contains IC.St (observation-specific IC estimates for S(t)) saved in a column
-  MSM_out <- lapply(rules_TRT, function(rule_name) {
-      est_name <- "MSM"
-      estimates <- data.table(time = periods,
-                              ht.MSM = hazard.IPAW[[rule_name]],
-                              St.MSM = S2.IPAW[[rule_name]],
-                              SE.MSM = IC.Var.S.d[[rule_name]][["se.S"]],
-                              rule.name = rep(rule_name, length(periods)))
-      estimates <- cbind(est_name = est_name, estimates)
-
-      n_ts <- nrow(IC.Var.S.d[[rule_name]][["IC.S"]])
-      for (i in 1:n_ts) {
-        estimates[i, ("IC.St") := list(list(IC.Var.S.d[[rule_name]][["IC.S"]][i, ]))]
-      }
-
-      attr(estimates, "estimator_short") <- est_name
-      attr(estimates, "estimator_long") <- "MSM (Marginal Structural Model) for hazard, mapped into survival"
-      attr(estimates, "nID") <- nID
-      attr(estimates, "rule_name") <- rule_name
-      attr(estimates, "time") <- estimates[["time"]]
-      attr(estimates, "trunc_weights") <- trunc_weights
-
-      return(list(est_name = est_name,
-                  periods = periods,
-                  St = S2.IPAW[[rule_name]],
-                  ht = hazard.IPAW[[rule_name]],
-                  MSM.fit = m.fit,
-                  MSM.intervals = MSM.intervals,
-                  # IC.Var.S.d = IC.Var.S.d[[rule_name]],
-                  nID = nID,
-                  nobs = nrow(wts_data_used),
-                  wts_data = { if (return_wts) {wts_data_used} else {NULL} },
-                  use_weights = use_weights,
-                  trunc_weights = trunc_weights,
-                  estimates = estimates
-                  ))
-    }
-  )
-  names(MSM_out) <- rules_TRT
-  if (length(MSM_out) == 1L) return(MSM_out[[1L]]) else  return(MSM_out)
-}
-
-runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
-  # Generic prediction fun for logistic regression coefs, predicts P(A = 1 | X_mat)
-  # Does not handle cases with deterministic Anodes in the original data.
-  logispredict = function(m.fit, X_mat) {
-    eta <- X_mat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-    pAout <- match.fun(FUN = m.fit$linkfun)(eta)
-    return(pAout)
-  }
-
-  if (glm_package %in% "h2o") {
-    if (verbose) message("...fitting hazard MSM with h2o::h2o.glm...")
-    MSM.designmat.H2O <- fast.load.to.H2O(wts_data, destination_frame = "MSM.designmat.H2O")
-    m.fit_h2o <- try(h2o::h2o.glm(y = Ynode,
-                                  x = all_dummies,
-                                  intercept = FALSE,
-                                  weights_column = "cum.IPAW",
-                                  training_frame = MSM.designmat.H2O,
-                                  family = "binomial",
-                                  standardize = FALSE,
-                                  solver = "IRLSM", # solver = c("L_BFGS"),
-                                  lambda = 0L,
-                                  max_iterations = 50,
-                                  ignore_const_cols = FALSE
-                                  ),
-                silent = TRUE)
-
-    out_coef <- vector(mode = "numeric", length = length(all_dummies))
-    out_coef[] <- NA
-    names(out_coef) <- c(all_dummies)
-    out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
-    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
-    glm.IPAW.predictP1 <- as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])
-    # wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
-  } else if (glm_package %in% "speedglm") {
-    if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
-    Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
-
-    m.fit <- try(speedglm::speedglm.wfit(
-                                       X = Xdesign.mat,
-                                       y = as.numeric(wts_data[[Ynode]]),
-                                       intercept = FALSE,
-                                       family = quasibinomial(),
-                                       weights = wts_data[["cum.IPAW"]],
-                                       trace = FALSE),
-                        silent = TRUE)
-    if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
-      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats::glm.fit; ", m.fit)
-      ctrl <- stats::glm.control(trace = FALSE)
-      SuppressGivenWarnings({
-        m.fit <- stats::glm.fit(x = Xdesign.mat,
-                                y = as.numeric(wts_data[[Ynode]]),
-                                family = quasibinomial(),
-                                intercept = FALSE,
-                                weights = wts_data[["cum.IPAW"]],
-                                control = ctrl)
-      }, GetWarningsToSuppress())
-    }
-    m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
-
-    if (verbose) {print("MSM fits"); print(m.fit$coef)}
-
-    glm.IPAW.predictP1 <- logispredict(m.fit, Xdesign.mat)
-    # wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
-  } else {
-    stop("glm_package can be either 'h2o' or 'speedglm'")
-  }
-  return(list(glm.IPAW.predictP1 = glm.IPAW.predictP1, m.fit = m.fit))
 }

@@ -6,7 +6,7 @@
 \usage{
 importData(data, ID = "Subject_ID", t_name = "time_period", covars,
   CENS = NULL, TRT = "A", MONITOR = NULL, OUTCOME = "Y",
-  noCENScat = 0L, remove_extra_rows = TRUE,
+  weights = NULL, noCENScat = 0L, remove_extra_rows = TRUE,
   verbose = getOption("stremr.verbose"))
 }
 \arguments{
@@ -45,6 +45,8 @@ Leave as missing if not intervening on monitoring.}
 
 \item{OUTCOME}{A column name in \code{data} for the survival OUTCOME variable name, code as 1 for the outcome event.}
 
+\item{weights}{Optional column name in \code{data} that contains subject- and time-specific weights.}
+
 \item{noCENScat}{The level (integer) that indicates CONTINUATION OF FOLLOW-UP for ALL censoring variables. Defaults is 0.
 Use this to modify the default reference category (no CENSoring / continuation of follow-up)
 for variables specifed in \code{CENS}.}
@@ -64,7 +66,6 @@ Import data, define various nodes, define dummies for factor columns and define 
 \examples{
 options(stremr.verbose = TRUE)
 require("data.table")
-set_all_stremr_options(estimator = "speedglm__glm")
 
 # ----------------------------------------------------------------------
 # Simulated Data
@@ -174,24 +175,34 @@ OData <- fitPropensity(OData, gform_CENS = gform_CENS, gform_TRT = gform_TRT,
                         gform_MONITOR = gform_MONITOR)
 
 # ----------------------------------------------------------------------
-# Fitting Propensity scores with Random Forests:
+# Fitting treatment model with Gradient Boosting machines:
 # ----------------------------------------------------------------------
 \dontrun{
-set_all_stremr_options(estimator = "h2o__randomForest")
 require("h2o")
 h2o::h2o.init(nthreads = -1)
 gform_CENS <- "C ~ highA1c + lastNat1"
+models_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm")
 OData <- fitPropensity(OData, gform_CENS = gform_CENS,
                         gform_TRT = gform_TRT,
+                        models_TRT = models_TRT,
                         gform_MONITOR = gform_MONITOR,
                         stratify_CENS = stratify_CENS)
 
-# For Gradient Boosting machines:
-set_all_stremr_options(estimator = "h2o__gbm")
-# Use `H2O-3` distributed implementation of GLM
-set_all_stremr_options(estimator = "h2o__glm")
+# Use `H2O-3` distributed implementation of GLM for treatment model estimator:
+models_TRT <- sl3::Lrnr_h2o_glm$new(family = "binomial")
+OData <- fitPropensity(OData, gform_CENS = gform_CENS,
+                        gform_TRT = gform_TRT,
+                        models_TRT = models_TRT,
+                        gform_MONITOR = gform_MONITOR,
+                        stratify_CENS = stratify_CENS)
+
 # Use Deep Neural Nets:
-set_all_stremr_options(estimator = "h2o__deeplearning")
+models_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "deeplearning")
+OData <- fitPropensity(OData, gform_CENS = gform_CENS,
+                        gform_TRT = gform_TRT,
+                        models_TRT = models_TRT,
+                        gform_MONITOR = gform_MONITOR,
+                        stratify_CENS = stratify_CENS)
 }
 
 # ----------------------------------------------------------------------
@@ -199,13 +210,14 @@ set_all_stremr_options(estimator = "h2o__deeplearning")
 # Fine tuning modeling with optional tuning parameters.
 # ----------------------------------------------------------------------
 \dontrun{
-params_TRT = gridisl::defModel(estimator = "h2o__gbm", ntrees = 50,
+params_TRT <- sl3::Lrnr_h2o_grid$new(algorithm = "gbm",
+                              ntrees = 50,
                               learn_rate = 0.05,
                               sample_rate = 0.8,
                               col_sample_rate = 0.8,
                               balance_classes = TRUE)
-params_CENS = gridisl::defModel(estimator = "speedglm__glm")
-params_MONITOR = gridisl::defModel(estimator = "speedglm__glm")
+params_CENS <- sl3::Lrnr_glm_fast$new()
+params_MONITOR <- sl3::Lrnr_glm_fast$new()
 OData <- fitPropensity(OData,
             gform_CENS = gform_CENS, stratify_CENS = stratify_CENS, params_CENS = params_CENS,
             gform_TRT = gform_TRT, params_TRT = params_TRT,
@@ -219,7 +231,7 @@ OData <- fitPropensity(OData,
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-models = gridisl::defModel(estimator = "h2o__randomForest",
+models <- sl3::Lrnr_h2o_grid$new(algorithm = "randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
@@ -230,7 +242,7 @@ tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",
 \dontrun{
 t.surv <- c(0:5)
 Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-models = gridisl::defModel(estimator = "h2o__randomForest",
+models <- sl3::Lrnr_h2o_grid$new(algorithm = "randomForest",
                            ntrees = 100, learn_rate = 0.05, sample_rate = 0.8,
                            col_sample_rate = 0.8, balance_classes = TRUE)
 tmle_est <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "TI.set1",

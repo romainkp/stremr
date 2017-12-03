@@ -13,7 +13,7 @@ test.GCOMP.TMLE.10Kdata <- function() {
   # options(gridisl.verbose = TRUE)
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
 
   ## ---------------------------------------------------------------------------
   ## INSTALL CORRECT VERSIONS of data.table and stremr from github:

@@ -1,6 +1,6 @@
 # nocov start
 SDRtransform <- R6Class(classname = "SDRtransform",
-  inherit = GenericModel,
+  inherit = ModelGeneric,
   portable = TRUE,
   class = TRUE,
   public = list(
@@ -36,7 +36,7 @@ SDRtransform <- R6Class(classname = "SDRtransform",
 # Q1: What happens when we have reached the final time-point?
 
 SDRtransformQModel  <- R6Class(classname = "SDRtransformQModel",
-  inherit = QlearnModel,
+  inherit = ModelQlearn,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,

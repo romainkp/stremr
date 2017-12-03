@@ -22,7 +22,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     options(gridisl.verbose = TRUE)
     # options(stremr.verbose = FALSE)
     # options(gridisl.verbose = FALSE)
-    set_all_stremr_options(estimator = "speedglm__glm")
+    # set_all_stremr_options(estimator = "speedglm__glm")
 
     data(OdatDT_10K)
     Odat_DT <- OdatDT_10K
@@ -44,7 +44,7 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
     # IMPORT DATA
     # ----------------------------------------------------------------
     # options(stremr.verbose = TRUE)
-    set_all_stremr_options(estimator = "xgboost__glm", fit_method = "cv", fold_column = "fold_ID")
+    # set_all_stremr_options(estimator = "xgboost__glm", fit_method = "cv", fold_column = "fold_ID")
     # set_all_stremr_options(estimator = "h2o__glm", fit_method = "cv", fold_column = "fold_ID")
     # h2o::h2o.init(nthreads = 1)
 
@@ -77,7 +77,8 @@ test.h2oglm.IPW.MSM.10Kdata <- function() {
                             stratify_TRT = stratify_TRT, gform_MONITOR = gform_MONITOR,
                             family = "quasibinomial",
                             # family = "binomial", solver = "L_BFGS", lambda_search = FALSE,
-                            estimator = "xgboost__glm", fit_method = "cv", fold_column = "fold_ID", nthread = 1)
+                            estimator = "xgboost__glm", 
+                            fit_method = "cv", fold_column = "fold_ID", nthread = 1)
     wts.St.dlow <- getIPWeights(OData, intervened_TRT = "gTI.dlow")
     wts.St.dhigh <- getIPWeights(OData, intervened_TRT = "gTI.dhigh")
 

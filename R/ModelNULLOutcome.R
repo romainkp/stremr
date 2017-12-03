@@ -2,8 +2,8 @@
 ## A trivial class for dealing with NULL outcome modeling (when MONITOR and / or CENS aren't specified)
 ## This class does nothing but simply returns a vector of (1,1,1,...) when predict methods are called.
 ## ----------------------------------------------------------------------------------
-NULLOutcomeModel  <- R6Class(classname = "NULLOutcomeModel",
-  inherit = DeterministicBinaryOutcomeModel,
+ModelNULLOutcome  <- R6Class(classname = "ModelNULLOutcome",
+  inherit = ModelDeterministic,
   cloneable = TRUE,
   portable = TRUE,
   class = TRUE,

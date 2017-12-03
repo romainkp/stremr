@@ -16,7 +16,7 @@ The class \code{DataStorageClass} is the only way the package uses to access the
  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
  For continous sVar this class provides methods for detecting / setting bin intervals,
  normalization, disretization and construction of bin indicators.
- The pointers to this class get passed on to \code{GenericModel} functions: \code{$fit()},
+ The pointers to this class get passed on to \code{ModelGeneric} functions: \code{$fit()},
  \code{$predict()} and \code{$predictAeqa()}.
 }
 \details{
@@ -40,12 +40,6 @@ The class \code{DataStorageClass} is the only way the package uses to access the
   \item{\code{evalsubst(subset_exprs, subset_vars)}}{...}
   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
-  \item{\code{bin.nms.sVar(name.sVar, nbins)}}{...}
-  \item{\code{detect.sVar.intrvls(name.sVar, nbins, bin_bymass, bin_bydhist, max_nperbin)}}{...}
-  \item{\code{detect.cat.sVar.levels(name.sVar)}}{...}
-  \item{\code{binirize.sVar(name.sVar, ...)}}{...}
-  \item{\code{get.sVar.bw(name.sVar, intervals)}}{...}
-  \item{\code{get.sVar.bwdiff(name.sVar, intervals)}}{...}
 }
 }
 
@@ -57,11 +51,7 @@ The class \code{DataStorageClass} is the only way the package uses to access the
    \item{\code{names.sVar}}{...}
    \item{\code{type.sVar}}{Named list of length \code{ncol(private$.mat.sVar)} with \code{sVar} variable types: "binary"/"categor"/"contin".}
    \item{\code{dat.sVar}}{...}
-   \item{\code{ord.sVar}}{Ordinal (categorical) transformation of a continous covariate \code{sVar}.}
-   \item{\code{active.bin.sVar}}{Name of active binarized cont sVar, changes as fit/predict is called (bin indicators are temp. stored in private$.mat.bin.sVar)}
-   \item{\code{dat.bin.sVar}}{...}
    \item{\code{emptydat.sVar}}{...}
-   \item{\code{emptydat.bin.sVar}}{...}
    \item{\code{noNA.Ynodevals}}{...}
    \item{\code{nodes}}{...}
 }

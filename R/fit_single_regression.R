@@ -2,7 +2,7 @@
 ## Call \code{gridisl} and fit a single regression model.
 ## All model fitting in stremr is performed via this function.
 ## ----------------------------------------------------------------------------------
-fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx, ...) {
+fit_single_regression <- function(data, nodes, models, model_contrl, predvars, outvar, subset_idx, outcome_type = "continuous", ...) {
 
   if (is.null(model_contrl[["fit_method"]]))
     stop("'fit_method' must be specified")
@@ -28,40 +28,63 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   ## Use the existing fold ID column (previously defined by calling define_CVfolds())
   } else if ((method %in% c("cv", "origamiSL")) && is.null(fold_column)) fold_column <- data$fold_column
 
-  model.fit <- try({
-    gridisl::fit(models,
-                method = method,
-                ID = nodes$IDnode,
-                t_name = nodes$tnode,
-                x = predvars,
-                y = outvar,
-                data = data,
-                fold_column = fold_column,
-                subset_idx = subset_idx, ...)
-  })
+  if (is(models, "Lrnr_base")) {
+    ## todo: implement an efficient converter from DataStorageClass into sl3_task object (avoiding a copy unless absolutely necessary)
+    ## todo: need to somehow transfer the fold column to task, but only if it actually exists
+    if (!is.null(data$fold_column)) {
+      folds <- data$make_origami_fold_from_column(subset_idx)
+    } else {
+      folds <- NULL
+    }
 
-  if (inherits(model.fit, "try-error")) {
-    message("...trying to run speedglm as a backup...")
-    method <- "none"
-    # model_contrl[["fit.package"]] <- "speedglm"
-    # model_contrl[["fit.algorithm"]] <- "glm"
-    glm_model <- models[1]
-    glm_model[[1]][["fit.package"]] <- "speedglm"
-    glm_model[[1]][["fit.algorithm"]] <- "glm"
-    class(glm_model) <- c(class(glm_model), "ModelStack")
-    # glm_model <- gridisl::defModel(estimator = "speedglm__glm", family = family, distribution = distribution)
+    task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ],
+                              covariates = predvars,
+                              outcome = outvar,
+                              id = data$nodes$IDnode,
+                              folds = folds,
+                              outcome_type = outcome_type
+                              )
+    
+    model.fit <- try({models$train(task)})
 
-    model.fit <- gridisl::fit(glm_model,
-                             method = method,
-                             ID = nodes$IDnode,
-                             t_name = nodes$tnode,
-                             x = predvars,
-                             y = outvar,
-                             data = data,
-                             verbose = gvars$verbose,
-                             fold_column = fold_column,
-                             subset_idx = subset_idx)
+    if (inherits(model.fit, "try-error") || inherits(model.fit$fit_object, "try-error")) {
+      cat("\nsl3 error debugging info:\n");
+      print(model.fit)
+    }
+    # try({
+    #   internal_ref <- model.fit$training_task$data
+    #   data.table::set(internal_ref, j=names(internal_ref), value=NULL)
+    # }, silent = TRUE)
 
+  } else {
+
+    model.fit <- try({
+      gridisl::fit(models,
+                  method = method,
+                  ID = nodes$IDnode,
+                  t_name = nodes$tnode,
+                  x = predvars,
+                  y = outvar,
+                  data = data,
+                  fold_column = fold_column,
+                  subset_idx = subset_idx, ...)
+    })
+  }
+
+  if (inherits(model.fit, "try-error") || inherits(model.fit$fit_object, "try-error")) {
+    message("...trying to run Lrnr_glm_fast as a backup...")
+    task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar, outcome_type = "continuous")
+    lrn_model <- sl3::Lrnr_glm_fast$new()
+
+    model.fit <- try(lrn_model$train(task))
+    if (inherits(model.fit, "try-error")) {
+      cat("\nsl3 error debugging info:\n");
+      print(model.fit)
+    }
+    # try({
+    #   internal_ref <- model.fit$training_task$data
+    #   data.table::set(internal_ref, j=names(internal_ref), value=NULL)
+    # }, silent = TRUE)
   }
 
   return(model.fit)

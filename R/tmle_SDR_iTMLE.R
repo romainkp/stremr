@@ -33,10 +33,6 @@
 #' See \code{stratifyQ_by_rule} for more details.
 #' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
-#' Should be a character string in the format 'Package__Algorithm'.
-#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-#' This argument is ignored when the fitting procedures are already defined via the argument \code{models}.
 #' @param fit_method Model selection approach. Can be either \code{"none"} - no model selection or
 #' \code{"cv"} - V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs).
 # \code{"holdout"} - model selection by splitting the data into training and validation samples according to lowest validation sample MSE (must specify the column of \code{TRUE} / \code{FALSE} indicators,
@@ -47,10 +43,13 @@
 #' @param CVTMLE Set to \code{TRUE} to run the CV-TMLE algorithm instead of the usual TMLE algorithm.
 #' Must set either \code{TMLE}=\code{TRUE} or \code{iterTMLE}=\code{TRUE} for this argument to have any effect..
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
+#' @param weights Optional \code{data.table} with additional observation- and time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}). Not implemented yet.
 #' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
 #' requires a previously defined parallel back-end cluster)
-#' @param return_fW ...
-#' @param use_DR_transform ...
+#' @param return_fW When \code{TRUE}, will return the object fit for the last Q regression as part of the output table.
+#' Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).
+#' @param use_DR_transform Apply DR transform estimator instead of the iTMLE.
 #' @param stabilize Only applies when \code{use_DR_transform=TRUE}. Set this argument to \code{TRUE} to stabilize the weights by the
 #' empirical conditional probability of having followed the rule at time-point \code{t}, given the subject has followed the rule all
 #' the way up to time-point \code{t}.
@@ -65,39 +64,37 @@
 #' @return An output list containing the \code{data.table} with survival estimates over time saved as \code{"estimates"}.
 #' @export
 fit_iTMLE <- function(OData,
-                    tvals,
-                    Qforms,
-                    intervened_TRT = NULL,
-                    intervened_MONITOR = NULL,
-                    rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
-                    models = NULL,
-                    estimator = stremrOptions("estimator"),
-                    fit_method = stremrOptions("fit_method"),
-                    fold_column = stremrOptions("fold_column"),
-                    stratifyQ_by_rule = FALSE,
-                    stratify_by_last = TRUE,
-                    useonly_t_TRT = NULL,
-                    useonly_t_MONITOR = NULL,
-                    CVTMLE = FALSE,
-                    trunc_weights = 10^6,
-                    parallel = FALSE,
-                    return_fW = FALSE,
-                    use_DR_transform = FALSE,
-                    stabilize = FALSE,
-                    reg_Q = NULL,
-                    SDR_model = NULL,
-                    verbose = getOption("stremr.verbose"), ...) {
+                      tvals,
+                      Qforms,
+                      intervened_TRT = NULL,
+                      intervened_MONITOR = NULL,
+                      rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
+                      models = NULL,
+                      fit_method = stremrOptions("fit_method"),
+                      fold_column = stremrOptions("fold_column"),
+                      stratifyQ_by_rule = FALSE,
+                      stratify_by_last = TRUE,
+                      useonly_t_TRT = NULL,
+                      useonly_t_MONITOR = NULL,
+                      CVTMLE = FALSE,
+                      trunc_weights = 10^6,
+                      weights = NULL,
+                      parallel = FALSE,
+                      return_fW = FALSE,
+                      use_DR_transform = FALSE,
+                      stabilize = FALSE,
+                      reg_Q = NULL,
+                      SDR_model = NULL,
+                      verbose = getOption("stremr.verbose"), ...) {
 
   if (is.null(SDR_model)) {
     SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6, learning_rate = .1, nrounds = 50)
-    # SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6, nrounds = 10)
-    # SDR_model <- list("objective" = "reg:logistic", "booster" = "gbtree", "nthread" = 1, "max_delta_step" = 6)
   }
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  if (!is.null(models)) assert_that(is.ModelStack(models))
+  assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
 
   # ------------------------------------------------------------------------------------------------
@@ -105,9 +102,20 @@ fit_iTMLE <- function(OData,
   # ------------------------------------------------------------------------------------------------
   OData$uncensored <- OData$eval_uncensored()
   OData$follow_rule <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
-  sVar.exprs <- capture.exprs(...)
-  models_control <- c(list(models = models), list(reg_Q = reg_Q), opt_params = list(sVar.exprs))
-  models_control[["estimator"]] <- estimator[1L]
+
+  opt_params <- capture.exprs(...)
+  if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
+
+  if (!is.null(models)) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  } else {
+    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+  }
+
+  models_control <- c(list(models = models), 
+                      list(reg_Q = reg_Q), 
+                      opt_params = list(opt_params))
+
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
 
@@ -270,11 +278,6 @@ fit_iTMLE_onet <- function(OData,
     OData$dat.sVar[, "Qk_hat" := NULL]
   }
 
-  # OData$def.types.sVar() ## was a bottleneck, replaced with below:
-  OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
-  OData$set.sVar.type(name.sVar = "Qkplus1.protected", new.type = "binary")
-  OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
-
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
   # **** TO DO: This could also be done only once in the main routine, then just subset the appropriate Q_regs_list
@@ -309,7 +312,7 @@ fit_iTMLE_onet <- function(OData,
 
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
-    ## The following two lines allow for a slightly simplified (shallower) tree representation of GenericModel-type classes.
+    ## The following two lines allow for a slightly simplified (shallower) tree representation of ModelGeneric-type classes.
     ## This also means that stratifying Q fits by some covariate value will not possible with this approach
     ## (i.e., such stratifications would have to be implemented locally by the actual model fitting functions).
     reg_i <- reg$clone()
@@ -367,56 +370,6 @@ fit_iTMLE_onet <- function(OData,
 
   est_name <- "St.SDR"
   resDF_onet[, (est_name) := (1 - mean_est_t)]
-
-  # browser()
-
-  # ## THESE TWO ARE EQUAL:
-  # mean(OData$dat.sVar[t==0, Qk_hat] - mean_est_t)
-  # mean(res_lastPredQ - mean_est_t)
-  # sum((res_lastPredQ - mean_est_t)^2) / (OData$nuniqueIDs^2)
-  # ## WHY IS THIS NOT EQUAL TO ABOVE???
-  # mean(OData$dat.sVar[t==0, EIC_i_t_sum])
-
-  # # prev SDR Var:
-  # # [1] 0.0004280239
-  # # [1] "...empirical mean of the estimated EIC: -0.000409312028226282"
-  # get_field_Qclass <- function(allQmodels, fieldName) {
-  #   lapply(allQmodels, function(Qclass) Qclass[[fieldName]])
-  #   # lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]][[fieldName]])
-  # }
-  # OData$IPwts_by_regimen[t==0, ]
-  # # [1] -0.000430987
-  # sum(OData$dat.sVar[t==0, EIC_i_t_sum]^2)/(OData$nuniqueIDs^2)
-  # # [1] 0.0001000335
-  # sqrt(sum(OData$dat.sVar[t==0, EIC_i_t_sum]^2)/(OData$nuniqueIDs^2))
-  # # [1] 0.01000167
-  # idx_all_wts_above0 <- which(OData$IPwts_by_regimen[["cum.IPAW"]] > 0)
-  # allQmodels <- Qlearn.fit$getPsAsW.models() # Get the individual Qlearning classes
-  # res_idx_used_to_fit_initQ <- as.vector(sort(unlist(get_field_Qclass(allQmodels, "idx_used_to_fit_initQ"))))
-  # use_subset_idx <- intersect(idx_all_wts_above0, res_idx_used_to_fit_initQ)
-  # wts_TMLE <- OData$IPwts_by_regimen[use_subset_idx, "cum.IPAW", with = FALSE][[1]]
-  # # Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1", with = FALSE][[1]]
-  # Qkplus1 <- OData$dat.sVar[use_subset_idx, "Qkplus1.protected", with = FALSE][[1]]
-  # Qk_hat <- OData$dat.sVar[use_subset_idx, "Qk_hat", with = FALSE][[1]]
-  # EIC_i_tplus <- wts_TMLE * (Qkplus1 - Qk_hat)
-  # # OData$dat.sVar[, ("EIC_i_t") := 0]
-  # OData$dat.sVar[use_subset_idx, ("EIC_i_t") := EIC_i_tplus]
-  # # OData$dat.sVar[use_subset_idx, ("EIC_i_t2") := EIC_i_tplus2]
-  # IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
-  # IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
-  # IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
-  # IC_dt
-  # SDR_Var_2 <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2) / OData$nuniqueIDs
-  # SDR_Var_2
-  # # [1] 0.0001282086
-  # # [1] 4.56573e-05
-  # sqrt(SDR_Var_2)
-  # # [1] 0.006757019
-  # mean(IC_dt[["EIC_i"]])
-  # # [1] 0.001448439
-  # # [1] 0.001229965
-  # # mean(res_lastPredQ - mean_est_t)
-  # 1.951753*(0.0005806247-0.1845869742)
 
   # ------------------------------------------------------------------------------------------------
   # SDR INFERENCE

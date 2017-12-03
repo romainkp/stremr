@@ -1,70 +1,9 @@
-tmle.update <- function(Qkplus1, Qk_hat, IPWts,
-                        lower_bound_zero_Q = TRUE,
-                        skip_update_zero_Q = TRUE,
-                        up_trunc_offset = stremrOptions("up_trunc_offset"),
-                        low_trunc_offset = stremrOptions("low_trunc_offset"),
-                        eps_tol = stremrOptions("eps_tol")
-                        ) {
-
-  QY.star <- NA
-
-  if (sum(abs(IPWts)) < 10^-9) {
-
-    update.Qstar.coef <- 0
-    # if (gvars$verbose)
-    message("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon to 0")
-    # warning("GLM TMLE update cannot be performed since all IP-weights are exactly zero, setting epsilon = 0")
-
-  # } else if ((sum(Qkplus1[IPWts > 0]) < 10^-5) && skip_update_zero_Q) {
-  } else if (((all(Qkplus1[IPWts > 0] < eps_tol)) || (all(Qkplus1[IPWts > 0] > (1-eps_tol)))) && skip_update_zero_Q) {
-    message("GLM TMLE update cannot be performed since the outcomes (Qkplus1) are either all 0 or all 1, setting epsilon to 0")
-    update.Qstar.coef <- 0
-
-  } else {
-
-    #************************************************
-    # TMLE update via weighted univariate ML (espsilon is intercept)
-    #************************************************
-    if (lower_bound_zero_Q) {
-      Qkplus1[Qkplus1 < eps_tol] <- eps_tol
-      Qkplus1[Qkplus1 > (1 - eps_tol)] <- (1 - eps_tol)
-    }
-
-    off_TMLE <- truncate_offset(qlogis(Qk_hat), up_trunc_offset, low_trunc_offset)
-    # off_TMLE <- qlogis(Qk_hat)
-    # off_TMLE[off_TMLE >= up_trunc_offset] <- up_trunc_offset
-    # off_TMLE[off_TMLE <= low_trunc_offset] <- low_trunc_offset
-
-    m.Qstar <- try(speedglm::speedglm.wfit(X = matrix(1L, ncol = 1, nrow = length(Qkplus1)),
-                                          y = Qkplus1, weights = IPWts, offset = off_TMLE,
-                                          # method=c('eigen','Cholesky','qr'),
-                                          family = quasibinomial(), trace = FALSE, maxit = 1000),
-                  silent = TRUE)
-
-    if (inherits(m.Qstar, "try-error")) { # TMLE update failed
-      # if (gvars$verbose)
-      message("GLM TMLE update has failed, setting epsilon = 0")
-      warning("GLM TMLE update has failed, setting epsilon = 0")
-      update.Qstar.coef <- 0
-    } else {
-      update.Qstar.coef <- m.Qstar$coef
-    }
-  }
-
-  if (gvars$verbose == 2) cat("...TMLE epsilon update = ", update.Qstar.coef, "\n")
-
-  fit <- list(TMLE_intercept = update.Qstar.coef)
-  class(fit)[2] <- "tmlefit"
-  if (gvars$verbose) print("tmle update: " %+% update.Qstar.coef)
-  return(fit)
-}
-
 ## ---------------------------------------------------------------------
 ## R6 Class for Q-Learning (Iterative G-COMP or TMLE)
 ## ---------------------------------------------------------------------
 ##  R6 class for controlling the internal implementation of Q-learning functionality.
 ##  Supports sequential (recursive) G-computation and longitudinal TMLE.
-##  Inherits from \code{BinaryOutcomeModel} R6 Class.
+##  Inherits from \code{ModelBinomial} R6 Class.
 ##
 ## @docType class
 ## @format An \code{\link{R6Class}} generator object
@@ -103,33 +42,39 @@ tmle.update <- function(Qkplus1, Qk_hat, IPWts,
 ##    \item{\code{getTMLEfit}}{...}
 ## }
 ## @export
-QlearnModel  <- R6Class(classname = "QlearnModel",
-  inherit = BinaryOutcomeModel,
+ModelQlearn  <- R6Class(classname = "ModelQlearn",
+  inherit = ModelBinomial,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
   public = list(
     reg = NULL,
-    regimen_names = character(), # for future pooling across regimens
+    regimen_names = character(), ## for future pooling across regimens
     classify = FALSE,
     TMLE = TRUE,
     CVTMLE = FALSE,
     byfold_Q = FALSE,
     nIDs = integer(),
-    stratifyQ_by_rule = FALSE,
+    stratifyQ_by_rule = FALSE,   ## train only among those who are following the rule of interest?
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
-    Qreg_counter = integer(), # Counter for the current sequential Q-regression (min is at 1)
+    Qreg_counter = integer(),    ## Counter for the current sequential Q-regression (min is at 1)
     all_Qregs_indx = integer(),
     t_period = integer(),
-    keep_idx = FALSE,         # keep current indices (do not remove them right after fitting)
+    keep_idx = FALSE,            ## keep current indices (do not remove them right after fitting)
+    keep_model_fit = TRUE,       ## keep the model fit object for current Q_k
     idx_used_to_fit_initQ = NULL,
     fold_y_names = NULL,
+    lwr = 0.0,                   ## lower bound for Q predictions
+    upr = 1.0,                   ## upper bound for Q predictions
+    maxpY = 1.0,                 ## max incidence P(Y=1|...) for rare-outcomes TMLE, only works with learners that can handle logistic-link with outcomes > 1
+    TMLE_updater = NULL,         ## function to use for TMLE updates
 
     initialize = function(reg, ...) {
       super$initialize(reg, ...)
 
       self$reg <- reg
+      self$outcome_type <- "quasibinomial"
 
       self$Qreg_counter <- reg$Qreg_counter
       self$all_Qregs_indx <- reg$all_Qregs_indx
@@ -139,12 +84,19 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$skip_update_zero_Q <- reg$skip_update_zero_Q
       self$t_period <- reg$t_period
       self$regimen_names <- reg$regimen_names
+      self$maxpY <- reg$maxpY
+
+      if (!is.character(reg$TMLE_updater)) stop("'TMLE_updater' must be a character name of an R function.")
+      updater_fun <- get(reg$TMLE_updater)
+      if (!is.function(updater_fun)) stop("'TMLE_updater' must resolve to an existing function name.")
+      self$TMLE_updater <- updater_fun
 
       self$TMLE <- reg$TMLE
       self$CVTMLE <- reg$CVTMLE
       self$byfold_Q <- reg$byfold_Q
 
       self$keep_idx <- reg$keep_idx
+      self$keep_model_fit <- reg$keep_model_fit
 
       if (gvars$verbose == 2) {print("initialized Q class"); reg$show()}
 
@@ -200,7 +152,23 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$idx_used_to_fit_initQ <- self$subset_idx ## Save the subset used for fitting of the current initial Q[t] -> will be used for targeting
       nodes <- data$nodes
       self$n_obs_fit <- length(self$subset_idx)
-      private$model.fit <- fit_single_regression(data, nodes, self$models, self$model_contrl, self$predvars, self$outvar, self$subset_idx, fold_y_names = fold_y_names)
+      ## multiply the outcomes by delta-factor (for rare-outcomes adjustment with known upper bound = self$maxpY)
+      data$rescaleNodes(subset_idx = self$subset_idx, nodes_to_rescale = self$outvar, delta = 1/self$maxpY)
+      ## Fit model using (re-scaled) Q.kplus as the outcome to obtain the inital model fit for Q[t]:
+      private$model.fit <- fit_single_regression(data = data, 
+                                                 nodes = nodes, 
+                                                 models = self$models, 
+                                                 model_contrl = self$model_contrl, 
+                                                 predvars = self$predvars, 
+                                                 outvar = self$outvar, 
+                                                 subset_idx = self$subset_idx,
+                                                 outcome_type = self$outcome_type,
+                                                 fold_y_names = fold_y_names)
+      if (gvars$verbose) {
+        print("Q.init model fit:"); try(print(private$model.fit))
+      }
+      ## Convert the outcome column back to its original scale (multpily by delta)
+      data$rescaleNodes(subset_idx = self$subset_idx, nodes_to_rescale = self$outvar, delta = self$maxpY)
       self$is.fitted <- TRUE
 
       ## **********************************************************************
@@ -211,38 +179,14 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## GCOMP: Qk_hat serves no purpose and will be discarded
       ## **********************************************************************
       Qk_hat <- self$predict(data, subset_idx = self$idx_used_to_fit_initQ)
+      ## bound predictions
+      Qk_hat[Qk_hat < self$lwr] <- self$lwr
+      Qk_hat[Qk_hat > self$upr] <- self$upr
+      ## rescale prediction from (0,1) range to its pre-specified bounded range (maximum probability constraint)
+      Qk_hat <- Qk_hat*self$maxpY
 
-      Qkplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, "Qkplus1", with = FALSE][[1]] ## The outcome used for training initial Q_k
-      update.Qstar.coef <- 0
-
-      if (self$TMLE) {
-        ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
-
-        ## no longer needed:
-        # idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
-        # Qk_hat <- probA1_obs[idx_for_fits_among_preds]
-
-        ## Cumulative IPWeights for current t=k (from t=0 to k):
-        wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
-
-        ## TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
-        ## TMLE update will error out if some predictions are exactly 0
-        private$TMLE.fit <- tmle.update(Qkplus1 = Qkplus1,
-                                        Qk_hat = Qk_hat,
-                                        IPWts = wts_TMLE,
-                                        lower_bound_zero_Q = self$lower_bound_zero_Q,
-                                        skip_update_zero_Q = self$skip_update_zero_Q)
-        TMLE_intercept <- private$TMLE.fit$TMLE_intercept
-
-        if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
-          update.Qstar.coef <- TMLE_intercept
-        }
-
-        ## Updated predictions (Q.star) under observed data (O(t))
-        Qk_hat <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
-        EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
-        data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
-      }
+      ## TMLE update of initial prediction (will return Qk_hat if not doing TMLE updates)
+      TMLE.fit <- self$TMLE_update(data, Qk_hat)
 
       ## **********************************************************************
       ## SECOND PREDICTION STEP OF TMLE/GCOMP
@@ -262,7 +206,6 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## 4. For stochastic g^*_t: Perform integration over the support of the stochastic intervention (as a weighted sum over g^*(a)=P(A^*(t)=a(t)))
       ## TO DO: add option for performing MC sampling to perform the same integration for stochastic g^*
       ## **********************************************************************
-
       interventionNodes.g0 <- data$interventionNodes.g0
       interventionNodes.gstar <- data$interventionNodes.gstar
       ## Determine which nodes are actually stochastic and need to be summed out:
@@ -272,26 +215,32 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$subset_idx <- self$define_idx_to_predictQ(data)
 
       if (!any_stoch) {
-        iQ_all <- self$predictStatic(data,
+        pred_Qk <- self$predictStatic(data,
                                     g0 = interventionNodes.g0,
                                     gstar = interventionNodes.gstar,
                                     subset_idx = self$subset_idx,
-                                    update.Qstar.coef = update.Qstar.coef)
+                                    TMLE.fit = TMLE.fit)
       } else {
-        ## For all stochastic nodes, need to integrate out w.r.t. the support of each node
-        iQ_all <- self$predictStochastic(data,
+        # For all stochastic nodes, need to integrate out w.r.t. the support of each node
+        pred_Qk <- self$predictStochastic(data,
                                         g0 = interventionNodes.g0,
                                         gstar = interventionNodes.gstar,
                                         subset_idx = self$subset_idx,
                                         stoch_indicator = stoch_indicator,
-                                        update.Qstar.coef = update.Qstar.coef)
+                                        TMLE.fit = TMLE.fit)
       }
 
-      ## Q.k.hat is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
+      pred_Qk[pred_Qk < self$lwr] <- self$lwr
+      pred_Qk[pred_Qk > self$upr] <- self$upr
+
+      ## rescale the prediction in (0,1) range to its pre-specified bounded range (maximum probability constraint)
+      pred_Qk <- pred_Qk*self$maxpY
+
+      ## pred_Qk is the prediction of the target parameter (\psi_hat) at the current time-point k (where we already set A(k) to A^*(k))
       ## This is either the initial G-COMP Q or the TMLE targeted version of the initial Q
       ## This prediction includes all newly censored observations.
       ## When stratifying Q fits, these predictions will also include all observations who just stopped following the treatment rule at time point k.
-      data$dat.sVar[self$subset_idx, ("Qk_hat") := iQ_all]
+      data$dat.sVar[self$subset_idx, ("Qk_hat") := pred_Qk]
 
       ## Set the outcome for the next Q-regression: put Q[t] in (t-1).
       ## only set the Qkplus1 while self$Qreg_counter > 1, self$Qreg_counter == 1 implies that Q-learning finished & reached the minimum/first time-point period
@@ -301,7 +250,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         ## Next training fold model can check if some of its indices overlap with 'train_idx_to_replace'
         ## How do we pass these predictions and store them?
         ## train_idx_to_replace <- (self$idx_used_to_fit_initQ - 1)
-        data$dat.sVar[newsubset_idx, ("Qkplus1") := iQ_all]
+        data$dat.sVar[newsubset_idx, ("Qkplus1") := pred_Qk]
 
         if (self$byfold_Q) {
           folds_seq <- seq_along(private$probA1_byfold)
@@ -318,7 +267,8 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         private$probA1 <- NULL
 
       } else {
-        private$probAeqa <- iQ_all ## save last predicted P(Q.kplus=1|W)
+        ## save prediction P(Q.kplus=1):
+        private$probAeqa <- pred_Qk
         private$probA1 <- NULL
       }
 
@@ -339,6 +289,51 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       invisible(self)
     },
 
+    TMLE_update = function(data, init_Qk) {
+      if (!self$TMLE) {
+
+        return(NULL)
+
+      } else if (self$TMLE) {
+
+        ## The outcome (not re-scaled yet by 1/self$maxpY) that was used for fitting the initial Q at current time-point k:
+        Qkplus1 <- data$dat.sVar[self$idx_used_to_fit_initQ, self$outvar, with = FALSE][[1]]
+        ## re-scaled initial predictions (from initial outcome model)
+        init_Qk <- init_Qk / self$maxpY
+        ## re-scaled outcomes
+        Y <- Qkplus1 / self$maxpY
+
+        ## TMLE offset (log(x/[1-x])) is derived from the initial prediction of Q among ROWS THAT WERE USED TO FIT Q
+        ## Thus, need to find which elements in predicted Q vector (init_Qk) where actually used for fitting the init Q
+        # idx_for_fits_among_preds <- which(self$subset_idx %in% self$idx_used_to_fit_initQ)
+        # init_Qk_fitted <- init_Qk[idx_for_fits_among_preds]
+        ## Cumulative IPWeights for current t=k (from t=0 to k):
+        wts_TMLE <- data$IPwts_by_regimen[self$idx_used_to_fit_initQ, "cum.IPAW", with = FALSE][[1]]
+
+        ## TMLE update based on the IPWeighted logistic regression model with offset and intercept only:
+        # newX <- X <- data.frame(intercept = rep(1L, length(init_Qk_fitted)), offset = qlogis(init_Qk_fitted))
+        newX <- X <- data.frame(intercept = rep(1L, length(init_Qk)), offset = qlogis(init_Qk))
+
+        ## todo: in case of failure call TMLE.updater.NULL, allow passing custom TMLE updaters
+        xgb.params <- list(nrounds = 100, silent = 1, objective = "reg:logistic", booster = "gblinear", eta = 1, nthread = 1)
+
+        TMLE.fit <- self$TMLE_updater(Y, X, newX, obsWeights = wts_TMLE, params = xgb.params)
+        # TMLE.fit <- iTMLE.updater.xgb(Y, X, newX, obsWeights = wts_TMLE, params = xgb.params)
+        # TMLE.fit <- TMLE.updater.speedglm(Y, X, newX, obsWeights = wts_TMLE)
+        # TMLE.fit <- TMLE.updater.glm(Y, X, newX, obsWeights = wts_TMLE)
+        # TMLE.fit <- TMLE.updater.NULL(Y, X, newX, obsWeights = wts_TMLE)
+
+        ## Updated the model predictions (Q.star) for init_Q based on TMLE update using ALL obs (inc. newly censored and newly non-followers):
+        Qk_hat <- TMLE.fit$pred*self$maxpY
+        ## evaluate the contribution to the EIC (TMLE variance estimation)
+        # Qk_hat <- pred_Qk[idx_for_fits_among_preds]
+        EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
+        data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
+
+        return(TMLE.fit$fit)
+      }
+    },
+
     # **********************************************************************
     # Take a new TMLE fit and propagate it by first updating the Q(t) model and then updating the Q-model-based predictions for previous time-point
     # **********************************************************************
@@ -346,17 +341,29 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       self$n <- data$nobs
       self$nIDs <- data$nuniqueIDs
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitly asked
-      TMLE_intercept <- new.TMLE.fit$TMLE_intercept
-      if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
-        update.Qstar.coef <- TMLE_intercept
-      } else {
-        update.Qstar.coef <- 0
-      }
+      # TMLE_intercept <- new.TMLE.fit$TMLE_intercept
+      # if (!is.na(TMLE_intercept) && !is.nan(TMLE_intercept)) {
+      #   update.Qstar.coef <- TMLE_intercept
+      # } else {
+      #   update.Qstar.coef <- 0
+      # }
 
       ## Update the model predictions (Qk_hat) for initial Q[k] from GCOMP at time-point k.
       ## Based on TMLE update, the predictions now include ALL obs that are newly censored and just stopped following the rule at k:
       Qk_hat <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
-      Qk_hat_updated <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
+
+      if (!is.null(new.TMLE.fit)) {
+        save <- private$probA1
+        newdata <- data.frame(intercept = rep(1L, length(Qk_hat)))
+        Qk_hat_updated <- predict(new.TMLE.fit, newdata = newdata, offset = qlogis(Qk_hat))
+        # private$probA1 <- plogis(qlogis(private$probA1) + update.Qstar.coef)
+        # head(cbind(private$probA1, save))
+      } else {
+        Qk_hat_updated <- Qk_hat
+      }
+
+      # Qk_hat_updated <- plogis(qlogis(Qk_hat) + update.Qstar.coef)
+
       # Save all predicted vals as Qk_hat[k] in row k or first target and then save targeted values:
       data$dat.sVar[self$subset_idx, "Qk_hat" := Qk_hat_updated]
 
@@ -386,17 +393,19 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       ## These are also referred to as predictions from all validation splits, or holdouts or out-of-sample predictions
       # holdout <- self$CVTMLE
       assert_that(self$is.fitted)
+      model.fit <- private$model.fit
 
       if (missing(newdata) && !is.null(private$probA1)) {
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         return(private$probA1)
       } else if (missing(newdata) && is.null(private$probA1)) {
-        probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                      add_subject_data = FALSE,
-                                      subset_idx = subset_idx,
-                                      # use_best_retrained_model = TRUE,
-                                      holdout = self$CVTMLE,
-                                      verbose = gvars$verbose)
+        if (is(model.fit, "PredictionStack")) {
+          probA1 <- gridisl::predict_SL(modelfit = model.fit, add_subject_data = FALSE, subset_idx = subset_idx, holdout = self$CVTMLE, verbose = gvars$verbose)
+        } else if (is(model.fit, "Lrnr_base")) {
+          probA1 <- model.fit$predict()
+        } else {
+          stop("model fit object is of unrecognized class (private$model.fit)")
+        }
 
         ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
         private$probA1 <- probA1[[1]]
@@ -410,28 +419,34 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         }
 
         if (!self$CVTMLE) {
-
-          probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
-                                        newdata = newdata,
-                                        add_subject_data = FALSE,
-                                        subset_idx = subset_idx,
-                                        # use_best_retrained_model = TRUE,
-                                        holdout = FALSE,
-                                        verbose = gvars$verbose)
-
-          if (self$byfold_Q) {
-            probA1_byfold <- gridisl::predict_SL(modelfit = private$model.fit,
-                                       newdata = newdata,
-                                       add_subject_data = FALSE,
-                                       subset_idx = subset_idx,
-                                       byfold = TRUE,
-                                       # use_best_retrained_model = TRUE,
-                                       verbose = gvars$verbose)
-            private$probA1_byfold <- probA1_byfold[["pred"]]
+          if (is(model.fit, "PredictionStack")) {
+            probA1 <- gridisl::predict_SL(modelfit = model.fit,
+                                          newdata = newdata,
+                                          add_subject_data = FALSE,
+                                          subset_idx = subset_idx,
+                                          # use_best_retrained_model = TRUE,
+                                          holdout = FALSE,
+                                          verbose = gvars$verbose)
+            if (self$byfold_Q) {
+              probA1_byfold <- gridisl::predict_SL(modelfit = model.fit,
+                                         newdata = newdata,
+                                         add_subject_data = FALSE,
+                                         subset_idx = subset_idx,
+                                         byfold = TRUE,
+                                         # use_best_retrained_model = TRUE,
+                                         verbose = gvars$verbose)
+              private$probA1_byfold <- probA1_byfold[["pred"]]
+            }
+          } else if (is(model.fit, "Lrnr_base")) {
+            ## todo: allow passing the DataStorage object directly to task, seamlessly
+            new_task <- sl3::sl3_Task$new(newdata$dat.sVar[self$subset_idx, ], covariates = self$predvars, outcome = self$outvar)
+            probA1 <- model.fit$predict(new_task)
+          } else {
+            stop("model fit object is of unrecognized class (private$model.fit)")
           }
 
         } else {
-          probA1 <- gridisl::predict_SL(modelfit = private$model.fit,
+          probA1 <- gridisl::predict_SL(modelfit = model.fit,
                                         newdata = newdata,
                                         add_subject_data = FALSE,
                                         subset_idx = self$idx_used_to_fit_initQ,
@@ -442,7 +457,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
 
           newObs_idx <- setdiff(subset_idx, self$idx_used_to_fit_initQ)
           if (length(newObs_idx) > 0) {
-            probA1_newObs <- gridisl::predict_SL(modelfit = private$model.fit,
+            probA1_newObs <- gridisl::predict_SL(modelfit = model.fit,
                                                  newdata = newdata,
                                                  add_subject_data = FALSE,
                                                  subset_idx = newObs_idx,
@@ -457,19 +472,26 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
           probA1[, ("idx") := NULL]
         }
 
-        ## probA1 will be a one column data.table, hence we extract and return the actual vector of predictions:
-        private$probA1 <- probA1[[1]]
+        ## if probA1 will be a one column data.table, we extract and return the actual vector of predictions:
+        if (is.list(probA1) || is.data.table(probA1) || is.data.frame(probA1)) {
+          probA1 <- probA1[[1]]
+        }
+
+        ## if one col matrix, extract the first column that is assumed to contain predictions
+        if (is.matrix(probA1)) {
+          probA1 <- probA1[,1]
+        }
 
         ## check that predictions P(A=1 | dmat) exist for all obs
-        if (any(is.na(private$probA1) & !is.nan(private$probA1))) {
-        # if (any(is.na(private$probA1) )) { # & !is.nan(private$probA1)
+        if (any(is.na(probA1) & !is.nan(probA1))) {
           stop("some of the predicted probabilities during seq g-comp resulted in NAs, which indicates an error of a prediction routine")
         }
+        private$probA1 <- probA1
         return(private$probA1)
       }
     },
 
-    predictStatic = function(data, g0, gstar, subset_idx, update.Qstar.coef = 0) {
+    predictStatic = function(data, g0, gstar, subset_idx, TMLE.fit = NULL) {
       # ------------------------------------------------------------------------------------------------------------------------
       # Set current A's and N's to the counterfactual exposures in the data (for predicting Q):
       # ------------------------------------------------------------------------------------------------------------------------
@@ -492,14 +514,18 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       # ------------------------------------------------------------------------------------------------------------------------
       # Perform qlogit-linear TMLE update for predicted Q, if available
       # ------------------------------------------------------------------------------------------------------------------------
-      if (abs(update.Qstar.coef)  > 10^-10) {
-        private$probA1 <- plogis(qlogis(private$probA1) + update.Qstar.coef)
+      if (!is.null(TMLE.fit)) {
+        save <- private$probA1
+        newdata <- data.frame(intercept = rep(1L, length(private$probA1)))
+        private$probA1 <- predict(TMLE.fit, newdata = newdata, offset = qlogis(private$probA1))
+        # private$probA1 <- plogis(qlogis(private$probA1) + update.Qstar.coef)
+        # head(cbind(private$probA1, save))
       }
 
       invisible(return(private$probA1))
     },
 
-    predictStochastic = function(data, g0, gstar, subset_idx, stoch_indicator, update.Qstar.coef = 0) {
+    predictStochastic = function(data, g0, gstar, subset_idx, stoch_indicator, TMLE.fit = NULL) {
       # Dimensionality across all stochastic nodes:
       stoch_nodes_idx <- which(stoch_indicator)
       stoch_nodes_names <- names(stoch_indicator[stoch_nodes_idx])
@@ -523,7 +549,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
         # Predict using newdata, obtain probAeqa_stoch
         # Predict Prob(Q.init = 1) for all observations in subset_idx (note: probAeqa is never used, only private$probA1)
         # Obtain the initial Q prediction P(Q=1|...) for EVERYBODY (including those who just got censored and those who just stopped following the rule)
-        probA1 <- self$predictStatic(data, g0 = g0, gstar = gstar, subset_idx = subset_idx, update.Qstar.coef = update.Qstar.coef)
+        probA1 <- self$predictStatic(data, g0 = g0, gstar = gstar, subset_idx = subset_idx, TMLE.fit = TMLE.fit)
         # Evaluate the joint probability vector for all_vals_mat[i,] for n observations (cumulative product) based on the probabilities from original column
         jointProb <- rep.int(1L, nrow(stoch.probs))
         for (stoch.node.nm in stoch_nodes_names) {
@@ -552,7 +578,7 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
       if (missing(newdata) && !is.null(private$probAeqa)) {
         return(private$probAeqa)
       } else {
-        stop("$predictAeqa should never be called for making predictions for GCOMP")
+        stop("ModelQlearn$predictAeqa has nothing to return, previous predictions have been deleted")
       }
     },
 
@@ -568,15 +594,29 @@ QlearnModel  <- R6Class(classname = "QlearnModel",
     wipe.alldat = function() {
       private$probA1 <- NULL
       private$probA1_byfold <- NULL
-      # private$model.fit <- NULL
-      # private$probAeqa <- NULL
-      # self$binomialModelObj$emptydata
-      # self$binomialModelObj$emptyY
-      return(self)
+      ## If we are planning on running iterative TMLE we will need the indicies used for fitting and predicting this Q
+      if (!self$keep_idx) {
+        self$wipe.all.indices
+      }
+      if (!self$keep_model_fit) {
+        self$wipe.model.fit
+      }
+      return(invisible(self))
     },
     wipe.all.indices = function() {
       self$idx_used_to_fit_initQ <- NULL
       self$subset_idx <- NULL
+      return(invisible(self))
+    },
+    wipe.model.fit = function() {
+      private$model.fit <- NULL
+      return(invisible(self))
+    },
+    wipe.probs = function() {
+      private$probA1 <- NULL
+      private$probAeqa <- NULL
+      private$probA1_byfold <- NULL
+      return(invisible(self))
     },
     getprobA1_byfold = function() { private$probA1_byfold },
     getfit = function() { private$model.fit },

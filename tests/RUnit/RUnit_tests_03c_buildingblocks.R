@@ -6,7 +6,7 @@ test.buildingblocks <- function() {
   require("stremr")
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
-  set_all_stremr_options(estimator = "glm__glm")
+  # set_all_stremr_options(estimator = "glm__glm")
 
   # ------------------------------------------------------------------------------------------------------
   # (IA) Data from the simulation study

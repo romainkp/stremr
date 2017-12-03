@@ -63,10 +63,10 @@ eval_weights_k = function(data, ignore_tmin = NULL, ignore_max = NULL, reverse_w
 
 ## ---------------------------------------------------------------------
 ## R6 class for fitting SDR procedure
-## Inherits from \code{GenericModel}.
+## Inherits from \code{ModelGeneric}.
 ## ---------------------------------------------------------------------
 SDRModel <- R6Class(classname = "SDRModel",
-  inherit = GenericModel,
+  inherit = ModelGeneric,
   portable = TRUE,
   class = TRUE,
   public = list(
@@ -159,10 +159,10 @@ SDRModel <- R6Class(classname = "SDRModel",
 ## ---------------------------------------------------------------------
 ## R6 Class for Sequentially Double Robustness Targeting Procedure
 ## Internal implementation of Q-learning functionality.
-## Inherits from \code{QlearnModel} R6 Class.
+## Inherits from \code{ModelQlearn} R6 Class.
 ## ---------------------------------------------------------------------
-SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
-  inherit = QlearnModel,
+SDRModelQlearn  <- R6Class(classname = "SDRModelQlearn",
+  inherit = ModelQlearn,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
@@ -224,8 +224,8 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         X <- as.matrix(qlogis(Qk_hat))
         newX <- as.matrix(qlogis(Qk_hat_all))
         colnames(X) <- colnames(newX) <- "offset"
-        # TMLE.fit <- SDR.updater.speedglmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
-        TMLE.fit <- SDR.updater.glmTMLE(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        # TMLE.fit <- TMLE.updater.speedglm(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
+        TMLE.fit <- TMLE.updater.glm(Y = Qkplus1, X = X, newX = newX, obsWeights = wts)
         Qk_hat_star_all <- TMLE.fit[["pred"]]
         Qk_hat_star <- predict(TMLE.fit[["fit"]], X)
         # TMLE.fit <- tmle.update(Qkplus1 = Qkplus1,
@@ -268,10 +268,10 @@ SDRQlearnModel  <- R6Class(classname = "SDRQlearnModel",
         Qk_hat_all <- data$dat.sVar[self$subset_idx, "Qk_hat", with = FALSE][[1]]
         pred_dat[, ("offset") := qlogis(Qk_hat_all)]
 
-        mfit <- SDR.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
-        # mfit <- SDR.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.TMLE(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
-        # mfit <- SDR.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        mfit <- iTMLE.updater.xgb(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts, params = self$reg$SDR_model)
+        # mfit <- iTMLE.updater.glm(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- TMLE.updater(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
+        # mfit <- TMLE.updater.NULL(Y = Qkplus1, X = as.matrix(obs_dat), newX = as.matrix(pred_dat), obsWeights = wts)
         Qk_hat_star_all <- mfit[["pred"]]
 
         # ## GAM

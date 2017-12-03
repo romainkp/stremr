@@ -1,5 +1,14 @@
 context("readme.md example")
 
+options(stremr.verbose = FALSE)
+options(gridisl.verbose = FALSE)
+options(sl3.verbose = FALSE)
+options(condensier.verbose = FALSE)
+# options(stremr.verbose = TRUE)
+# options(gridisl.verbose = TRUE)
+# options(sl3.verbose = TRUE)
+# options(condensier.verbose = TRUE)
+
 require("stremr")
 require("data.table")
 require("magrittr")
@@ -14,11 +23,13 @@ OdataDT[, ("TI.set0") := 0L]
 
 OData <- importData(OdataDT, ID = "ID", t = "t", covars = c("highA1c", "lastNat1", "N.tminus1"), CENS = "C", TRT = "TI", OUTCOME = "Y.tplus1")
 
-print(OData)
+##extract data from the data object with helper fun and set the vars
 get_data(OData)[, ("TI.set0") := 1L]
-print(OData)
 get_data(OData)[, ("TI.set0") := 0L]
-print(OData)
+
+test_that("get_data can be used to set new column(s) in OData$dat.sVar", {
+  expect_equal(unique(OData$dat.sVar[["TI.set0"]]), 0L)
+})
 
 gform_CENS <- "C ~ highA1c + lastNat1"
 gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
@@ -26,6 +37,7 @@ gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
 stratify_CENS <- list(C=c("t < 16", "t == 16"))
 
 test_that("readme examples run as expected without errors", {
+  print(OData)
   OData <- fitPropensity(OData,
                          gform_CENS = gform_CENS,
                          gform_TRT = gform_TRT,
@@ -34,7 +46,6 @@ test_that("readme examples run as expected without errors", {
   AKME.St.1 <- getIPWeights(OData, intervened_TRT = "TI.set1") %>%
                survNPMSM(OData) %$%
                estimates
-
 
   AKME.St.1[]
 
@@ -80,7 +91,7 @@ test_that("readme examples run as expected without errors", {
   # install.packages("h2o", type="source", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-tutte/2/R")))
 
   require("h2o")
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
   h2o::h2o.init(nthreads = -1)
   OData <- fitPropensity(OData,
                          gform_CENS = gform_CENS,

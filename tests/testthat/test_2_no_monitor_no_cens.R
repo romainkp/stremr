@@ -13,9 +13,17 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   library("tidyr")
   library("purrr")
   library("dplyr")
+  library("sl3")
 
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
+  options(sl3.verbose = FALSE)
+  options(condensier.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  # options(sl3.verbose = TRUE)
+  # options(condensier.verbose = TRUE)
+
   data.table::setDTthreads(1)
 
   data(OdatDT_10K)
@@ -69,7 +77,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## Define models for fitting propensity scores (g) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
   fit_method_g <- "none"
-  models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
   ## ------------------------------------------------------------------------
   ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
@@ -81,7 +89,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## Use speedglm to fit all Q.
   ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
   ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
-  models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
 
   ## ----------------------------------------------------------------
   ## Fit propensity score models.
@@ -92,7 +100,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   OData <- fitPropensity(OData,
                           gform_TRT = gform_TRT,
                           stratify_TRT = stratify_TRT,
-                          models_TRT = models_g,
+                          # models_TRT = models_g,
                           fit_method = fit_method_g
                           )
 
@@ -104,7 +112,6 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
   # test_that("evaluating IPW", {
-  IPW_time <- system.time({
     IPW <-  analysis %>%
           distinct(intervened_TRT, trunc_weight) %>%
 
@@ -140,8 +147,6 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                       tbreaks = tbreaks,
                       glm_package = "speedglm"))) %>%
           mutate(MSM = map(MSM, "estimates"))
-  })
-  IPW_time_hrs <- IPW_time[3]/60/60
 
   ## save IPW tables (will be later merged with main results dataset)
   IPWtabs <-  analysis %>%
@@ -173,7 +178,7 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## ------------------------------------------------------------
   ## GCOMP ANALYSIS
   ## ------------------------------------------------------------
-  GCOMP_time <- system.time({
+  test_that("GCOMP results w/out Monitoring match", {
     GCOMP <-analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule) %>%
           mutate(GCOMP = map2(intervened_TRT, stratifyQ_by_rule,
@@ -181,16 +186,12 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
                           stratifyQ_by_rule = .y,
                           tvals = tvals,
                           OData = OData,
-                          models = models_Q,
+                          # models = models_Q,
                           Qforms = Qforms,
                           fit_method = fit_method_Q
                           ))) %>%
           mutate(GCOMP = map(GCOMP, "estimates"))
-  })
-  GCOMP_time_hrs <- GCOMP_time[3]/60/60
 
-
-  test_that("GCOMP results w/out Monitoring match", {
     GCOMP[["GCOMP"]][[1]][["St.GCOMP"]]
     # [1] 0.99 0.99 0.99
 
@@ -201,23 +202,19 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
   ## ------------------------------------------------------------
-  TMLE <- CVTMLE <- analysis %>%
+  test_that("TMLE results w/out Monitoring match", {
+    TMLE <- CVTMLE <- analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule)
-
-  TMLE_time <- system.time({
     TMLE <- TMLE %>%
           mutate(TMLE = pmap(TMLE, fit_TMLE,
                              tvals = tvals,
                              OData = OData,
-                             models = models_Q,
+                             # models = models_Q,
                              Qforms = Qforms,
                              fit_method = fit_method_Q
                              )) %>%
           mutate(TMLE = map(TMLE, "estimates"))
-  })
-  TMLE_time_hrs <- TMLE_time[3]/60/60
 
-  test_that("TMLE results w/out Monitoring match", {
     TMLE[["TMLE"]][[1]][["St.TMLE"]]
     # [1] 0.99 0.99 0.99
     TMLE[["TMLE"]][[1]][["SE.TMLE"]]
@@ -228,53 +225,3 @@ context("Fitting with no Monitoring and / or no Censoring indicators")
     TMLE[["TMLE"]][[2]][["SE.TMLE"]]
     # [1] 0.009949874 0.015098587 0.015938640
   })
-
-  ## ------------------------------------------------------------
-  ## COMBINE ALL ANALYSES INTO A SINGLE DATASET
-  ## ------------------------------------------------------------
-  results <-  analysis %>%
-              left_join(IPW) %>%
-              left_join(GCOMP) %>%
-              left_join(TMLE)
-
-  ## Nest each estimator by treatment regimen (we now only show the main analysis rows)
-  results <- results %>%
-              nest(intervened_TRT, NPMSM, MSM.crude, MSM, GCOMP, TMLE, .key = "estimates")
-
-  ## Calculate RDs (contrasting all interventions, for each analysis row & estimator).
-  ## The RDs data no longer needs the intervened_TRT column
-  results <-  results %>%
-              mutate(RDs =
-                map(estimates,
-                  ~ select(.x, -intervened_TRT) %>%
-                  map(~ get_RDs(.x)) %>%
-                  as_tibble()
-                  ))
-
-  ## ------------------------------------------------------------
-  ## Uncomment and run this to remove the individual EIC estimates from MSM and TMLE estimates.
-  ## This is useful if saving results to a file. The EIC take up a lot of space, hence removing them
-  ## will significantly reduce the final file size.
-  ## ------------------------------------------------------------
-  ## Clean up by removing the subject-level IC estimates for EVERY SINGLE ESTIMATE / ANALYSIS
-  ## WARNING: THIS IS A SIDE-EFFECT FUNCTION!
-  # res <- results[["estimates"]] %>%
-  #     map(
-  #       ~ select(.x, -intervened_TRT) %>%
-  #       map(
-  #         ~ map(.x,
-  #           ~ suppressWarnings(.x[, ("IC.St") := NULL]))))
-  # rm(res)
-
-  ## ------------------------------------------------------------
-  ## VARIOUS WAYS OF PLOTTING SURVIVAL CURVES
-  ## ------------------------------------------------------------
-  ests <- "NPMSM"
-  SURVplot <- results[1, ][["estimates"]][[1]][[ests]] %>%
-              ggsurv %>%
-              print
-
-  ests <- "TMLE"
-  SURVplot <- results[1, ][["estimates"]][[1]][[ests]] %>%
-              ggsurv %>%
-              print

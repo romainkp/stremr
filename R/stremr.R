@@ -1,5 +1,6 @@
 #' @useDynLib stremr
 #' @import R6
+#' @import data.table
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is
@@ -195,11 +196,15 @@ stremr <- function(data, ID = "Subj_ID", t_name = "time_period",
                    noCENScat = 0L,
                    remove_extra_rows = TRUE,
                    nfolds = NULL,
-                   models_CENS = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
-                   models_TRT = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
-                   models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+                   models_CENS = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
+                   # models_CENS = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+                   models_TRT = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
+                   # models_TRT = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+                   models_MONITOR = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
+                   # models_MONITOR = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
                    fit_method_g = "none",
-                   models_Q = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
+                   models_Q = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
+                   # models_Q = gridisl::defModel(estimator = "speedglm__glm", family = "quasibinomial"),
                    fit_method_Q = "none",
                    Qforms = NULL,
                    tvals = NULL,

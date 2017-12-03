@@ -1,14 +1,18 @@
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("Qk_hat", "cum.inc", "mean_Q", "EIC_i", "TMLE_Var", "IC.St"))
+}
+
 ## ------------------------------------------------------------------------------------------
 ## TO DO:
 ## ------------------------------------------------------------------------------------------
 ## *) The definition of Qperiods below needs to be based on actual periods observed in the data.
 ## *) Stochastic interventions ***
 ##    intervened_TRT/intervened_MONITOR are vectors of counterfactual probs -> need to allow each to be multivariate (>1 cols)
-## *) Accessing correct QlearnModel ***
-##     Need to come up with a good way of accessing correct terminal QlearnModel to get final Q-predictions in private$probAeqa.
+## *) Accessing correct ModelQlearn ***
+##     Need to come up with a good way of accessing correct terminal ModelQlearn to get final Q-predictions in private$probAeqa.
 ##     These predictions are for the final n observations that were used for evaluating E[Y^a].
 ##     However, if we do stratify=TRUE and use a stack version of g-comp with different strata all in one stacked database it will be difficult
-##     to pull the right QlearnModel.
+##     to pull the right ModelQlearn.
 ##     Alternative is to ignore that completely and go directly for the observed data (by looking up the right column/row combos).
 ## *) Pooling across regimens ***
 ##     Since new regimen results in new Qkplus1 and hence new outcome -> requires a separate regression for each regimen:
@@ -38,7 +42,7 @@
 ## When the intervention node values are <1 and >0, those are interpreted as probabilities,
 ## i.e., stochastic interventions.
 ## In more detail, the column 0 < intervened_TRT < 1 defines the counterfactual probability that P(TRT[t]^*=1)=intervened_TRT[t].
-## Those are dealt with in QlearnModel class by directly integrating, i.e.,
+## Those are dealt with in ModelQlearn class by directly integrating, i.e.,
 ##  evaluating a weighted sum of predicted Q's with weights given by the probabilities in g.star columns
 ## (on A and N).
 
@@ -191,8 +195,8 @@ fit_CVTMLE <- function(...) {
 #' @param trunc_weights Specify the numeric weight truncation value. All final weights exceeding the value in \code{trunc_weights} will be truncated.
 #' @param models Optional parameters specifying the models for fitting the iterative (sequential) G-Computation formula.
 #' Must be an object of class \code{ModelStack} specified with \code{gridisl::defModel} function.
-#' @param weights Optional \code{data.table} with additional observation-time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
-#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}).
+#' @param weights Optional \code{data.table} with additional observation- and time-specific weights.  Must contain columns \code{ID}, \code{t} and \code{weight}.
+#' The column named \code{weight} is merged back into the original data according to (\code{ID}, \code{t}). Not implemented yet.
 #' @param max_iter For iterative TMLE only: Integer, set to maximum number of iterations for iterative TMLE algorithm.
 #' @param adapt_stop For iterative TMLE only: Choose between two stopping criteria for iterative TMLE, default is \code{TRUE},
 #' which will stop the iterative TMLE algorithm in an adaptive way. Specifically, the iterations will stop when the mean estimate
@@ -208,10 +212,6 @@ fit_CVTMLE <- function(...) {
 #' The iterative TMLE algorithm will stop when the absolute value of the TMLE intercept update is below \code{tol_eps}
 #' @param parallel Set to \code{TRUE} to run the sequential G-COMP or TMLE in parallel (uses \code{foreach} with \code{dopar} and
 #' requires a previously defined parallel back-end cluster)
-#' @param estimator Specify the default estimator to use for fitting the iterative g-computation formula.
-#' Should be a character string in the format 'Package__Algorithm'.
-#' See \code{stremrOptions("estimator", showvals = TRUE)} for a range of possible values.
-#' This argument is ignored when the fitting procedures are already defined via the argument \code{models}.
 #' @param fit_method Model selection approach. Can be either \code{"none"} - no model selection or
 #' \code{"cv"} - discrete Super Learner using V fold cross-validation that selects the best model according to lowest cross-validated MSE (must specify the column name that contains the fold IDs) or
 #' \code{"origamiSL"} - continuous Super Learner that uses the \code{origami} R package to select the
@@ -224,9 +224,26 @@ fit_CVTMLE <- function(...) {
 #' @param return_wts Applies only when \code{TMLE = TRUE}.
 #' Return the data.table with subject-specific IP weights as part of the output.
 #' Note: for large datasets setting this to \code{TRUE} may lead to extremely large object sizes!
-#' @param return_fW Return the \code{gridisl} model object from the very last Q regression.
+#' @param return_fW When \code{TRUE}, will return the object fit for the last Q regression as part of the output table.
 #' Can be used for obtaining subject-specific predictions of the counterfactual functional E(Y_{d}|W_i).
 #' @param reg_Q (ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.
+#' @param type_intervened_TRT (ADVANCED FUNCTIONALITY) Set to \code{NULL} by default, can be characters that are set to either 
+#' \code{"bin"}, \code{"shift"} or \code{"MSM"}. 
+#' Provides support for different types of interventions on \code{TRT} (treatment) node (counterfactual treatment node \code{A^*(t)}).
+#' The default behavior is the same as \code{"bin"}, which assumes that \code{A^*(t)} is binary and 
+#' is set equal to either \code{0}, \code{1} or \code{p(t)}, where 0<=\code{p(t)}<=1. 
+#' Here, \code{p(t)} denotes the probability that counterfactual A^*(t) is equal to 1, i.e., P(A^*(t)=1)=\code{p(t)} 
+#' and it can change in time and subject to subject.
+#' For \code{"shift"}, it is assumed that the intervention node \code{A^*(t)} is a shift in the value of the continuous treatment \code{A}, 
+#' i.e., \code{A^*(t)}=\code{A(t)}+delta(t).
+#' Finally, for "MSM" it is assumed that we simply want the final intervention density \code{g^*(t)} to be set to a constant 1. 
+#' This has use for static MSMs. 
+#' @param type_intervened_MONITOR (ADVANCED FUNCTIONALITY) Same as \code{type_intervened_TRT}, but for monitoring intervention node 
+#' (counterfactual monitoring node \code{N^*(t)}).
+#' @param maxpY Maximum probability that the cumulative incidence of the outcome Y(t) is equal to 1.
+#' Useful for upper-bounding the rare-outcomes.
+#' @param TMLE_updater Function for performing the TMLE update. Default is the TMLE updater based on speedglm (called \code{"TMLE.updater.speedglm"}).
+#' Other possible options include \code{"TMLE.updater.glm"}, \code{"linear.TMLE.updater.speedglm"} and \code{"iTMLE.updater.xgb"}.
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -244,7 +261,6 @@ fit_GCOMP <- function(OData,
                         intervened_MONITOR = NULL,
                         rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
                         models = NULL,
-                        estimator = stremrOptions("estimator"),
                         fit_method = stremrOptions("fit_method"),
                         fold_column = stremrOptions("fold_column"),
                         TMLE = FALSE,
@@ -267,18 +283,18 @@ fit_GCOMP <- function(OData,
                         return_wts = FALSE,
                         return_fW = FALSE,
                         reg_Q = NULL,
+                        type_intervened_TRT = NULL,
+                        type_intervened_MONITOR = NULL,
+                        maxpY = 1.0,
+                        TMLE_updater = "TMLE.updater.speedglm",
                         verbose = getOption("stremr.verbose"), ...) {
 
-  # cat("Calling fit_GCOMP:\n")
-  # cat("intervened_TRT: ", intervened_TRT, "\n")
-  # cat("stratifyQ_by_rule: ", stratifyQ_by_rule, "\n")
-  # cat("stratify_by_last: ", stratify_by_last, "\n")
-  # cat("trunc_weights: ", trunc_weights, "\n")
+  if (!is.null(weights)) stop("optional argument 'weights' is not implemented yet for TMLE or GCOMP")
 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
-  if (!is.null(models)) assert_that(is.ModelStack(models))
+
   assert_that(is.logical(adapt_stop))
 
   if (TMLE & iterTMLE) stop("Either 'TMLE' or 'iterTMLE' must be set to FALSE. Cannot estimate both within a single algorithm run.")
@@ -287,15 +303,34 @@ fit_GCOMP <- function(OData,
     stop("Running byfold_Q=TRUE requires seting fit_method='origamiSL'")
 
   if (missing(rule_name)) rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
+
+  added_rule_col <- FALSE
+  if (!"rule.name" %in% names(OData$dat.sVar)) {
+    added_rule_col <- TRUE
+    rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
+    OData$dat.sVar[, "rule.name" := rule_name]
+  } else {
+    rule_name <- unique(OData$dat.sVar[["rule.name"]])
+  }
+
   # ------------------------------------------------------------------------------------------------
   # **** Evaluate the uncensored and initialize rule followers (everybody is a follower by default)
   # ------------------------------------------------------------------------------------------------
   OData$uncensored <- OData$eval_uncensored()
   OData$follow_rule <- rep.int(TRUE, nrow(OData$dat.sVar)) # (everybody is a follower by default)
 
-  sVar.exprs <- capture.exprs(...)
-  models_control <- c(list(models = models), list(reg_Q = reg_Q), opt_params = list(sVar.exprs))
-  models_control[["estimator"]] <- estimator[1L]
+  opt_params <- capture.exprs(...)
+  if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
+
+  if (!is.null(models)) {
+    assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
+  } else {
+    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+  }
+
+  models_control <- c(list(models = models), 
+                      list(reg_Q = reg_Q), 
+                      opt_params = list(opt_params))
   models_control[["fit_method"]] <- fit_method[1L]
   models_control[["fold_column"]] <- fold_column
 
@@ -313,7 +348,9 @@ fit_GCOMP <- function(OData,
                                 useonly_t_MONITOR,
                                 rule_name,
                                 holdout = CVTMLE,
-                                eval_stabP = FALSE)
+                                eval_stabP = FALSE,
+                                type_intervened_TRT = type_intervened_TRT,
+                                type_intervened_MONITOR = type_intervened_MONITOR)
       if (trunc_weights < Inf) IPWeights[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
     } else {
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
@@ -325,7 +362,6 @@ fit_GCOMP <- function(OData,
     assert_that("cum.IPAW" %in% names(IPWeights))
     OData$IPwts_by_regimen <- IPWeights
 
-    if (!is.null(weights)) stop("optional argument 'weights' is not implemented for TMLE or GCOMP")
     ## Add additional observation-specific weights to the cumulative weights:
     # IPWeights <- process_opt_wts(IPWeights, weights, nodes, adjust_outcome = FALSE)
   }
@@ -371,7 +407,7 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -383,16 +419,52 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
   )
 
-  # ------------------------------------------------------------------------------------------------
-  # Restore backed up nodes, even in the event of failure (otherwise the input data is corrupted for good)
-  # ------------------------------------------------------------------------------------------------
+  ## using delayed (works with multisession, errors with multcore)
+  # subtasks <- lapply(rev(seq_along(tvals)), function(t_idx) {
+  #   t_period <- tvals[t_idx]
+  #   delayed_Q <- delayed_fun(fit_GCOMP_onet)(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+  #                  TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
+  #                  models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
+  #                  adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
+  #                  return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
+  #   delayed_Q$expect_error <- TRUE
+  #   return(delayed_Q)
+  # })
+  # bundle_Q <- bundle_delayed(subtasks)
+
+  # tmle.run.res <- try(
+  #   res_byt <- bundle_Q$compute(verbose = TRUE)
+  #   # res_byt <- bundle_Q$compute(nworkers = 2, verbose = TRUE)
+  # )
+
+  ## using native future interface (error: result is too long a vector):
+  # f <- list()
+  # for (ii in seq_along(tvals)) {
+  #   t_period <- tvals[ii]
+  #   f[[ii]] <- future({
+  #     fit_GCOMP_onet(OData, t_period, Qforms, Qstratify, stratifyQ_by_rule,
+  #                    TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
+  #                    models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
+  #                    adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
+  #                    return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
+  #   })
+  # }
+  # #
+  # res <- f
+  # res <- lapply(f, FUN = value)
+
+  ## Restore backed up nodes, even in the event of failure (otherwise the input data is corrupted for good)
   OData$restoreNodes(c(intervened_TRT,intervened_MONITOR))
+  ## remove the newly added rule name column from observed data
+  if (added_rule_col) {
+    OData$dat.sVar[, "rule.name" := NULL]
+  }
 
   if (inherits(tmle.run.res, "try-error")) {
     stop(
@@ -408,7 +480,9 @@ If this error cannot be fixed, consider creating a replicable example and filing
   # IC.Var.S.d <- t(do.call("cbind", ICs_byt))
 
   resultDT <- cbind(est_name = est_name, resultDT)
-  resultDT[, "rule.name" := eval(as.character(rule_name))]
+  if (!"rule.name" %in% names(resultDT)) {
+    resultDT[, "rule.name" := eval(as.character(rule_name))]
+  }
 
   attr(resultDT, "estimator_short") <- est_name
   attr(resultDT, "estimator_long") <- est_name
@@ -439,7 +513,7 @@ If this error cannot be fixed, consider creating a replicable example and filing
 # ITERATIVE (UNIVARIATE) TMLE AGLORITHM for a single time-point.
 # Called as part of the fit_GCOMP_onet()
 # ------------------------------------------------------------------------------------------------
-iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001) {
+iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001, TMLE_updater = "TMLE.updater.speedglm") {
   get_field_Qclass <- function(allQmodels, fieldName) {
     lapply(allQmodels, function(Qclass) Qclass[[fieldName]])
     # lapply(allQmodels, function(Qclass) Qclass$getPsAsW.models()[[1]][[fieldName]])
@@ -462,6 +536,8 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
       # function(Qclass) Qclass$getPsAsW.models()[[1]]$Propagate_TMLE_fit(data = OData, new.TMLE.fit = TMLE.fit))
     return(invisible(allQmodels))
   }
+
+  TMLE_updater <- get(TMLE_updater)
 
   allQmodels <- Qlearn.fit$getPsAsW.models() # Get the individual Qlearning classes
   # res_all_subset_idx <- as.vector(sort(unlist(get_field_Qclass(allQmodels, "subset_idx"))))
@@ -487,6 +563,7 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
     # ------------------------------------------------------------------------------------
     # Get t-specific and i-specific components of the EIC for all t > t.init:
     EIC_i_tplus <- wts_TMLE * (Qkplus1 - Qk_hat)
+
     # Get t-specific and i-specific components of the EIC for all t = t.init (mean pred from last reg, all n obs)
     res_lastPredQ <- allQmodels[[Qreg_idx[1]]]$predictAeqa()  # Qreg_idx[1] is the index for the last Q-fit
     # res_lastPredQ <- allQmodels[[length(allQmodels)]]$predictAeqa()
@@ -502,13 +579,18 @@ iterTMLE_onet <- function(OData, Qlearn.fit, Qreg_idx, max_iter = 15, adapt_stop
         # if (abs(EIC_est) < (1 / OData$nuniqueIDs)) break
         if (abs(EIC_est) < (1 / (adapt_stop_factor*sqrt(OData$nuniqueIDs)))) break
       } else {
-        if (!is.null(tol_eps) & (abs(TMLE.fit$TMLE_intercept) <= tol_eps)) break
+        if (!is.null(tol_eps) & (abs(TMLE.fit$object$coef) <= tol_eps)) break
       }
     } else if (iter > max_iter) {
       break
     }
 
-    TMLE.fit <- tmle.update(Qkplus1 = Qkplus1, Qk_hat = Qk_hat, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
+    Y <- Qkplus1
+    newX <- X <- data.frame(intercept = rep(1L, length(Qk_hat)), offset = qlogis(Qk_hat))
+    TMLE.fit <- TMLE_updater(Y, X, newX, obsWeights = wts_TMLE)
+    TMLE.fit <- TMLE.fit$fit
+    # TMLE.fit <- tmle.update(Qkplus1 = Qkplus1, Qk_hat = Qk_hat, IPWts = wts_TMLE, lower_bound_zero_Q = FALSE, skip_update_zero_Q = FALSE)
+
     Propagate_TMLE_fits(allQmodels, OData, TMLE.fit)
   }
 
@@ -543,6 +625,8 @@ fit_GCOMP_onet <- function(OData,
                              adapt_stop_factor = 10,
                              tol_eps = 0.001,
                              return_fW = FALSE,
+                             maxpY = 1.0,
+                             TMLE_updater = "TMLE.updater.speedglm",
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -560,7 +644,7 @@ fit_GCOMP_onet <- function(OData,
   # Adding user-specified stratas to each Q(t) regression:
   all_Q_stratify <- Qstratas_by_t
   if (!is.null(Qstratify)) {
-    stop("...Qstratify is not implemented...")
+    stop("...Qstratify is not implemented yet...")
     assert_that(is.vector(Qstratify))
     assert_that(is.character(Qstratify))
     for (idx in seq_along(all_Q_stratify)) {
@@ -593,11 +677,9 @@ fit_GCOMP_onet <- function(OData,
   if ("Qk_hat" %in% names(OData$dat.sVar)) {
     OData$dat.sVar[, "Qk_hat" := NULL]
   }
-
-
-  # OData$def.types.sVar() ## was a bottleneck, replaced with below:
-  OData$set.sVar.type(name.sVar = "Qkplus1", new.type = "binary")
-  OData$set.sVar.type(name.sVar = "EIC_i_t", new.type = "binary")
+  if ("res_lastPredQ" %in% names(OData$dat.sVar)) {
+    OData$dat.sVar[, "res_lastPredQ" := NULL]
+  }
 
   # ------------------------------------------------------------------------------------------------
   # **** Define regression classes for Q.Y and put them in a single list of regressions.
@@ -612,6 +694,7 @@ fit_GCOMP_onet <- function(OData,
     if (!is.null(models[["reg_Q"]])) {
       models[["models"]] <- models[["reg_Q"]][[Qreg_idx[i]]]
     }
+    last.reg <- Qreg_idx[i] == 1L
     reg <- RegressionClassQlearn$new(Qreg_counter = Qreg_idx[i],
                                      all_Qregs_indx = Qreg_idx,
                                      t_period = Qperiods[i],
@@ -619,6 +702,8 @@ fit_GCOMP_onet <- function(OData,
                                      CVTMLE = CVTMLE,
                                      byfold_Q = byfold_Q,
                                      keep_idx = ifelse(iterTMLE, TRUE, FALSE),
+                                     # keep_model_fit = ifelse(iterTMLE, TRUE, last.reg),
+                                     keep_model_fit = ifelse(iterTMLE, TRUE, FALSE),
                                      stratifyQ_by_rule = stratifyQ_by_rule,
                                      outvar = "Qkplus1",
                                      predvars = regform$predvars,
@@ -626,11 +711,13 @@ fit_GCOMP_onet <- function(OData,
                                      subset_vars = list("Qkplus1"),
                                      subset_exprs = all_Q_stratify[i],
                                      model_contrl = models,
-                                     censoring = FALSE)
+                                     censoring = FALSE,
+                                     maxpY = maxpY,
+                                     TMLE_updater = TMLE_updater)
 
     ## For Q-learning this reg class always represents a terminal model class,
     ## since there cannot be any additional model-tree splits by values of subset_vars, subset_exprs, etc.
-    ## The following two lines allow for a slightly simplified (shallower) tree representation of GenericModel-type classes.
+    ## The following two lines allow for a slightly simplified (shallower) tree representation of ModelGeneric-type classes.
     ## This also means that stratifying Q fits by some covariate value will not possible with this approach
     ## (i.e., such stratifications would have to be implemented locally by the actual model fitting functions).
     reg_i <- reg$clone()
@@ -639,7 +726,7 @@ fit_GCOMP_onet <- function(OData,
   }
 
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
-  Qlearn.fit <- GenericModel$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
+  Qlearn.fit <- ModelGeneric$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
   Qlearn.fit$fit(data = OData, Qlearn.fit = Qlearn.fit)
   # Qlearn.fit$getPsAsW.models()[[1]]
   OData$Qlearn.fit <- Qlearn.fit
@@ -650,55 +737,49 @@ fit_GCOMP_onet <- function(OData,
   # get the individual TMLE updates and evaluate if any updates have failed
   allQmodels <- Qlearn.fit$getPsAsW.models()
 
-  allTMLEfits <- lapply(allQmodels, function(Qmod) Qmod$getTMLEfit)
-  TMLEfits <- unlist(allTMLEfits)
-  successTMLEupdates <- !is.na(TMLEfits) & !is.nan(TMLEfits)
-  ALLsuccessTMLE <- all(successTMLEupdates)
-  nFailedUpdates <- sum(!successTMLEupdates)
-
-  ## 1a. Grab last reg predictions from Q-regression objects:
   lastQ_inx <- Qreg_idx[1] # The index for the last Q-fit (first time-point)
-  ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
-  res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()
-  mean_est_t <- mean(res_lastPredQ)
-
-  ## 1b. Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression
-  ## mean_est_t and mean_est_t_2 have to be equal!!!!
-  # lastQ.fit <- allQmodels[[lastQ_inx]]$getPsAsW.models()[[1]] ## allQmodels[[lastQ_inx]]$get.fits()
   lastQ.fit <- allQmodels[[lastQ_inx]]
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
-  subset_idx <- OData$evalsubst(subset_vars = subset_vars, subset_exprs = subset_exprs)
-  mean_est_t_2 <- mean(OData$dat.sVar[subset_idx, ][["Qk_hat"]])
+  subset_idx <- OData$evalsubst(subset_exprs = subset_exprs) ## subset_vars = subset_vars,
+
+  ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
+  res_lastPredQ <- lastQ.fit$predictAeqa()
+  ## remove vector of predictions from the modeling class (to free up memory):
+  if (!iterTMLE) {
+    lastQ.fit$wipe.probs
+  }
+
+  ## Can instead grab the last prediction of Q (Qk_hat) directly from the data, using the appropriate strata-subsetting expression:
+  mean_est_t_2 <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(Qk_hat)), by = "rule.name"]
+
+  ## Evaluate the last predictions by rule (which rule each prediction belongs to):
+  OData$dat.sVar[subset_idx, "res_lastPredQ" := res_lastPredQ]
+  mean_est_t <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(res_lastPredQ)), by = "rule.name"]
 
   if (gvars$verbose) {
-    print("Surv est: " %+% (1 - mean_est_t))
-    print("Surv est 2: " %+% (1 - mean_est_t_2))
+    print("mean est: ");  print(mean_est_t)
+    print("mean est 2: "); print(mean_est_t_2)
     print("No. of obs for last prediction of Q: " %+% length(res_lastPredQ))
-    print("EY^* estimate at t="%+%t_period %+%": " %+% round(mean_est_t, 5))
   }
 
   resDF_onet <- data.table(time = t_period,
                            St.GCOMP = NA,
                            St.TMLE = NA,
-                           # St.iterTMLE = NA,
-                           ALLsuccessTMLE = ALLsuccessTMLE,
-                           nFailedUpdates = nFailedUpdates,
-                           type = ifelse(stratifyQ_by_rule, "stratified", "pooled")
+                           type = ifelse(stratifyQ_by_rule, "stratified", "pooled"),
+                           rule.name = unique(OData$dat.sVar[["rule.name"]])
                           )
 
   est_name <- ifelse(TMLE, "St.TMLE", "St.GCOMP")
-  resDF_onet[, (est_name) := (1 - mean_est_t)]
+  resDF_onet <- resDF_onet[mean_est_t_2, on = "rule.name"]
+
+  resDF_onet[, (est_name) := (1 - cum.inc)]
 
   # ------------------------------------------------------------------------------------------------
   # RUN ITERATIVE TMLE (updating all Q's at once):
   # ------------------------------------------------------------------------------------------------
   if (iterTMLE){
-    # iter.time <- system.time(
-      res <- iterTMLE_onet(OData, Qlearn.fit, Qreg_idx, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps)
-    # )
-    # if (gvars$verbose) {print("Time to run iterative TMLE: "); print(iter.time)}
-
+    res <- iterTMLE_onet(OData, Qlearn.fit, Qreg_idx, max_iter = max_iter, adapt_stop = adapt_stop, adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps, TMLE_updater = TMLE_updater)
     ## 1a. Grab the mean prediction from the very last regression (over all n observations);
     lastQ_inx <- Qreg_idx[1]
     res_lastPredQ <- allQmodels[[lastQ_inx]]$predictAeqa()
@@ -707,12 +788,6 @@ fit_GCOMP_onet <- function(OData,
     if (gvars$verbose) print("Iterative TMLE surv estimate: " %+% (1 - mean_est_t))
 
     ## 1b. Grab it directly from the data, using the appropriate strata-subsetting expression
-    # lastQ.fit <- Qlearn.fit$getPsAsW.models()[[Qreg_idx[1]]]$getPsAsW.models()[[1]]
-    # subset_idx <- OData$evalsubst(subset_vars = lastQ.fit$subset_vars, subset_exprs = lastQ.fit$subset_exprs)
-    # res_lastPredQ <- OData$dat.sVar[subset_idx, ][["Qkplus1"]]
-    # mean_est_t  <- mean(res_lastPredQ)
-    # print("TMLE surv estimate 2: " %+% (1 - mean_est_t))
-
     resDF_onet[, ("St.TMLE") := (1 - mean_est_t)]
   }
 
@@ -721,32 +796,55 @@ fit_GCOMP_onet <- function(OData,
   # ------------------------------------------------------------------------------------------------
   IC_i_onet <- vector(mode = "numeric", length = OData$nuniqueIDs)
   IC_i_onet[] <- NA
-
-  if (TMLE || iterTMLE) {
-    IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = eval(nodes$IDnode)]
-    IC_dt[, ("EIC_i_t0") := res_lastPredQ - mean_est_t]
-    IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
-    IC_dt[, c("EIC_i_t0", "EIC_i_tplus") :=  list(NULL, NULL)]
-    IC_i_onet <- IC_dt[["EIC_i"]]
-    ## asymptotic variance (var of the EIC):
-    IC_Var <- (1 / (OData$nuniqueIDs)) * sum(IC_dt[["EIC_i"]]^2)
-    ## variance of the TMLE estimate (scaled by n):
-    TMLE_Var <- IC_Var / OData$nuniqueIDs
-    ## SE of the TMLE
-    TMLE_SE <- sqrt(TMLE_Var)
-
-    if (gvars$verbose) {
-      print("...empirical mean of the estimated EIC: " %+% mean(IC_dt[["EIC_i"]]))
-      print("...estimated TMLE variance: " %+% TMLE_Var)
-    }
-    resDF_onet[, ("SE.TMLE") := TMLE_SE]
-  }
-
   ## save the i-specific estimates of the EIC as a separate column:
   resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
+
+  if (TMLE || iterTMLE) {
+    resDF_onet[, ("IC.St") := NULL]
+    IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(nodes$IDnode, "rule.name")]
+
+    IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(nodes$IDnode, "res_lastPredQ", "rule.name"), with = FALSE][,
+      "mean_Q" := mean(res_lastPredQ), by = c("rule.name")][,
+      "EIC_i_t0" := res_lastPredQ-mean_Q][,
+      c("mean_Q", "res_lastPredQ") := list(NULL, NULL)
+      ]
+
+    ## remove newly added column from observed dataset
+    OData$dat.sVar[, "res_lastPredQ" := NULL]
+
+    IC_dt <- IC_dt[IC_dt_t0, on = c(nodes$IDnode, "rule.name")]
+    IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
+    IC_dt[, c("EIC_i_t0", "EIC_i_tplus") :=  list(NULL, NULL)]
+
+    ## asymptotic variance (var of the EIC), by rule:
+    IC_Var <- IC_dt[,
+      list("IC_Var" = (1 / (.N)) * sum(EIC_i^2),
+           "TMLE_Var" = (1 / (.N)) * sum(EIC_i^2) / .N
+            ), by = "rule.name"][,
+      "SE.TMLE" := sqrt(TMLE_Var)]
+    IC_Var[, "IC_Var" := NULL][, "TMLE_Var" := NULL]
+
+    if (gvars$verbose) {
+      print("...empirical mean of the estimated EIC: ")
+      print(IC_dt[, list("mean_EIC" = mean(EIC_i)), by = "rule.name"])
+      print("...estimated TMLE variance: "); print(IC_Var)
+    }
+
+    resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
+    data.table::setkeyv(IC_dt, c("rule.name", nodes$IDnode))
+    IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
+                        tibble::as_tibble() %>%
+                        tidyr::nest(EIC_i, .key = "IC.St") %>%
+                        dplyr::mutate(IC.St = purrr::map(IC.St, ~ .x[[1]]))
+    data.table::setDT(IC_i_onet_byrule)
+    # IC_i_onet_byrule[, "IC.St" := list(list(as.numeric(IC.St[[1]][[1]]))), by = "rule.name"]
+    resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
+  }
 
   fW_fit <- lastQ.fit$getfit
   resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
 
+  ## re-order the columns so that "rule.name" col is always last
+  data.table::setcolorder(resDF_onet, c(setdiff(names(resDF_onet), "rule.name"), "rule.name"))
   return(resDF_onet)
 }

@@ -5,10 +5,18 @@ context("NDE assumption")
   library("magrittr")
   library("data.table")
   library("testthat")
+  library("sl3")
 
   data.table::setDTthreads(1)
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
+  options(sl3.verbose = FALSE)
+  options(condensier.verbose = FALSE)
+  # options(stremr.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  # options(sl3.verbose = TRUE)
+  # options(condensier.verbose = TRUE)
+
   options(width = 100)
 
   data(OdatDT_10K)
@@ -31,7 +39,7 @@ context("NDE assumption")
   ## ----------------------------------------------------------------
   ## IMPORT DATA
   ## ----------------------------------------------------------------
-  set_all_stremr_options(estimator = "speedglm__glm")
+  # set_all_stremr_options(estimator = "speedglm__glm")
   OData <- importData(Odat_DT,
                       ID = "ID", t = "t",
                       covars = c("highA1c", "lastNat1", "lastNat1.factor"),
@@ -174,8 +182,10 @@ test_that("TMLE / GCOMP with a static intervention on MONITOR under NDE assumpti
     tolerance = .0001
   )
   ## stratified modeling by rule followers only:
+  models_Q <- defModel(estimator = "speedglm__glm")
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", intervened_MONITOR = "N.star.0101",
-                        useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE)
+                        useonly_t_MONITOR = "N.star.0101 == 1", Qforms = Qforms, stratifyQ_by_rule = TRUE,
+                        models = models_Q)
 
   expect_equal(
     tmle_est3[["estimates"]][["St.TMLE"]],
