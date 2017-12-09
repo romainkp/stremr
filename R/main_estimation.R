@@ -202,7 +202,7 @@ importData <- function(data,
   new.factor.names <- vector(mode="list", length=length(factor.Ls))
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0 && verbose)
-    message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
+    message("...converting the following factor(s) to binary dummies (and dropping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
   for (factor.varnm in factor.Ls) {
     factor.levs <- levels(OData$dat.sVar[[factor.varnm]])
     ## only define new dummies for factors with > 2 levels
