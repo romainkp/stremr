@@ -202,7 +202,7 @@ importData <- function(data,
   new.factor.names <- vector(mode="list", length=length(factor.Ls))
   names(new.factor.names) <- factor.Ls
   if (length(factor.Ls)>0 && verbose)
-    message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
+    message("...converting the following factor(s) to binary dummies (and dropping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
   for (factor.varnm in factor.Ls) {
     factor.levs <- levels(OData$dat.sVar[[factor.varnm]])
     ## only define new dummies for factors with > 2 levels
@@ -465,8 +465,15 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     regs_list <- vector(mode = "list", length = length(NodeNames))
     names(regs_list) <- c(NodeNames)
     class(regs_list) <- c(class(regs_list), "ListOfRegressionForms")
+
+    modelfit.g.root <- modelfit.g$getPsAsW.models()
+    # class(modelfit.g.root)
     for (i in seq_along(NodeNames)) {
-      modelfit.g.node <- modelfit.g$getPsAsW.models()[[i]]
+      if (length(modelfit.g.root) == length(NodeNames) && inherits(modelfit.g.root[[1]], "ModelBinomial")) {
+        modelfit.g.node <- modelfit.g.root[[i]]
+      } else {
+        modelfit.g.node <- modelfit.g.root[[1]]$getPsAsW.models()[[i]]
+      }
 
       reg <- RegressionClass$new(outvar = NodeNames[i],
                                  predvars = NULL,
