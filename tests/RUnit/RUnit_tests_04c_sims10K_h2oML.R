@@ -116,14 +116,13 @@ test.h2o.ALL.ML.allestimators10Kdata <- function() {
     # ---------------------------------------------------------------------------------------------------------
     # TMLE w/ h2o random forest, using sl3 (should be equivalent)
     # ---------------------------------------------------------------------------------------------------------
-    params = sl3::Lrnr_h2o_grid$new(algorithm = "randomForest", ntrees = 10, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
-    # params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
-    t.surv <- c(2)
-    Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
-    tmle_est_sl3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
-    tmle_est_sl3$estimates[]
-
-    checkEquals(tmle_est$estimates[], tmle_est_sl3$estimates[])
+    # params = sl3::Lrnr_h2o_grid$new(algorithm = "randomForest", ntrees = 10, learn_rate = 0.1, sample_rate = 0.9, col_sample_rate = 0.9, balance_classes = TRUE)
+    # # params = list(fit.package = "h2o", fit.algorithm = "randomForest", ntrees = 100, learn_rate = 0.05, sample_rate = 0.8, col_sample_rate = 0.8, balance_classes = TRUE)
+    # t.surv <- c(2)
+    # Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
+    # tmle_est_sl3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "gTI.dhigh", Qforms = Qforms, models = params, stratifyQ_by_rule = FALSE)
+    # tmle_est_sl3$estimates[]
+    # checkEquals(tmle_est$estimates[], tmle_est_sl3$estimates[])
     
     h2o::h2o.shutdown(prompt = FALSE)
 
