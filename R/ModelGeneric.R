@@ -151,7 +151,6 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
     },
     # P(A=1|W=w): uses private$m.fit to generate predictions
     predict = function(newdata) {
-      # if (missing(newdata)) stop("must provide newdata")
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
       # serial loop over all regressions in PsAsW.models:
       for (k_i in seq_along(private$PsAsW.models)) {
@@ -159,7 +158,7 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
       }
       invisible(self)
     },
-    # WARNING: This method cannot be chained together with other methods (s.a, class$predictAeqa()$fun())
+    # WARNING: Next 2 methods cannot be chained together with other methods (s.a, class$predictAeqa()$fun())
     # Uses daughter objects (stored from prev call to fit()) to get predictions for P(A=obsdat.A|W=w)
     # Invisibly returns the joint probability P(A=a|W=w), also aves it as a private field "cumprodAeqa"
     # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
@@ -168,13 +167,24 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
         assert_that(is.DataStorageClass(newdata))
         n <- newdata$nobs
       }
-
       cumprodAeqa <- rep.int(1L, n)
       # loop over all regressions in PsAsW.models:
       for (k_i in seq_along(private$PsAsW.models)) {
         cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
       }
-
+      private$cumprodAeqa <- cumprodAeqa
+      return(cumprodAeqa)
+    },
+    predictgstar = function(newdata, n, ...) {
+      if (!missing(newdata)) {
+        assert_that(is.DataStorageClass(newdata))
+        n <- newdata$nobs
+      }
+      cumprodAeqa <- rep.int(1L, n)
+      # loop over all regressions in PsAsW.models:
+      for (k_i in seq_along(private$PsAsW.models)) {
+        cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictgstar(newdata = newdata, n = n, ...)
+      }
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     },

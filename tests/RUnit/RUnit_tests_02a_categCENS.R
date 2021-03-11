@@ -13,7 +13,7 @@ test.model.fits.categorCENSOR <- function() {
   # (IA) Data from the simulation study
   # ------------------------------------------------------------------------------------------------------
   data(OdataCatCENS)
-  OdataCatCENS <- as.data.table(OdataCatCENS, key=c(ID, t))
+  OdataCatCENS <- as.data.table(OdataCatCENS, key=c("ID", "t"))
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataCatCENS[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
   OdataCatCENS[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]

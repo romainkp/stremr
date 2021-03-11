@@ -64,14 +64,16 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
   analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
                   stratifyQ_by_rule = c(FALSE)) %>%
-                  cross_d() %>%
+                  cross_df() %>%
                   arrange(stratifyQ_by_rule)
 
-  ## ------------------------------------------------------------------------
+  ## ----------------------s--------------------------------------------------
   ## Define models for fitting propensity scores (g) -- PARAMETRIC LOGISTIC REGRESSION
   ## ------------------------------------------------------------------------
-  fit_method_g <- "cv"
+  # fit_method_g <- "cv"
+  fit_method_g <- "none"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
+  
   lrn_glm <- Lrnr_glm_fast$new()
   lrn_glm_sm <- Lrnr_glm_fast$new(covariates = c("CVD"))
   # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = binomial())
@@ -82,7 +84,17 @@ context("Testing sl3 cross-validation and continuous super learner")
                     metalearner = Lrnr_nnls$new())
 
   # models_g <- lrn_glm
-  models_g <- sl
+  # models_g <- sl
+
+  lrn_glm_base <- Lrnr_glm$new(family = gaussian())
+  OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1")
+  OData <- fitPropensity(OData,
+                         gform_TRT = gform_TRT,
+                         stratify_TRT = stratify_TRT,
+                         models_TRT = lrn_glm_base,
+                         fit_method = "none"
+                        )
+
 
   sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm),
                     metalearner = Lrnr_nnls$new())
@@ -116,8 +128,8 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## Fit propensity score models.
   ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
-  OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>%
-           stremr::define_CVfolds(nfolds = 5, fold_column = "fold_ID")
+  OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1")
+   # %>% stremr::define_CVfolds(nfolds = 5, fold_column = "fold_ID")
 
   OData <- fitPropensity(OData,
                          gform_TRT = gform_TRT,

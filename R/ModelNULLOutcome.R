@@ -35,6 +35,12 @@ ModelNULLOutcome  <- R6Class(classname = "ModelNULLOutcome",
       return(probAeqa)
     },
 
+    predictgstar = function(newdata, ...) { # P(A^s[i]=a^s|W^s=w^s) - calculating the likelihood for indA[i] (n vector of a`s)
+      probAeqa <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+      self$wipe.alldat # to save RAM space when doing many stacked regressions wipe out all internal data:
+      return(probAeqa)
+    },
+
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE) {
       if (print_format) {

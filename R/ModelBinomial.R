@@ -27,32 +27,10 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       model_contrl <- reg$model_contrl
 
       if (!is.null(model_contrl[["models"]])) {
-
         self$models <- model_contrl[["models"]]
         model_contrl[["models"]] <- NULL
-
       } else {
-
         stop("for binomial exposures 'model' must be always always specified and it must be an sl3 learner object")
-
-        # opt_params <- model_contrl[["opt_params"]]
-        # model_contrl[["opt_params"]] <- NULL
-
-        # if (("sl3_learner" %in% names(model_contrl))) {
-        #   sl3_learner <- model_contrl[["sl3_learner"]]
-        #   model_contrl[["sl3_learner"]] <- NULL
-        # } else if (("sl3_learner" %in% names(opt_params))) {
-        #   sl3_learner <- opt_params[["sl3_learner"]]
-        #   opt_params[["sl3_learner"]] <- NULL
-        # } else {
-        #   # message("'sl3_learner' argument for sl3 learner object not found, using default GLM learner 'sl3::Lrnr_glm_fast'")
-        #   if (!("family" %in% names(opt_params))) opt_params[["family"]] <- quasibinomial()
-        #   sl3_learner <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
-        # }
-        # ## todo: need to decide if the learner object should be already instantiated prior to calling stremr
-        # # assert_that(is(sl3_learner, "R6ClassGenerator"))
-        # assert_that(is(sl3_learner, "Lrnr_base"))
-        # self$models <- sl3_learner
       }
 
       self$model_contrl <- model_contrl
@@ -157,32 +135,17 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       probA1 <- private$probA1 # [self$getsubset]
       # check that predictions P(A=1 | dmat) exist for all obs (not NA)
       if (any(is.na(probA1))) stop("some of the modeling predictions resulted in NAs, which indicates an error in a prediction routine")
-
-      ## todo: make it more robust (non-dependent on the name of prediction column, but rather
-      ## based on the learner / outcome type (contin / cat / binary))
-      ## Predictions can be of two types:
-      ## 1) Likelihood P(A=a|W) -- nothing else needs to be done; or
-      ## 2) Probability P(A=1|W) (i.e., logistic regression) -- turn this into likelihood P(A=a|W)
-
-      # if ("likelihood" %in% names(probA1)) {
-      #   ## 1) using condensier, already returns the likelihood predictions:
-      #   likelihood <- probA1[["likelihood"]]
-      # } else {
-        ## 2) regular classification / binary regression problem, turn into likelihood:
-        if (missing(newdata) & missing(indA)) {
-          indA <- self$getoutvarval
-        } else if (missing(indA)) {
-          indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
-        }
-        assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
-        if (is.list(probA1) || is.data.table(probA1) || is.data.frame(probA1)) {
-          probA1 <- probA1[[1]]
-        }
-        likelihood <- probA1^(indA) * (1 - probA1)^(1L - indA)
-        ## alternative versions of above:
-        # likelihood_1 <- as.vector(probA1^(indA) * (1 - probA1)^(1L - indA))
-        # likelihood_3 <- probA1[, (names(probA1)) := .SD^(indA) * (1 - .SD)^(1L - indA)]
-      # }
+      ## 2) regular classification / binary regression problem, turn into likelihood:
+      if (missing(newdata) & missing(indA)) {
+        indA <- self$getoutvarval
+      } else if (missing(indA)) {
+        indA <- newdata$get.outvar(self$getsubset, self$getoutvarnm) # Always a vector of 0/1
+      }
+      assert_that(is.integerish(indA)) # check that obsdat.sA is always a vector of of integers
+      if (is.list(probA1) || is.data.table(probA1) || is.data.frame(probA1)) {
+        probA1 <- probA1[[1]]
+      }
+      likelihood <- probA1^(indA) * (1 - probA1)^(1L - indA)
 
       probAeqa[self$getsubset] <- likelihood
       private$probAeqa <- probAeqa
@@ -194,8 +157,74 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       return(probAeqa)
     },
 
-    predict.gstar = function(newdata, ...) { # P(A^*[i]=A^*|W=w) - calculating the likelihood for g^*(A)
-      stop("not implemented")
+    predictgstar = function(newdata, intervened_NODE_all, intervened_type_all, ...) { # P(A^*[i]=A^*|W=w) - calculating the likelihood for g^*(A)
+      assert_that(self$is.fitted)
+      self$n <- newdata$nobs
+      self$define.subset.idx(newdata)
+
+      if (missing(newdata)) {
+        stop("newdata must be provided for evaluating gstar")
+      }
+
+      gstar_name = intervened_NODE_all[[self$getoutvarnm]]
+      intervened_type = intervened_type_all[[self$getoutvarnm]]
+
+      # Aobs <-  newdata$get.outvar(TRUE, self$getoutvarnm)
+      # Astar <- newdata$get.outvar(TRUE, gstar_name)
+      Aobs <-  newdata$get.outvar(self$getsubset, self$getoutvarnm)
+      Astar <- newdata$get.outvar(self$getsubset, gstar_name)
+
+      # gstar <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+      if (intervened_type %in% "bin") {
+        # -------------------------------------------------
+        # map gstar for intervention on binary A
+        # -------------------------------------------------
+        # check that observed exposure is always a vector of integers
+        if(!is.integerish(Aobs)) {
+          stop("Not possible to intervene on continuous node ('" %+% self$getoutvarnm %+% 
+               "') with a static intervention -- please change the intervention type by setting 'intervened_type_TRT' / 'intervened_type_MONITOR' to 'shift' or 'MSM'.")
+        }
+        gstar <- Astar^(Aobs) * (1 - Astar)^(1L - Aobs)
+      } else if (intervened_type %in% "shift") {
+        # -------------------------------------------------
+        ## map gstar for a delta(W) shift of continuous A
+        # -------------------------------------------------
+        ## 1. define the new outcome node to evalute g(A-\delta(W)), defined as Anew = 2*Aobs - Astar
+        newdata$dat.sVar[, "Anew.delta.shift.star.tmp" := 2*Aobs - Astar]
+        ## 2. swap the names of gnode and self$gstar_name
+        newdata$swapNodes(current = self$getoutvarnm, target = "Anew.delta.shift.star.tmp")
+        ## 3. call predict on original g fit, but using Anew.tmp as the outcome
+        gstar <- self$predictAeqa(newdata)
+        ## 4. swap the node names back
+        newdata$swapNodes(current = "Anew.delta.shift.star.tmp", target = self$getoutvarnm)
+        newdata$dat.sVar[, "Anew.delta.shift.star.tmp" := NULL]
+      } else if (intervened_type %in% "MSM") {
+        # -------------------------------------------------
+        ## map gstar for MSMs, which is just const 1
+        # -------------------------------------------------
+        gstar <- rep.int(1L, length(self$getsubset))
+      } else {
+        stop("Unrecognized value for 'intervened_type_TRT' or 'intervened_type_MONITOR', these can only be 'bin', 'shift' or 'MSM', please consult the manual.")
+      }
+
+      # print(paste0("Evaluating g^* for exposure node: ", 
+      #         self$getoutvarnm, " and intervention node: ", gstar_name))
+
+      # print(paste0("Evaluating g^* for intervened_type: ", intervened_type))
+      # print(paste0("Length subset: ", length(self$getsubset)))
+      # print("...Aobs..."); print(head(Aobs)); 
+      # print("...Astar..."); print(head(Astar)); 
+      # print("...gstar..."); print(head(gstar)); 
+      # print(paste0("Aobs  len: ", length(Aobs), "; sum: ", sum(Aobs))); 
+      # print(paste0("Astar len: ", length(Astar), "; sum: ", sum(Astar)));
+      # print(paste0("gstar len: ", length(gstar), "; sum: ", sum(gstar)));
+
+      gstar_out <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+      gstar_out[self$getsubset] <- gstar
+
+      self$wipe.alldat # to save RAM space when doing many stacked regressions wipe out all internal data:
+
+      return(gstar_out)
     },
 
     define.subset.idx = function(data) {

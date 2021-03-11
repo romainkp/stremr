@@ -9,14 +9,14 @@ ModelDeterministic  <- R6Class(classname = "ModelDeterministic",
   public = list(
     gstar.Name = character(),
     modelfit.g = NULL,
-    type_intervened = "bin",
+    intervened_type = "bin",
     is.fitted = TRUE,
 
     initialize = function(reg, ...) {
       self$model_contrl <- reg$model_contrl
       self$gstar.Name <- reg$model_contrl[["gstar.Name"]]
       self$modelfit.g <- reg$model_contrl[["modelfit.g"]]
-      self$type_intervened <- reg$model_contrl[["type_intervened"]]
+      self$intervened_type <- reg$model_contrl[["intervened_type"]]
       assert_that(!is.null(self$gstar.Name))
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -67,16 +67,16 @@ ModelDeterministic  <- R6Class(classname = "ModelDeterministic",
       }
 
       # gstar <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
-      if (self$type_intervened %in% "bin") {
+      if (self$intervened_type %in% "bin") {
         # -------------------------------------------------
         # map gstar for intervention on binary A
         # -------------------------------------------------
         # check that observed exposure is always a vector of integers
         if(!is.integerish(Aobs)) {
-          stop("Not possible to intervene on continuous node ('" %+% self$getoutvarnm %+% "') with a static intervention -- please change the intervention type by setting 'type_intervened_TRT' / 'type_intervened_MONITOR' to 'shift' or 'MSM'.")
+          stop("Not possible to intervene on continuous node ('" %+% self$getoutvarnm %+% "') with a static intervention -- please change the intervention type by setting 'intervened_type_TRT' / 'intervened_type_MONITOR' to 'shift' or 'MSM'.")
         }
         gstar <- Astar^(Aobs) * (1 - Astar)^(1L - Aobs)
-      } else if (self$type_intervened %in% "shift") {
+      } else if (self$intervened_type %in% "shift") {
         # -------------------------------------------------
         ## map gstar for a delta(W) shift of continuous A
         # -------------------------------------------------
@@ -89,13 +89,13 @@ ModelDeterministic  <- R6Class(classname = "ModelDeterministic",
         ## 4. swap the node names back
         newdata$swapNodes(current = "Anew.delta.shift.star.tmp", target = self$getoutvarnm)
         newdata$dat.sVar[, "Anew.delta.shift.star.tmp" := NULL]
-      } else if (self$type_intervened %in% "MSM") {
+      } else if (self$intervened_type %in% "MSM") {
         # -------------------------------------------------
         ## map gstar for MSMs, which is just const 1
         # -------------------------------------------------
         gstar <- rep.int(1L, self$n)
       } else {
-        stop("Unrecognized value for 'type_intervened_TRT' or 'type_intervened_MONITOR', these can only be 'bin', 'shift' or 'MSM', please consult the manual.")
+        stop("Unrecognized value for 'intervened_type_TRT' or 'intervened_type_MONITOR', these can only be 'bin', 'shift' or 'MSM', please consult the manual.")
       }
 
       self$wipe.alldat # to save RAM space when doing many stacked regressions wipe out all internal data:

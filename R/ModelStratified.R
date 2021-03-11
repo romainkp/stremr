@@ -75,7 +75,6 @@ ModelStratified <- R6Class(classname = "ModelStratified",
     },
     # P(A^s=1|W^s=w^s): uses private$m.fit to generate predictions
     predict = function(newdata, ...) {
-      # if (missing(newdata)) stop("must provide newdata")
       if (gvars$verbose == 2) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
       super$predict(newdata, ...)
@@ -87,6 +86,13 @@ ModelStratified <- R6Class(classname = "ModelStratified",
       if (gvars$verbose == 2) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
       if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
       cumprodAeqa <- super$predictAeqa(newdata, ...)
+      private$cumprodAeqa <- cumprodAeqa
+      return(cumprodAeqa)
+    },
+    predictgstar = function(newdata, ...) {
+      if (gvars$verbose == 2) print("performing prediction for outcome based on stratified model: " %+% self$outvar)
+      if (!missing(newdata)) assert_that(is.DataStorageClass(newdata))
+      cumprodAeqa <- super$predictgstar(newdata, ...)
       private$cumprodAeqa <- cumprodAeqa
       return(cumprodAeqa)
     }
