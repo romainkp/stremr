@@ -443,7 +443,7 @@ fitPropensity <- function(OData,
 }
 
 ## TODO: convert useonly_t_NODE to a named list of same dim as intervened_NODE (separate expression pre intervention node)
-## TODO: test new useonly_t_NODE functionality (as names list) on BinomialModel classes (strata) that have no nodes to intervene on.
+## TODO: (DONE) test new useonly_t_NODE functionality (as names list) on BinomialModel classes (strata) that have no nodes to intervene on.
 ## TODO: (DONE) convert intervened_NODE to named look-up list (each intervention node item is named after the corresponding exposure node)
 ## TODO: (DONE) Move all functionality in ModelDeterministic to ModelBinomial. 
 ##       This way we do not have to re-create the R6 class strucuture of modelfit.g
@@ -505,21 +505,40 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
 
     ## --------------------------------------------------------------------------------------------------
     ## New method for evaluting gstar. Relies solely on BinomialModel, doesn't require DeterministicModel
+    ## Intervene only on the subset of nodes (rows that evaluate to TRUE by expr in useonly_t_NODE)
+    ## The rest of the rows (not in useonly_t_NODE) are set to g0 fit (yields propensity score = 1)
+    ## TODO: 1) Change useonly_t_NODE to list of named nodes (one item per intervention node)
+    ## TODO (DONE): 2) Move this evaluation into BinomialModel    
     ## --------------------------------------------------------------------------------------------------
+    # browser()
     gstar_NODE_new <- modelfit.g$predictgstar(newdata = OData, 
                                               n = OData$nobs, 
                                               intervened_NODE_all = intervened_NODE_l, 
-                                              intervened_type_all = intervened_type_l)
-    check_same_gstar = all(gstar_NODE_new==gstar_NODE)
-    # browser()
-    if (!check_same_gstar) stop("critical error: two gstar evaluation methods produced inconsistent results")
+                                              intervened_type_all = intervened_type_l,
+                                              useonly_t_NODE_all  = useonly_t_NODE)
 
+    # browser()    
+    # tmpdf <- data.frame(gstar_NODE,gstar_NODE_new,g.obs)
+    # head(tmpdf[setdiff(1:length(gstar_NODE), idx_set_to_g0), ],500)
+    # sum(tmpdf[setdiff(1:length(gstar_NODE), idx_set_to_g0), ]$gstar_NODE_new - tmpdf[idx_set_to_g0, ]$g.obs)
+    # sum(tmpdf[setdiff(1:length(gstar_NODE), idx_set_to_g0), ]$gstar_NODE_new - tmpdf[setdiff(1:length(gstar_NODE), idx_set_to_g0), ]$gstar_NODE)
+
+    ## --------------------------------------------------------------------------------------------------
+    ## OLD APPROACH TO intervene only on the subset of nodes gstar. 
+    ## This has been moved inside BinomialModel$predictgstar(...). 
+    ## To be removed, keeping for now to verify new implementation.
+    ## --------------------------------------------------------------------------------------------------
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
     if (any(is.na(subset_idx)))
       stop("the subset index evaluation for the expression '" %+% useonly_t_NODE %+% "' resulted in NAs")
+    idx_set_to_g0 <- setdiff(1:length(gstar_NODE), subset_idx)
+    gstar_NODE[idx_set_to_g0] <- g.obs[idx_set_to_g0]
 
-    idx_set_to_g0 <- setdiff(1:length(gstar_NODE_new), subset_idx)
-    gstar_NODE_new[idx_set_to_g0] <- g.obs[idx_set_to_g0]
+    ## --------------------------------------------------------------------------------------------------
+    ## Verify both approaches for gstar eval match
+    ## --------------------------------------------------------------------------------------------------
+    check_same_gstar = all(gstar_NODE_new==gstar_NODE)
+    if (!check_same_gstar) stop("critical error: two gstar evaluation methods produced inconsistent results")
 
   } else {
     # use the actual observed exposure probability (no intervention on NODE)

@@ -157,7 +157,7 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       return(probAeqa)
     },
 
-    predictgstar = function(newdata, intervened_NODE_all, intervened_type_all, ...) { # P(A^*[i]=A^*|W=w) - calculating the likelihood for g^*(A)
+    predictgstar = function(newdata, intervened_NODE_all, intervened_type_all, useonly_t_NODE_all, ...) { # P(A^*[i]=A^*|W=w) - calculating the likelihood for g^*(A)
       assert_that(self$is.fitted)
       self$n <- newdata$nobs
       self$define.subset.idx(newdata)
@@ -209,7 +209,6 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
 
       # print(paste0("Evaluating g^* for exposure node: ", 
       #         self$getoutvarnm, " and intervention node: ", gstar_name))
-
       # print(paste0("Evaluating g^* for intervened_type: ", intervened_type))
       # print(paste0("Length subset: ", length(self$getsubset)))
       # print("...Aobs..."); print(head(Aobs)); 
@@ -221,6 +220,13 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
 
       gstar_out <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
       gstar_out[self$getsubset] <- gstar
+
+      ## only intervene (assign to gstar) on observations in this subset
+      subset_idx_intervene <- newdata$evalsubst(subset_exprs = useonly_t_NODE_all)
+      if (any(is.na(subset_idx_intervene)))
+        stop("the subset index evaluation for the expression '" %+% useonly_t_NODE_all %+% "' resulted in NAs")
+      idx_set_to_g0 <- setdiff(self$getsubset, subset_idx_intervene)
+      gstar_out[idx_set_to_g0] <- private$probAeqa[idx_set_to_g0]
 
       self$wipe.alldat # to save RAM space when doing many stacked regressions wipe out all internal data:
 

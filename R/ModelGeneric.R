@@ -139,8 +139,8 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
     },
     length = function(){ base::length(private$PsAsW.models) },
     getPsAsW.models = function() { private$PsAsW.models },  # get all summary model objects (one model object per outcome var sA[j])
-    getcumprodAeqa = function() { private$cumprodAeqa },  # get joint prob as a vector of the cumulative prod over j for P(sA[j]=a[j]|sW)
-
+    # get joint prob as a vector of the cumulative prod over j for P(sA[j]=a[j]|W)
+    getcumprodAeqa = function() { private$cumprodAeqa },  
     fit = function(data, ...) {
       assert_that(is.DataStorageClass(data))
       # serial loop over all regressions in PsAsW.models:
@@ -159,7 +159,7 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
       invisible(self)
     },
     # WARNING: Next 2 methods cannot be chained together with other methods (s.a, class$predictAeqa()$fun())
-    # Uses daughter objects (stored from prev call to fit()) to get predictions for P(A=obsdat.A|W=w)
+    # Uses daughter objects (stored from prev call to fit()) to get joint predictions for P(A=obsdat.A|W=w) (factorized)
     # Invisibly returns the joint probability P(A=a|W=w), also aves it as a private field "cumprodAeqa"
     # P(A=a|W=w) - calculating the likelihood for obsdat.A[i] (n vector of a's):
     predictAeqa = function(newdata, n, ...) {
@@ -167,26 +167,27 @@ ModelGeneric <- R6Class(classname = "ModelGeneric",
         assert_that(is.DataStorageClass(newdata))
         n <- newdata$nobs
       }
-      cumprodAeqa <- rep.int(1L, n)
+      jprodAeqa <- rep.int(1L, n)
       # loop over all regressions in PsAsW.models:
       for (k_i in seq_along(private$PsAsW.models)) {
-        cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
+        jprodAeqa <- jprodAeqa * private$PsAsW.models[[k_i]]$predictAeqa(newdata = newdata, n = n, ...)
       }
-      private$cumprodAeqa <- cumprodAeqa
-      return(cumprodAeqa)
+      private$cumprodAeqa <- jprodAeqa
+      return(jprodAeqa)
     },
+    # Same as above, but calling predictgstar(...) methods, plus not saving the joint prob
     predictgstar = function(newdata, n, ...) {
       if (!missing(newdata)) {
         assert_that(is.DataStorageClass(newdata))
         n <- newdata$nobs
       }
-      cumprodAeqa <- rep.int(1L, n)
+      jprodAeqa <- rep.int(1L, n)
       # loop over all regressions in PsAsW.models:
       for (k_i in seq_along(private$PsAsW.models)) {
-        cumprodAeqa <- cumprodAeqa * private$PsAsW.models[[k_i]]$predictgstar(newdata = newdata, n = n, ...)
+        jprodAeqa <- jprodAeqa * private$PsAsW.models[[k_i]]$predictgstar(newdata = newdata, n = n, ...)
       }
-      private$cumprodAeqa <- cumprodAeqa
-      return(cumprodAeqa)
+      # private$jprodAeqa <- jprodAeqa
+      return(jprodAeqa)
     },
 
     # get pre-saved predictions P(Q=1) from the K indexed model fit for unique n obs.
