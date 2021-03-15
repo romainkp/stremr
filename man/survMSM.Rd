@@ -4,10 +4,21 @@
 \alias{survMSM}
 \title{Estimate Survival with a particular MSM for the survival-hazard function using previously fitted weights.}
 \usage{
-survMSM(wts_data, OData, tbreaks, use_weights = TRUE, stabilize = TRUE,
-  trunc_weights = 10^6, weights = NULL, getSEs = TRUE, est_name = "IPW",
-  glm_package = c("speedglm", "h2o"), return_wts = FALSE, tmax = NULL,
-  verbose = getOption("stremr.verbose"))
+survMSM(
+  wts_data,
+  OData,
+  tbreaks,
+  use_weights = TRUE,
+  stabilize = TRUE,
+  trunc_weights = 10^6,
+  weights = NULL,
+  getSEs = TRUE,
+  est_name = "IPW",
+  glm_package = c("speedglm", "h2o"),
+  return_wts = FALSE,
+  tmax = NULL,
+  verbose = getOption("stremr.verbose")
+)
 }
 \arguments{
 \item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function

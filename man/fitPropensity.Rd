@@ -4,12 +4,26 @@
 \alias{fitPropensity}
 \title{Define and fit propensity score models.}
 \usage{
-fitPropensity(OData, gform_CENS, gform_TRT, gform_MONITOR,
-  stratify_CENS = NULL, stratify_TRT = NULL, stratify_MONITOR = NULL,
-  models_CENS = NULL, models_TRT = NULL, models_MONITOR = NULL,
+fitPropensity(
+  OData,
+  gform_CENS,
+  gform_TRT,
+  gform_MONITOR,
+  stratify_CENS = NULL,
+  stratify_TRT = NULL,
+  stratify_MONITOR = NULL,
+  models_CENS = NULL,
+  models_TRT = NULL,
+  models_MONITOR = NULL,
   fit_method = stremrOptions("fit_method"),
-  fold_column = stremrOptions("fold_column"), reg_CENS, reg_TRT, reg_MONITOR,
-  use_weights = FALSE, verbose = getOption("stremr.verbose"), ...)
+  fold_column = stremrOptions("fold_column"),
+  reg_CENS,
+  reg_TRT,
+  reg_MONITOR,
+  use_weights = FALSE,
+  verbose = getOption("stremr.verbose"),
+  ...
+)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}

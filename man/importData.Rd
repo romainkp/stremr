@@ -4,10 +4,20 @@
 \alias{importData}
 \title{Import data, define various nodes, define dummies for factor columns and define OData R6 object}
 \usage{
-importData(data, ID = "Subject_ID", t_name = "time_period", covars,
-  CENS = NULL, TRT = "A", MONITOR = NULL, OUTCOME = "Y",
-  weights = NULL, noCENScat = 0L, remove_extra_rows = TRUE,
-  verbose = getOption("stremr.verbose"))
+importData(
+  data,
+  ID = "Subject_ID",
+  t_name = "time_period",
+  covars,
+  CENS = NULL,
+  TRT = "A",
+  MONITOR = NULL,
+  OUTCOME = "Y",
+  weights = NULL,
+  noCENScat = 0L,
+  remove_extra_rows = TRUE,
+  verbose = getOption("stremr.verbose")
+)
 }
 \arguments{
 \item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns,

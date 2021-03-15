@@ -4,17 +4,43 @@
 \alias{ggRD}
 \title{Plot risk differences over time with ggplot2}
 \usage{
-ggRD(RDests, CI = TRUE, CI_errorbar = FALSE, CI_line = FALSE,
-  plot_cens = TRUE, surv_col = "gg.def", cens_col = "gg.def",
-  lty_est = 1, shape_est = seq_along(RDests), lty_ci = 2,
-  size_est = 0.5, size_ci = size_est, size_pt = size_est + 0.3,
-  cens_size = 2, cens_shape = 3, back_white = TRUE, xlab = "Time",
-  ylab = "Risk Difference", main = "", legend_pos = "right",
-  RD_name = "RD", SE_name = "RD.SE", CIlow_name = "CI95low",
-  CIup_name = "CI95up", order_legend = TRUE, t_int_sel = NULL,
-  ymin = NULL, ymax = NULL, facet = FALSE, font_size = 6,
-  line_RD_plot = TRUE, x_breaks = unique(RDests[["time"]]),
-  axis_font_size = NULL, x_axis_font_angle = 0, ...)
+ggRD(
+  RDests,
+  CI = TRUE,
+  CI_errorbar = FALSE,
+  CI_line = FALSE,
+  plot_cens = TRUE,
+  surv_col = "gg.def",
+  cens_col = "gg.def",
+  lty_est = 1,
+  shape_est = seq_along(RDests),
+  lty_ci = 2,
+  size_est = 0.5,
+  size_ci = size_est,
+  size_pt = size_est + 0.3,
+  cens_size = 2,
+  cens_shape = 3,
+  back_white = TRUE,
+  xlab = "Time",
+  ylab = "Risk Difference",
+  main = "",
+  legend_pos = "right",
+  RD_name = "RD",
+  SE_name = "RD.SE",
+  CIlow_name = "CI95low",
+  CIup_name = "CI95up",
+  order_legend = TRUE,
+  t_int_sel = NULL,
+  ymin = NULL,
+  ymax = NULL,
+  facet = FALSE,
+  font_size = 6,
+  line_RD_plot = TRUE,
+  x_breaks = unique(RDests[["time"]]),
+  axis_font_size = NULL,
+  x_axis_font_angle = 0,
+  ...
+)
 }
 \arguments{
 \item{RDests}{A table in long format with a single column containing names of two contrasting regimens.

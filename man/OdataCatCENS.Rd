@@ -4,7 +4,8 @@
 \name{OdataCatCENS}
 \alias{OdataCatCENS}
 \title{An example of a dataset in long format with categorical censoring variable.}
-\format{A data frame with 1,000 observations and variables:
+\format{
+A data frame with 1,000 observations and variables:
 \describe{
   \item{ID}{Unique subject identifier}
   \item{CVD}{Baseline confounder (time invariant)}
@@ -16,7 +17,8 @@
   \item{TI}{Binary exposure variable}
   \item{N}{The indicator of being monitored (having a visit)}
   \item{Y.tplus1}{Binary outcome at t}
-}}
+}
+}
 \usage{
 data(OdataCatCENS)
 }

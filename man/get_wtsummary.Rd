@@ -4,8 +4,13 @@
 \alias{get_wtsummary}
 \title{IP-Weights Summary Tables}
 \usage{
-get_wtsummary(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150),
-  varname = "Stabilized IPAW", by.rule = FALSE, stabilize = FALSE)
+get_wtsummary(
+  wts_data,
+  cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150),
+  varname = "Stabilized IPAW",
+  by.rule = FALSE,
+  stabilize = FALSE
+)
 }
 \arguments{
 \item{wts_data}{Either a list of data.table containing weights (one for each separate regimen/intervention) or a single data.table with

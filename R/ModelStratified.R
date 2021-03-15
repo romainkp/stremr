@@ -1,32 +1,11 @@
 
 ## ---------------------------------------------------------------------
-#' R6 class for fitting and predicting with several stratified models for a single outcome variable (conditional on some covariate values)
-#'
-#' This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for a summary \code{A[j]}.
-#' This class inherits from \code{\link{ModelGeneric}} class.
-#' The stratification criteria is determined by the \code{R} expression in the field \code{subset_exprs}.
-#'
-#' @docType class
-#' @format An \code{\link{R6Class}} generator object
-#' @keywords R6 class
-#' @details
-#' \itemize{
-#' \item{\code{reg}} - .
-#' \item{\code{outvar}} - .
-#' \item{\code{subset_exprs}} - .
-#' }
-#' @section Methods:
-#' \describe{
-#'   \item{\code{new(reg, DataStorageClass.g0, ...)}}{...}
-#'   \item{\code{fit(data)}}{...}
-#'   \item{\code{predict(newdata)}}{...}
-#'   \item{\code{predictAeqa(newdata)}}{...}
-#' }
-#' @section Active Bindings:
-#' \describe{
-#'   \item{\code{cats}}{...}
-#' }
-#' @export
+# R6 class for fitting and predicting with several stratified models for a single outcome variable (conditional on some covariate values)
+#
+# This R6 class defines and fits a conditional probability model \code{P(A[j]|W,...)} for a summary \code{A[j]}.
+# This class inherits from \code{\link{ModelGeneric}} class.
+# The stratification criteria is determined by the \code{R} expression in the field \code{subset_exprs}.
+#
 ModelStratified <- R6Class(classname = "ModelStratified",
   inherit = ModelGeneric,
   portable = TRUE,

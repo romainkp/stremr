@@ -4,9 +4,15 @@
 \alias{set_all_stremr_options}
 \title{Setting all possible \code{stremr} options at once.}
 \usage{
-set_all_stremr_options(fit_method = c("none", "cv"), fold_column = NULL,
-  lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE,
-  up_trunc_offset = 20, low_trunc_offset = -10, eps_tol = 10^-5)
+set_all_stremr_options(
+  fit_method = c("none", "cv"),
+  fold_column = NULL,
+  lower_bound_zero_Q = TRUE,
+  skip_update_zero_Q = TRUE,
+  up_trunc_offset = 20,
+  low_trunc_offset = -10,
+  eps_tol = 10^-5
+)
 }
 \arguments{
 \item{fit_method}{Specify the default method for model selection.

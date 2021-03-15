@@ -4,16 +4,32 @@
 \alias{fit_iTMLE}
 \title{Fit the sequential double robust (SDR) procedure, either with DR tranformation or TMLE-like targeting}
 \usage{
-fit_iTMLE(OData, tvals, Qforms, intervened_TRT = NULL,
-  intervened_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
-  intervened_MONITOR), collapse = ""), models = NULL,
+fit_iTMLE(
+  OData,
+  tvals,
+  Qforms,
+  intervened_TRT = NULL,
+  intervened_MONITOR = NULL,
+  rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
+  models = NULL,
   fit_method = stremrOptions("fit_method"),
-  fold_column = stremrOptions("fold_column"), stratifyQ_by_rule = FALSE,
-  stratify_by_last = TRUE, useonly_t_TRT = NULL, useonly_t_MONITOR = NULL,
-  CVTMLE = FALSE, trunc_weights = 10^6, weights = NULL,
-  parallel = FALSE, return_fW = FALSE, use_DR_transform = FALSE,
-  stabilize = FALSE, reg_Q = NULL, SDR_model = NULL,
-  verbose = getOption("stremr.verbose"), ...)
+  fold_column = stremrOptions("fold_column"),
+  stratifyQ_by_rule = FALSE,
+  stratify_by_last = TRUE,
+  useonly_t_TRT = NULL,
+  useonly_t_MONITOR = NULL,
+  CVTMLE = FALSE,
+  trunc_weights = 10^6,
+  weights = NULL,
+  parallel = FALSE,
+  return_fW = FALSE,
+  use_DR_transform = FALSE,
+  stabilize = FALSE,
+  reg_Q = NULL,
+  SDR_model = NULL,
+  verbose = getOption("stremr.verbose"),
+  ...
+)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}

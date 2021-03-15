@@ -4,8 +4,14 @@
 \alias{defineMONITORvars}
 \title{Helper routine to define the monitoring indicator and time since last visit}
 \usage{
-defineMONITORvars(data, ID, t, imp.I, MONITOR.name = "N",
-  tsinceNis1 = "last.Nt")
+defineMONITORvars(
+  data,
+  ID,
+  t,
+  imp.I,
+  MONITOR.name = "N",
+  tsinceNis1 = "last.Nt"
+)
 }
 \arguments{
 \item{data}{Input \code{data.table} or \code{data.frame}}

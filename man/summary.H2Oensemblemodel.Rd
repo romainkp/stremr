@@ -4,8 +4,7 @@
 \alias{summary.H2Oensemblemodel}
 \title{S3 methods for getting model fit summary for H2Oensemblemodel class object}
 \usage{
-\method{summary}{H2Oensemblemodel}(object, only.coefs = FALSE,
-  format_table = TRUE, ...)
+\method{summary}{H2Oensemblemodel}(object, only.coefs = FALSE, format_table = TRUE, ...)
 }
 \arguments{
 \item{object}{The model fit object produced by h2oEnsemble package}

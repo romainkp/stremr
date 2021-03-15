@@ -4,11 +4,21 @@
 \alias{fit_hMSM}
 \title{Estimate Survival with any MSM for the survival-hazard function using previously fitted weights.}
 \usage{
-fit_hMSM(wts_data, form, OData, use_weights = TRUE, stabilize = TRUE,
-  trunc_weights = 10^6, weights = NULL, getSEs = TRUE,
-  glm_package = c("glm", "speedglm", "h2o"), return_wts = FALSE,
-  tmax = NULL, rule.var = "rule.name",
-  verbose = getOption("stremr.verbose"))
+fit_hMSM(
+  wts_data,
+  form,
+  OData,
+  use_weights = TRUE,
+  stabilize = TRUE,
+  trunc_weights = 10^6,
+  weights = NULL,
+  getSEs = TRUE,
+  glm_package = c("glm", "speedglm", "h2o"),
+  return_wts = FALSE,
+  tmax = NULL,
+  rule.var = "rule.name",
+  verbose = getOption("stremr.verbose")
+)
 }
 \arguments{
 \item{wts_data}{A list of \code{data.table}s, each data set is a result of calling the function

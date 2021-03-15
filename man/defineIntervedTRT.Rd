@@ -4,8 +4,19 @@
 \alias{defineIntervedTRT}
 \title{Define counterfactual dynamic treatment}
 \usage{
-defineIntervedTRT(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceNis1,
-  new.TRT.names = NULL, return.allcolumns = FALSE)
+defineIntervedTRT(
+  data,
+  theta,
+  ID,
+  t,
+  I,
+  CENS,
+  TRT,
+  MONITOR,
+  tsinceNis1,
+  new.TRT.names = NULL,
+  return.allcolumns = FALSE
+)
 }
 \arguments{
 \item{data}{Input data.frame or data.table in long format, see below for the description of the assumed format.}

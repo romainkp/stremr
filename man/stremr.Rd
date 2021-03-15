@@ -4,20 +4,43 @@
 \alias{stremr}
 \title{Run all estimators (KM, hazard-IPW, direct-IPW, GCOMP plug-in and TMLE).}
 \usage{
-stremr(data, ID = "Subj_ID", t_name = "time_period", covars, CENS = "C",
-  TRT = "A", MONITOR = "N", OUTCOME = "Y", gform_CENS, gform_TRT,
-  gform_MONITOR, stratify_CENS = NULL, stratify_TRT = NULL,
-  stratify_MONITOR = NULL, intervened_TRT = NULL, noCENScat = 0L,
-  remove_extra_rows = TRUE, nfolds = NULL,
+stremr(
+  data,
+  ID = "Subj_ID",
+  t_name = "time_period",
+  covars,
+  CENS = "C",
+  TRT = "A",
+  MONITOR = "N",
+  OUTCOME = "Y",
+  gform_CENS,
+  gform_TRT,
+  gform_MONITOR,
+  stratify_CENS = NULL,
+  stratify_TRT = NULL,
+  stratify_MONITOR = NULL,
+  intervened_TRT = NULL,
+  noCENScat = 0L,
+  remove_extra_rows = TRUE,
+  nfolds = NULL,
   models_CENS = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
   models_TRT = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
   models_MONITOR = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
-  fit_method_g = "none", models_Q = sl3::Lrnr_glm_fast$new(family =
-  quasibinomial()), fit_method_Q = "none", Qforms = NULL, tvals = NULL,
-  stratifyQ_by_rule = TRUE, trunc_IPW_MSM = Inf, trunc_IPW_TMLE = Inf,
-  seed = NULL, MSMGLMpkg = c("speedglm", "h2o"), tbreaks = NULL,
-  start_h2o_cluster = TRUE, nthreads = 2,
-  verbose = getOption("stremr.verbose"))
+  fit_method_g = "none",
+  models_Q = sl3::Lrnr_glm_fast$new(family = quasibinomial()),
+  fit_method_Q = "none",
+  Qforms = NULL,
+  tvals = NULL,
+  stratifyQ_by_rule = TRUE,
+  trunc_IPW_MSM = Inf,
+  trunc_IPW_TMLE = Inf,
+  seed = NULL,
+  MSMGLMpkg = c("speedglm", "h2o"),
+  tbreaks = NULL,
+  start_h2o_cluster = TRUE,
+  nthreads = 2,
+  verbose = getOption("stremr.verbose")
+)
 }
 \arguments{
 \item{data}{Input data in long format. Can be a \code{data.frame} or a \code{data.table} with named columns, containing the time-varying covariates (\code{covars}),

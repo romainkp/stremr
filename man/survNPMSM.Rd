@@ -4,8 +4,13 @@
 \alias{survNPMSM}
 \title{Non-parametric (saturated) MSM for survival based on previously evaluated IP weights.}
 \usage{
-survNPMSM(wts_data, OData, weights = NULL, trunc_weights = 10^6,
-  return_wts = FALSE)
+survNPMSM(
+  wts_data,
+  OData,
+  weights = NULL,
+  trunc_weights = 10^6,
+  return_wts = FALSE
+)
 }
 \arguments{
 \item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}.

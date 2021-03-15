@@ -1,7 +1,6 @@
 #' @useDynLib stremr
 #' @import R6
 #' @import data.table
-#' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is
 #' @importFrom stats approx binomial coef glm.control glm.fit plogis predict qlogis qnorm quantile rnorm terms var predict glm.control
@@ -9,14 +8,6 @@
 #' @importFrom stats as.formula glm na.exclude rbinom terms.formula pnorm quasibinomial
 NULL
 
-#' Fast C++ version of the inverse logit link function (expit)
-#'
-#' The conversion performed is given by 1/(1+exp(-eta))
-#'
-#' @param eta The argument to be converted
-#' @rdname logit_linkinv
-#' @export logit_linkinv
-"logit_linkinv"
 
 if(getRversion() >= "2.15.1") {
   utils::globalVariables(c("estimates", "FUPtimes_tabs", "MSM", "MSM.crude", "NPMSM", "trunc_MSM", "trunc_TMLE", "trunc_weight", "wts_data", "wts_tabs"))

@@ -69,4 +69,4 @@ Remotes:
     github::osofr/gridisl
 License: MIT + file LICENSE
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 7.1.1

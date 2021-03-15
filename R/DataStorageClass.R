@@ -1,3 +1,5 @@
+#' @importFrom assertthat assert_that is.count is.flag is.string
+
 fast.load.to.H2O <- function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
   tmpf <- tempfile(fileext = ".csv")
   assertthat::assert_that(is.data.table(dat.sVar))
@@ -110,54 +112,52 @@ trim_rows_after_tmax <- function(OData, tmax = OData$max.t) {
 }
 
 ## ---------------------------------------------------------------------
-#' R6 class for storing, managing, subsetting and manipulating the input data.
-#'
-#'  The class \code{DataStorageClass} is the only way the package uses to access the input data.
-#'  The evaluated summary measures from sVar.object are stored as a matrix (\code{private$.mat.sVar}).
-#'  Contains methods for replacing missing values with default in \code{gvars$misXreplace}.
-#'  Also contains method for detecting / setting sVar variable type (binary, categor, contin).
-#'  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
-#'  For continous sVar this class provides methods for detecting / setting bin intervals,
-#'  normalization, disretization and construction of bin indicators.
-#'  The pointers to this class get passed on to \code{ModelGeneric} functions: \code{$fit()},
-#'  \code{$predict()} and \code{$predictAeqa()}.
-#'
-#' @docType class
-#' @format An \code{\link{R6Class}} generator object
-#' @keywords R6 class
-#' @details
-#' \itemize{
-#'    \item{\code{YnodeVals}}
-#'    \item{\code{det.Y}}
-#' }
-#' @section Methods:
-#' \describe{
-#'   \item{\code{new(Odata, nodes, YnodeVals, det.Y, ...)}}{...}
-#'   \item{\code{def.types.sVar(type.sVar = NULL)}}{...}
-#'   \item{\code{fixmiss_sVar()}}{...}
-#'   \item{\code{set.sVar(name.sVar, new.type)}}{...}
-#'   \item{\code{set.sVar.type(name.sVar, new.type)}}{...}
-#'   \item{\code{get.sVar(name.sVar, new.sVarVal)}}{...}
-#'   \item{\code{replaceOneAnode(AnodeName, newAnodeVal)}}{...}
-#'   \item{\code{replaceManyAnodes(Anodes, newAnodesMat)}}{...}
-#'   \item{\code{addYnode(YnodeVals, det.Y)}}{...}
-#'   \item{\code{evalsubst(subset_exprs, subset_vars)}}{...}
-#'   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
-#'   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
-#' }
-#' @section Active Bindings:
-#' \describe{
-#'    \item{\code{nobs}}{...}
-#'    \item{\code{ncols.sVar}}{...}
-#'    \item{\code{names.sVar}}{...}
-#'    \item{\code{type.sVar}}{Named list of length \code{ncol(private$.mat.sVar)} with \code{sVar} variable types: "binary"/"categor"/"contin".}
-#'    \item{\code{dat.sVar}}{...}
-#'    \item{\code{emptydat.sVar}}{...}
-#'    \item{\code{noNA.Ynodevals}}{...}
-#'    \item{\code{nodes}}{...}
-#' }
-#' @importFrom assertthat assert_that is.count is.flag is.string
-#' @export
+# R6 class for storing, managing, subsetting and manipulating the input data.
+#
+#  The class \code{DataStorageClass} is the only way the package uses to access the input data.
+#  The evaluated summary measures from sVar.object are stored as a matrix (\code{private$.mat.sVar}).
+#  Contains methods for replacing missing values with default in \code{gvars$misXreplace}.
+#  Also contains method for detecting / setting sVar variable type (binary, categor, contin).
+#  Contains methods for combining, subsetting, discretizing & binirizing summary measures \code{(sW,sA)}.
+#  For continous sVar this class provides methods for detecting / setting bin intervals,
+#  normalization, disretization and construction of bin indicators.
+#  The pointers to this class get passed on to \code{ModelGeneric} functions: \code{$fit()},
+#  \code{$predict()} and \code{$predictAeqa()}.
+#
+# @docType class
+# @format An \code{\link{R6Class}} generator object
+# @keywords R6 class
+# @details
+# \itemize{
+#    \item{\code{YnodeVals}}
+#    \item{\code{det.Y}}
+# }
+# @section Methods:
+# \describe{
+#   \item{\code{new(Odata, nodes, YnodeVals, det.Y, ...)}}{...}
+#   \item{\code{def.types.sVar(type.sVar = NULL)}}{...}
+#   \item{\code{fixmiss_sVar()}}{...}
+#   \item{\code{set.sVar(name.sVar, new.type)}}{...}
+#   \item{\code{set.sVar.type(name.sVar, new.type)}}{...}
+#   \item{\code{get.sVar(name.sVar, new.sVarVal)}}{...}
+#   \item{\code{replaceOneAnode(AnodeName, newAnodeVal)}}{...}
+#   \item{\code{replaceManyAnodes(Anodes, newAnodesMat)}}{...}
+#   \item{\code{addYnode(YnodeVals, det.Y)}}{...}
+#   \item{\code{evalsubst(subset_exprs, subset_vars)}}{...}
+#   \item{\code{get.dat.sVar(rowsubset = TRUE, covars)}}{...}
+#   \item{\code{get.outvar(rowsubset = TRUE, var)}}{...}
+# }
+# @section Active Bindings:
+# \describe{
+#    \item{\code{nobs}}{...}
+#    \item{\code{ncols.sVar}}{...}
+#    \item{\code{names.sVar}}{...}
+#    \item{\code{type.sVar}}{Named list of length \code{ncol(private$.mat.sVar)} with \code{sVar} variable types: "binary"/"categor"/"contin".}
+#    \item{\code{dat.sVar}}{...}
+#    \item{\code{emptydat.sVar}}{...}
+#    \item{\code{noNA.Ynodevals}}{...}
+#    \item{\code{nodes}}{...}
+# }
 DataStorageClass <- R6Class(classname = "DataStorageClass",
   portable = TRUE,
   class = TRUE,

@@ -300,7 +300,7 @@ predict.TMLE.updater <- function(object, newdata, offset, ...) {
     offset <- newdata[, "offset"]
   }
   # offset <- truncate_offset(offset)
-  pred <- logit_linkinv(offset + mfit$coef)
+  pred <- plogis(offset + mfit$coef)
   pred
 }
 
@@ -335,7 +335,7 @@ predict.iTMLE.updater.glm <- function(object, newdata, offset, ...) {
   newdata <- newdata[, colnames(newdata)[!colnames(newdata) %in% "offset"], drop = FALSE]
   Xmat <- cbind(Intercept = 1L, as.matrix(newdata))
   eta <- Xmat[,!is.na(mfit$coef), drop = FALSE] %*% mfit$coef[!is.na(mfit$coef)]
-  pred <- logit_linkinv(offset + eta)
+  pred <- plogis(offset + eta)
   pred
 }
 

@@ -4,13 +4,30 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats and survival estimates using pandoc.}
 \usage{
-make_report_rmd(OData, MSM, NPMSM, TMLE, GCOMP, WTtables, FUPtables,
-  MSM.RDtables, TMLE.RDtables, plotKM = FALSE, printEstimateTables = FALSE,
-  format = c("html", "pdf", "word"), skip.modelfits = FALSE,
+make_report_rmd(
+  OData,
+  MSM,
+  NPMSM,
+  TMLE,
+  GCOMP,
+  WTtables,
+  FUPtables,
+  MSM.RDtables,
+  TMLE.RDtables,
+  plotKM = FALSE,
+  printEstimateTables = FALSE,
+  format = c("html", "pdf", "word"),
+  skip.modelfits = FALSE,
   file.name = getOption("stremr.file.name"),
-  file.path = getOption("stremr.file.path"), openFile = TRUE,
-  serve_html_rmote = FALSE, keep_md = FALSE, keep_tex = FALSE,
-  save_report_data = FALSE, use_ggplot = TRUE, ...)
+  file.path = getOption("stremr.file.path"),
+  openFile = TRUE,
+  serve_html_rmote = FALSE,
+  keep_md = FALSE,
+  keep_tex = FALSE,
+  save_report_data = FALSE,
+  use_ggplot = TRUE,
+  ...
+)
 }
 \arguments{
 \item{OData}{Input data object returned by the function \code{\link{importData}}.}

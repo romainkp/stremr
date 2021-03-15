@@ -4,9 +4,15 @@
 \alias{define_single_regression}
 \title{Directly specify a single regression model}
 \usage{
-define_single_regression(OData, regforms, stratify = NULL, models = NULL,
+define_single_regression(
+  OData,
+  regforms,
+  stratify = NULL,
+  models = NULL,
   fit_method = stremrOptions("fit_method"),
-  fold_column = stremrOptions("fold_column"), ...)
+  fold_column = stremrOptions("fold_column"),
+  ...
+)
 }
 \arguments{
 \item{OData}{OData Input data object created by \code{importData} function.}

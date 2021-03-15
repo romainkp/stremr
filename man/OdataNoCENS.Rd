@@ -4,7 +4,8 @@
 \name{OdataNoCENS}
 \alias{OdataNoCENS}
 \title{An example of a dataset in long format with random monitoring and no right censoring.}
-\format{A data frame with 1,000 observations and variables:
+\format{
+A data frame with 1,000 observations and variables:
 \describe{
   \item{ID}{Unique subject identifier}
   \item{CVD}{Baseline confounder (time invariant)}
@@ -15,7 +16,8 @@
   \item{C}{Administrative censoring indicator, always set to 0 unless the end of study is reached (t==16)}
   \item{N}{The indicator of being monitored (having a visit)}
   \item{Y.tplus1}{Binary outcome at t}
-}}
+}
+}
 \usage{
 data(OdataNoCENS)
 }

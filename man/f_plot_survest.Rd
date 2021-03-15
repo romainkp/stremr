@@ -4,8 +4,18 @@
 \alias{f_plot_survest}
 \title{Plot survival estimates using base R graphics}
 \usage{
-f_plot_survest(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend, y_legend,
-  cex = 0.7, ...)
+f_plot_survest(
+  surv_list,
+  t,
+  t_int_sel,
+  y_lab,
+  x_lab,
+  miny,
+  x_legend,
+  y_legend,
+  cex = 0.7,
+  ...
+)
 }
 \arguments{
 \item{surv_list}{A list with survival estimates, one per regimen.}

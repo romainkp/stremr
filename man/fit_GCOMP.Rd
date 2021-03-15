@@ -4,20 +4,43 @@
 \alias{fit_GCOMP}
 \title{Fit sequential GCOMP and TMLE for survival}
 \usage{
-fit_GCOMP(OData, tvals, Qforms, intervened_TRT = NULL,
-  intervened_MONITOR = NULL, rule_name = paste0(c(intervened_TRT,
-  intervened_MONITOR), collapse = ""), models = NULL,
+fit_GCOMP(
+  OData,
+  tvals,
+  Qforms,
+  intervened_TRT = NULL,
+  intervened_MONITOR = NULL,
+  rule_name = paste0(c(intervened_TRT, intervened_MONITOR), collapse = ""),
+  models = NULL,
   fit_method = stremrOptions("fit_method"),
-  fold_column = stremrOptions("fold_column"), TMLE = FALSE,
-  stratifyQ_by_rule = FALSE, stratify_by_last = TRUE, Qstratify = NULL,
-  useonly_t_TRT = NULL, useonly_t_MONITOR = NULL, iterTMLE = FALSE,
-  CVTMLE = FALSE, byfold_Q = FALSE, IPWeights = NULL,
-  trunc_weights = 10^6, weights = NULL, max_iter = 15,
-  adapt_stop = TRUE, adapt_stop_factor = 10, tol_eps = 0.001,
-  parallel = FALSE, return_wts = FALSE, return_fW = FALSE, reg_Q = NULL,
-  type_intervened_TRT = NULL, type_intervened_MONITOR = NULL, maxpY = 1,
+  fold_column = stremrOptions("fold_column"),
+  TMLE = FALSE,
+  stratifyQ_by_rule = FALSE,
+  stratify_by_last = TRUE,
+  Qstratify = NULL,
+  useonly_t_TRT = NULL,
+  useonly_t_MONITOR = NULL,
+  iterTMLE = FALSE,
+  CVTMLE = FALSE,
+  byfold_Q = FALSE,
+  IPWeights = NULL,
+  trunc_weights = 10^6,
+  weights = NULL,
+  max_iter = 15,
+  adapt_stop = TRUE,
+  adapt_stop_factor = 10,
+  tol_eps = 0.001,
+  parallel = FALSE,
+  return_wts = FALSE,
+  return_fW = FALSE,
+  reg_Q = NULL,
+  type_intervened_TRT = NULL,
+  type_intervened_MONITOR = NULL,
+  maxpY = 1,
   TMLE_updater = "TMLE.updater.speedglm",
-  verbose = getOption("stremr.verbose"), ...)
+  verbose = getOption("stremr.verbose"),
+  ...
+)
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}

@@ -4,8 +4,7 @@
 \alias{directIPW}
 \title{Direct (bounded) IPW estimator for the expected outcome over time (can be time-to-event or not).}
 \usage{
-directIPW(wts_data, OData, weights, trunc_weights = 10^6,
-  return_wts = FALSE)
+directIPW(wts_data, OData, weights, trunc_weights = 10^6, return_wts = FALSE)
 }
 \arguments{
 \item{wts_data}{\code{data.table} returned by a single call to \code{getIPWeights}.

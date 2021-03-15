@@ -4,7 +4,8 @@
 \name{dt_2t}
 \alias{dt_2t}
 \title{An example of a dataset in long format with two time-points and no censoring.}
-\format{A data frame with 500,000 observations and variables:
+\format{
+A data frame with 500,000 observations and variables:
 \describe{
   \item{ID}{Unique subject identifier}
   \item{t}{Interger for current time period, range 0-1}
@@ -13,7 +14,8 @@
   \item{L3}{Binary time-varying confounder}
   \item{A}{Binary time-varying exposure}
   \item{Y}{Indicator of the binary outcome at the end of the study (t=1). Constant set to 0 at first time point (t=0)}
-}}
+}
+}
 \usage{
 data(dt_2t)
 }

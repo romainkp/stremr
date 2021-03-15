@@ -4,7 +4,8 @@
 \name{dt_1t}
 \alias{dt_1t}
 \title{An example of a dataset in long format with one time-point and no censoring.}
-\format{A data frame with 50,000 observations and variables:
+\format{
+A data frame with 50,000 observations and variables:
 \describe{
   \item{ID}{Unique subject identifier}
   \item{L1}{Binary baseline confounder}
@@ -15,7 +16,8 @@
   \item{L6}{Binary baseline confounder}
   \item{A}{Binary exposure}
   \item{Y}{Indicator of the binary outcome at the end of the study.}
-}}
+}
+}
 \usage{
 data(dt_1t)
 }

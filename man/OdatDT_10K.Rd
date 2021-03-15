@@ -4,7 +4,8 @@
 \name{OdatDT_10K}
 \alias{OdatDT_10K}
 \title{An example of a dataset in long format with random monitoring process and no right censoring.}
-\format{A data frame with 10,000 observations and variables:
+\format{
+A data frame with 10,000 observations and variables:
 \describe{
   \item{ID}{Unique subject identifier}
   \item{t}{Interger for current time period, range 0-16}
@@ -20,7 +21,8 @@
   \item{gPois3.yrly}{Poisson probability of counterfactual monitoring indicator being equal to 1}
   \item{gPois3.biyrly}{Poisson probability of counterfactual monitoring indicator being equal to 1}
   \item{gp05}{Bernoulli probability of counterfactual monitoring indicator being equal to 1}
-}}
+}
+}
 \usage{
 data(OdatDT_10K)
 }
