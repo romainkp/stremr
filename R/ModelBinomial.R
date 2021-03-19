@@ -72,14 +72,17 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
 
       self$n_obs_fit <- length(self$subset_idx)
 
-      private$model.fit <- fit_single_regression(data = data, 
-                                                 nodes = nodes, 
-                                                 models = self$models, 
-                                                 model_contrl = self$model_contrl, 
-                                                 predvars = self$predvars, 
-                                                 outvar = self$outvar, 
-                                                 subset_idx = self$subset_idx,
-                                                 outcome_type = self$outcome_type)
+      ## only perform fit if the strata (current training data) is not empty
+      if (self$n_obs_fit > 0) {
+        private$model.fit <- fit_single_regression(data = data, 
+                                                   nodes = nodes, 
+                                                   models = self$models, 
+                                                   model_contrl = self$model_contrl, 
+                                                   predvars = self$predvars, 
+                                                   outvar = self$outvar, 
+                                                   subset_idx = self$subset_idx,
+                                                   outcome_type = self$outcome_type)        
+      }
 
       self$is.fitted <- TRUE
       if (predict) try(self$predictAeqa(..., indA = data$get.outvar(self$subset_idx, self$getoutvarnm)), silent = TRUE)
@@ -93,12 +96,18 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
 
     # Predict the response P(Bin = 1|sW = sw);
     # uses private$model.fit to generate predictions for data:
+    # if prediction data has 0 observations, return an empty prediction vector
     predict = function(newdata, holdout = FALSE, ...) {
       assert_that(self$is.fitted)
+      if (missing(newdata) && !is.null(private$probA1)) {
+        return(invisible(self))
+      }
       model.fit <- private$model.fit
-
-      if (missing(newdata) && is.null(private$probA1)) {
-        if (is(model.fit, "PredictionStack")) {
+      ## change to accomodate case when subset is 0 length
+      if (missing(newdata)) {
+        if (length(self$subset_idx) == 0L) { ## to accomodate case when subset is 0 length
+          private$probA1 = double()
+        } else if (is(model.fit, "PredictionStack")) {
           private$probA1 <- gridisl::predict_SL(modelfit = model.fit, add_subject_data = FALSE, subset_idx = self$subset_idx, holdout = holdout, verbose = gvars$verbose)
         } else if (is(model.fit, "Lrnr_base")) {
           private$probA1 <- model.fit$predict()
@@ -108,7 +117,9 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       } else {
         self$n <- newdata$nobs
         self$define.subset.idx(newdata)
-        if (is(model.fit, "PredictionStack")) {
+        if (length(self$subset_idx) == 0L) { ## to accomodate case when subset is 0 length
+          private$probA1 = double()
+        } else if (is(model.fit, "PredictionStack")) {
           private$probA1 <- gridisl::predict_SL(modelfit = model.fit, newdata = newdata, add_subject_data = FALSE, subset_idx = self$subset_idx, holdout = holdout, verbose = gvars$verbose)
         } else if (is(model.fit, "Lrnr_base")) {
           ## todo: allow passing the DataStorage object directly to task, seamlessly

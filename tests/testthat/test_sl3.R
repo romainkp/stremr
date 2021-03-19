@@ -45,13 +45,15 @@ context("Testing sl3 cross-validation and continuous super learner")
 
   ## ------------------------------------------------------------------
   ## Propensity score models for Treatment, Censoring & Monitoring
+  ## OS add: Try running a case with an empty strata (t==17), this should be gracefully ignored...
   ## ------------------------------------------------------------------
   gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
   stratify_TRT <- list(
     TI=c("t == 0L",                                            # MODEL TI AT t=0
          "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
          "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
-         "(t > 0L) & (barTIm1eq0 == 0L)"                       # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
+         "(t > 0L) & (barTIm1eq0 == 0L)"                      # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
+         # "t == 17L"
         ))
 
   ## ------------------------------------------------------------
@@ -74,18 +76,20 @@ context("Testing sl3 cross-validation and continuous super learner")
   fit_method_g <- "none"
   # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
   
+  lrn_glm_base <- Lrnr_glm$new(family = binomial())
   lrn_glm <- Lrnr_glm_fast$new()
   lrn_glm_sm <- Lrnr_glm_fast$new(covariates = c("CVD"))
   # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = binomial())
   lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
   # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
   lrn_glmnet_gaus <- Lrnr_glmnet$new(family = "gaussian", nlambda = 5)
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
+  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm_base, lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
                     metalearner = Lrnr_nnls$new())
 
   # models_g <- lrn_glm
   # models_g <- sl
 
+  ## try new family (as gaussian)
   lrn_glm_base <- Lrnr_glm$new(family = gaussian())
   OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1")
   OData <- fitPropensity(OData,
