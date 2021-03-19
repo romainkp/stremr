@@ -37,7 +37,6 @@ Imports:
     pander,
     purrr,
     R6,
-    Rcpp,
     rmarkdown,
     speedglm,
     sl3,
@@ -45,7 +44,6 @@ Imports:
     tibble,
     tidyr,
     zoo
-LinkingTo: Rcpp
 Suggests:
     bibtex,
     doParallel,

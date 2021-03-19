@@ -1,4 +1,3 @@
-#' @useDynLib stremr
 #' @import R6
 #' @import data.table
 #' @importFrom graphics axis barplot hist par text  legend plot

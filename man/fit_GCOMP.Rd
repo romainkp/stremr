@@ -34,8 +34,8 @@ fit_GCOMP(
   return_wts = FALSE,
   return_fW = FALSE,
   reg_Q = NULL,
-  type_intervened_TRT = NULL,
-  type_intervened_MONITOR = NULL,
+  intervened_type_TRT = NULL,
+  intervened_type_MONITOR = NULL,
   maxpY = 1,
   TMLE_updater = "TMLE.updater.speedglm",
   verbose = getOption("stremr.verbose"),
@@ -140,7 +140,7 @@ Can be used for obtaining subject-specific predictions of the counterfactual fun
 
 \item{reg_Q}{(ADVANCED USE ONLY) Directly specify the Q regressions, separately for each time-point.}
 
-\item{type_intervened_TRT}{(ADVANCED FUNCTIONALITY) Set to \code{NULL} by default, can be characters that are set to either 
+\item{intervened_type_TRT}{(ADVANCED FUNCTIONALITY) Set to \code{NULL} by default, can be characters that are set to either 
 \code{"bin"}, \code{"shift"} or \code{"MSM"}. 
 Provides support for different types of interventions on \code{TRT} (treatment) node (counterfactual treatment node \code{A^*(t)}).
 The default behavior is the same as \code{"bin"}, which assumes that \code{A^*(t)} is binary and 
@@ -152,7 +152,7 @@ i.e., \code{A^*(t)}=\code{A(t)}+delta(t).
 Finally, for "MSM" it is assumed that we simply want the final intervention density \code{g^*(t)} to be set to a constant 1. 
 This has use for static MSMs.}
 
-\item{type_intervened_MONITOR}{(ADVANCED FUNCTIONALITY) Same as \code{type_intervened_TRT}, but for monitoring intervention node 
+\item{intervened_type_MONITOR}{(ADVANCED FUNCTIONALITY) Same as \code{intervened_type_TRT}, but for monitoring intervention node 
 (counterfactual monitoring node \code{N^*(t)}).}
 
 \item{maxpY}{Maximum probability that the cumulative incidence of the outcome Y(t) is equal to 1.

@@ -80,13 +80,13 @@ test_that("IPW and TMLE run with continuous exposure and cond. dens. SuperLearne
 
   ## todo: now we need to somehow call sl$predict() on the counterfactual exposure as the outcome (evalute another likelihood)
   ## currently just calling ModelDeterministic$predict() which simply evaluates I(continA=new_continA), which isn't enough
-  wtsDT <- getIPWeights(OData, intervened_TRT = "new_continA", type_intervened_TRT = "shift")
+  wtsDT <- getIPWeights(OData, intervened_TRT = "new_continA", intervened_type_TRT = "shift")
   survNPMSM <- survNPMSM(wtsDT, OData)
   survMSM <- survMSM(wtsDT, OData)
   IPW <- directIPW(wtsDT, OData)
 
   ## gstar.A should be 1
-  wtsDT_MSM <- getIPWeights(OData, intervened_TRT = "new_continA", type_intervened_TRT = "MSM")
+  wtsDT_MSM <- getIPWeights(OData, intervened_TRT = "new_continA", intervened_type_TRT = "MSM")
 
   t.surv <- c(0:3)
   Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (max(t.surv)+1))
@@ -94,7 +94,7 @@ test_that("IPW and TMLE run with continuous exposure and cond. dens. SuperLearne
   tmle_est3 <- fit_TMLE(OData, tvals = t.surv, intervened_TRT = "new_continA",
                         Qforms = Qforms,
                         stratifyQ_by_rule = FALSE,
-                        type_intervened_TRT = "shift")
+                        intervened_type_TRT = "shift")
 
   options(stremr.verbose = FALSE)
 })

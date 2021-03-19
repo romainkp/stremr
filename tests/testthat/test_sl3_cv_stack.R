@@ -1,9 +1,4 @@
-context("Testing sl3 cross-validation and continuous super learner")
-
-  ## -----------------------------------------------------------------------
-  ## Analyses by intervention
-  ## **** makes it easier to read the individual analyses ****
-  ## -----------------------------------------------------------------------
+context("Testing sl3 cross-validation and super learner")
   # devtools::install_github("jeremyrcoyle/sl3")
   library("stremr")
   library("sl3")
@@ -11,14 +6,11 @@ context("Testing sl3 cross-validation and continuous super learner")
   options(stremr.verbose = FALSE)
   options(gridisl.verbose = FALSE)
   options(sl3.verbose = FALSE)
-  # options(stremr.verbose = TRUE)
-  # options(gridisl.verbose = TRUE)
-  # options(sl3.verbose = TRUE)
   library("data.table")
   library("magrittr")
   library("ggplot2")
-  library("tibble")
-  library("tidyr")
+  # library("tibble")
+  # library("tidyr")
   library("purrr")
   library("dplyr")
 
@@ -45,7 +37,6 @@ context("Testing sl3 cross-validation and continuous super learner")
 
   ## ------------------------------------------------------------------
   ## Propensity score models for Treatment, Censoring & Monitoring
-  ## OS add: Try running a case with an empty strata (t==17), this should be gracefully ignored...
   ## ------------------------------------------------------------------
   gform_TRT <- "TI ~ CVD + highA1c + N.tminus1"
   stratify_TRT <- list(
@@ -53,92 +44,54 @@ context("Testing sl3 cross-validation and continuous super learner")
          "(t > 0L) & (N.tminus1 == 1L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN MONITORED
          "(t > 0L) & (N.tminus1 == 0L) & (barTIm1eq0 == 1L)",  # MODEL TRT INITATION WHEN NOT MONITORED
          "(t > 0L) & (barTIm1eq0 == 0L)"                      # MODEL TRT CONTINUATION (BOTH MONITORED AND NOT MONITORED)
-         # "t == 17L"
         ))
+  ## ------------------------------------------------------------------------
+  ## Outcome models for iterative G-COMP (Q)
+  ## ------------------------------------------------------------------------
+  tvals <- 2
+  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
 
   ## ------------------------------------------------------------
   ## **** As a first step define a grid of all possible parameter combinations (for all estimators)
   ## **** This dataset is to be saved and will be later merged in with all analysis
   ## ------------------------------------------------------------
-  # tvals <- 0:2
-  tvals <- 2
   ## This dataset defines all parameters that we like to vary in this analysis (including different interventions)
   ## That is, each row of this dataset corresponds with a single analysis, for one intervention of interest.
-  analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"),
-                  stratifyQ_by_rule = c(FALSE)) %>%
+  analysis <- list(intervened_TRT = c("gTI.dlow", "gTI.dhigh"), stratifyQ_by_rule = c(FALSE)) %>%
                   cross_df() %>%
                   arrange(stratifyQ_by_rule)
 
   ## ----------------------s--------------------------------------------------
-  ## Define models for fitting propensity scores (g) -- PARAMETRIC LOGISTIC REGRESSION
+  ## Define models for fitting propensity scores (g) and outcome model (Q)
   ## ------------------------------------------------------------------------
-  # fit_method_g <- "cv"
-  fit_method_g <- "none"
-  # models_g <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  
   lrn_glm_base <- Lrnr_glm$new(family = binomial())
   lrn_glm <- Lrnr_glm_fast$new()
   lrn_glm_sm <- Lrnr_glm_fast$new(covariates = c("CVD"))
   # lrn_glmnet_binom <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = binomial())
-  lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
+  # lrn_glmnet_binom <- Lrnr_glmnet$new(family = "binomial", nlambda = 5)
   # lrn_glmnet_gaus <- Lrnr_pkg_SuperLearner$new("SL.glmnet", family = "gaussian")
-  lrn_glmnet_gaus <- Lrnr_glmnet$new(family = "gaussian", nlambda = 5)
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm_base, lrn_glm, lrn_glm_sm, lrn_glmnet_binom),
+  # lrn_glmnet_gaus <- Lrnr_glmnet$new(family = "gaussian", nlambda = 5)
+  sl_g <- Lrnr_sl$new(learners = Stack$new(lrn_glm_base, lrn_glm, lrn_glm_sm),
+                    metalearner = Lrnr_nnls$new())
+  sl_Q <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm),
                     metalearner = Lrnr_nnls$new())
 
-  # models_g <- lrn_glm
-  # models_g <- sl
-
-  ## try new family (as gaussian)
-  lrn_glm_base <- Lrnr_glm$new(family = gaussian())
-  OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1")
-  OData <- fitPropensity(OData,
-                         gform_TRT = gform_TRT,
-                         stratify_TRT = stratify_TRT,
-                         models_TRT = lrn_glm_base,
-                         fit_method = "none"
-                        )
-
-
-  sl <- Lrnr_sl$new(learners = Stack$new(lrn_glm, lrn_glm_sm),
-                    metalearner = Lrnr_nnls$new())
-  # models_Q <- lrn_glm
-  models_Q <- sl
-
-  # lrn_glm <- Lrnr_glm$new(outcome_type = binomial())
-  # task <- sl3::sl3_Task$new(Odat_DT,
-  #                           covariates = "highA1c",
-  #                           outcome = "TI",
-  #                           id = "ID"
-  #                         )
-  # lrn_glm$train(task)
-
-  ## ------------------------------------------------------------------------
-  ## Define models for iterative G-COMP (Q) -- PARAMETRIC LOGISTIC REGRESSION
-  ## ------------------------------------------------------------------------
-  ## regression formulas for Q's:
-  Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + lastNat1 + TI + TI.tminus1", (max(tvals)+1))
+  fit_method_g <- "cv"
+  # fit_method_g <- "none"    
   ## no cross-validation model selection, just fit a single model specified below
   fit_method_Q <- "none"
-  ## Use speedglm to fit all Q.
-  ## NOTE: it is currently not possible to use fit_method_Q <- "cv" with speedglm or glm.
-  ## To perform cross-validation with GLM use 'estimator="h2o__glm"' or 'estimator="xgboost__glm"'
-  # models_Q <- defModel(estimator = "speedglm__glm", family = "quasibinomial")
-  # models_Q <- defModel(estimator = "xgboost__glm", family = "quasibinomial")
-  # models_Q <- defModel(estimator = "xgboost__gbm", family = "quasibinomial", nrounds = 50)
-  # models_Q <- sl
 
   ## ----------------------------------------------------------------
   ## Fit propensity score models.
-  ## We are using the same model ensemble defined in models_g for censoring, treatment and monitoring mechanisms.
+  ## We are using the same model ensemble defined in sl_g for censoring, treatment and monitoring mechanisms.
   ## ----------------------------------------------------------------
-  OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1")
-   # %>% stremr::define_CVfolds(nfolds = 5, fold_column = "fold_ID")
+  OData <- stremr::importData(Odat_DT, ID = "ID", t_name = "t", covars = c("highA1c", "lastNat1", "lastNat1.factor"), TRT = "TI", OUTCOME = "Y.tplus1") %>% 
+           stremr::define_CVfolds(nfolds = 4, fold_column = "fold_ID")
 
   OData <- fitPropensity(OData,
                          gform_TRT = gform_TRT,
                          stratify_TRT = stratify_TRT,
-                         models_TRT = models_g,
+                         models_TRT = sl_g,
                          fit_method = fit_method_g
                         )
 
@@ -181,14 +134,14 @@ context("Testing sl3 cross-validation and continuous super learner")
   ## ------------------------------------------------------------
   ## TMLE ANALYSIS
   ## ------------------------------------------------------------
-  TMLE <- CVTMLE <- analysis %>%
+  TMLE <- analysis %>%
           distinct(intervened_TRT, stratifyQ_by_rule)
 
   TMLE <- TMLE %>%
         mutate(TMLE = pmap(TMLE, fit_TMLE,
                            tvals = tvals,
                            OData = OData,
-                           models = models_Q,
+                           models = sl_Q,
                            Qforms = Qforms,
                            fit_method = fit_method_Q
                            )) %>%
