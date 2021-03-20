@@ -537,7 +537,10 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     ## --------------------------------------------------------------------------------------------------
     ## Verify both approaches for gstar eval match
     ## --------------------------------------------------------------------------------------------------
-    check_same_gstar = all(gstar_NODE_new==gstar_NODE)
+    check_same_len = length(gstar_NODE_new) == length(gstar_NODE)
+    check_same_gstar = all(gstar_NODE_new[!is.na(gstar_NODE)]==gstar_NODE[!is.na(gstar_NODE)])
+
+    if (!check_same_len) stop("critical error: two gstar evaluation methods produced different length vectors")
     if (!check_same_gstar) stop("critical error: two gstar evaluation methods produced inconsistent results")
 
   } else {

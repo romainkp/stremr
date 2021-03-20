@@ -325,7 +325,13 @@ fit_GCOMP <- function(OData,
   if (!is.null(models)) {
     assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   } else {
-    models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+    # models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
+    opt_params_est = c(estimator = "speedglm__glm", opt_params)
+    models <- do.call(gridisl::defModel, opt_params_est)
+    # print("--------------------------------------------------")
+    # print("opt_params_est: "); print(opt_params_est)
+    # print("models: "); print(models)
+    # print("--------------------------------------------------")
   }
 
   models_control <- c(list(models = models), 
