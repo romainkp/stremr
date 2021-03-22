@@ -368,7 +368,7 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
     out_coef[] <- NA
     names(out_coef) <- c(all_dummies)
     out_coef[names(m.fit_h2o@model$coefficients)[-1]] <- m.fit_h2o@model$coefficients[-1]
-    m.fit <- list(coef = out_coef, linkfun = "logit_linkinv", fitfunname = "h2o.glm")
+    m.fit <- list(coef = out_coef, linkfun = "plogis", fitfunname = "h2o.glm")
     glm.IPAW.predictP1 <- as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])
     # wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
   } else if (glm_package %in% "speedglm") {
@@ -395,7 +395,7 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
                                 control = ctrl)
       }, GetWarningsToSuppress())
     }
-    m.fit <- list(coef = m.fit$coef, linkfun = "logit_linkinv", fitfunname = "speedglm")
+    m.fit <- list(coef = m.fit$coef, linkfun = "plogis", fitfunname = "speedglm")
 
     if (verbose) {print("MSM fits"); print(m.fit$coef)}
 
