@@ -517,7 +517,6 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
                                               intervened_type_all = intervened_type_l,
                                               useonly_t_NODE_all  = useonly_t_NODE)
 
-    # browser()    
     # tmpdf <- data.frame(gstar_NODE,gstar_NODE_new,g.obs)
     # head(tmpdf[setdiff(1:length(gstar_NODE), idx_set_to_g0), ],500)
     # sum(tmpdf[setdiff(1:length(gstar_NODE), idx_set_to_g0), ]$gstar_NODE_new - tmpdf[idx_set_to_g0, ]$g.obs)
@@ -538,7 +537,12 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     ## Verify both approaches for gstar eval match
     ## --------------------------------------------------------------------------------------------------
     check_same_len = length(gstar_NODE_new) == length(gstar_NODE)
-    check_same_gstar = all(gstar_NODE_new[!is.na(gstar_NODE)]==gstar_NODE[!is.na(gstar_NODE)])
+    check_same_gstar = all(gstar_NODE_new[!is.na(gstar_NODE_new) & !is.na(gstar_NODE)]==gstar_NODE[!is.na(gstar_NODE_new) & !is.na(gstar_NODE)])
+
+    # head(data.table(cbind(gstar_NODE_new,gstar_NODE)),100)
+    # tmpdt <- copy(OData$dat.sVar)
+    # tmpdt[, gstar_NODE_new := gstar_NODE_new][, gstar_NODE := gstar_NODE]
+    # tmpdt[1:100, list(STUDY_ID, intnum, barTIm1eq0, outcome, censor, C.CAT, exposure, exposure.tminus1, d7.0, gstar_NODE_new, gstar_NODE)]
 
     if (!check_same_len) stop("critical error: two gstar evaluation methods produced different length vectors")
     if (!check_same_gstar) stop("critical error: two gstar evaluation methods produced inconsistent results")

@@ -229,7 +229,9 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       # print(paste0("Astar len: ", length(Astar), "; sum: ", sum(Astar)));
       # print(paste0("gstar len: ", length(gstar), "; sum: ", sum(gstar)));
 
-      gstar_out <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+      ## Changing the default assignment value for g^*(A) to NA
+      # gstar_out <- rep.int(1L, self$n) # for missing values, the likelihood is always set to P(A = a) = 1.
+      gstar_out <- rep.int(NA_real_, self$n)
       gstar_out[self$getsubset] <- gstar
 
       ## only intervene (assign to gstar) on observations in this subset
