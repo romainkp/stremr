@@ -13,7 +13,7 @@ require("stremr")
 require("data.table")
 require("magrittr")
 data(OdataNoCENS)
-OdataDT <- as.data.table(OdataNoCENS, key=c(ID, t))
+OdataDT <- as.data.table(OdataNoCENS, key=c("ID", "t"))
 
 OdataDT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
 OdataDT[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]

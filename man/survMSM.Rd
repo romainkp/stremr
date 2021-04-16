@@ -123,7 +123,7 @@ for every unique period in the observed data.
 require("data.table")
 require("magrittr")
 data(OdataCatCENS)
-OdataDT <- as.data.table(OdataCatCENS, key=c(ID, t))
+OdataDT <- as.data.table(OdataCatCENS, key=c("ID", "t"))
 # Indicator that the person has never been treated in the past:
 OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) \%in\% 0), by = ID]
 OdataDT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]

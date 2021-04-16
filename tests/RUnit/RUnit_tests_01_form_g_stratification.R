@@ -10,7 +10,7 @@ test.helperfuns <- function() {
   OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA
   OdataNoCENS <- OdataNoCENS[,!names(OdataNoCENS)%in%c("highA1c.UN", "timelowA1c.UN")]
   # head(OdataNoCENS)
-  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c(ID, t))
+  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c("ID", "t"))
   addN.t1 <- defineMONITORvars(OdataNoCENS, ID = "ID", t = "t", imp.I = "N",
                         MONITOR.name = "N.new", tsinceNis1 = "last.Nt")
   # addN.t1[]
@@ -47,7 +47,7 @@ test.model.fits.stratify <- function() {
   data(OdataNoCENS)
   OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA
   # head(OdataNoCENS)
-  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c(ID, t))
+  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c("ID", "t"))
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataNoCENS.DT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
   OdataNoCENS.DT[is.na(C), "C" := 0]
@@ -192,7 +192,7 @@ test.error.fits.stratify <- function() {
   data(OdataNoCENS)
   OdataNoCENS[OdataNoCENS[,"t"]%in%16,"lastNat1"] <- NA
   # head(OdataNoCENS)
-  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c(ID, t))
+  OdataNoCENS.DT <- as.data.table(OdataNoCENS, key=c("ID", "t"))
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataNoCENS.DT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
 

@@ -14,7 +14,7 @@ test.buildingblocks <- function() {
   # Nsize <- 1000
   # OdataNoCENS <- simulateDATA.fromDAG(Nsize = Nsize, rndseed = 124356)
   data(OdataNoCENS)
-  OdataDT <- as.data.table(OdataNoCENS, key=c(ID, t))
+  OdataDT <- as.data.table(OdataNoCENS, key=c("ID", "t"))
 
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataDT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]

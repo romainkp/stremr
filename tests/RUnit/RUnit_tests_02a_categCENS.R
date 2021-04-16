@@ -134,7 +134,7 @@ test.model.fits.categorCENSOR2 <- function() {
   require("data.table")
   require("magrittr")
   data(OdataCatCENS)
-  OdataDT <- as.data.table(OdataCatCENS, key=c(ID, t))
+  OdataDT <- as.data.table(OdataCatCENS, key=c("ID", "t"))
   # Indicator that the person has never been treated in the past:
   OdataDT[, "barTIm1eq0" := as.integer(c(0, cumsum(TI)[-.N]) %in% 0), by = ID]
   # Define lagged N, first value is always 1 (always monitored at the first time point):

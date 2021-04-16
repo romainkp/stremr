@@ -14,7 +14,7 @@ options(condensier.verbose = FALSE)
 # options(condensier.verbose = TRUE)
 
 data(OdataNoCENS)
-Odat_DT <- as.data.table(OdataNoCENS, key=c(ID, t))
+Odat_DT <- as.data.table(OdataNoCENS, key=c("ID", "t"))
 
 # define lagged N, first value is always 1 (always monitored at the first time point):
 Odat_DT[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]

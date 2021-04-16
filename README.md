@@ -143,7 +143,7 @@ require("stremr")
 #> Loading required package: stremr
 
 data(OdataNoCENS)
-datDT <- as.data.table(OdataNoCENS, key=c(ID, t))
+datDT <- as.data.table(OdataNoCENS, key=c("ID", "t"))
 ```
 
 Define some summaries (lags):

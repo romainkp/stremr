@@ -107,7 +107,7 @@ test.GenericModelPredict <- function() {
 
   require("data.table")
   data(OdataNoCENS)
-  OdataNoCENS <- as.data.table(OdataNoCENS, key=c(ID, t))
+  OdataNoCENS <- as.data.table(OdataNoCENS, key=c("ID", "t"))
   # define lagged N, first value is always 1 (always monitored at the first time point):
   OdataNoCENS[, ("N.tminus1") := shift(get("N"), n = 1L, type = "lag", fill = 1L), by = ID]
   OdataNoCENS[, ("TI.tminus1") := shift(get("TI"), n = 1L, type = "lag", fill = 1L), by = ID]

@@ -117,8 +117,13 @@ test.tidy.speedglm.10Kdata <- function() {
                       glm_package = "speedglm",
                       getSEs = FALSE)
 
+  wts_data1 <- getIPWeights("gTI.dlow", OData = OData, tmax = tmax)
+  wts_data2 <- getIPWeights("gTI.dhigh", OData = OData, tmax = tmax)
+  ipw_est1 <- survNPMSM(wts_data = wts_data1, OData = OData)
+  ipw_est2 <- survNPMSM(wts_data = wts_data2, OData = OData)
+
   ## ------------------------------------------------------------
-  ## RUN IPW ANALYSES
+  ## RUN ALL IPW ANALYSES AT ONCE
   ## **** For each individual analysis do filter()/subset()/etc to create a grid of parameters specific to given estimator
   ## ------------------------------------------------------------
   IPW <-  analysis %>%

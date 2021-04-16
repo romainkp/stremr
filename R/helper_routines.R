@@ -298,9 +298,9 @@ defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = 'N', tsinceNis1
   ID.expression <- as.name(ID)
   indx <- as.name("indx")
   if (is.data.table(data)) {
-    DT <- data.table(data, key=c(ID, t))
+    DT <- data.table(data, key=c("ID", "t"))
   } else if (is.data.frame(data)) {
-    DT <- data.table(data, key=c(ID, t))
+    DT <- data.table(data, key=c("ID", "t"))
   } else {
     stop("input data must be either a data.table or a data.frame")
   }

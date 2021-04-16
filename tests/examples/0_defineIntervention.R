@@ -4,7 +4,7 @@
 require("data.table")
 require("magrittr")
 data(OdataCatCENS)
-OdataDT <- as.data.table(OdataCatCENS, key=c(ID, t))
+OdataDT <- as.data.table(OdataCatCENS, key=c("ID", "t"))
 
 #-------------------------------------------------------------------
 # Define the counterfactual dynamic treatment assignment
