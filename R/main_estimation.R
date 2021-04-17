@@ -714,15 +714,9 @@ getIPWeights <- function(OData,
     "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR][, # Joint likelihoood for all 3 node types:
     "gstar.CAN_old" := gstar.CENS * gstar.TRT_old * gstar.MONITOR_old]
 
-  ## --------------------------------------------------------------------------------------------------
-  ## Verify both approaches for gstar eval match
-  ## --------------------------------------------------------------------------------------------------
-  check_same_gstar = all(wts.DT[["gstar.CAN"]][!is.na(wts.DT[["gstar.CAN"]]) & !is.na(wts.DT[["gstar.CAN_old"]])] == wts.DT[["gstar.CAN_old"]][!is.na(wts.DT[["gstar.CAN"]]) & !is.na(wts.DT[["gstar.CAN_old"]])])
-  if (!check_same_gstar) stop("critical error: two gstar evaluation methods produced inconsistent results (gstar.CAN != gstar.CAN_old)")
-  ## --------------------------------------------------------------------------------------------------
-
   ## Weights by time and cumulative weights by time:
   wts.DT[,"wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)]
+  wts.DT[,"wt.by.t_old" := gstar.CAN_old / g0.CAN, by = eval(nodes$IDnode)]
 
   ## When ignore_tmin is specified set the wt.by.t to 1 for all t values that occur prior to time-points.
   ## NOTE: This is not the most efficient way to evaluate forward product for ignore_tmin, but it preserves the indexing
@@ -731,11 +725,14 @@ getIPWeights <- function(OData,
   if (!is.null(ignore_tmax)) wts.DT[eval(as.name(nodes$tnode)) > ignore_tmax, ("wt.by.t") := 1]
   if (reverse_wt_prod) {
     wts.DT[,"cum.IPAW" := rev(cumprod(rev(wt.by.t))), by = eval(nodes$IDnode)]
+    wts.DT[,"cum.IPAW_old" := rev(cumprod(rev(wt.by.t_old))), by = eval(nodes$IDnode)]
   } else {
     wts.DT[,"cum.IPAW" := cumprod(wt.by.t), by = eval(nodes$IDnode)]
+    wts.DT[,"cum.IPAW_old" := cumprod(wt.by.t_old), by = eval(nodes$IDnode)]
   }
 
   if (trunc_weights < Inf) wts.DT[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
+  if (trunc_weights < Inf) wts.DT[eval(as.name("cum.IPAW_old")) > trunc_weights, ("cum.IPAW_old") := trunc_weights]
 
   ## -------------------------------------------------------------------------------------------
   ## Calculate weight stabilization factor -- get emp P(followed rule at time t | followed rule up to now)
@@ -766,6 +763,13 @@ getIPWeights <- function(OData,
   ## remove person time observations with FUP above tmax
   if (!is.null(tmax)) wts.DT <- wts.DT[eval(as.name(nodes$tnode)) <= tmax, ]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
+
+  ## --------------------------------------------------------------------------------------------------
+  ## Verify both approaches for gstar/ cum.IPAW match
+  ## --------------------------------------------------------------------------------------------------
+  check_same_gstar = all(wts.DT[["cum.IPAW"]][!is.na(wts.DT[["cum.IPAW"]]) & !is.na(wts.DT[["cum.IPAW_old"]])] == wts.DT[["cum.IPAW_old"]][!is.na(wts.DT[["cum.IPAW"]]) & !is.na(wts.DT[["cum.IPAW_old"]])])
+  if (!check_same_gstar) stop("critical error: two gstar evaluation methods produced inconsistent results (cum.IPAW != cum.IPAW_old)")
+  ## --------------------------------------------------------------------------------------------------
 
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
 
