@@ -179,6 +179,9 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
 
       gstar_name = intervened_NODE_all[[self$getoutvarnm]]
       intervened_type = intervened_type_all[[self$getoutvarnm]]
+      useonly_t = useonly_t_NODE_all[[gstar_name]]
+      # print("useonly_t_NODE_all"); print(useonly_t_NODE_all)
+      # print(paste0("useonly_t: ", useonly_t))
 
       # Aobs <-  newdata$get.outvar(TRUE, self$getoutvarnm)
       # Astar <- newdata$get.outvar(TRUE, gstar_name)
@@ -235,9 +238,9 @@ ModelBinomial  <- R6Class(classname = "ModelBinomial",
       gstar_out[self$getsubset] <- gstar
 
       ## only intervene (assign to gstar) on observations in this subset
-      subset_idx_intervene <- newdata$evalsubst(subset_exprs = useonly_t_NODE_all)
+      subset_idx_intervene <- newdata$evalsubst(subset_exprs = useonly_t)
       if (any(is.na(subset_idx_intervene)))
-        stop("the subset index evaluation for the expression '" %+% useonly_t_NODE_all %+% "' resulted in NAs")
+        stop("the subset index evaluation for the expression '" %+% useonly_t %+% "' resulted in NAs")
       idx_set_to_g0 <- setdiff(self$getsubset, subset_idx_intervene)
       gstar_out[idx_set_to_g0] <- private$probAeqa[idx_set_to_g0]
 

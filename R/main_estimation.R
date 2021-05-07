@@ -480,33 +480,42 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     intervened_type_l <- as.list(intervened_type)
     names(intervened_type_l) <- NodeNames
 
-    ## assert that useonly_t_NODE is either vector of length == 1 or 0 (NULL) or a list
+    ## assert that useonly_t_NODE is either character vector of length == 1 or 0 (NULL) or a list
     if (is.list(useonly_t_NODE)) {
       useonly_t_NODE_l <- useonly_t_NODE
-    } else if (is.null(useonly_t_NODE)) {
-      # ...
-      useonly_t_NODE_l <- useonly_t_NODE
+    } else if (is.null(useonly_t_NODE)) { ## for NULL entry, convert to named list of NULL elements
+      useonly_t_NODE_l <- sapply(intervened_NODE, function(x) NULL)
     } else if (is.character(useonly_t_NODE) & length(useonly_t_NODE)==1) {
       useonly_t_NODE_l <- as.list(rep.int(useonly_t_NODE, length(intervened_NODE)))
       names(useonly_t_NODE_l) <- intervened_NODE
     } else {
       stop("useonly_t_NODE must be either 'NULL', a single character expression (eg 't = 5') or a named list of character expressions")
     }
+    ## check subset of intervened nodes is specified by a list
+    assert_that(is.list(useonly_t_NODE_l))
+    ## add a name check: all names in subset node list are part of intervened_NODE
+    assert_that(all(names(useonly_t_NODE_l) %in% intervened_NODE))
+    ## add a check that list input consists of either: a) characters or b) NULLs
+    assert_that(all(sapply(useonly_t_NODE_l, function(x) is.null(x) | is.character(x))))
+
+    # useonly_t_NODE_l_a <- list(A1star = "t > 5", A2star = "t == 4")
+    # useonly_t_NODE_l_b <- list(A1star = NULL, A2star = NULL)
+    # useonly_t_NODE_l_c <- list(A1star = 1.3, A2star = "t == 4")
 
     # print("useonly_t_NODE"); print(useonly_t_NODE)
     # print("useonly_t_NODE_l"); print(useonly_t_NODE_l)
     # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
 
     ## --------------------------------------------------------------------------------------------------
-    ## TODO: 1) Change useonly_t_NODE to list of named nodes (one item per intervention node)
+    ## TODO (DONE): 1) Change useonly_t_NODE to list of named nodes (one item per intervention node)
     ## TODO (DONE): 2) Move this evaluation into BinomialModel    
     ## --------------------------------------------------------------------------------------------------
     gstar_NODE_new <- modelfit.g$predictgstar(newdata = OData, 
                                               n = OData$nobs, 
                                               intervened_NODE_all = intervened_NODE_l, 
                                               intervened_type_all = intervened_type_l,
-                                              useonly_t_NODE_all  = useonly_t_NODE
-                                              # useonly_t_NODE_all  = useonly_t_NODE_l
+                                              # useonly_t_NODE_all  = useonly_t_NODE
+                                              useonly_t_NODE_all  = useonly_t_NODE_l
                                               )
 
   } else {
@@ -664,8 +673,8 @@ getIPWeights <- function(OData,
     g_preds <- OData$g_holdout_preds
   }
 
-  if (!is.null(useonly_t_TRT) && !is.na(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT))
-  if (!is.null(useonly_t_MONITOR) && !is.na(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR))
+  if (!is.null(useonly_t_TRT) && !is.na(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT) || is.list(useonly_t_TRT))
+  if (!is.null(useonly_t_MONITOR) && !is.na(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR) || is.list(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
   if (!is.null(intervened_type_TRT) && !is.na(intervened_type_TRT)) assert_that(is.character(intervened_type_TRT))
   if (!is.null(intervened_type_MONITOR) && !is.na(intervened_type_MONITOR)) assert_that(is.character(intervened_type_MONITOR))
@@ -768,7 +777,7 @@ getIPWeights <- function(OData,
   ## Verify both approaches for gstar/ cum.IPAW match
   ## --------------------------------------------------------------------------------------------------
   check_same_gstar = all(wts.DT[["cum.IPAW"]][!is.na(wts.DT[["cum.IPAW"]]) & !is.na(wts.DT[["cum.IPAW_old"]])] == wts.DT[["cum.IPAW_old"]][!is.na(wts.DT[["cum.IPAW"]]) & !is.na(wts.DT[["cum.IPAW_old"]])])
-  if (!check_same_gstar) stop("critical error: two gstar evaluation methods produced inconsistent results (cum.IPAW != cum.IPAW_old)")
+  if (!check_same_gstar) warning("two gstar evaluation methods produced inconsistent results (cum.IPAW != cum.IPAW_old)")
   ## --------------------------------------------------------------------------------------------------
 
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
