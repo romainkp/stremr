@@ -271,6 +271,7 @@ fit_hMSM <- function(wts_data,
   attr(estimates, "time") <- estimates[[t_name]]
   attr(estimates, "trunc_weights") <- trunc_weights
 
-  return(list(estimates = estimates, msm.fit = msm.fit))
+  return(list(estimates = estimates, msm.fit = msm.fit, beta.SE = beta.IC.O.SEs$se.beta))
+
 
 }
