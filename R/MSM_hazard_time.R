@@ -45,7 +45,7 @@ return(wts_data)
 #' used when generating reports with \code{make_report_rmd}.
 #' @param glm_package Which R package should be used for fitting the weighted logistic regression
 #' model (MSM) for the survival hazard?
-#' Currently available options are \code{"speedglm"} and \code{"h2o"}.
+#' Currently available options are \code{"glm"}, \code{"speedglm"} and \code{"h2o"}.
 #' \code{h2o} can provided better performance
 #' when fitting MSM with many observations and large number of time-points.
 #' @param return_wts Return the data.table with subject-specific IP weights as part of the output.
@@ -103,7 +103,7 @@ survMSM <- function(wts_data,
                     weights = NULL,
                     getSEs = TRUE,
                     est_name = "IPW",
-                    glm_package = c("speedglm", "h2o"),
+                    glm_package = c("glm", "speedglm", "h2o"),
                     return_wts = FALSE,
                     tmax = NULL,
                     verbose = getOption("stremr.verbose")) {
@@ -118,7 +118,7 @@ survMSM <- function(wts_data,
   rules_TRT <- sort(unique(wts_data[["rule.name"]]))
 
   glm_package <- glm_package[1L]
-  if (!(glm_package %in% c("speedglm", "h2o"))) stop("glm_package must be either 'speedglm' or 'h2o'")
+  if (!(glm_package %in% c("glm", "speedglm", "h2o"))) stop("glm_package must be either 'glm', 'speedglm' or 'h2o'")
 
   if (verbose) print("performing MSM estimation for the following TRT/MONITOR rules found in column 'rule.name': " %+% paste(rules_TRT, collapse=","))
 
@@ -371,20 +371,28 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
     m.fit <- list(coef = out_coef, linkfun = "plogis", fitfunname = "h2o.glm")
     glm.IPAW.predictP1 <- as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])
     # wts_data[, glm.IPAW.predictP1 := as.vector(h2o::h2o.predict(m.fit_h2o, newdata = MSM.designmat.H2O)[,"p1"])]
-  } else if (glm_package %in% "speedglm") {
-    if (verbose) message("...fitting hazard MSM with speedglm::speedglm.wfit...")
+
+  } else if (glm_package %in% c("speedglm","glm")) {
+
+    if (verbose) message(paste0("...fitting hazard MSM with ", glm_package))
     Xdesign.mat <- as.matrix(wts_data[, all_dummies, with = FALSE])
 
-    m.fit <- try(speedglm::speedglm.wfit(
-                                       X = Xdesign.mat,
-                                       y = as.numeric(wts_data[[Ynode]]),
-                                       intercept = FALSE,
-                                       family = quasibinomial(),
-                                       weights = wts_data[["cum.IPAW"]],
-                                       trace = FALSE),
-                        silent = TRUE)
-    if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
-      if (verbose) message("speedglm::speedglm.wfit failed, falling back on stats::glm.fit; ", m.fit)
+    if (glm_package %in% "speedglm") {
+      m.fit <- try(speedglm::speedglm.wfit(
+                                         X = Xdesign.mat,
+                                         y = as.numeric(wts_data[[Ynode]]),
+                                         intercept = FALSE,
+                                         family = quasibinomial(),
+                                         weights = wts_data[["cum.IPAW"]],
+                                         trace = FALSE),
+                          silent = TRUE)
+      if (inherits(m.fit, "try-error")) { # if failed, fall back on stats::glm
+        if (verbose) stop("speedglm::speedglm.wfit failed, try using glm_package='glm'", m.fit)
+        return(invisible(m.fit))
+      }      
+    }
+
+    if (glm_package %in% "glm") {
       ctrl <- stats::glm.control(trace = FALSE)
       SuppressGivenWarnings({
         m.fit <- stats::glm.fit(x = Xdesign.mat,
@@ -395,14 +403,12 @@ runglmMSM <- function(wts_data, all_dummies, Ynode, glm_package, verbose) {
                                 control = ctrl)
       }, GetWarningsToSuppress())
     }
+
     m.fit <- list(coef = m.fit$coef, linkfun = "plogis", fitfunname = "speedglm")
-
     if (verbose) {print("MSM fits"); print(m.fit$coef)}
-
     glm.IPAW.predictP1 <- logispredict(m.fit, Xdesign.mat)
     # wts_data[, glm.IPAW.predictP1 := logispredict(m.fit, Xdesign.mat)]
-  } else {
-    stop("glm_package can be either 'h2o' or 'speedglm'")
   }
+
   return(list(glm.IPAW.predictP1 = glm.IPAW.predictP1, m.fit = m.fit))
 }
