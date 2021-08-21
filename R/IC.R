@@ -2,12 +2,9 @@
 ## SE of IPW estimator of MSM coef
 ###################################
 getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW_MSMestimator = TRUE){
-  # head(MSMdata)
   cum.IPAW <- "cum.IPAW"
 
-  IC.data <- MSMdata[ ,c(ID, t.var, Yname, cum.IPAW, MSMpredict), with = FALSE] # contains data for all obs compatible with at least one rule
-  # MSMepsilon <- IC.data[,Yname, with = FALSE]-IC.data[,MSMpredict, with = FALSE]
-  # IC.data <- cbind(IC.data,MSMepsilon)
+  IC.data <- MSMdata[ ,c(ID, t.var, Yname, cum.IPAW, MSMpredict), with = FALSE]
 
   IC.data[, "MSMepsilon" := get(Yname) - get(MSMpredict)]
 
@@ -16,11 +13,9 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
   }else{
     sweep.tmp <- IC.data[["MSMepsilon"]]
   }
-  # *********
-  #OS: multiply each column of t(MSMdesign) by sweep.tmp:
-  D.O.beta <- sweep(t(MSMdesign), 2, sweep.tmp, "*")
 
-  # New & faster approach using data.table:
+  D.O.beta <- sweep(t(MSMdesign), 2, sweep.tmp, "*") # multiply each column of t(MSMdesign) by sweep.tmp:
+
   xDT <- data.table(ID = IC.data[[ID]], t(D.O.beta))
   setkeyv(xDT, cols = "ID")
   D.O.beta.alt <- as.matrix(xDT[, lapply(.SD, sum), by = ID][, ID := NULL])
@@ -55,7 +50,6 @@ getSEcoef <- function(ID, nID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW
 ##############################################################
 ### IC.O below is the first output of previous function:
 getSE.S <- function(nID, S.d.t.predict, h.d.t.predict, design.d.t, IC.O){
-  # browser()
   ### SE for S(t) for all t's
   h.by.dl.dt <- matrix(NA, nrow = length(S.d.t.predict), ncol = ncol(design.d.t))
   for(t.val in 1:length(S.d.t.predict)) {

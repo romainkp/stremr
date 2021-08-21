@@ -14,7 +14,7 @@ survMSM(
   weights = NULL,
   getSEs = TRUE,
   est_name = "IPW",
-  glm_package = c("speedglm", "h2o"),
+  glm_package = c("glm", "speedglm", "h2o"),
   return_wts = FALSE,
   tmax = NULL,
   verbose = getOption("stremr.verbose")
@@ -56,7 +56,7 @@ used when generating reports with \code{make_report_rmd}.}
 
 \item{glm_package}{Which R package should be used for fitting the weighted logistic regression
 model (MSM) for the survival hazard?
-Currently available options are \code{"speedglm"} and \code{"h2o"}.
+Currently available options are \code{"glm"}, \code{"speedglm"} and \code{"h2o"}.
 \code{h2o} can provided better performance
 when fitting MSM with many observations and large number of time-points.}
 

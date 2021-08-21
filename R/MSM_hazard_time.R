@@ -275,9 +275,11 @@ survMSM <- function(wts_data,
         col.idx <- which(period.j <= MSM.intervals[,2] & period.j >= MSM.intervals[,1])
         design.t[period.idx, col.idx] <- 1
       }
+      
+      ## Always use IPW_MSMestimator=TRUE (even for crude estimators) to only use rule-followers.
       beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
                                 MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
-                                MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = use_weights)
+                                MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = TRUE)
 
       for(d.j in names(S2.IPAW)) {
         d.idx <- which(names(S2.IPAW) %in% d.j)
@@ -324,7 +326,6 @@ survMSM <- function(wts_data,
                   ht = hazard.IPAW[[rule_name]],
                   MSM.fit = m.fit,
                   MSM.intervals = MSM.intervals,
-                  # IC.Var.S.d = IC.Var.S.d[[rule_name]],
                   nID = nID,
                   nobs = nrow(wts_data_used),
                   wts_data = { if (return_wts) {wts_data_used} else {NULL} },
