@@ -232,12 +232,13 @@ fit_hMSM <- function(wts_data,
 
     ## the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
     ## the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
+    ## Always use IPW_MSMestimator=TRUE (even for crude estimators) to only use rule-followers.
     beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
                               MSMdata = wts_data_used,
                               # MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
                               MSMdesign = design_mat,
                               MSMpredict = "glm.IPAW.predictP1",
-                              IPW_MSMestimator = use_weights)
+                              IPW_MSMestimator = TRUE)
 
     for(d.j in rules_TRT) {
       rule.idx <- estimates[[rule.var]] %in% d.j
