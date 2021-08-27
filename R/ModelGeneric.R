@@ -28,11 +28,6 @@ newsummarymodel.SDRQlearn <- function(regClass, reg, ...) SDRModelQlearn$new(reg
 newsummarymodel.SplitCVSDRQlearn <- function(regClass, reg, ...) SplitCVSDRModelQlearn$new(reg = reg, ...)
 newsummarymodel.SDRtransformQModel <- function(regClass, reg, ...) SDRtransformQModel$new(reg = reg, ...)
 
-## For evaluating propensity scores under g.star (counterfactual probabilities)
-newsummarymodel.deterministic <- function(regClass, reg, ...) ModelDeterministic$new(reg = reg, ...)
-newsummarymodel.NULL <- function(regClass, reg, ...) ModelNULLOutcome$new(reg = reg, ...)
-
-
 
 prettyprint_ModelGeneric <- function(self, reg, all.outvar.bin) {
   print("#----------------------------------------------------------------------------------")

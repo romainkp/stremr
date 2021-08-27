@@ -442,7 +442,6 @@ fitPropensity <- function(OData,
   return(OData)
 }
 
-
 ## --------------------------------------------------------------------------------------------------
 ## New method for evaluting gstar. Relies solely on BinomialModel, doesn't require DeterministicModel
 ## Intervene only on the subset of nodes (rows that evaluate to TRUE by expr in useonly_t_NODE)
@@ -454,14 +453,7 @@ fitPropensity <- function(OData,
 ## multiply to get a single joint probability (at each time point).
 ## This function simply grabs the counterfactual node values (N^*(t)) and compares them
 ## to the observed values (N(t)) by evaluating the indicator (N^*(t)=N(t)).
-## The call to fit below is empty, i.e., does nothing other than call ModelDeterministic$predict()
 ## --------------------------------------------------------------------------------------------------
-## TODO: convert useonly_t_NODE to a named list of same dim as intervened_NODE (separate expression pre intervention node)
-## TODO: (DONE) test new useonly_t_NODE functionality (as names list) on BinomialModel classes (strata) that have no nodes to intervene on.
-## TODO: (DONE) convert intervened_NODE to named look-up list (each intervention node item is named after the corresponding exposure node)
-## TODO: (DONE) Move all functionality in ModelDeterministic to ModelBinomial. 
-##       This way we do not have to re-create the R6 class strucuture of modelfit.g
-##       Need to figure out how to pass relevant parameters to define g^*...
 defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs, modelfit.g, intervened_type) {
   if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
@@ -473,7 +465,6 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     } else {
       intervened_type <- rep("bin", length(intervened_NODE))
     }
-
 
     intervened_NODE_l <- as.list(intervened_NODE)
     names(intervened_NODE_l) <- NodeNames
@@ -498,23 +489,10 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     ## add a check that list input consists of either: a) characters or b) NULLs
     assert_that(all(sapply(useonly_t_NODE_l, function(x) is.null(x) | is.character(x))))
 
-    # useonly_t_NODE_l_a <- list(A1star = "t > 5", A2star = "t == 4")
-    # useonly_t_NODE_l_b <- list(A1star = NULL, A2star = NULL)
-    # useonly_t_NODE_l_c <- list(A1star = 1.3, A2star = "t == 4")
-
-    # print("useonly_t_NODE"); print(useonly_t_NODE)
-    # print("useonly_t_NODE_l"); print(useonly_t_NODE_l)
-    # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
-
-    ## --------------------------------------------------------------------------------------------------
-    ## TODO (DONE): 1) Change useonly_t_NODE to list of named nodes (one item per intervention node)
-    ## TODO (DONE): 2) Move this evaluation into BinomialModel    
-    ## --------------------------------------------------------------------------------------------------
     gstar_NODE_new <- modelfit.g$predictgstar(newdata = OData, 
                                               n = OData$nobs, 
                                               intervened_NODE_all = intervened_NODE_l, 
                                               intervened_type_all = intervened_type_l,
-                                              # useonly_t_NODE_all  = useonly_t_NODE
                                               useonly_t_NODE_all  = useonly_t_NODE_l
                                               )
 
@@ -523,68 +501,6 @@ defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE
     gstar_NODE_new <- g.obs
   }
   return(gstar_NODE_new)
-}
-
-## --------------------------------------------------------------------------------------------------
-## Old method for evaluting gstar. To be removed, along with DeterministicModel
-## --------------------------------------------------------------------------------------------------
-## OLD APPROACH TO intervene only on the subset of nodes gstar. 
-## This has been moved inside BinomialModel$predictgstar(...). 
-## To be removed, keeping for now to verify new implementation.
-## --------------------------------------------------------------------------------------------------
-defineNodeGstarIPW_old <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs, modelfit.g, intervened_type) {
-  if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
-    for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
-    assert_that(length(intervened_NODE) == length(NodeNames))
-    if (!is.null(intervened_type)) {
-      assert_that(length(intervened_type)==length(intervened_NODE))
-      assert_that(is.character(intervened_type))
-      assert_that(all(intervened_type %in% c("bin", "shift", "MSM")))
-    } else {
-      intervened_type <- rep("bin", length(intervened_NODE))
-    }
-
-    # From intervened_NODE we need to evaluate the likelihood: g^*(A^*(t)=A(t)) based on the observed data A(t) and counterfactuals A^*(t) in intervened_NODE
-
-    ## --------------------------------------------------------------------------------------------------
-    ## Old method for evaluting gstar. To be removed, along with DeterministicModel
-    ## --------------------------------------------------------------------------------------------------
-    regs_list <- vector(mode = "list", length = length(NodeNames))
-    names(regs_list) <- c(NodeNames)
-    class(regs_list) <- c(class(regs_list), "ListOfRegressionForms")
-    modelfit.g.root <- modelfit.g$getPsAsW.models()
-    for (i in seq_along(NodeNames)) {
-      if (length(modelfit.g.root) == length(NodeNames) && inherits(modelfit.g.root[[1]], "ModelBinomial")) {
-        modelfit.g.node <- modelfit.g.root[[i]]
-      } else if (length(modelfit.g.root) == length(NodeNames) && inherits(modelfit.g.root[[i]], "ModelGeneric")){
-        modelfit.g.node <- modelfit.g.root[[i]]$getPsAsW.models()[[1]]
-      } else {
-        modelfit.g.node <- modelfit.g.root[[1]]$getPsAsW.models()[[i]]
-      }
-
-      reg <- RegressionClass$new(outvar = NodeNames[i],
-                                 predvars = NULL,
-                                 outvar.class = list("deterministic"),
-                                 subset_vars = list(NodeNames[i]),
-                                 model_contrl = list(gstar.Name = intervened_NODE[i],
-                                                     intervened_type = intervened_type[i],
-                                                     modelfit.g = modelfit.g.node))
-      regs_list[[i]] <- reg
-    }
-    gstar_NODE_obj <- ModelGeneric$new(reg = regs_list, DataStorageClass.g0 = OData)
-    gstar_NODE <- gstar_NODE_obj$fit(data = OData)$predictAeqa(newdata = OData, n = OData$nobs)
-
-    subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
-    if (any(is.na(subset_idx)))
-      stop("the subset index evaluation for the expression '" %+% useonly_t_NODE %+% "' resulted in NAs")
-    idx_set_to_g0 <- setdiff(1:length(gstar_NODE), subset_idx)
-    gstar_NODE[idx_set_to_g0] <- g.obs[idx_set_to_g0]
-
-  } else {
-    # use the actual observed exposure probability (no intervention on NODE)
-    gstar_NODE <- g.obs
-  }
-  return(gstar_NODE)
 }
 
 # ---------------------------------------------------------------------------------------
@@ -694,12 +610,6 @@ getIPWeights <- function(OData,
 
   # indicator that the person is uncensored at each t (continuation of follow-up)
   gstar.CENS = as.integer(OData$eval_uncensored())
-
-  # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
-  # gstar.TRT_old <- defineNodeGstarIPW_old(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, g_preds[["g0.A"]], OData$modelfit.gA, intervened_type_TRT)
-  # Likelihood for monitoring P(N^*(t)=N(t)) under counterfactual intervention N^*(t) on N(t):
-  # gstar.MONITOR_old <- defineNodeGstarIPW_old(OData, intervened_MONITOR, nodes$Nnodes, useonly_t_MONITOR, g_preds[["g0.N"]], OData$modelfit.gN, intervened_type_MONITOR)
-
   # Likelihood P(A^*(t)=A(t)) under counterfactual intervention A^*(t) on A(t)
   gstar.TRT <- defineNodeGstarIPW(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, g_preds[["g0.A"]], OData$modelfit.gA, intervened_type_TRT)
   # Likelihood for monitoring P(N^*(t)=N(t)) under counterfactual intervention N^*(t) on N(t):
@@ -765,13 +675,6 @@ getIPWeights <- function(OData,
   ## remove person time observations with FUP above tmax
   if (!is.null(tmax)) wts.DT <- wts.DT[eval(as.name(nodes$tnode)) <= tmax, ]
   setkeyv(wts.DT, cols = c(nodes$IDnode, nodes$tnode))
-
-  # ## --------------------------------------------------------------------------------------------------
-  # ## Verify both approaches for gstar/ cum.IPAW match
-  # ## --------------------------------------------------------------------------------------------------
-  # check_same_gstar = all(wts.DT[["cum.IPAW"]][!is.na(wts.DT[["cum.IPAW"]]) & !is.na(wts.DT[["cum.IPAW_old"]])] == wts.DT[["cum.IPAW_old"]][!is.na(wts.DT[["cum.IPAW"]]) & !is.na(wts.DT[["cum.IPAW_old"]])])
-  # if (!check_same_gstar) warning("two gstar evaluation methods produced inconsistent results (cum.IPAW != cum.IPAW_old)")
-  # ## --------------------------------------------------------------------------------------------------
 
   wts.DT[, "rule.name" := eval(as.character(rule_name))]
 
