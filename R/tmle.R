@@ -62,7 +62,14 @@ if(getRversion() >= "2.15.1") {
 
 
 
-
+## ------------------------------------------------------------------------------------------------------------------------
+## TODO: Need to modify to allow multivariate 'useonly_t_NODE' (separate expression for each node in multivar 'intervened_NODE')
+##       Currently 'OData$replaceNodesVals()' call replaces A^* with observed A vals for all observations that evaluatee to true
+##       This applies to all nodes in A (for the same observation).
+## Plan: Write a multivar version of OData$replaceNodesVals(...)? 
+##       It gets passed a matrix/list of multivar not_subset_idx (evaluate separately for each el of intervened_NODE). 
+##       Each vector column in this matrix/list is applied separately to replace each component of A^*[i] with A[i].
+## ------------------------------------------------------------------------------------------------------------------------
 ## ------------------------------------------------------------------------------------------------------------------------
 ## When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
 ## ------------------------------------------------------------------------------------------------------------------------
@@ -84,9 +91,10 @@ defineNodeGstarGCOMP <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
     ## ------------------------------------------------------------------------------------------
     ## Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
     ## ------------------------------------------------------------------------------------------
+    ## TODO: create multivariate version to return list/matrix for each el of useonly_t_NODE (for each el of intervened_NODE)
     subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
     not_subset_idx <- setdiff(1:nrow(OData$dat.sVar), subset_idx)
-    # OData$replaceNodesVals(!subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
+    ## TODO: create a multivariate version of replaceNodesVals where all 3 inputs are of the same dim (either lists of mat/vectors)
     OData$replaceNodesVals(not_subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
     ## ------------------------------------------------------------------------------------------
 
