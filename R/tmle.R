@@ -20,7 +20,6 @@ if(getRversion() >= "2.15.1") {
 ##     => Can use the same stacked dataset of regime-followers, but with a separate stratification for each regimen.
 ## ------------------------------------------------------------------------------------------
 
-
 ## ------------------------------------------------------------------------------------------
 ## Sequential (Recursive) G-COMP Algorithm:
 ## ------------------------------------------------------------------------------------------
@@ -60,43 +59,59 @@ if(getRversion() >= "2.15.1") {
 ##     In general, we can pool all Q.kplus (across all t's) and do a single update on all of them
 ##     Would make this TMLE iterative, but would not require refitting on the initial Q's
 
-
-
 ## ------------------------------------------------------------------------------------------------------------------------
-## TODO: Need to modify to allow multivariate 'useonly_t_NODE' (separate expression for each node in multivar 'intervened_NODE')
-##       Currently 'OData$replaceNodesVals()' call replaces A^* with observed A vals for all observations that evaluatee to true
-##       This applies to all nodes in A (for the same observation).
-## Plan: Write a multivar version of OData$replaceNodesVals(...)? 
-##       It gets passed a matrix/list of multivar not_subset_idx (evaluate separately for each el of intervened_NODE). 
-##       Each vector column in this matrix/list is applied separately to replace each component of A^*[i] with A[i].
-## ------------------------------------------------------------------------------------------------------------------------
-## ------------------------------------------------------------------------------------------------------------------------
-## When useonly_t_TRT or useonly_t_MONITOR is specified, need to set nodes to their observed values, rather than the counterfactual values
-## ------------------------------------------------------------------------------------------------------------------------
-## Do it separately for gstar_TRT & gstar_MONITOR
-## Loop over each node in gstar_TRT / gstar_MONITOR
-## Do it only once for all observations inside main TMLE call
-## Back-up a copy of all gstar nodes first, the original copy is then restored when finished running
-## The observations which get swapped with g0 values are defined by:
-## subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
-## probability of P(A^*(t)=n(t)) or P(N^*(t)=n(t)) under counterfactual A^*(t) or N^*(t) and observed a(t) or n(t)
 ## Example call: defineNodeGstarGCOMP(OData, intervened_TRT, nodes$Anodes, useonly_t_TRT, stratifyQ_by_rule)
+## ------------------------------------------------------------------------------------------------------------------------
+## OData - R6 objects that stores input data and associated data management functions
+## intervened_NODE - column name(s) w/ counterfactual intervention values of A^* or N^*; can be len > 1 for multivariate A or N
+## NodeNames - column names with observed exposures for A or N; can be multivariate (len > 1)
+## useonly_t_NODE - a single logical expression or a list of logical expressions, intervene only on the subset of exposure nodes 
+##                  (rows that evaluate to TRUE by expr in useonly_t_NODE)
+## stratifyQ_by_rule - define observations that are following the rule (using entire duration of follow-up)
+## stratify_by_last - define observations that are following the rule at current time-point only
+## ... When useonly_t_TRT or useonly_t_MONITOR is specified, we set nodes A^* nodes to their observed values (A), rather than the counterfactual values
 defineNodeGstarGCOMP <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, stratifyQ_by_rule, stratify_by_last) {
   # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
   if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
     gstar.NODEs <- intervened_NODE
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
+    intervened_NODE_l <- as.list(intervened_NODE)
+    names(intervened_NODE_l) <- NodeNames
+
+    ## assert that useonly_t_NODE is either character vector of length == 1 or 0 (NULL) or a list
+    if (is.list(useonly_t_NODE)) {
+      useonly_t_NODE_l <- useonly_t_NODE
+    } else if (is.null(useonly_t_NODE)) { ## for NULL entry, convert to named list of NULL elements
+      useonly_t_NODE_l <- sapply(intervened_NODE, function(x) NULL)
+    } else if (is.character(useonly_t_NODE) & length(useonly_t_NODE)==1) {
+      useonly_t_NODE_l <- as.list(rep.int(useonly_t_NODE, length(intervened_NODE)))
+      names(useonly_t_NODE_l) <- intervened_NODE
+    } else {
+      stop("useonly_t_NODE must be either 'NULL', a single character expression (eg 't = 5') or a named list of character expressions")
+    }
+    ## check subset of intervened nodes is specified by a list
+    assert_that(is.list(useonly_t_NODE_l))
+    ## add a name check: all names in subset node list are part of intervened_NODE
+    assert_that(all(names(useonly_t_NODE_l) %in% intervened_NODE))
+    ## add a check that list input consists of either: a) characters or b) NULLs
+    assert_that(all(sapply(useonly_t_NODE_l, function(x) is.null(x) | is.character(x))))
 
     ## ------------------------------------------------------------------------------------------
-    ## Modify the observed input intervened_NODE in OData$dat.sVar with values from NodeNames for subset_idx:
+    ## Modify the observed intervened_NODE (A^*) in OData$dat.sVar with values from NodeName (A) for repl_subset_idx:
     ## ------------------------------------------------------------------------------------------
-    ## TODO: create multivariate version to return list/matrix for each el of useonly_t_NODE (for each el of intervened_NODE)
-    subset_idx <- OData$evalsubst(subset_exprs = useonly_t_NODE)
-    not_subset_idx <- setdiff(1:nrow(OData$dat.sVar), subset_idx)
-    ## TODO: create a multivariate version of replaceNodesVals where all 3 inputs are of the same dim (either lists of mat/vectors)
-    OData$replaceNodesVals(not_subset_idx, nodes_to_repl = intervened_NODE, source_for_repl = NodeNames)
-    ## ------------------------------------------------------------------------------------------
+    ## 1. Loop over each node in NodeNames (source_node)
+    ## 2. Pick corresponding A^* name (node_to_repl) and useonly_t_NODE expression, 
+    ## 3. Evaluate the subset index of rows that need replacement (repl_subset_idx)
+    ## 3. Replace the node values in node_to_repl with source_node for rows in subset_idx only
+    for (source_node in NodeNames) {
+      node_to_repl <- intervened_NODE_l[[source_node]]
+      useonly_t = useonly_t_NODE_l[[node_to_repl]]
+      subset_idx <- OData$evalsubst(subset_exprs = useonly_t)
+      ## inverse of subset_idx: replace A^*[idx] nodes with A[idx] only when we DO NOT want to intevene on A[idx]
+      repl_subset_idx <- setdiff(1:nrow(OData$dat.sVar), subset_idx)
+      OData$replaceNodesVals(repl_subset_idx, nodes_to_repl = node_to_repl, source_for_repl = source_node)
+    }
 
     ## ------------------------------------------------------------------------------------------
     ## update rule followers for trt if doing stratified G-COMP:

@@ -443,7 +443,7 @@ fitPropensity <- function(OData,
 }
 
 ## --------------------------------------------------------------------------------------------------
-## New method for evaluting gstar. Relies solely on BinomialModel, doesn't require DeterministicModel
+## New method for evaluting gstar. Only uses BinomialModel R6 class
 ## Intervene only on the subset of nodes (rows that evaluate to TRUE by expr in useonly_t_NODE)
 ## The rest of the rows (not in useonly_t_NODE) are set to g0 fit (yields propensity score = 1)
 ## --------------------------------------------------------------------------------------------------
