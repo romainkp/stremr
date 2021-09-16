@@ -28,6 +28,8 @@ newsummarymodel.SDRQlearn <- function(regClass, reg, ...) SDRModelQlearn$new(reg
 newsummarymodel.SplitCVSDRQlearn <- function(regClass, reg, ...) SplitCVSDRModelQlearn$new(reg = reg, ...)
 newsummarymodel.SDRtransformQModel <- function(regClass, reg, ...) SDRtransformQModel$new(reg = reg, ...)
 
+## A trivial class for dealing with NULL outcome modeling (when MONITOR and / or CENS aren't specified)
+newsummarymodel.NULL <- function(regClass, reg, ...) ModelNULLOutcome$new(reg = reg, ...)
 
 prettyprint_ModelGeneric <- function(self, reg, all.outvar.bin) {
   print("#----------------------------------------------------------------------------------")
