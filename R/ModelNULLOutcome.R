@@ -3,10 +3,14 @@
 ## This class does nothing but simply returns a vector of (1,1,1,...) when predict methods are called.
 ## ----------------------------------------------------------------------------------
 ModelNULLOutcome  <- R6Class(classname = "ModelNULLOutcome",
+  inherit = ModelBinomial,
   cloneable = TRUE,
   portable = TRUE,
   class = TRUE,
   public = list(
+    gstar.Name = character(),
+    modelfit.g = NULL,
+    intervened_type = "bin",
     is.fitted = TRUE,
     initialize = function(reg, ...) {
       self$model_contrl <- reg$model_contrl
