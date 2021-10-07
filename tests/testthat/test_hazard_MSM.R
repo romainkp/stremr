@@ -84,7 +84,7 @@ context("IPW-MSM for hazard")
   # ----------------------------------------------------------------------
   ## new IPW-MSM for the hazard allows using arbitrary GLM formulas
   # ----------------------------------------------------------------------
-  test_that("EXAMPLE 1. Saturated MSM, must match the MSM above (define a separate indicator for each (t x rule) combo)", {
+  test_that("EXAMPLE 1. saturated hazard MSM, must match the MSM above (define a separate indicator for each (t x rule) combo)", {
   ## EXAMPLE 1.
   ## Saturated MSM, must match the MSM above (define a separate indicator for each (t x rule) combo)
   survMSM_res <- fit_hMSM(list(wts.DT.1, wts.DT.0),
@@ -95,8 +95,7 @@ context("IPW-MSM for hazard")
   })
 
 
-
-  test_that("EXAMPLE 2. MSM with user-defined covariate f(t,d)='theta' that is contant in t (only varies by d)", {
+  test_that("EXAMPLE 2. hazard MSM with user-defined covariate f(t,d)='theta' that is contant in t (only varies by d)", {
     ## EXAMPLE 2.
     ## MSM with user-defined covariate f(t,d)='theta' that is contant in t (only varies by d)
     ## This MSM will smooth over time (time used as a continuous covariate) and adds interaction of (t,theta)
@@ -108,8 +107,7 @@ context("IPW-MSM for hazard")
   })
 
 
-
-  test_that("EXAMPLE 3. MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)", {
+  test_that("EXAMPLE 3. hazard MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)", {
     ## EXAMPLE 3.
     ## MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)
     ## add an arbitrary covariate that var
@@ -117,4 +115,37 @@ context("IPW-MSM for hazard")
     survMSM_res3[["estimates"]]
     survMSM_res3[["msm.fit"]]
   })
+
+
+  test_that("EXAMPLE 4. new (non-hazard) MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)", {
+    ## EXAMPLE 3.
+    ## MSM with user-defined covariate f(t,d)='sumtheta' that varies in (t,d), along with interaction (theta,sumtheta)
+    ## can add any arbitrary bsl covariate V
+    MSM_res4 <- fit_gMSM(list(wts.DT.1, wts.DT.0),
+                         ## Adding V to MSM formula:
+                         form = Y.tplus1 ~ t + I(rule.name=='gTI.dhigh') + CVD + highA1c,
+                         family = "quasibinomial",
+                         OData = OData,
+                         use_weights = TRUE,
+                         stabilize = FALSE,
+                         tvals = c(10, 11, 12, 13, 14),
+                         # tmax = 12,
+                         verbose = TRUE)
+
+    MSM_res4[["msm.fit"]]
+    MSM_res4[["beta.SE"]]
+
+   # form = "Y.tplus1 ~ -1 + t + theta + sumtheta", 
+   # form = "Y.tplus1 ~ t + theta + sumtheta",
+   # form = "Y.tplus1 ~ -1 + t + theta + t:theta",
+   # form = "Y.tplus1 ~ -1 + as.factor(t):as.factor(rule.name)"
+   # form = "Y.tplus1 ~ t + I(rule.name=='gTI.dhigh')",
+  })
+
+
+# (simpleMSM <- shifted.OUTCOME%+%"~ intnum"%+%" + "%+%paste(paste0("I(rule.name=='",rule.names[rule.names!=dRef],"')"),collapse=" + "))
+# HR.MSM.KM <- fit_hMSM(wts_data=IPW.by.rule, form=simpleMSM, OData= OData, use_weights = FALSE, stabilize = TRUE, trunc_weights=Inf, getSEs = TRUE, return_wts = FALSE, tmax = tmax, verbose = FALSE)
+# HR.stabIPW.MSM.KM <- fit_hMSM(wts_data=IPW.by.rule, form=simpleMSM, OData= OData, use_weights = TRUE, stabilize = TRUE, trunc_weights=Inf, getSEs = TRUE, return_wts = FALSE, tmax = tmax, verbose = TRUE)
+
+
 
