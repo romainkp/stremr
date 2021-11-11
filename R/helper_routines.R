@@ -201,20 +201,21 @@ get_FUPtimes <- function(wts_data, IDnode, tnode) {
 #' @seealso \code{\link{getIPWeights}} for evaluation of IP-weights.
 #' @export
 get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE, stabilize = FALSE) {
-  wts_data <- format_wts_data(copy(wts_data))
-  if (stabilize) wts_data[, `:=`("cum.IPAW", cum.stab.P * cum.IPAW)]
+  wts_data_new <- copy(wts_data)
+  wts_data_new <- format_wts_data(wts_data_new)
+  if (stabilize) wts_data_new[, `:=`("cum.IPAW", cum.stab.P * cum.IPAW)]
   # get the counts for each category (bin) + missing count:
-  na.count <- sum(is.na(wts_data[["cum.IPAW"]]))
+  na.count <- sum(is.na(wts_data_new[["cum.IPAW"]]))
   na.yes <- (na.count > 0L)
   # define a list of intervals:
   cutoffs2 <- c(-Inf, cutoffs, Inf)
   idx <- seq_along(cutoffs2); idx <- idx[-length(idx)]
   intervals_list <- lapply(idx, function(i) c(cutoffs2[i], cutoffs2[i+1]))
-  x.freq.counts.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE))]
+  x.freq.counts.DT <- wts_data_new[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE))]
   x.freq.counts <- as.integer(x.freq.counts.DT[1,])
   if (na.yes) {
     x.freq.counts <- c(x.freq.counts, na.count)
-    x.freq.counts.DT <- cbind(x.freq.counts.DT, wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE)])
+    x.freq.counts.DT <- cbind(x.freq.counts.DT, wts_data_new[, sum(is.na(cum.IPAW), na.rm = TRUE)])
   }
   # create labels:
   catNames <- rep.int(NA, (length(cutoffs) + 1 + as.integer(na.yes)))
@@ -232,9 +233,9 @@ get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 1
   x.freq.counts.tab[length(cutoffs)+1,1] <- paste("$\\geq$ ",cutoffs[length(cutoffs)],sep="")
   # do the same by separately for each rule:
   if (by.rule) {
-    x.freq.counts.byrule.DT <- wts_data[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE)), by = rule.name]
+    x.freq.counts.byrule.DT <- wts_data_new[, lapply(intervals_list, function(int) sum((cum.IPAW >= int[1]) & (cum.IPAW < int[2]), na.rm = TRUE)), by = rule.name]
     if (na.yes) {
-      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data[, sum(is.na(cum.IPAW), na.rm = TRUE), by = rule.name], on = c("rule.name")]
+      x.freq.counts.byrule.DT <- x.freq.counts.byrule.DT[wts_data_new[, sum(is.na(cum.IPAW), na.rm = TRUE), by = rule.name], on = c("rule.name")]
     }
     colnames(x.freq.counts.byrule.DT)[-1] <- catNames
   } else {
