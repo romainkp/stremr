@@ -201,7 +201,7 @@ get_FUPtimes <- function(wts_data, IDnode, tnode) {
 #' @seealso \code{\link{getIPWeights}} for evaluation of IP-weights.
 #' @export
 get_wtsummary <- function(wts_data, cutoffs = c(0, 0.5, 1, 10, 20, 30, 40, 50, 100, 150), varname = "Stabilized IPAW", by.rule = FALSE, stabilize = FALSE) {
-  wts_data <- format_wts_data(wts_data)
+  wts_data <- format_wts_data(copy(wts_data))
   if (stabilize) wts_data[, `:=`("cum.IPAW", cum.stab.P * cum.IPAW)]
   # get the counts for each category (bin) + missing count:
   na.count <- sum(is.na(wts_data[["cum.IPAW"]]))
