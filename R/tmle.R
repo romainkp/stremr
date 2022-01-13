@@ -119,12 +119,14 @@ defineNodeGstarGCOMP <- function(OData, intervened_NODE, NodeNames, useonly_t_NO
     ## FOR NDE BASED TMLE THE DEFINITION OF RULE-FOLLOWERS CHANGES ACCORDINGLY based on modified n^*(t) and a^*(t)
     # ------------------------------------------------------------------------------------------
     if (stratifyQ_by_rule) {
-      if (!stratify_by_last) {
-        follow_rule <- OData$eval_follow_rule(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
-      } else {
-        follow_rule <- OData$eval_follow_rule_each_t(NodeName = NodeNames, gstar.NodeName = intervened_NODE)
+      for (Anode_i in NodeNames) {
+        if (!stratify_by_last) {
+          follow_rule <- OData$eval_follow_rule(NodeName = Anode_i, gstar.NodeName = intervened_NODE_l[[Anode_i]])
+        } else {
+          follow_rule <- OData$eval_follow_rule_each_t(NodeName = Anode_i, gstar.NodeName = intervened_NODE_l[[Anode_i]])
+        }
+        OData$follow_rule <- follow_rule & OData$follow_rule & OData$uncensored
       }
-      OData$follow_rule <- follow_rule & OData$follow_rule & OData$uncensored
     }
   } else {
     # use the actual (observed) node names under g0:
