@@ -178,12 +178,19 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       ## TMLE: Qk_hat will be modified into Q^* with TMLE update
       ## GCOMP: Qk_hat serves no purpose and will be discarded
       ## **********************************************************************
-      Qk_hat <- self$predict(data, subset_idx = self$idx_used_to_fit_initQ)
-      ## bound predictions
-      Qk_hat[Qk_hat < self$lwr] <- self$lwr
-      Qk_hat[Qk_hat > self$upr] <- self$upr
-      ## rescale prediction from (0,1) range to its pre-specified bounded range (maximum probability constraint)
-      Qk_hat <- Qk_hat*self$maxpY
+      Qk_hat <- try(self$predict(data, subset_idx = self$idx_used_to_fit_initQ))
+      # prediction in seq-Gcomp has failed
+      if (inherits(Qk_hat, "try-error")) {
+        warning("error during prediction step of GCOMP/TMLE, assigning NA to predicted Q values")
+        print(Qk_hat)
+        Qk_hat <- NA
+      } else {
+        ## bound predictions
+        Qk_hat[Qk_hat < self$lwr] <- self$lwr
+        Qk_hat[Qk_hat > self$upr] <- self$upr
+        ## rescale prediction from (0,1) range to its pre-specified bounded range (maximum probability constraint)
+        Qk_hat <- Qk_hat*self$maxpY
+      }
 
       ## TMLE update of initial prediction (will return Qk_hat if not doing TMLE updates)
       TMLE.fit <- self$TMLE_update(data, Qk_hat)
@@ -508,8 +515,11 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       data$swapNodes(current = gstar, target = g0)
 
       # prediction in seq-Gcomp has failed
-      if (inherits(gcomp.pred.res, "try-error"))
-        stop("error during prediction step of GCOMP/TMLE")
+      if (inherits(gcomp.pred.res, "try-error")) {
+        private$probA1 <- NA
+        warning("error during prediction step of GCOMP/TMLE, assigning NA to predicted Q values")
+        print(gcomp.pred.res)
+      }
 
       # ------------------------------------------------------------------------------------------------------------------------
       # Perform qlogit-linear TMLE update for predicted Q, if available
