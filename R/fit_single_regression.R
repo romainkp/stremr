@@ -72,7 +72,7 @@ c) Passing the name of the existing fold column as the argument 'fold_column' of
   if (inherits(model.fit, "try-error") || inherits(model.fit$fit_object, "try-error")) {
     message("...trying to run Lrnr_glm_fast as a backup...")
     task <- sl3::sl3_Task$new(data$dat.sVar[subset_idx, ], covariates = predvars, outcome = outvar, outcome_type = "continuous")
-    lrn_model <- sl3::Lrnr_glm$new(family = models$params$family)
+    lrn_model <- sl3::Lrnr_glm$new()
     model.fit <- try(lrn_model$train(task))
     if (inherits(model.fit, "try-error")) {
       cat("\nsl3 error debugging info:\n");

@@ -59,6 +59,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
     lower_bound_zero_Q = TRUE,
     skip_update_zero_Q = TRUE,
     Qreg_counter = integer(),    ## Counter for the current sequential Q-regression (min is at 1)
+    Qreg_fail = FALSE,           ## Indicator that this Q model fit has failed (was unable to train and/or predict)
     all_Qregs_indx = integer(),
     t_period = integer(),
     keep_idx = FALSE,            ## keep current indices (do not remove them right after fitting)
@@ -132,11 +133,13 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
     fit = function(overwrite = FALSE, data, Qlearn.fit, ...) { # Move overwrite to a field? ... self$overwrite
 
       prevQ_indx <- which(self$all_Qregs_indx %in% (self$Qreg_counter+1))
-      if (length(prevQ_indx) > 0 && self$byfold_Q) {
+      if (length(prevQ_indx) > 0) {
         prevQ <- Qlearn.fit$getPsAsW.models()[[prevQ_indx]]
-        fold_y_names <- prevQ$fold_y_names
+        prevQreg_fail <- prevQ$Qreg_fail
+        if (self$byfold_Q) fold_y_names <- prevQ$fold_y_names
       } else {
         fold_y_names <- NULL
+        prevQreg_fail <- FALSE
       }
 
       self$n <- data$nobs
@@ -184,6 +187,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         warning("error during prediction step of GCOMP/TMLE, assigning NA to predicted Q values")
         print(Qk_hat)
         Qk_hat <- NA
+        self$Qreg_fail <- TRUE
       } else {
         ## bound predictions
         Qk_hat[Qk_hat < self$lwr] <- self$lwr
@@ -278,7 +282,9 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         private$probAeqa <- pred_Qk
         private$probA1 <- NULL
       }
-
+      
+      self$Qreg_fail <- prevQreg_fail | self$Qreg_fail
+      
       # **********************************************************************
       # Wipe out all internal data -- DOES NOT REMOVE THE Q MODEL FIT OBJECTS
       self$wipe.alldat
@@ -517,6 +523,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       # prediction in seq-Gcomp has failed
       if (inherits(gcomp.pred.res, "try-error")) {
         private$probA1 <- NA
+        self$Qreg_fail <- TRUE
         warning("error during prediction step of GCOMP/TMLE, assigning NA to predicted Q values")
         print(gcomp.pred.res)
       }

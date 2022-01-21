@@ -773,6 +773,8 @@ fit_GCOMP_onet <- function(OData,
   subset_vars <- lastQ.fit$subset_vars
   subset_exprs <- lastQ.fit$subset_exprs
   subset_idx <- OData$evalsubst(subset_exprs = subset_exprs) ## subset_vars = subset_vars,
+  
+  Qreg_fail <- lastQ.fit$Qreg_fail ## indicator that one of the Q model fit has failed
 
   ## Get the previously saved mean prediction for Q from the very last regression (first time-point, all n obs):
   res_lastPredQ <- lastQ.fit$predictAeqa()
@@ -787,6 +789,11 @@ fit_GCOMP_onet <- function(OData,
   ## Evaluate the last predictions by rule (which rule each prediction belongs to):
   OData$dat.sVar[subset_idx, "res_lastPredQ" := res_lastPredQ]
   mean_est_t <- OData$dat.sVar[subset_idx, list("cum.inc" = mean(res_lastPredQ)), by = "rule.name"]
+
+  if (Qreg_fail) {
+    mean_est_t[, cum.inc := NA]
+    mean_est_t_2[, cum.inc := NA]
+    }
 
   if (gvars$verbose) {
     print("mean est: ");  print(mean_est_t)
@@ -855,6 +862,10 @@ fit_GCOMP_onet <- function(OData,
       "SE.TMLE" := sqrt(TMLE_Var)]
     IC_Var[, "IC_Var" := NULL][, "TMLE_Var" := NULL]
 
+    if (Qreg_fail) {
+      IC_Var[, SE.TMLE := NA]
+    }
+
     if (gvars$verbose) {
       print("...empirical mean of the estimated EIC: ")
       print(IC_dt[, list("mean_EIC" = mean(EIC_i)), by = "rule.name"])
@@ -874,7 +885,7 @@ fit_GCOMP_onet <- function(OData,
 
   fW_fit <- lastQ.fit$getfit
   resDF_onet[, ("fW_fit") := { if (return_fW) {list(list(fW_fit))} else {list(list(NULL))} }]
-
+  
   ## re-order the columns so that "rule.name" col is always last
   data.table::setcolorder(resDF_onet, c(setdiff(names(resDF_onet), "rule.name"), "rule.name"))
   return(resDF_onet)
