@@ -1,10 +1,11 @@
 Package: stremr
 Title: Streamlined Estimation for Static, Dynamic and Stochastic Treatment Regimes in Longitudinal Data
-Version: 0.8.99
+Version: 1.1.0
 Authors@R: c(
-    person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
+    person("Oleg", "Sofrygin", role="aut", email="oleg.sofrygin@gmail.com"),
+    person("Holly", "Finertie", role="aut", email="holly.x.finertie@kp.org"),
     person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"),
-    person("Romain", "Neugebauer", role="aut", email="Romain.S.Neugebauer@kp.org"))
+    person("Romain", "Neugebauer", role=c("aut","cre"), email="Romain.S.Neugebauer@kp.org"))
 Description: Analysis of longitudinal data with binary (time-to-event) or continuous outcomes.
     Estimates the mean counterfactual outcome or counterfactual survival under static, dynamic and
     stochastic interventions on treatment (exposure) and monitoring events over time.

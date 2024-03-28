@@ -136,12 +136,15 @@ fit_hMSM <- function(wts_data,
 
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
+  clusterNperID <- OData$clusterNperID
   nodes <- OData$nodes
+  clusterID <- nodes$CLUSTERnode
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
 
   ## rbind all regimen-specific weights datasets into one:
   wts_data <- format_wts_data(wts_data)
+  if(!is.null(clusterID))wts_data <- merge(wts_data, unique(OData$dat.sVar[, c(nodes$IDnode, clusterID), with=FALSE]), by=nodes$IDnode, x.all=TRUE, y.all=FALSE)
 
   ## remove all observations with 0 cumulative weights & copy the weights data.table
   ## keep all weights, even if they are 0:
@@ -233,7 +236,8 @@ fit_hMSM <- function(wts_data,
     ## the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
     ## the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
     ## Always use IPW_MSMestimator=TRUE (even for crude estimators) to only use rule-followers.
-    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
+    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, clusterID = nodes$CLUSTERnode , nID = nID, clusterNperID = clusterNperID,
+                              t.var = nodes$tnode, Yname = Ynode,
                               MSMdata = wts_data_used,
                               # MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
                               MSMdesign = design_mat,

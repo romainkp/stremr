@@ -21,7 +21,10 @@ gvars$opts.allowedVals <- list(#sl3_learner = "_R6_learner_object",
                                skip_update_zero_Q = c(TRUE, FALSE),
                                up_trunc_offset = "_numeric_",
                                low_trunc_offset = "_numeric_",
-                               eps_tol = "_numeric_"
+                               eps_tol = "_numeric_",
+                               up_rare_y = "_numeric_",
+                               low_rare_y = "_numeric_"
+                               
   )
 
 getopt <- function(optname) return(stremrOptions(o = optname))
@@ -99,6 +102,8 @@ print_stremr_opts <- function() {
 #' @param up_trunc_offset The upper bound for the TMLE offset during the TMLE GLM update step.
 #' @param low_trunc_offset The lower bound for the TMLE offset during the TMLE GLM update step.
 #' @param eps_tol Used for TMLE GLM update step. Set the tolerance for testing that the outcomes (\code{Qkplus1}) are all 0 or are all 1.
+#' @param up_rare_y The upper bound for the returned predicted values during the TMLE GLM update step for rare outcomes only.
+#' @param low_rare_y The lower bound for the returned predicted values during the TMLE GLM update step for rare outcomes only.
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{stremrOptions}}, \code{\link{print_stremr_opts}}
 #' @export
@@ -109,7 +114,9 @@ set_all_stremr_options <- function(
                             skip_update_zero_Q = TRUE,
                             up_trunc_offset = 20,
                             low_trunc_offset = -10,
-                            eps_tol = 10^-5
+                            eps_tol = 10^-5,
+                            up_rare_y = 0.05,
+                            low_rare_y = 0.00
                             ) {
 
   old.opts <- gvars$opts
@@ -127,7 +134,10 @@ set_all_stremr_options <- function(
     skip_update_zero_Q = skip_update_zero_Q,
     up_trunc_offset = up_trunc_offset,
     low_trunc_offset = low_trunc_offset,
-    eps_tol = eps_tol
+    eps_tol = eps_tol, 
+    up_rare_y = up_rare_y,
+    low_rare_y = low_rare_y
+    
   )
 
   gvars$opts <- opts

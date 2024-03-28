@@ -88,7 +88,7 @@ define_single_regression <- function(OData,
 
   opt_params <- capture.exprs(...)
 
-  if (!is.null(models) && suppressWarnings(!is.na(models))) {
+  if (!is.null(models) && suppressWarnings(all(!is.na(models)))) {
     assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   } else {
     models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
@@ -118,10 +118,11 @@ define_single_regression <- function(OData,
 #' the monitoring process variable(s) (\code{MONITOR})
 #' and the survival OUTCOME variable (\code{OUTCOME}).
 #' @param ID Unique subject identifier column name in \code{data}.
+#' @param clusterID Unique cluster identifier column name in \code{data}.
 #' @param t_name The name of the time/period variable in \code{data}.
 #' @param covars Vector of names with time varying and baseline covariates in \code{data}.
 #' This argument does not need to be specified, by default all variables
-#' that are not in \code{ID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME}
+#' that are not in \code{ID}, \code{clusterID}, \code{t}, \code{CENS}, \code{TRT}, \code{MONITOR} and \code{OUTCOME}
 #' will be considered as covariates.
 #' @param CENS Column name of the censoring variable(s) in \code{data}.
 #' Leave as missing if not intervening on censoring / no right-censoring in the input data.
@@ -153,6 +154,7 @@ define_single_regression <- function(OData,
 #' @export
 importData <- function(data,
                        ID = "Subject_ID",
+                       clusterID = NULL,
                        t_name = "time_period",
                        covars,
                        CENS = NULL, # CENS = "C",
@@ -177,7 +179,7 @@ importData <- function(data,
   if (missing(MONITOR)) MONITOR <- NULL
 
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
-    covars <- setdiff(colnames(data), c(ID, t_name, CENS, TRT, MONITOR, OUTCOME))
+    covars <- setdiff(colnames(data), c(ID, clusterID, t_name, CENS, TRT, MONITOR, OUTCOME))
   }
   # The ordering of variables in this list is the assumed temporal order!
   nodes <- list(Lnodes = covars,
@@ -186,6 +188,7 @@ importData <- function(data,
                 Nnodes = MONITOR,
                 Ynode = OUTCOME,
                 IDnode = ID,
+                CLUSTERnode = clusterID,
                 tnode = t_name,
                 weights = weights)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes, noCENScat = noCENScat)
@@ -237,6 +240,7 @@ importData <- function(data,
   for (Ynode  in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode  in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
   for (IDnode in nodes$IDnode) CheckVarNameExists(OData$dat.sVar, IDnode)
+  for (CLUSTERnode in nodes$CLUSTERnode) CheckVarNameExists(OData$dat.sVar, CLUSTERnode)
   for (weights in nodes$weights) CheckVarNameExists(OData$dat.sVar, weights)
 
   return(OData)
@@ -244,7 +248,7 @@ importData <- function(data,
 
 define_propensity_model <- function(models, opt_params) {
   ## verify the learners are of acceptible type, otherwise define default learner as sl3 glm
-  if (!is.null(models) && suppressWarnings(!is.na(models))) {
+  if (!is.null(models) && suppressWarnings(all(!is.na(models)))) {
     assert_that(is.ModelStack(models) || is(models, "Lrnr_base"))
   } else {
     models <- do.call(sl3::Lrnr_glm_fast$new, opt_params)
@@ -455,7 +459,7 @@ fitPropensity <- function(OData,
 ## to the observed values (N(t)) by evaluating the indicator (N^*(t)=N(t)).
 ## --------------------------------------------------------------------------------------------------
 defineNodeGstarIPW <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, g.obs, modelfit.g, intervened_type) {
-  if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
+  if (!is.null(intervened_NODE) && all(!is.na(intervened_NODE))) {
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
     if (!is.null(intervened_type)) {
@@ -589,11 +593,11 @@ getIPWeights <- function(OData,
     g_preds <- OData$g_holdout_preds
   }
 
-  if (!is.null(useonly_t_TRT) && !is.na(useonly_t_TRT)) assert_that(is.character(useonly_t_TRT) || is.list(useonly_t_TRT))
-  if (!is.null(useonly_t_MONITOR) && !is.na(useonly_t_MONITOR)) assert_that(is.character(useonly_t_MONITOR) || is.list(useonly_t_MONITOR))
+  if (!is.null(useonly_t_TRT) && all(!is.na(useonly_t_TRT))) assert_that(is.character(useonly_t_TRT) || is.list(useonly_t_TRT))
+  if (!is.null(useonly_t_MONITOR) && all(!is.na(useonly_t_MONITOR))) assert_that(is.character(useonly_t_MONITOR) || is.list(useonly_t_MONITOR))
   # OData$dat.sVar[, c("g0.CAN.compare") := list(h_gN)] # should be identical to g0.CAN
-  if (!is.null(intervened_type_TRT) && !is.na(intervened_type_TRT)) assert_that(is.character(intervened_type_TRT))
-  if (!is.null(intervened_type_MONITOR) && !is.na(intervened_type_MONITOR)) assert_that(is.character(intervened_type_MONITOR))
+  if (!is.null(intervened_type_TRT) && all(!is.na(intervened_type_TRT))) assert_that(is.character(intervened_type_TRT))
+  if (!is.null(intervened_type_MONITOR) && all(!is.na(intervened_type_MONITOR))) assert_that(is.character(intervened_type_MONITOR))
   # print("CALLING IP WEIGHTS NOW"); print("intervened_TRT"); print(intervened_TRT)
   # ------------------------------------------------------------------------------------------
   # Probabilities of counterfactual interventions under observed (A,C,N) at each t
@@ -603,7 +607,7 @@ getIPWeights <- function(OData,
   # (2) gstar.TRT: prob of following one treatment rule; and
   # (3) gstar.MONITOR prob following the monitoring regime; and
   # ------------------------------------------------------------------------------------------------------------------------------
-  if (is.null(g_preds) || is.na(g_preds))
+  if (is.null(g_preds) || all(is.na(g_preds)))
     stop("...cannot locate propensity scores in 'OData' object - must run fitPropensity(...) prior to calling this function")
   if (any(!(c("g0.A", "g0.C", "g0.N") %in% names(g_preds))))
     stop("... fatal error; propensity scores were not found in the input dataset, please re-run fitPropensity(...)")

@@ -110,11 +110,15 @@ survMSM <- function(wts_data,
 
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
+  clusterNperID <- OData$clusterNperID
   nodes <- OData$nodes
+  clusterID <- nodes$CLUSTERnode
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
-
+    
   wts_data <- format_wts_data(wts_data)
+  if(!is.null(clusterID))wts_data <- merge(wts_data, unique(OData$dat.sVar[, c(nodes$IDnode, clusterID), with=FALSE]), by=nodes$IDnode, x.all=TRUE, y.all=FALSE)
+
   rules_TRT <- sort(unique(wts_data[["rule.name"]]))
 
   glm_package <- glm_package[1L]
@@ -277,9 +281,10 @@ survMSM <- function(wts_data,
       }
       
       ## Always use IPW_MSMestimator=TRUE (even for crude estimators) to only use rule-followers.
-      beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
-                                MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
-                                MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = TRUE)
+      beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, clusterID = nodes$CLUSTERnode , nID = nID, clusterNperID = clusterNperID,
+                                 t.var = nodes$tnode, Yname = Ynode,
+                                 MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
+                                 MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = TRUE)
 
       for(d.j in names(S2.IPAW)) {
         d.idx <- which(names(S2.IPAW) %in% d.j)

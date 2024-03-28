@@ -235,7 +235,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
       if (length(subset_exprs)==0L && !is.null(subset_exprs)) return(as.integer(subset_exprs))
 
-      if (!is.null(subset_exprs) && !is.na(subset_exprs)) {
+      if (!is.null(subset_exprs) && all(!is.na(subset_exprs))) {
         if (is.logical(subset_exprs)) {
           return(which(res & subset_exprs))
         } else if (is.character(subset_exprs)) {
@@ -567,7 +567,26 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     min.t = function() { min(self$dat.sVar[[self$nodes[['tnode']]]], na.rm = TRUE) },
     max.t = function() { max(self$dat.sVar[[self$nodes[['tnode']]]], na.rm = TRUE) },
     nobs = function() { nrow(self$dat.sVar) },
-    nuniqueIDs = function() { length(unique(self$dat.sVar[[self$nodes$IDnode]])) },
+    nuniqueIDs = function() {
+        if( is.null(self$nodes$CLUSTERnode) ){
+            nIndepUnit <- length(unique(self$dat.sVar[[self$nodes$IDnode]]))
+        }else{
+            nIndepUnit <- length(unique(self$dat.sVar[[self$nodes$CLUSTERnode]]))
+        }
+        return(nIndepUnit)
+    },
+    clusterNperID = function() {
+        if( is.null(self$nodes$CLUSTERnode) ){
+            clusterNperID <- self$dat.sVar[ get(self$nodes$tnode)==0 , .(get(self$nodes$IDnode)) ]
+            setnames(clusterNperID, "V1", self$nodes$IDnode)
+            clusterNperID[ , clusterN := 1]
+        }else{
+            clusterNperID <- self$dat.sVar[  , uniqueN(get(self$nodes$IDnode)) , by = c(self$nodes$CLUSTERnode) ]
+            setnames(clusterNperID,"V1","clusterN")
+
+        }
+        return(clusterNperID)
+    },
     nuniquets = function() { length(unique(self$dat.sVar[[self$nodes$tnode]])) },
     names.sVar = function() { colnames(self$dat.sVar) },
     ncols.sVar = function() { length(self$names.sVar) },

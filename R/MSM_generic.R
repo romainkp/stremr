@@ -72,12 +72,15 @@ fit_gMSM <- function(wts_data,
 
   gvars$verbose <- verbose
   nID <- OData$nuniqueIDs
+  clusterNperID <- OData$clusterNperID
   nodes <- OData$nodes
+  clusterID <- nodes$CLUSTERnode
   t_name <- nodes$tnode
   Ynode <- nodes$Ynode
-
-  ## rbind all regimen-specific weights datasets into single dataset (will be used to form design matrix):
+  
+  ## rbind all regimen-specific weights datasets into one:
   wts_data <- format_wts_data(wts_data)
+  if(!is.null(clusterID))wts_data <- merge(wts_data, unique(OData$dat.sVar[, c(nodes$IDnode, clusterID), with=FALSE]), by=nodes$IDnode, x.all=TRUE, y.all=FALSE)
 
   ## keep all weights, even if they are 0 (for correct inference, glm will not use 0 weights)
   ## remove all observations with missing weights or outcomes
@@ -187,11 +190,13 @@ fit_gMSM <- function(wts_data,
     ## the matrix where each row consists of indicators for t-specific derivatives of m(t,d), for each fixed d.
     ## the rows loop over all possible t's for which the survival will be plotted! Even if there was the same coefficient beta for several t's
     ## Always use IPW_MSMestimator=TRUE (even for crude estimators) to only use rule-followers.
-    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, nID = nID, t.var = nodes$tnode, Yname = Ynode,
+    beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, clusterID = nodes$CLUSTERnode , nID = nID, clusterNperID = clusterNperID,
+                               t.var = nodes$tnode, Yname = Ynode,
                                MSMdata = MSM_fit_data,
                                MSMdesign = design_mat,
                                MSMpredict = "glm.IPAW.predict",
-                               IPW_MSMestimator = TRUE)
+                               IPW_MSMestimator = TRUE,
+                               family = family)
 
     # for(d.j in rules_TRT) {
     #   rule.idx <- estimates[[rule.var]] %in% d.j
@@ -226,6 +231,6 @@ fit_gMSM <- function(wts_data,
   # attr(estimates, "trunc_weights") <- trunc_weights
 
   # return(list(estimates = estimates, msm.fit = msm.fit, beta.SE = beta.IC.O.SEs$se.beta))
-  return(list(msm.fit = msm.fit, beta.SE = beta.IC.O.SEs$se.beta))
+  return(list(msm.fit = msm.fit, beta.SE = beta.IC.O.SEs$se.beta, beta.IC = beta.IC.O.SEs$IC.O))
 
 }

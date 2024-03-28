@@ -72,7 +72,7 @@ if(getRversion() >= "2.15.1") {
 ## ... When useonly_t_TRT or useonly_t_MONITOR is specified, we set nodes A^* nodes to their observed values (A), rather than the counterfactual values
 defineNodeGstarGCOMP <- function(OData, intervened_NODE, NodeNames, useonly_t_NODE, stratifyQ_by_rule, stratify_by_last) {
   # if intervened_NODE returns more than one rule-column, evaluate g^* for each and the multiply to get a single joint (for each time point)
-  if (!is.null(intervened_NODE) && !is.na(intervened_NODE)) {
+  if (!is.null(intervened_NODE) && all(!is.na(intervened_NODE))) {
     gstar.NODEs <- intervened_NODE
     for (intervened_NODE_col in intervened_NODE) CheckVarNameExists(OData$dat.sVar, intervened_NODE_col)
     assert_that(length(intervened_NODE) == length(NodeNames))
@@ -332,7 +332,7 @@ fit_GCOMP <- function(OData,
   added_rule_col <- FALSE
   if (!"rule.name" %in% names(OData$dat.sVar)) {
     added_rule_col <- TRUE
-    rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
+    #rule_name <- paste0(c(intervened_TRT,intervened_MONITOR), collapse = "")
     OData$dat.sVar[, "rule.name" := rule_name]
   } else {
     rule_name <- unique(OData$dat.sVar[["rule.name"]])
@@ -384,6 +384,7 @@ fit_GCOMP <- function(OData,
                                 intervened_type_MONITOR = intervened_type_MONITOR)
       if (trunc_weights < Inf) IPWeights[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
     } else {
+      if (trunc_weights < Inf) IPWeights[eval(as.name("cum.IPAW")) > trunc_weights, ("cum.IPAW") := trunc_weights]
       getIPWeights_fun_call <- attributes(IPWeights)[['getIPWeights_fun_call']]
       if (gvars$verbose) message("applying user-specified IPWeights obtained with a call: \n" %+% deparse(getIPWeights_fun_call)[[1]])
       assert_that(all.equal(attributes(IPWeights)[['intervened_TRT']], intervened_TRT))
@@ -837,23 +838,33 @@ fit_GCOMP_onet <- function(OData,
   ## save the i-specific estimates of the EIC as a separate column:
   resDF_onet[, ("IC.St") := list(list(IC_i_onet))]
 
+  clusterID <- nodes$CLUSTERnode # iid unit level assumed to be cluster
+  if(is.null(clusterID))clusterID <- nodes$IDnode # overwritten with ID if there is no clustering
+  
   if (TMLE || iterTMLE) {
     resDF_onet[, ("IC.St") := NULL]
-    IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(nodes$IDnode, "rule.name")]
+    IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(clusterID, "rule.name")] ## sum over t with no clustering and over t and cluster observations otherwise
 
-    IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(nodes$IDnode, "res_lastPredQ", "rule.name"), with = FALSE][,
+    IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(clusterID, "res_lastPredQ", "rule.name"), with = FALSE][, 
       "mean_Q" := mean(res_lastPredQ), by = c("rule.name")][,
-      "EIC_i_t0" := res_lastPredQ-mean_Q][,
+      "EIC_i_t0" := sum(res_lastPredQ-mean_Q), by = c("rule.name") ][,
       c("mean_Q", "res_lastPredQ") := list(NULL, NULL)
       ]
+    IC_dt_t0 <- IC_dt_t0[, mean(EIC_i_t0), by = c(clusterID,"rule.name")] ## this sum over clusters amounts to no change if there is no clustering, i.e. if the sum of EIC_i_t0 per ID = EIC_i_t0
+    setnames(IC_dt_t0,"V1","EIC_i_t0")
 
     ## remove newly added column from observed dataset
     OData$dat.sVar[, "res_lastPredQ" := NULL]
-
-    IC_dt <- IC_dt[IC_dt_t0, on = c(nodes$IDnode, "rule.name")]
+    ## clustering adjustment check
+    if(nrow(IC_dt)!=nrow(IC_dt_t0))stop("Unexpected IC matrix dimensions when computing TMLE SE - possibly indicative of incorrect clustering adjustment")
+    IC_dt <- IC_dt[IC_dt_t0, on = c(clusterID, "rule.name")]
     IC_dt[, ("EIC_i") := EIC_i_t0 + EIC_i_tplus]
     IC_dt[, c("EIC_i_t0", "EIC_i_tplus") :=  list(NULL, NULL)]
 
+    ## apply the clustering weights (n/N where n is iid sample size and N = sum_cluster of cluster size)
+    clusteringWeight <- OData$nuniqueIDs/OData$clusterNperID[,sum(clusterN)]
+    IC_dt[ , ("EIC_i") := clusteringWeight*EIC_i ]
+        
     ## asymptotic variance (var of the EIC), by rule:
     IC_Var <- IC_dt[,
       list("IC_Var" = (1 / (.N)) * sum(EIC_i^2),
@@ -873,8 +884,8 @@ fit_GCOMP_onet <- function(OData,
     }
 
     resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
-    data.table::setkeyv(IC_dt, c("rule.name", nodes$IDnode))
-    IC_i_onet_byrule <- IC_dt[, (nodes$IDnode) := NULL] %>%
+    data.table::setkeyv(IC_dt, c("rule.name", clusterID))
+    IC_i_onet_byrule <- IC_dt[, (clusterID) := NULL] %>%
                         tibble::as_tibble() %>%
                         tidyr::nest(EIC_i, .key = "IC.St") %>%
                         dplyr::mutate(IC.St = purrr::map(IC.St, ~ .x[[1]]))
