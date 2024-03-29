@@ -840,17 +840,17 @@ fit_GCOMP_onet <- function(OData,
 
   clusterID <- nodes$CLUSTERnode # iid unit level assumed to be cluster
   if(is.null(clusterID))clusterID <- nodes$IDnode # overwritten with ID if there is no clustering
-  
+
   if (TMLE || iterTMLE) {
     resDF_onet[, ("IC.St") := NULL]
     IC_dt <- OData$dat.sVar[, list("EIC_i_tplus" = sum(eval(as.name("EIC_i_t")))), by = c(clusterID, "rule.name")] ## sum over t with no clustering and over t and cluster observations otherwise
 
     IC_dt_t0 <- OData$dat.sVar[subset_idx,  c(clusterID, "res_lastPredQ", "rule.name"), with = FALSE][, 
       "mean_Q" := mean(res_lastPredQ), by = c("rule.name")][,
-      "EIC_i_t0" := sum(res_lastPredQ-mean_Q), by = c("rule.name") ][,
+      "EIC_i_t0" := res_lastPredQ-mean_Q][,
       c("mean_Q", "res_lastPredQ") := list(NULL, NULL)
       ]
-    IC_dt_t0 <- IC_dt_t0[, mean(EIC_i_t0), by = c(clusterID,"rule.name")] ## this sum over clusters amounts to no change if there is no clustering, i.e. if the sum of EIC_i_t0 per ID = EIC_i_t0
+    IC_dt_t0 <- IC_dt_t0[, sum(EIC_i_t0), by = c(clusterID,"rule.name")] ## this sum over clusters amounts to no change if there is no clustering, i.e. if the sum of EIC_i_t0 per ID = EIC_i_t0
     setnames(IC_dt_t0,"V1","EIC_i_t0")
 
     ## remove newly added column from observed dataset
