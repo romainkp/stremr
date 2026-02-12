@@ -635,7 +635,8 @@ getIPWeights <- function(OData,
     "gstar.CAN" := gstar.CENS * gstar.TRT * gstar.MONITOR] # Joint likelihoood for all 3 node types:
 
   ## Weights by time and cumulative weights by time:
-  wts.DT[,"wt.by.t" := gstar.CAN / g0.CAN, by = eval(nodes$IDnode)]
+  # if numerator is 0, will always be 0
+  wts.DT[,"wt.by.t" := ifelse(gstar.CAN==0, 0, gstar.CAN / g0.CAN), by = eval(nodes$IDnode)]
 
   ## When ignore_tmin is specified set the wt.by.t to 1 for all t values that occur prior to time-points.
   ## NOTE: This is not the most efficient way to evaluate forward product for ignore_tmin, but it preserves the indexing

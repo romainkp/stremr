@@ -36,8 +36,8 @@ if(getRversion() >= "2.15.1") {
 #' RD(dx3,dx2), RD(dx3,dx1) and RD(dx2,dx1).
 #' @return A long format dataset (\code{tibble}) with risk differences.
 #' @export
-get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data)) {
-
+get_RDs <- function(St_data, St_name, getSEs = TRUE, getICs = FALSE, order = seq_along(St_data)) {
+  
   ## Use default name for the column with survival estimates
   if (missing(St_name)) {
     estimator_short <- unique(attr(St_data[[1]], "estimator_short"))
@@ -47,36 +47,36 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
     }
     St_name <- paste0("St.", estimator_short)
   }
-
+  
   ## check that the influence curve column exists in all survival datasets
   ## if not, automatically set getSEs to FALSE
   if (!all(unlist(purrr::map( St_data, ~ "IC.St" %in% names(.x) ))))
     getSEs <- FALSE
-
+  
   # nIDs <- attr(St_data[[1]], "nID")
-
+  
   ## Grab all available follow-up time-points by regimen:
   # time_bydx_obs <- lapply(St_data, function(St) attr(St, "time"))
   time_bydx_obs <- lapply(St_data, function(St) St[["time"]])
-
+  
   ## Find the intersection of follow-up time-points across all regimens
   ## Will evaluate all RDs only at these intersected f-up time-points
   time <- Reduce(intersect, time_bydx_obs)
   time_idx <- seq_along(time)
-
+  
   if (!all(unlist(lapply(St_data, function(surv) St_name %in% names(surv)))))
     stop("name of the survival estimates column cannot be found in one of the input datasets: " %+% St_name)
-
+  
   tx_idx <- seq_along(St_data)
   # tx_names <- unlist(lapply(St_data, function(St) attr(St, "rule_name")))
   tx_names <- unlist(lapply(St_data, function(St) unique(St[["rule.name"]])))
-
+  
   ## TO EVALUATE RD (dx1 - dx2) IS THE SAME AS EVALUATING S.t_dx2 - S.t_dx1
   eval_RDs_two_tx <- function(dx1, dx2, time_idx, St_name, ...) {
     St_data[[dx2]][[St_name]][time_idx] - St_data[[dx1]][[St_name]][time_idx]
   }
-
-  eval_SEs_two_tx <- function(dx1, dx2, time_idx, ...) {
+  
+  eval_SEs_two_tx <- function(dx1, dx2, time_idx, return_IC = FALSE, ...) {
     nIDs_1 <- length(St_data[[dx1]][["IC.St"]][[time_idx]])
     nIDs_2 <- length(St_data[[dx2]][["IC.St"]][[time_idx]])
     if (nIDs_1 != nIDs_2) {
@@ -85,48 +85,118 @@ get_RDs <- function(St_data, St_name, getSEs = TRUE, order = seq_along(St_data))
       return(NA_real_)
     } else {
       nIDs <- nIDs_1
-      SE.diff <- sqrt(sum(( St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] )^2) / nIDs^2)
+      IC.RD <- St_data[[dx2]][["IC.St"]][[time_idx]] - St_data[[dx1]][["IC.St"]][[time_idx]] # risk difference ICs named explicitly
+      SE.diff <- sqrt(sum((IC.RD)^2) / nIDs^2)
+      if (return_IC == TRUE) return(IC.RD) # return_IC argument passed through ... # If true, return IC.RD instead of SE.diff
       return(SE.diff)
     }
   }
-
+  
   gs <- list(dx1 = tx_idx,
              dx2 = tx_idx,
              time_idx = time_idx) %>%
-        purrr::cross_df() %>%
-        dplyr::mutate(rank1 = order[dx1]) %>%
-        dplyr::mutate(rank2 = order[dx2]) %>%
-        dplyr::filter(rank1 < rank2) %>%
-        dplyr::arrange(rank1, rank2) %>%
-        dplyr::select(-rank1, -rank2) %>%
-        dplyr::mutate(time = time[time_idx])
-
+    purrr::cross_df() %>%
+    dplyr::mutate(rank1 = order[dx1]) %>%
+    dplyr::mutate(rank2 = order[dx2]) %>%
+    dplyr::filter(rank1 < rank2) %>%
+    dplyr::arrange(rank1, rank2) %>%
+    dplyr::select(-rank1, -rank2) %>%
+    dplyr::mutate(time = time[time_idx])
+  
   gs <- gs %>%
-        dplyr::mutate(RD = purrr::pmap_dbl(., eval_RDs_two_tx, St_name)) %>%
-        dplyr::mutate(RD.SE = NA_real_)
-
+    dplyr::mutate(RD = purrr::pmap_dbl(., eval_RDs_two_tx, St_name)) %>%
+    dplyr::mutate(RD.SE = NA_real_)
+  
   if (getSEs)
     gs <- gs %>%
-          dplyr::mutate(RD.SE = purrr::pmap_dbl(., eval_SEs_two_tx))
-
-    gs <- gs %>%
-          dplyr::mutate(CI95low = round(RD - abs(qnorm(0.025))*RD.SE, 4)) %>%
-          dplyr::mutate(CI95up = round(RD + abs(qnorm(0.025))*RD.SE, 4)) %>%
-          tidyr::unite("CI", CI95low, CI95up, sep = ";", remove = FALSE) %>%
-          dplyr::mutate(pval = round(2*pnorm( abs(RD/RD.SE), lower.tail=FALSE ),2))
-
+    dplyr::mutate(RD.SE = purrr::pmap_dbl(., eval_SEs_two_tx))
+  
   gs <- gs %>%
-        dplyr::mutate(dx1_name = purrr::map_chr(dx1, ~ tx_names[.x])) %>%
-        dplyr::mutate(dx2_name = purrr::map_chr(dx2, ~ tx_names[.x])) %>%
-        tidyr::unite("contrast", dx1_name, dx2_name, remove = FALSE) %>%
-        dplyr::mutate(estimator = St_name)
-
+    dplyr::mutate(CI95low = round(RD - abs(qnorm(0.025))*RD.SE, 4)) %>%
+    dplyr::mutate(CI95up = round(RD + abs(qnorm(0.025))*RD.SE, 4)) %>%
+    tidyr::unite("CI", CI95low, CI95up, sep = ";", remove = FALSE) %>%
+    dplyr::mutate(pval = round(2*pnorm( abs(RD/RD.SE), lower.tail=FALSE ),2))
+  
+  gs <- gs %>%
+    dplyr::mutate(dx1_name = purrr::map_chr(dx1, ~ tx_names[.x])) %>%
+    dplyr::mutate(dx2_name = purrr::map_chr(dx2, ~ tx_names[.x])) %>%
+    tidyr::unite("contrast", dx1_name, dx2_name, remove = FALSE) %>%
+    dplyr::mutate(estimator = St_name)
+  
   attr(gs, "tx") <- tx_names
   attr(gs, "stratifyQ_by_rule") <- attr(St_data[[1]], "stratifyQ_by_rule")
   attr(gs, "trunc_weights") <- attr(St_data[[1]], "trunc_weights")
-
+  
+  if(getICs)
+    gs <- gs %>%
+    dplyr::mutate(IC.RD = purrr::pmap(., eval_SEs_two_tx, return_IC = TRUE))
+  
   return(list(gs))
 }
+
+#' Difference of risk difference estimates with standard errors for IPW-MSM output.
+#' The corresponding SEs are evaluated based on the estimated influence curves (IC) of risk differences for given treatment comparison across subgroups.
+#' @param RD_1 output of get_RDs with argument get_ICs = TRUE for population subgroup 1
+#' @param RD_2 output of get_RDs with argument get_ICs = TRUE for population subgroup 2
+#' @return *Describe output*
+#' @seealso \code{\link{get_RDs}} 
+#' @export
+get_RD_diff <- function(RD_1, RD_2) {
+  
+  point.est <- RD_1 %>%
+    select(time, RD, CI, pval, contrast) %>%
+    mutate(stratum = "S1") %>%
+    bind_rows(RD_2 %>%
+                select(time, RD, CI, pval, contrast) %>%
+                mutate(stratum = "S2")) %>%
+    pivot_wider(id_cols = c("time", "contrast"), names_from = "stratum", values_from = c("RD", "CI", "pval"), names_glue = "{.value}_{stratum}") %>%
+    mutate(RDdiff = RD_S1 - RD_S2,
+           time = as.factor(time))
+  
+  # combine ICs for RDs at each timepoint into matrix
+  ICRD_1 <- do.call(cbind, RD_1$IC.RD)
+  ICRD_2 <- do.call(cbind, RD_2$IC.RD)
+  # add column names indicating time point associated with each set of RD ICs
+  colnames(ICRD_1) <- RD_1$time
+  colnames(ICRD_2) <- RD_2$time
+  # explicitly create cluster ID column corresponding to rownames of ICs
+  # these rownames have been carried from point in stremr where IDs were previously dropped
+  ICRD_1 <- as.data.table(cbind(ID = rownames(ICRD_1), ICRD_1))
+  ICRD_2 <- as.data.table(cbind(ID = rownames(ICRD_2), ICRD_2))
+  
+  # convert from wide to long--each row is identified by ID and time point of corresponding RD
+  ICRD_1 <- melt(ICRD_1,
+                 id.vars = "ID",
+                 variable.name = "time",
+                 value.name = "ICRD_1")
+  ICRD_2 <- melt(ICRD_2,
+                 id.vars = "ID",
+                 variable.name = "time",
+                 value.name = "ICRD_2")
+  
+  # ICs are merged on ID, with ICRD_1 and ICRD_2 being IC columns associated with each respective subgroup
+  ICRD_merge <- merge(ICRD_1, ICRD_2, by = c("ID", "time"), all = TRUE)
+  # weights for each IC contribution are calculated
+  ICRD_merge[, wt_1 := .N/sum(!is.na(ICRD_1)), time]
+  ICRD_merge[, wt_2 := .N/sum(!is.na(ICRD_2)), time]
+  # IDs that don't contribute to one subgroup have and ICRD_1/ICRD_2 value that is NA up until this point
+  # These NA values are set to 0
+  ICRD_merge[is.na(ICRD_merge)] <- 0
+  # ICs are multiplied by corresponding weight and subtracted to create IC for the difference of risk differences
+  ICRD_merge[, ICRDdiff := wt_1*as.numeric(ICRD_1) - wt_2*as.numeric(ICRD_2)]
+  # standard error for difference of risk differences is calculated using influence curves across all time points
+  RDdiffse <- ICRD_merge[, .(RDdiff.SE = sqrt(sum((ICRDdiff)^2) / .N^2)), by = time]
+  
+  resdf <- full_join(point.est, RDdiffse, by = "time")  %>%
+    dplyr::mutate(CI95low = round(RDdiff - abs(qnorm(0.025))*RDdiff.SE, 4)) %>%
+    dplyr::mutate(CI95up = round(RDdiff + abs(qnorm(0.025))*RDdiff.SE, 4)) %>%
+    tidyr::unite("CI", CI95low, CI95up, sep = ";", remove = FALSE) %>%
+    dplyr::mutate(pval = round(2*pnorm( abs(RDdiff/RDdiff.SE), lower.tail=FALSE ),2)) %>%
+    dplyr::mutate(time = as.numeric(as.character(time)))
+  
+  return(resdf)
+}
+
 
 #' Print RD table
 #'
@@ -144,24 +214,24 @@ print_RDs <- function(RD_tab, dx1, dx2, time, ...) {
   } else {
     dx1_sel <- dx1
   }
-
+  
   if (missing(dx2)) {
     dx2_sel <- unique(RD_tab[["dx2"]])
   } else {
     dx2_sel <- dx2
   }
-
+  
   if (missing(time)) {
     time_sel <- unique(RD_tab[["time"]])
   } else {
     time_sel <- time
   }
-
+  
   RD_tab_sel <- 
     RD_tab %>% 
     dplyr::filter((dx1 %in% dx1_sel) & (dx2 %in% dx2_sel) & (time %in% time_sel)) %>%
     dplyr::select(estimator, dx1_name, dx2_name, time, RD, RD.SE, CI, pval)
-
+  
   var <- knitr::kable(RD_tab_sel, ...)
   print(var)
   return(var)
@@ -312,13 +382,13 @@ defineMONITORvars <- function(data, ID, t, imp.I, MONITOR.name = 'N', tsinceNis1
   # N(t-1)=1 indicates that I(t) is observed. Note that the very first I(t) is assumed to be always observed.
   DT[, (MONITOR.name) := shift(.SD, n=1L, fill=NA, type="lead"), by = eval(ID.expression), .SDcols = (imp.I)]
   DT[, (MONITOR.name) := 1L - get(MONITOR.name)]
-
+  
   # Create "indx" vector that goes up by 1 every time MONITOR.name(t-1) shifts from 1 to 0 or from 0 to 1
   DT[, ("indx") := cumsum(c(FALSE, (get(MONITOR.name)!=0L)[-.N])), by = eval(ID.expression)]
   ## This line had a bug, since vec=cumsum(0, MONITOR) evaluates to length [.N+1].
   ## By applying vec[-.N] we remove the second to last observation, rather than just the last observation in vec
   # DT[, ("indx") := cumsum(c(FALSE, get(MONITOR.name)!=0L))[-.N], by = eval(ID.expression)]
-
+  
   ## Evaluate the number of time-points that have passed since last visit:
   DT[, (tsinceNis1) := seq(.N)-1, by = list(eval(ID.expression), eval(indx))]
   DT[is.na(DT[["indx"]]), (tsinceNis1) := NA]
@@ -411,13 +481,13 @@ defineIntervedTRT <- function(data, theta, ID, t, I, CENS, TRT, MONITOR, tsinceN
     # NOTE: ****** (tsinceNis1 > 0) is equivalent to (N(t-1)==0) ******
     DT[(get(tsinceNis1) == 0L) & (get(I) >= eval(dtheta)), "new.TRT.gstar" :=  1L]
     # 3. Once the person goes on treatment he/she has to stay on it until the end of the follow-up (using carry-forward)
-
+    
     DT[, ("new.TRT.gstar") := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
     # DT[, new.TRT.gstar := zoo::na.locf(new.TRT.gstar, na.rm = FALSE), by = eval(ID.expression)]
-
+    
     # 4. all remaining NA's must be the ones that occurred prior to treatment switch -> all must be 0 (not-treated)
     DT[is.na(new.TRT.gstar), ("new.TRT.gstar") := 0]
-
+    
     # DT[is.na(new.TRT.gstar), new.TRT.gstar := 0]
     setnames(DT, old = "new.TRT.gstar", new = new.TRT.names[dtheta.i])
   }
@@ -451,18 +521,18 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.peri
   dtheta <- names(S.IPAW)
   RDtable <- matrix(NA, nrow = (length(dtheta)-1)*2, ncol = length(dtheta)-1)
   # RDtable <- matrix(NA,nrow=2*3,ncol=3)
-
+  
   ContrastScale <- ifelse(RDscale,"-","/")
-
+  
   H0val <- ifelse(RDscale,0,1)
   ## Compare mean bootstrap to point estimates - should be similar
   PYK1.IPAW <- allRDtable <- vector("list",length(S.IPAW))
   names(PYK1.IPAW) <- names(allRDtable) <- names(S.IPAW)
   PYK1.IPAW <- lapply(S.IPAW,function(x,y)return(1-x[y]),y=t.period)
-
+  
   rownames(RDtable) <- rep(rev(dtheta)[-length(dtheta)],each=2)
   colnames(RDtable) <- dtheta[-length(dtheta)]
-
+  
   for(rule1 in rev(dtheta)[-length(dtheta)]) {
     for(rule2 in dtheta[ 1:(which(dtheta==rule1)-1) ]){
       RD <- mapply(ContrastScale,PYK1.IPAW[[rule1]],PYK1.IPAW[[rule2]])
@@ -478,7 +548,7 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.peri
   fileText <- paste(esti,ifelse(RDscale,"RD","RR"),sep="")
   captionText2 <- ifelse(RDscale,"differences","ratios")
   captionText3 <- ifelse(RDscale,"$-$","$/$")
-
+  
   if (esti %in% c("IPAW", "IPW")) {
     estimates <- "Stabilized inverse weighting"
   } else if(esti %in% c("IPAWtrunc","IPWtrunc")){
@@ -488,10 +558,10 @@ make.table.m0 <- function(S.IPAW, RDscale = "-" , nobs = 0, esti = "IPW", t.peri
   } else {
     estimates <- esti
   }
-
+  
   model <- "MSM"
   if (esti %in% "crude") model <- "model"
-
+  
   MSM_text <- paste0("The risk contrasts are derived from a logistic ", model, " for the discrete-time hazards fitted based on ", nobs, " observations. ")
   caption <- paste0(estimates, " estimates of the (cumulative) risk ",
                     captionText2,", $d_1$", captionText3,"$d_2$, evaluated at the time indicator value = ", t.value, ". ",
@@ -518,8 +588,8 @@ getSE_table_d_by_d <- function(S2.IPAW, IC.Var.S.d, nID, t.period.val.idx, getSE
         se.RDscale.Sdt.K[d1.idx, d2.idx] <- getSE.RD.d1.minus.d2(nID = nID,
                                                                  IC.S.d1 = IC.Var.S.d[[d1.idx]][["IC.S"]],
                                                                  IC.S.d2 = IC.Var.S.d[[d2.idx]][["IC.S"]])[t.period.val.idx]
-
-
+        
+        
       }
     }
   }
@@ -576,7 +646,7 @@ get_TMLE_RDs <- function(TMLE_list, t.periods.RDs) {
   new_TMLE_list$est_name <- TMLE_list[[1]]$est_name
   new_TMLE_list$wts_data <- rbindlist(lapply(TMLE_list, "[[", "wts_data"))
   new_TMLE_list$nID <- TMLE_list[[1]]$nID
-
+  
   RDs.TMLE.tperiods <- vector(mode = "list", length = length(t.periods.RDs))
   periods_idx <- seq_along(new_TMLE_list$periods)
   names(RDs.TMLE.tperiods) <- "RDs_for_t" %+% t.periods.RDs

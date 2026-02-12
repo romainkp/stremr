@@ -577,9 +577,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
     clusterNperID = function() {
         if( is.null(self$nodes$CLUSTERnode) ){
-            clusterNperID <- self$dat.sVar[ get(self$nodes$tnode)==0 , .(get(self$nodes$IDnode)) ]
-            setnames(clusterNperID, "V1", self$nodes$IDnode)
-            clusterNperID[ , clusterN := 1]
+            clusterNperID <- self$dat.sVar[  , uniqueN(get(self$nodes$IDnode)) , by = c(self$nodes$IDnode) ]
+            setnames(clusterNperID, "V1", "clusterN")
         }else{
             clusterNperID <- self$dat.sVar[  , uniqueN(get(self$nodes$IDnode)) , by = c(self$nodes$CLUSTERnode) ]
             setnames(clusterNperID,"V1","clusterN")

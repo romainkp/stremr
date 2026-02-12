@@ -130,7 +130,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
     ## (*) If person failed at t, he/she could not have participated in model fit at t+1.
     ## (*) Thus the outcome at row t for new failures ("Qkplus1") is always deterministically assigned to 1.
     ## **********************************************************************
-    fit = function(overwrite = FALSE, data, Qlearn.fit, ...) { # Move overwrite to a field? ... self$overwrite
+    fit = function(overwrite = FALSE, data, Qlearn.fit, IC_residual_bound_val, ...) { # Move overwrite to a field? ... self$overwrite
 
       prevQ_indx <- which(self$all_Qregs_indx %in% (self$Qreg_counter+1))
       if (length(prevQ_indx) > 0) {
@@ -197,7 +197,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       }
 
       ## TMLE update of initial prediction (will return Qk_hat if not doing TMLE updates)
-      TMLE.fit <- self$TMLE_update(data, Qk_hat)
+      TMLE.fit <- self$TMLE_update(data, Qk_hat, IC_residual_bound_val)
 
       ## **********************************************************************
       ## SECOND PREDICTION STEP OF TMLE/GCOMP
@@ -302,7 +302,7 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
       invisible(self)
     },
 
-    TMLE_update = function(data, init_Qk) {
+    TMLE_update = function(data, init_Qk, IC_residual_bound_val) {
       if (!self$TMLE) {
 
         return(NULL)
@@ -340,7 +340,11 @@ ModelQlearn  <- R6Class(classname = "ModelQlearn",
         Qk_hat <- TMLE.fit$pred*self$maxpY
         ## evaluate the contribution to the EIC (TMLE variance estimation)
         # Qk_hat <- pred_Qk[idx_for_fits_among_preds]
-        EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
+        if(!is.null(IC_residual_bound_val)) {
+          EIC_i_t_calc <- wts_TMLE * ifelse((Qkplus1-Qk_hat)>=0, 1, -1) * (pmax(abs(Qkplus1 - Qk_hat), IC_residual_bound_val))
+        } else {
+          EIC_i_t_calc <- wts_TMLE * (Qkplus1 - Qk_hat)
+        }
         data$dat.sVar[self$idx_used_to_fit_initQ, ("EIC_i_t") := EIC_i_t_calc]
 
         return(TMLE.fit$fit)

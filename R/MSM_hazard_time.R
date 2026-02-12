@@ -117,7 +117,7 @@ survMSM <- function(wts_data,
   Ynode <- nodes$Ynode
     
   wts_data <- format_wts_data(wts_data)
-  if(!is.null(clusterID))wts_data <- merge(wts_data, unique(OData$dat.sVar[, c(nodes$IDnode, clusterID), with=FALSE]), by=nodes$IDnode, x.all=TRUE, y.all=FALSE)
+  if(!is.null(clusterID))wts_data <- merge(wts_data, unique(OData$dat.sVar[, c(nodes$IDnode, clusterID), with=FALSE]), by=nodes$IDnode, all.x=TRUE, all.y=FALSE)
 
   rules_TRT <- sort(unique(wts_data[["rule.name"]]))
 
@@ -284,7 +284,7 @@ survMSM <- function(wts_data,
       beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, clusterID = nodes$CLUSTERnode , nID = nID, clusterNperID = clusterNperID,
                                  t.var = nodes$tnode, Yname = Ynode,
                                  MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
-                                 MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = TRUE)
+                                 MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = TRUE, stabilize = stabilize, use_weights = use_weights)
 
       for(d.j in names(S2.IPAW)) {
         d.idx <- which(names(S2.IPAW) %in% d.j)

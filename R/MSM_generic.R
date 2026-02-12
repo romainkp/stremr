@@ -80,7 +80,7 @@ fit_gMSM <- function(wts_data,
   
   ## rbind all regimen-specific weights datasets into one:
   wts_data <- format_wts_data(wts_data)
-  if(!is.null(clusterID))wts_data <- merge(wts_data, unique(OData$dat.sVar[, c(nodes$IDnode, clusterID), with=FALSE]), by=nodes$IDnode, x.all=TRUE, y.all=FALSE)
+  if(!is.null(clusterID))wts_data <- merge(wts_data, unique(OData$dat.sVar[, c(nodes$IDnode, clusterID), with=FALSE]), by=nodes$IDnode, all.x=TRUE, all.y=FALSE)
 
   ## keep all weights, even if they are 0 (for correct inference, glm will not use 0 weights)
   ## remove all observations with missing weights or outcomes
@@ -196,7 +196,9 @@ fit_gMSM <- function(wts_data,
                                MSMdesign = design_mat,
                                MSMpredict = "glm.IPAW.predict",
                                IPW_MSMestimator = TRUE,
-                               family = family)
+                               family = family,
+                               stabilize = NULL,
+                               use_weights = use_weights)
 
     # for(d.j in rules_TRT) {
     #   rule.idx <- estimates[[rule.var]] %in% d.j

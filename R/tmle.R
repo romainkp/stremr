@@ -269,6 +269,10 @@ fit_CVTMLE <- function(...) {
 #' Useful for upper-bounding the rare-outcomes.
 #' @param TMLE_updater Function for performing the TMLE update. Default is the TMLE updater based on speedglm (called \code{"TMLE.updater.speedglm"}).
 #' Other possible options include \code{"TMLE.updater.glm"}, \code{"linear.TMLE.updater.speedglm"} and \code{"iTMLE.updater.xgb"}.
+#' @param bound_IC_residual When \code{TRUE}, will update the IC residual to IC_residual_bound_val if \code{abs(Qkplus1-Qk_hat)<IC_residual_bound_val}.
+#' Default is \code{FALSE}. 
+#' @param IC_residual_bound_val Set to \code{NULL} by default. If \code{bound_IC_residual = TRUE}, then will use 0.0005 to bound IC residuals or user 
+#' can pass through other numeric value to bound IC residuals. 
 #' @param verbose Set to \code{TRUE} to print auxiliary messages during model fitting.
 #' @param ... When \code{models} arguments is NOT specified, these additional arguments will be passed on directly to all \code{GridSL}
 #' modeling functions that are called from this routine,
@@ -312,6 +316,8 @@ fit_GCOMP <- function(OData,
                         intervened_type_MONITOR = NULL,
                         maxpY = 1.0,
                         TMLE_updater = "TMLE.updater.speedglm",
+                        bound_IC_residual = FALSE,
+                        IC_residual_bound_val = NULL,
                         verbose = getOption("stremr.verbose"), ...) {
 
   if (!is.null(weights)) stop("optional argument 'weights' is not implemented yet for TMLE or GCOMP")
@@ -336,6 +342,12 @@ fit_GCOMP <- function(OData,
     OData$dat.sVar[, "rule.name" := rule_name]
   } else {
     rule_name <- unique(OData$dat.sVar[["rule.name"]])
+  }
+  
+  if(bound_IC_residual) { 
+    if(is.null(IC_residual_bound_val))IC_residual_bound_val <- 0.0005 # default is 0.0005 if not specified
+  } else {
+    IC_residual_bound_val <- NULL # if bound_IC_residual = FALSE, IC_residual_bound_val is NULL, even if specified (presumably by accident)
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -439,7 +451,8 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, 
+                                IC_residual_bound_val = IC_residual_bound_val, verbose = verbose)
         return(res)
       }
       res_byt[] <- res_byt[rev(seq_along(tvals))] # re-assign to order results by increasing t
@@ -451,7 +464,8 @@ fit_GCOMP <- function(OData,
                                 TMLE = TMLE, iterTMLE = iterTMLE, CVTMLE = CVTMLE, byfold_Q = byfold_Q,
                                 models = models_control, max_iter = max_iter, adapt_stop = adapt_stop,
                                 adapt_stop_factor = adapt_stop_factor, tol_eps = tol_eps,
-                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, verbose = verbose)
+                                return_fW = return_fW, maxpY = maxpY, TMLE_updater = TMLE_updater, 
+                                IC_residual_bound_val = IC_residual_bound_val, verbose = verbose)
         res_byt[[t_idx]] <- res
       }
     }
@@ -659,6 +673,7 @@ fit_GCOMP_onet <- function(OData,
                              return_fW = FALSE,
                              maxpY = 1.0,
                              TMLE_updater = "TMLE.updater.speedglm",
+                             IC_residual_bound_val = NULL,
                              verbose = getOption("stremr.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
@@ -759,7 +774,7 @@ fit_GCOMP_onet <- function(OData,
 
   # Run all Q-learning regressions (one for each subsets defined above, predictions of the last regression form the outcomes for the next:
   Qlearn.fit <- ModelGeneric$new(reg = Q_regs_list, DataStorageClass.g0 = OData)
-  Qlearn.fit$fit(data = OData, Qlearn.fit = Qlearn.fit)
+  Qlearn.fit$fit(data = OData, Qlearn.fit = Qlearn.fit, IC_residual_bound_val = IC_residual_bound_val)
   # Qlearn.fit$getPsAsW.models()[[1]]
   OData$Qlearn.fit <- Qlearn.fit
 
@@ -885,10 +900,12 @@ fit_GCOMP_onet <- function(OData,
 
     resDF_onet <- resDF_onet[IC_Var, on = "rule.name"]
     data.table::setkeyv(IC_dt, c("rule.name", clusterID))
-    IC_i_onet_byrule <- IC_dt[, (clusterID) := NULL] %>%
-                        tibble::as_tibble() %>%
-                        tidyr::nest(EIC_i, .key = "IC.St") %>%
-                        dplyr::mutate(IC.St = purrr::map(IC.St, ~ .x[[1]]))
+    IC_i_onet_byrule <- IC_dt %>%
+      tibble::as_tibble() %>%
+      tidyr::nest(c(clusterID, EIC_i), .key = "IC.St") %>%
+      dplyr::mutate(IC.St = purrr::map(IC.St, function(.x) {
+        setNames(.x[["EIC_i"]], .x[[clusterID]])
+      }))
     data.table::setDT(IC_i_onet_byrule)
     # IC_i_onet_byrule[, "IC.St" := list(list(as.numeric(IC.St[[1]][[1]]))), by = "rule.name"]
     resDF_onet <- resDF_onet[IC_i_onet_byrule, on = "rule.name"]
