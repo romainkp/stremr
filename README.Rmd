@@ -1,5 +1,11 @@
 ---
-output: github_document
+output:
+  github_document: default
+  html_document: default
+bibliography: inst/Bib/README-refs.bib
+csl: inst/Bib/frontiers-in-physics.csl
+link-citations: true
+nocite: "@*"
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -21,8 +27,8 @@ BibOptions(check.entries = FALSE, style = "markdown", cite.style = "authoryear",
 
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/stremr)](https://CRAN.R-project.org/package=stremr)
 [![](https://cranlogs.r-pkg.org/badges/stremr)](https://CRAN.R-project.org/package=stremr)
-[![Travis-CI Build Status](https://travis-ci.org/osofr/stremr.svg?branch=master)](https://travis-ci.org/osofr/stremr)
-[![codecov](https://codecov.io/gh/osofr/stremr/branch/master/graph/badge.svg)](https://codecov.io/gh/osofr/stremr)
+[![Travis-CI Build Status](https://travis-ci.org/romainkp/stremr.svg?branch=master)](https://travis-ci.org/romainkp/stremr)
+[![codecov](https://codecov.io/gh/romainkp/stremr/branch/master/graph/badge.svg)](https://codecov.io/gh/romainkp/stremr)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 
 > Analysis of longitudinal data, with continuous or time-to-event (binary) outcome 
@@ -33,7 +39,7 @@ BibOptions(check.entries = FALSE, style = "markdown", cite.style = "authoryear",
 > along with several other estimators.  
 > Perform data-adaptive estimation of the outcome and treatment models with Super Learner [`sl3`](https://jeremyrcoyle.github.io/sl3/).
 
-__Authors:__ [Oleg Sofrygin](https://divisionofresearch.kaiserpermanente.org/researchers/sofrygin-oleg), [Mark van der Laan](https://vanderlaan-group.github.io/), [Romain Neugebauer](https://divisionofresearch.kaiserpermanente.org/researchers/neugebauer-romain)
+__Authors:__ Oleg Sofrygin, Holly Finertie, [Mark van der Laan](https://vanderlaan-lab.org/), [Romain Neugebauer](https://divisionofresearch.kaiserpermanente.org/researchers/neugebauer-romain)
 
 ## Available estimators
 
@@ -44,16 +50,16 @@ Currently available estimators can be roughly categorized into 4 groups:
     - [IPW-adjusted Kaplan-Meier](https://doi.org/10.1002/sim.2174) (`survNPMSM`)
     - [MSM-IPW for the survival hazard](https://doi.org/10.1016/j.jclinepi.2013.01.016) (`survMSM`)
   * Outcome regression:
-    - longitudinal G-formula (`GCOMP`) `r AutoCite(bib, "Bang:Robins05")`
+    - longitudinal G-formula (`GCOMP`)
   * Doubly-robust (DR) approaches:
-    - TMLE for longitudinal data (`TMLE`) `r AutoCite(bib, "vanderLaan:Gruber12a")`
+    - TMLE for longitudinal data (`TMLE`)
     - iterative TMLE (`iterTMLE`)
     - cross-validated TMLE (`CVTMLE`)
   * Sequentially doubly-robust (SDR) approaches:
-    - infinite-dimensional TMLE (`iTMLE`) `r AutoCite(bib, "luedtke2017")`
+    - infinite-dimensional TMLE (`iTMLE`)
     - doubly robust unbiased transformations (`DR_transform`) ([Rubin and van der Laan, 2006](http://biostats.bepress.com/ucbbiostat/paper208), `r Citet(bib, "luedtke2017")``)
 
-##Input data format 
+## Input data format 
 
 The exposure, monitoring and censoring variables can be coded as either binary, categorical or continuous. Each can be multivariate (e.g., can use more than one column of dummy indicators for different censoring events). The input data needs to be in long format.
 
@@ -67,14 +73,14 @@ The exposure, monitoring and censoring variables can be coded as either binary, 
      * `Y` -- Outcome (binary 0/1 or continuous between 0 and 1).
  - Categorical censoring can be useful for representing all of the censoring events with a single column (variable).
 
-##Estimation of the outcome and treatment models
+## Estimation of the outcome and treatment models
 
  - Separate models are fit for the observed censoring, exposure and monitoring mechanisms. Jointly, these make up what is known as the *propensity score*.
  - Separate outcome regression models can be specified for each time-point.
  - Each propensity score model can be stratified (separate model is fit) by time or any other user-specified stratification criteria. Each strata is defined with by a single logical expression that selects specific observations/rows in the observed data (strata).
  -  By default, all models are fit with the logistic regression.
  -  Alternatively, model fitting can be performed via any machine learning (ML) algorithm available in [`sl3`](https://github.com/jeremyrcoyle/sl3) and [`gridisl`](https://github.com/osofr/gridisl) R packages. See [`xgboost`](https://github.com/dmlc/xgboost) and [`h2o`](https://github.com/h2oai/h2o-3) for a sample description of possible ML algorithms.
- -  One can select the best model from an ensemble of many learners via *model stacking* or *Super Learning* `r AutoCite(bib, c("breiman1996stacked","vdl2007super"))`, which finds the optimal convex combination of all models in the ensemble via cross-validation.
+ -  One can select the best model from an ensemble of many learners via *model stacking* or *Super Learning*, which finds the optimal convex combination of all models in the ensemble via cross-validation.
 
 ## Brief overview of `stremr`
 
@@ -84,7 +90,7 @@ The exposure, monitoring and censoring variables can be coded as either binary, 
 * [Example with Simulated Data](#Example1)
 * [Sequential G-Computation (GCOMP) and Targeted Maximum Likelihood Estimation (TMLE) for longitudinal survival data](#GCOMPTMLE)
 * [Machine Learning](#ML)
-* [Ensemble Learning with Discrete SuperLearner (based on `gridisl` R package)](#gridisl)
+<!--* [Ensemble Learning with Discrete SuperLearner (based on `gridisl` R package)](#gridisl)-->
 * [Details on some implemented estimators](#estimators)
 
 
@@ -99,7 +105,7 @@ install.packages('stremr')
 To install the development version (requires the `devtools` package):
 
 ```{r, eval = FALSE}
-devtools::install_github('osofr/stremr')
+devtools::install_github('romainkp/stremr')
 ```
 
 For ensemble-learning with Super Learner algorithm we recommend installing the latest development version of the `sl3` R package. It can be installed as follows:
@@ -119,7 +125,7 @@ install.packages("data.table", type = "source",
 ### Issues<a name="issues"></a>
 
 If you encounter any bugs or have any specific feature requests, please [file an
-issue](https://github.com/osofr/stremr/issues).
+issue](https://github.com/romainkp/stremr/issues).
 
 
 ### Documentation<a name="docs"></a>
@@ -253,7 +259,8 @@ head(IPW.St.1[],2)
 ```{r}
 wts.DT.1 <- getIPWeights(OData = OData, intervened_TRT = "TI.set1", rule_name = "TI1")
 wts.DT.0 <- getIPWeights(OData = OData, intervened_TRT = "TI.set0", rule_name = "TI0")
-survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1,)
+options(datatable.allow.cartesian = TRUE)
+survMSM_res <- survMSM(list(wts.DT.1, wts.DT.0), OData, tbreaks = c(1:8,12,16)-1,trunc_weights=20)
 ```
 
 In this particular case the output is a little different, with separate survival tables for each regimen. The output of `survMSM` is hence a list, 
@@ -276,6 +283,7 @@ Qforms <- rep.int("Qkplus1 ~ CVD + highA1c + N + lastNat1 + TI + TI.tminus1", (m
 To run iterative means substitution estimator (G-Computation), where all at risk observations are `pooled` for fitting each outcome regression (Q-regression):
 
 ```{r}
+options(gridisl.verbose = FALSE)
 gcomp_est <- fit_GCOMP(OData, tvals = tvals, intervened_TRT = "TI.set1", Qforms = Qforms)
 ```
 
@@ -464,7 +472,7 @@ OData <- fitPropensity(OData,
 The SuperLearner for TMLE and GCOMP is specified in an identical fashion. One needs to specify the relevant parameters and the ensemble models as part of the `models` argument. However, its currently not possible to save the individual SuperLearner fits of the outcome (Q) model.
  -->
 
-### Details on some implemented estimators<a name="estimator"></a>
+### Details on some implemented estimators<a name="estimators"></a>
 
 Currently implemented **estimators** include:
 
@@ -481,12 +489,12 @@ Currently implemented **estimators** include:
 
 To cite `stremr` in publications, please use:
 
-> Sofrygin O, van der Laan MJ, Neugebauer R (2017). *stremr: Streamlined Estimation for Static, Dynamic and Stochastic Treatment Regimes in Longitudinal Data.* R package version x.x.xx
+> Sofrygin O, Finertie H, van der Laan MJ, Neugebauer R (2017). *stremr: Streamlined Estimation for Static, Dynamic and Stochastic Treatment Regimes in Longitudinal Data.* R package version x.x.xx
 
 
 ### Funding
 
-This work was partially supported through a Patient-Centered Outcomes Research Institute (PCORI) Award (ME-1403-12506). All statements in this work, including its findings and conclusions, are solely those of the authors and do not necessarily represent the views of the Patient-Centered Outcomes Research Institute (PCORI), its Board of Governors or Methodology Committee. This work was also supported through an NIH grant (R01 AI074345-07).
+This work was partially supported through several Patient-Centered Outcomes Research Institute (PCORI) Awards (ME-1403-12506, ME-2018C1-10942, DB-2020C2-20318). All statements in this work, including its findings and conclusions, are solely those of the authors and do not necessarily represent the views of the Patient-Centered Outcomes Research Institute (PCORI), its Board of Governors or Methodology Committee. This work was also supported through an NIH grant (R01 AI074345-07).
 
 ### Copyright
 The contents of this repository are distributed under the MIT license.
@@ -515,8 +523,6 @@ SOFTWARE.
 ```
 ---
 
-### References
+# References
 
-```{r results = "asis", echo = FALSE}
-PrintBibliography(bib, .opts = list(check.entries = FALSE, sorting = "ynt"))
-```
+

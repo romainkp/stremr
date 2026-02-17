@@ -3,8 +3,9 @@
 ^\.Rproj\.user$
 ^cran-comments\.md$
 ^README\.html$
+^README\.md$
+^README\.Rmd$
 ^.Rprofile$
-^inst/db$
 ^tests/$
 ^tests/RUnit/$
 ^\.travis\.yml$

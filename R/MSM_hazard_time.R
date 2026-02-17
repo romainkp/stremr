@@ -176,6 +176,10 @@ survMSM <- function(wts_data,
 
   if (max(tbreaks) < tmax) tbreaks <- sort(c(tbreaks, tmax)) # pad on the right (if needed with tmax):
 
+  tbreaks <- sort(tbreaks)
+  saturatedMSM <- FALSE ## presume MSM is not saturated
+  if(identical(tbreaks,sort(periods)))saturatedMSM <- TRUE
+    
   # Create the dummies I(d == intervened_TRT) for the logistic MSM for d-specific hazard
   all.d.dummies <- NULL
   for( dummy.j in rules_TRT ){
@@ -284,7 +288,7 @@ survMSM <- function(wts_data,
       beta.IC.O.SEs <- getSEcoef(ID = nodes$IDnode, clusterID = nodes$CLUSTERnode , nID = nID, clusterNperID = clusterNperID,
                                  t.var = nodes$tnode, Yname = Ynode,
                                  MSMdata = wts_data_used, MSMdesign = as.matrix(wts_data_used[, all_dummies, with = FALSE]),
-                                 MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = TRUE, stabilize = stabilize, use_weights = use_weights)
+                                 MSMpredict = "glm.IPAW.predictP1", IPW_MSMestimator = TRUE, stabilize = stabilize, use_weights = use_weights, saturatedMSM = saturatedMSM)
 
       for(d.j in names(S2.IPAW)) {
         d.idx <- which(names(S2.IPAW) %in% d.j)

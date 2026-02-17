@@ -1,12 +1,3 @@
-@article{vdl2007super,
-  title={Super learner},
-  author={{van der Laan}, Mark J. and Polley, Eric C. and Hubbard, Alan E.},
-  journal={Statistical applications in genetics and molecular biology},
-  volume={6},
-  number={1},
-  year={2007}
-}
-
 @article{breiman1996stacked,
   title={Stacked regressions},
   author={Breiman, Leo},
@@ -18,30 +9,426 @@
   publisher={Springer}
 }
 
+@ARTICLE{Bang2005-gc,
+  title     = "Doubly robust estimation in missing data and causal inference
+               models",
+  author    = "Bang, Heejung and Robins, James M",
+  abstract  = "The goal of this article is to construct doubly robust (DR)
+               estimators in ignorable missing data and causal inference
+               models. In a missing data model, an estimator is DR if it
+               remains consistent when either (but not necessarily both) a
+               model for the missingness mechanism or a model for the
+               distribution of the complete data is correctly specified.
+               Because with observational data one can never be sure that
+               either a missingness model or a complete data model is correct,
+               perhaps the best that can be hoped for is to find a DR
+               estimator. DR estimators, in contrast to standard
+               likelihood-based or (nonaugmented) inverse probability-weighted
+               estimators, give the analyst two chances, instead of only one,
+               to make a valid inference. In a causal inference model, an
+               estimator is DR if it remains consistent when either a model for
+               the treatment assignment mechanism or a model for the
+               distribution of the counterfactual data is correctly specified.
+               Because with observational data one can never be sure that a
+               model for the treatment assignment mechanism or a model for the
+               counterfactual data is correct, inference based on DR estimators
+               should improve upon previous approaches. Indeed, we present the
+               results of simulation studies which demonstrate that the finite
+               sample performance of DR estimators is as impressive as theory
+               would predict. The proposed method is applied to a
+               cardiovascular clinical trial.",
+  journal   = "Biometrics",
+  publisher = "Wiley",
+  volume    =  61,
+  number    =  4,
+  pages     = "962--973",
+  month     =  dec,
+  year      =  2005,
+  copyright = "http://onlinelibrary.wiley.com/termsAndConditions\#vor",
+  language  = "en"
+}
+
+@ARTICLE{Van_der_Laan2007-qn,
+  title    = "Super learner",
+  author   = "{van der Laan}, Mark J and Polley, Eric C and Hubbard, Alan E",
+  abstract = "When trying to learn a model for the prediction of an outcome
+              given a set of covariates, a statistician has many estimation
+              procedures in their toolbox. A few examples of these candidate
+              learners are: least squares, least angle regression, random
+              forests, and spline regression. Previous articles (van der Laan
+              and Dudoit (2003); van der Laan et al. (2006); Sinisi et al.
+              (2007)) theoretically validated the use of cross validation to
+              select an optimal learner among many candidate learners.
+              Motivated by this use of cross validation, we propose a new
+              prediction method for creating a weighted combination of many
+              candidate learners to build the super learner. This article
+              proposes a fast algorithm for constructing a super learner in
+              prediction which uses V-fold cross-validation to select weights
+              to combine an initial set of candidate learners. In addition,
+              this paper contains a practical demonstration of the adaptivity
+              of this so called super learner to various true data generating
+              distributions. This approach for construction of a super learner
+              generalizes to any parameter which can be defined as a minimizer
+              of a loss function.",
+  journal  = "Stat. Appl. Genet. Mol. Biol.",
+  volume   =  6,
+  pages    = "Article25",
+  month    =  sep,
+  year     =  2007,
+  language = "en"
+}
+
+@ARTICLE{Van_der_Laan2012-ph,
+  title     = "Targeted minimum loss based estimation of causal effects of
+               multiple time point interventions",
+  author    = "{van der Laan}, Mark J and Gruber, Susan",
+  abstract  = "We consider estimation of the effect of a multiple time point
+               intervention on an outcome of interest, where the intervention
+               nodes are subject to time-dependent confounding by intermediate
+               covariates.In previous work van der Laan (2010) and Stitelman
+               and van der Laan (2011a) developed and implemented a closed form
+               targeted maximum likelihood estimator (TMLE) relying on the
+               log-likelihood loss function, and demonstrated important gains
+               relative to inverse probability of treatment weighted estimators
+               and estimating equation based estimators. This TMLE relies on an
+               initial estimator of the entire probability distribution of the
+               longitudinal data structure. To enhance the finite sample
+               performance of the TMLE of the target parameter it is of
+               interest to select the smallest possible relevant part of the
+               data generating distribution, which is estimated and updated by
+               TMLE. Inspired by this goal, we develop a new closed form TMLE
+               of an intervention specific mean outcome based on general
+               longitudinal data structures. The target parameter is
+               represented as an iterative sequence of conditional expectations
+               of the outcome of interest. This collection of conditional means
+               represents the relevant part, which is estimated and updated
+               using the general TMLE algorithm. We also develop this new TMLE
+               for other causal parameters, such as parameters defined by
+               working marginal structural models. The theoretical properties
+               of the TMLE are also practically demonstrated with a small scale
+               simulation study.The proposed TMLE is building upon a previously
+               proposed estimator Bang and Robins (2005) by integrating some of
+               its key and innovative ideas into the TMLE framework.",
+  journal   = "Int. J. Biostat.",
+  publisher = "Walter de Gruyter GmbH",
+  volume    =  8,
+  number    =  1,
+  month     =  may,
+  year      =  2012,
+  language  = "en"
+}
+
+@ARTICLE{Neugebauer2014-eu,
+  title     = "Targeted learning in real-world comparative effectiveness
+               research with time-varying interventions",
+  author    = "Neugebauer, Romain and Schmittdiel, Julie A and {van der Laan},
+               Mark J",
+  abstract  = "In comparative effectiveness research (CER), often the aim is to
+               contrast survival outcomes between exposure groups defined by
+               time-varying interventions. With observational data, standard
+               regression analyses (e.g., Cox modeling) cannot account for
+               time-dependent confounders on causal pathways between exposures
+               and outcome nor for time-dependent selection bias that may arise
+               from informative right censoring. Inverse probability weighting
+               (IPW) estimation to fit marginal structural models (MSMs) has
+               commonly been applied to properly adjust for these expected
+               sources of bias in real-world observational studies. We describe
+               the application and performance of an alternate estimation
+               approach in such a study. The approach is based on the recently
+               proposed targeted learning methodology and consists in targeted
+               minimum loss-based estimation (TMLE) with super learning (SL)
+               within a nonparametric MSM. The evaluation is based on the
+               analysis of electronic health record data with both IPW
+               estimation and TMLE to contrast cumulative risks under four more
+               or less aggressive strategies for treatment intensification in
+               adults with type 2 diabetes already on 2+ oral agents or basal
+               insulin. Results from randomized experiments provide a surrogate
+               gold standard to validate confounding and selection bias
+               adjustment. Bootstrapping is used to validate analytic
+               estimation of standard errors. This application does the
+               following: (1) establishes the feasibility of TMLE in real-world
+               CER based on large healthcare databases; (2) provides evidence
+               of proper confounding and selection bias adjustment with TMLE
+               and SL; and (3) motivates their application for improving
+               estimation efficiency. Claims are reinforced with a simulation
+               study that also illustrates the double-robustness property of
+               TMLE.",
+  journal   = "Stat. Med.",
+  publisher = "Wiley",
+  volume    =  33,
+  number    =  14,
+  pages     = "2480--2520",
+  month     =  jun,
+  year      =  2014,
+  keywords  = "comparative effectiveness; diabetes; efficiency gain; inverse
+               probability weighting; marginal structural model; targeted
+               learning",
+  copyright = "http://onlinelibrary.wiley.com/termsAndConditions\#vor",
+  language  = "en"
+}
+
+@ARTICLE{Neugebauer2025-ry,
+  title     = "Glucose-lowering medication classes and cardiovascular Outcomes
+               in patients with type 2 diabetes",
+  author    = "Neugebauer, Romain and An, Jaejin and Dombrowski, Sarah Krahe
+               and Oshiro, Caryn and Cassidy-Bushrow, Andrea and Gilliam, Lisa
+               and Simonson, Gregg and Karter, Andrew J and Bergenstal, Richard
+               and Finertie, Holly and Yassin, Maher M and Knowlton, Greg and
+               Lin, Sharon R and Dyer, Wendy and Pimentel, Noel and Izadian,
+               Keanu and Schmittdiel, Julie and Thomas, Tainayah W and Hooker,
+               Stephanie A and Nolan, Margaret B and Wright, Eric and Aurora,
+               Lindsey and Rodriguez, Luis A and Kaur, Jasleen and Adams, Alyce
+               S and {van der Laan}, Mark J and O'Connor, Patrick J",
+  abstract  = "Importance: Major adverse cardiovascular events (MACEs) are
+               primary causes of morbidity and mortality in adults with type 2
+               diabetes (T2D), yet few head-to-head randomized trials have
+               compared the effects of glucose-lowering medications on MACEs,
+               and most observational analyses are limited by inadequate bias
+               adjustment methods. Objective: To compare the effectiveness of
+               sustained exposure to 4 classes of glucose-lowering medications
+               (sulfonylureas, dipeptidyl peptidase-4 inhibitors [DPP4is],
+               sodium-glucose cotransporter-2 inhibitors [SGLT2is], and
+               glucagon-like peptide-1 receptor agonists [GLP-1RAs]) on MACEs
+               in US adults with T2D using modern causal methods combined with
+               machine learning. Design, Setting, and Participants: This
+               comparative effectiveness study included adults with T2D who
+               were members of 6 large US health care delivery systems and
+               initiated treatment with 1 of 4 medication classes
+               (sulfonylureas, DPP4is, SGLT2is, and GLP-1RAs) between January
+               1, 2014, and December 31, 2021. Data analysis was conducted from
+               May 1 to December 31, 2024. Exposure: New use of a sulfonylurea,
+               DPP4i, SGLT2i, or GLP-1RA based on filled prescriptions. Main
+               Outcomes and Measures: The primary outcome was MACEs defined as
+               nonfatal myocardial infarction, nonfatal stroke, or
+               cardiovascular death. Analyses were conducted using targeted
+               learning within a trial emulation framework. Heterogeneity of
+               treatment effects was assessed for prespecified subgroups.
+               Results: This study included 296 676 adults. The cohort for
+               emulating a 4-arm trial included a subset of 241 981 adults
+               (mean [SD] age, 57.2 [12.9] years; 54.3\% male) with T2D. In
+               adjusted analyses, 2.5-year MACE risk was lowest in patients
+               with sustained exposure to GLP-1RAs, followed by SGLT2is ,
+               sulfonylureas, and DPP4is. Comparing DPP4is with sulfonylureas
+               and SGLT2is with GLP-1RAs, the 2.5-year cumulative risk
+               difference was 1.9\% (95\% CI, 1.1\%-2.7\%) and 1.5\%
+               (1.1\%-1.9\%), respectively. Risk differences in patients with
+               vs without atherosclerotic cardiovascular disease (ASCVD) were
+               similar in direction but typically much smaller for patients
+               without ASCVD. Evidence of a benefit of GLP-1RAs over SGLT2is
+               was most pronounced in patients with baseline ASCVD or heart
+               failure (HF), age 65 years or older, or low to moderate kidney
+               impairment but was not found in patients younger than 50 years.
+               Conclusions and Relevance: In this study, MACE risk varied
+               significantly by medication class, with most protection achieved
+               with sustained treatment with GLP-1RAs followed by SGLT2is,
+               sulfonylureas, and DPP4is. The magnitude of benefit of GLP-1RAs
+               over SGLT2is depended on baseline age, ASCVD, HF, and kidney
+               impairment. These results, along with consideration of cost,
+               availability, and collateral clinical benefits, may inform
+               treatment decisions for adults with T2D.",
+  journal   = "JAMA Netw. Open",
+  publisher = "American Medical Association (AMA)",
+  volume    =  8,
+  number    =  10,
+  pages     = "e2536100",
+  month     =  oct,
+  year      =  2025,
+  language  = "en"
+}
+
+@ARTICLE{Neugebauer2016-pp,
+  title     = "A case study of the impact of data-adaptive versus model-based
+               estimation of the propensity scores on causal inferences from
+               three Inverse Probability Weighting estimators",
+  author    = "Neugebauer, Romain and Schmittdiel, Julie A and {van der Laan},
+               Mark J",
+  abstract  = "OBJECTIVE: Consistent estimation of causal effects with inverse
+               probability weighting estimators is known to rely on consistent
+               estimation of propensity scores. To alleviate the bias expected
+               from incorrect model specification for these nuisance parameters
+               in observational studies, data-adaptive estimation and in
+               particular an ensemble learning approach known as Super Learning
+               has been proposed as an alternative to the common practice of
+               estimation based on arbitrary model specification. While the
+               theoretical arguments against the use of the latter haphazard
+               estimation strategy are evident, the extent to which
+               data-adaptive estimation can improve inferences in practice is
+               not. Some practitioners may view bias concerns over arbitrary
+               parametric assumptions as academic considerations that are
+               inconsequential in practice. They may also be wary of
+               data-adaptive estimation of the propensity scores for fear of
+               greatly increasing estimation variability due to extreme weight
+               values. With this report, we aim to contribute to the
+               understanding of the potential practical consequences of the
+               choice of estimation strategy for the propensity scores in
+               real-world comparative effectiveness research. METHOD: We
+               implement secondary analyses of Electronic Health Record data
+               from a large cohort of type 2 diabetes patients to evaluate the
+               effects of four adaptive treatment intensification strategies
+               for glucose control (dynamic treatment regimens) on subsequent
+               development or progression of urinary albumin excretion. Three
+               Inverse Probability Weighting estimators are implemented using
+               both model-based and data-adaptive estimation strategies for the
+               propensity scores. Their practical performances for proper
+               confounding and selection bias adjustment are compared and
+               evaluated against results from previous randomized experiments.
+               CONCLUSION: Results suggest both potential reduction in bias and
+               increase in efficiency at the cost of an increase in computing
+               time when using Super Learning to implement Inverse Probability
+               Weighting estimators to draw causal inferences.",
+  journal   = "Int. J. Biostat.",
+  publisher = "Walter de Gruyter GmbH",
+  volume    =  12,
+  number    =  1,
+  pages     = "131--155",
+  month     =  may,
+  year      =  2016,
+  language  = "en"
+}
+
+@ARTICLE{Neugebauer2017-qg,
+  title     = "Identification of the joint effect of a dynamic treatment
+               intervention and a stochastic monitoring intervention under the
+               no direct effect assumption",
+  author    = "Neugebauer, Romain and Schmittdiel, Julie A and Adams, Alyce S
+               and Grant, Richard W and {van der Laan}, Mark J",
+  abstract  = "The management of chronic conditions is characterized by
+               frequent re-assessment of therapy decisions in response to the
+               patient's changing condition over the course of the illness.
+               Evidence most suitable to inform care thus often concerns the
+               contrast of adaptive treatment strategies that repeatedly
+               personalize treatment decisions over time using the latest
+               accumulated data available from the patient's previous clinic
+               visits such as laboratory exams (e.g., hemoglobin A1c
+               measurements in diabetes care). The frequency at which such
+               information is monitored implicitly defines the causal estimand
+               that is typically evaluated in an observational or randomized
+               study of such adaptive treatment strategies. Analytic control of
+               monitoring with standard estimation approaches for time-varying
+               interventions can therefore not only improve study
+               generalizibility but also inform the optimal timing of clinical
+               surveillance. Valid inference with these estimators requires the
+               upholding of a positivity assumption that can hinder their
+               applicability. To potentially weaken this requirement for
+               monitoring control, we introduce identifiability results that
+               will facilitate the derivation of alternate estimators of
+               effects defined by general joint treatment and monitoring
+               interventions in the context of time-to-event outcomes. These
+               results are developed based on the nonparametric structural
+               equation modeling framework using a no direct effect assumption
+               originally introduced in a prior paper that inspired this work.
+               The relevance and scope of the results presented here are
+               illustrated with examples in diabetes comparative effectiveness
+               research.",
+  journal   = "J. Causal Inference",
+  publisher = "Walter de Gruyter GmbH",
+  volume    =  5,
+  number    =  1,
+  month     =  mar,
+  year      =  2017,
+  keywords  = "counterfactual identifiability; dynamic intervention; effect of
+               monitoring; no direct effect assumption; stochastic
+               intervention; time-varying treatment",
+  language  = "en"
+}
+
 @article{luedtke2017,
   title        = {Sequential Double Robustness in Right-Censored Longitudinal Models},
-  author       = {Luedtke, Alexander R and Sofrygin, Oleg and van der Laan, Mark J and Carone, Marco},
+  author       = {Luedtke, Alexander R and Sofrygin, Oleg and {van der Laan}, Mark J and Carone, Marco},
   journal      = {arXiv preprint arXiv:1705.02459},
   year         = {2017},
   eprinttype   = {arxiv},
   eprint       = {1705.02459}
 }
 
-@article{vanderLaan:Gruber12a,
-  Author  = {M.J. van der Laan and S. Gruber},
-  Journal = {The International Journal of Biostatistics},
-  Title   = {Targeted minimum loss based estimation of causal effects of multiple time point interventions},
-  Volume  = {8},
-  Year    = {2012},
-  doi     = {10.1515/1557-4679.1370}
+@ARTICLE{Sofrygin2019-ep,
+  title     = "Targeted learning with daily {EHR} data",
+  author    = "Sofrygin, Oleg and Zhu, Zheng and Schmittdiel, Julie A and
+               Adams, Alyce S and Grant, Richard W and {van der Laan}, Mark J and
+               Neugebauer, Romain",
+  abstract  = "Electronic health records (EHR) data provide a cost- and
+               time-effective opportunity to conduct cohort studies of the
+               effects of multiple time-point interventions in the diverse
+               patient population found in real-world clinical settings.
+               Because the computational cost of analyzing EHR data at daily
+               (or more granular) scale can be quite high, a pragmatic approach
+               has been to partition the follow-up into coarser intervals of
+               pre-specified length (eg, quarterly or monthly intervals). The
+               feasibility and practical impact of analyzing EHR data at a
+               granular scale has not been previously evaluated. We start
+               filling these gaps by leveraging large-scale EHR data from a
+               diabetes study to develop a scalable targeted learning approach
+               that allows analyses with small intervals. We then study the
+               practical effects of selecting different coarsening intervals on
+               inferences by reanalyzing data from the same large-scale pool of
+               patients. Specifically, we map daily EHR data into four analytic
+               datasets using 90-, 30-, 15-, and 5-day intervals. We apply a
+               semiparametric and doubly robust estimation approach, the
+               longitudinal Targeted Minimum Loss-Based Estimation (TMLE), to
+               estimate the causal effects of four dynamic treatment rules with
+               each dataset, and compare the resulting inferences. To overcome
+               the computational challenges presented by the size of these
+               data, we propose a novel TMLE implementation, the ``long-format
+               TMLE,'' and rely on the latest advances in scalable
+               data-adaptive machine-learning software, xgboost and h2o, for
+               estimation of the TMLE nuisance parameters.",
+  journal   = "Stat. Med.",
+  publisher = "Wiley",
+  volume    =  38,
+  number    =  16,
+  pages     = "3073--3090",
+  month     =  jul,
+  year      =  2019,
+  keywords  = "EHR; Targeted Minimum Loss-Based Estimation; big data; causal
+               inference; dynamic treatment regimes; machine learning",
+  copyright = "http://onlinelibrary.wiley.com/termsAndConditions\#vor",
+  language  = "en"
 }
 
-@article{Bang:Robins05,
-  author        = {H. Bang and J.M. Robins},
-  journal       = {Biometrics},
-  pages         = {962--972},
-  title         = {Doubly robust estimation in missing data and causal inference models},
-  volume        = {61},
-  year          = {2005},
-  doi           = {10.1111/j.1541-0420.2005.00377.x}
+@ARTICLE{Kreif2021-jq,
+  title     = "Exploiting nonsystematic covariate monitoring to broaden the
+               scope of evidence about the causal effects of adaptive treatment
+               strategies",
+  author    = "Kreif, No{\'e}mi and Sofrygin, Oleg and Schmittdiel, Julie A and
+               Adams, Alyce S and Grant, Richard W and Zhu, Zheng and {van der
+               Laan}, Mark J and Neugebauer, Romain",
+  abstract  = "In studies based on electronic health records (EHR), the
+               frequency of covariate monitoring can vary by covariate type,
+               across patients, and over time, which can limit the
+               generalizability of inferences about the effects of adaptive
+               treatment strategies. In addition, monitoring is a health
+               intervention in itself with costs and benefits, and stakeholders
+               may be interested in the effect of monitoring when adopting
+               adaptive treatment strategies. This paper demonstrates how to
+               exploit nonsystematic covariate monitoring in EHR-based studies
+               to both improve the generalizability of causal inferences and to
+               evaluate the health impact of monitoring when evaluating
+               adaptive treatment strategies. Using a real world, EHR-based,
+               comparative effectiveness research (CER) study of patients with
+               type II diabetes mellitus, we illustrate how the evaluation of
+               joint dynamic treatment and static monitoring interventions can
+               improve CER evidence and describe two alternate estimation
+               approaches based on inverse probability weighting (IPW). First,
+               we demonstrate the poor performance of the standard estimator of
+               the effects of joint treatment-monitoring interventions, due to
+               a large decrease in data support and concerns over finite-sample
+               bias from near-violations of the positivity assumption (PA) for
+               the monitoring process. Second, we detail an alternate IPW
+               estimator using a no direct effect assumption. We demonstrate
+               that this estimator can improve efficiency but at the potential
+               cost of increase in bias from violations of the PA for the
+               treatment process.",
+  journal   = "Biometrics",
+  publisher = "Wiley",
+  volume    =  77,
+  number    =  1,
+  pages     = "329--342",
+  month     =  mar,
+  year      =  2021,
+  keywords  = "dynamic treatment regimes; electronic health records; inverse
+               probability weighting; joint interventions; monitoring regimes;
+               no direct effect assumption; time-dependent confounding",
+  copyright = "http://onlinelibrary.wiley.com/termsAndConditions\#vor",
+  language  = "en"
 }
+

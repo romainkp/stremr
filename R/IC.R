@@ -1,12 +1,12 @@
 ###################################
 ## SE of IPW estimator of MSM coef
 ###################################
-getSEcoef <- function(ID, clusterID = NULL, nID, clusterNperID = clusterNperID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW_MSMestimator = TRUE, family="binomial", stabilize, use_weights){
+getSEcoef <- function(ID, clusterID = NULL, nID, clusterNperID = clusterNperID, t.var, Yname, MSMdata, MSMpredict, MSMdesign, IPW_MSMestimator = TRUE, family="binomial", stabilize, use_weights, saturatedMSM=FALSE){
   cum.IPAW <- "cum.IPAW"
   
   if(is.null(clusterID))clusterID <- ID
   
-  if(!is.null(stabilize) & use_weights){ #getSEcoef is called from survMSM (i.e. the MSM is saturated) & using weights from IPW
+  if(!is.null(stabilize) & use_weights & saturatedMSM){ #getSEcoef is called from survMSM & using weights from IPW & the MSM is saturated (not a guarantee when using survMSM)
       ##IC formula derived from appendix of "A Case Study of the Impact of Data-Adaptive Versus Model-Based Estimation of the Propensity Scores on Causal Inferences from Three Inverse Probability Weighting Estimators" and after working out the IPW normalizing constant under the assumption that the action mechanism is estimated consistently and a saturated MSM for hazard
       
     saturatedMSMterms <- colnames(MSMdesign)[grep("Periods",colnames(MSMdesign))]
@@ -45,7 +45,7 @@ getSEcoef <- function(ID, clusterID = NULL, nID, clusterNperID = clusterNperID, 
     IC.O <- t(D.O.beta.alt)
     
   }else{ #getSEcoef is NOT called from survMSM (i.e. fit_xMSM functions) or crude survMSM
-    
+
     IC.data <- MSMdata[ ,c(unique(c(ID,clusterID)), t.var, Yname, cum.IPAW, MSMpredict), with = FALSE]
     
     IC.data[, "MSMepsilon" := get(Yname) - get(MSMpredict)]

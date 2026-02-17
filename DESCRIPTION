@@ -1,6 +1,6 @@
 Package: stremr
 Title: Streamlined Estimation for Static, Dynamic and Stochastic Treatment Regimes in Longitudinal Data
-Version: 1.1.2
+Version: 1.1.3
 Authors@R: c(
     person("Oleg", "Sofrygin", role="aut", email="oleg.sofrygin@gmail.com"),
     person("Holly", "Finertie", role="aut", email="holly.x.finertie@kp.org"),
